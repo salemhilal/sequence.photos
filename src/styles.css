@@ -1791,6 +1791,28 @@ body.col-resizing * {
   gap: 12px;
   padding: 10px 16px;
 }
+/*
+ * The controls fade once the pointer rests (see useIdle in Preview.tsx), like a video
+ * player's, leaving just the book; they come back quickly when it moves.
+ */
+.preview-head,
+.preview .turn {
+  transition: opacity 150ms ease-out;
+}
+.preview.idle .preview-head,
+.preview.idle .turn {
+  opacity: 0;
+  transition-duration: 600ms;
+}
+.preview.idle {
+  cursor: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .preview-head,
+  .preview .turn {
+    transition: none;
+  }
+}
 .preview .btn {
   background: rgba(255, 255, 255, 0.07);
 }
