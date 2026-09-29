@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { folioLabel } from '../actions';
 import { useWindowEvent } from '../hooks';
@@ -8,6 +8,45 @@ import { useProject } from '../store';
 import { closeModal, ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
 import { allSpreads, sheetOf } from '../spreads';
+
+/** How long the pointer rests before the controls fade, as a video player's do. */
+const IDLE_MS = 1000;
+
+/**
+ * Whether the preview's controls should fade: the pointer has rested a moment, and isn't
+ * over them. Moving it (or tabbing to a control) brings them back; turning pages with
+ * the keys doesn't, so paging through stays undisturbed.
+ */
+function useIdle(root: React.RefObject<HTMLElement | null>, hold: boolean): boolean {
+  const [idle, setIdle] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const rest = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        // Not while pointing at a control, or while one has keyboard focus.
+        const onControl = root.current?.querySelector('.preview-head:hover, .turn:hover, :focus-visible');
+        if (!onControl && !hold) setIdle(true);
+      }, IDLE_MS);
+    };
+    const wake = () => {
+      setIdle(false);
+      rest();
+    };
+    const onKey = (e: KeyboardEvent) => e.key === 'Tab' && wake();
+    rest();
+    window.addEventListener('pointermove', wake);
+    window.addEventListener('pointerdown', wake);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pointermove', wake);
+      window.removeEventListener('pointerdown', wake);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [root, hold]);
+  return idle && !hold;
+}
 
 export function Preview() {
   const { project } = useProject();
@@ -20,9 +59,12 @@ export function Preview() {
   });
   const [dir, setDir] = useState<'next' | 'prev'>('next');
   const stageRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 900, h: 600 });
   const busy = ui.use((s) => s.busy);
   const sheet = sheetOf(project);
+  // Saving (a PDF or images) shows its progress in the header: keep it up until that's done.
+  const idle = useIdle(rootRef, busy !== null);
   const spreads = allSpreads(project);
   const spread = spreads[Math.min(index, spreads.length - 1)];
 
@@ -62,7 +104,7 @@ export function Preview() {
   const label = folioLabel(index, spreads.length, sheet.layout);
 
   return (
-    <div className="preview" data-modal>
+    <div className={`preview${idle ? ' idle' : ''}`} data-modal ref={rootRef}>
       <header className="preview-head">
         <span className="folio">{label}</span>
         <span className="muted data">
