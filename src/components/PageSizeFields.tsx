@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { setPageSize, switchLayout } from '../pageSize';
 import { sheetOf } from '../spreads';
 import { useProject } from '../store';
@@ -7,8 +7,8 @@ import { FRAME_PRESETS, UNITS } from '../units';
 import { NumberField } from './NumberField';
 
 const KINDS: { value: LayoutKind; label: string }[] = [
-  { value: 'print', label: 'Print book' },
-  { value: 'digital', label: 'Digital' },
+  { value: 'print', label: 'For print' },
+  { value: 'digital', label: 'For digital' },
 ];
 
 /**
@@ -19,16 +19,21 @@ const KINDS: { value: LayoutKind; label: string }[] = [
 export function PageSizeFields() {
   const { project } = useProject();
   const sheet = sheetOf(project);
+  // Unique per copy: the new-project card and the Layout view can both be open.
+  const id = useId();
   const current: Size = { w: sheet.pageW, h: sheet.pageH };
   // A new form whenever the size changes some other way (undo, switching kinds).
   return (
     <div className="layout-fields">
-      <div className="segmented" role="radiogroup" aria-label="Layout">
+      <span className="field-label" id={`${id}-label`}>
+        Layout format
+      </span>
+      <div className="segmented halves" role="radiogroup" aria-labelledby={`${id}-label`}>
         {KINDS.map((k) => (
           <label key={k.value} className={sheet.layout === k.value ? 'on' : ''}>
             <input
               type="radio"
-              name="layout"
+              name={id}
               value={k.value}
               checked={sheet.layout === k.value}
               onChange={() => switchLayout(k.value)}
