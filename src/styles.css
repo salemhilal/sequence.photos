@@ -1205,6 +1205,41 @@ body.col-resizing * {
 .section-head h3 {
   flex: 1;
 }
+/* The title folds its section away. */
+.section-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: -4px 0 -4px -6px;
+  padding: 4px 6px 4px 2px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.section-toggle:hover {
+  background: var(--fill);
+}
+.section-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.section-toggle .chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transition: transform 120ms ease-out;
+}
+.section-toggle[aria-expanded='true'] .chevron {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .section-toggle .chevron {
+    transition: none;
+  }
+}
 .section-head .btn {
   color: var(--muted);
 }
@@ -1477,11 +1512,6 @@ body.col-resizing * {
 .setting + .setting {
   border-top: 1px solid var(--border);
 }
-/* App preferences are set apart from the book's settings. */
-.setting.app-setting {
-  border-top: 1px solid var(--border-strong);
-  margin-top: 8px;
-}
 .setting h3 {
   margin: 5px 0 0;
   font-family: var(--mono);
@@ -1670,6 +1700,17 @@ body.col-resizing * {
   background: var(--fill);
   color: inherit;
   font: 12px var(--font);
+}
+/* In the Layout panel, the size form fills its width. */
+.guides-panel .layout-fields,
+.guides-panel .size-form {
+  align-items: stretch;
+}
+.guides-panel .size-form select {
+  width: 100%;
+}
+.guides-panel .size-form .num-field {
+  flex: 1;
 }
 .size-form select:focus-visible {
   outline: none;

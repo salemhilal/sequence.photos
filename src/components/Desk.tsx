@@ -355,13 +355,11 @@ export function Desk() {
               <span className="caps muted">Layout</span>
               <PageSizeFields />
               <p className="help">
-                You can change this anytime.
-                <br />
-                Set up{' '}
-                <button className="link" onClick={() => openModal('guides')}>
-                  Guides
-                </button>{' '}
-                for photos to fit and snap to.
+                You can change this anytime in{' '}
+                <button className="link" onClick={() => openModal('layout')}>
+                  Layout
+                </button>
+                , along with the guides photos fit and snap to.
               </p>
             </div>
           )}

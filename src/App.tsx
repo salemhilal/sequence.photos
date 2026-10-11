@@ -25,7 +25,7 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { ContextMenus } from './components/ContextMenu';
 import { Desk } from './components/Desk';
 import { FileMenu } from './components/FileMenu';
-import { GuidesEditor } from './components/GuidesEditor';
+import { LayoutEditor } from './components/LayoutEditor';
 import { PhotoImg } from './components/PhotoImg';
 import { Preview } from './components/Preview';
 import { QuickLook } from './components/QuickLook';
@@ -157,9 +157,14 @@ export default function App() {
         <span className="status" data-tauri-drag-region>
           {status}
         </span>
-        <button className="btn ghost" data-tour="guides" onClick={() => openModal('guides')} title="Guides">
+        <button
+          className="btn ghost"
+          data-tour="layout"
+          onClick={() => openModal('layout')}
+          title="Layout: page size and guides"
+        >
           <Ruler />
-          Guides
+          Layout
         </button>
         <button
           className="btn accent has-hint"
@@ -198,7 +203,7 @@ export default function App() {
       {modal === 'settings' && <SettingsDialog />}
       {modal === 'about' && <AboutDialog />}
       {modal === 'preview' && <Preview />}
-      {modal === 'guides' && <GuidesEditor />}
+      {modal === 'layout' && <LayoutEditor />}
       <QuickLook />
       <Tour />
       <ConfirmDialog />

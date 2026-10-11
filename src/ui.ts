@@ -45,7 +45,7 @@ export interface ConfirmRequest {
   choose: (index: number | null) => void;
 }
 
-export type Modal = 'settings' | 'about' | 'preview' | 'guides';
+export type Modal = 'settings' | 'about' | 'preview' | 'layout';
 
 export interface UiState {
   selection: PhotoId[];

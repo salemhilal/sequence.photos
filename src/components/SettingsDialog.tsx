@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Ruler } from 'lucide-react';
 import { platform } from '#platform';
 import { Dialog } from './Dialog';
 import { formatBytes, readStorageStatus, requestPersistence, type StorageStatus } from '../storage';
-import { projectStore, useProject } from '../store';
 import type { ThemePref } from '../theme';
-import { setTheme, closeModal, openModal, ui } from '../ui';
+import { setTheme, closeModal, ui } from '../ui';
 import { DeskColorPicker } from './DeskColorPicker';
-import { PageSizeFields } from './PageSizeFields';
 
 const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -72,45 +69,12 @@ function StorageRow() {
   );
 }
 
+/** The app's own preferences; the project's page setup is in Layout. */
 export function SettingsDialog() {
-  const { project } = useProject();
-  const s = project.settings;
-
   return (
     <Dialog title="Settings" onClose={closeModal} className="settings">
       <div className="settings-body">
         <section className="setting">
-          <h3>Layout</h3>
-          <div className="setting-controls">
-            <PageSizeFields />
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={s.keepRelative}
-                onChange={(e) => projectStore.apply((d) => void (d.settings.keepRelative = e.target.checked))}
-              />
-              Keep photos relative to guides
-            </label>
-            <p className="help">
-              {s.keepRelative
-                ? 'When the size changes, photos move and scale with the guides.'
-                : 'When the size changes, photos keep their exact position.'}
-            </p>
-          </div>
-        </section>
-
-        <section className="setting">
-          <h3>Guides</h3>
-          <div className="setting-controls">
-            <button className="btn" onClick={() => openModal('guides')}>
-              <Ruler />
-              Edit guides…
-            </button>
-            <p className="help">Border guides, center lines, and guides from the rulers.</p>
-          </div>
-        </section>
-
-        <section className="setting app-setting">
           <h3 id="appearance-label">Appearance</h3>
           <div className="setting-controls">
             <ThemePicker />
