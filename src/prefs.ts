@@ -63,6 +63,21 @@ export const sidebarWidthPref = createPref('photobook-sidebar-width', SIDEBAR_DE
   return Number.isFinite(n) && n >= SIDEBAR_MIN_WIDTH ? n : undefined;
 });
 
+/** Which of the Layout panel's sections are folded away. */
+export const collapsedPref = createPref<string[]>(
+  'photobook-layout-collapsed',
+  [],
+  (raw) => {
+    try {
+      const v: unknown = JSON.parse(raw);
+      return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : undefined;
+    } catch {
+      return undefined;
+    }
+  },
+  (ids) => JSON.stringify(ids),
+);
+
 /** Whether this browser has been shown the product tour (it starts on its own only once). */
 export const tourSeenPref = createPref(
   'photobook-tour',

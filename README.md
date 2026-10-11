@@ -67,16 +67,16 @@ Right-click the desk to tidy photos into a grid or change the desk color.
 **Print or digital.** A project is a print book (spreads of facing pages, sized in
 inches) or a digital sequence (single frames, sized in pixels, like an Instagram
 carousel; 1080 × 1440 px by default, with Instagram's sizes as presets). Choose in
-Settings → Layout. Switching breaks a book's spreads into frames, each photo going with
+**Layout** (in the toolbar). Switching breaks a book's spreads into frames, each photo going with
 the page that holds its center; going back, frame 1 becomes the first page and the rest
 pair into spreads. Guides and photos convert in proportion to the page width.
 
-**Guides** (in the toolbar) sets up the guides photos snap to, on every spread and mirrored
+**Layout** also sets up the guides photos snap to, on every spread and mirrored
 on facing pages: center lines, border guides (a distance from each edge: top, bottom,
 inside at the gutter, and outside; left and right on a frame), and straight guides you
 drag out of the rulers (hold Shift to snap to ⅛ in, or 10 px; drag one off the page to
 remove it). Click any guide to highlight
-its settings. Photos dropped on a page fit inside the border guide marked **On drop**.
+its settings. Fold away panel sections you don't need by clicking their titles. Photos dropped on a page fit inside the border guide marked **On drop**.
 
 File → Take the tour walks through the app with a few sample photos (it also runs on your first visit). Your own project is set aside while it runs and comes back when it ends.
 

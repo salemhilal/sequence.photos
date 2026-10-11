@@ -148,11 +148,11 @@ export const commands = {
     inFields: true,
     run: () => toggleModal('preview'),
   },
-  guides: {
-    title: 'Guides',
+  layout: {
+    title: { browser: 'Layout', macos: 'Layout…' },
     bindings: [],
     scope: 'app',
-    run: () => toggleModal('guides'),
+    run: () => toggleModal('layout'),
   },
   // ⌘; as in InDesign and Photoshop.
   toggleGuides: { bindings: [{ key: ';', mod: true }], scope: 'app', inFields: true, run: toggleGuides },

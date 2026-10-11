@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { Link2, Link2Off, Plus, SeparatorHorizontal, SeparatorVertical, X } from 'lucide-react';
+import { ChevronRight, Link2, Link2Off, Plus, SeparatorHorizontal, SeparatorVertical, X } from 'lucide-react';
 import { startDrag } from '../drag';
 import {
   clampBorder,
@@ -24,6 +24,8 @@ import type { BorderGuide, Edges, LayoutKind, LineGuide, PageSide, Sheet, Spread
 import { UNITS, type Units } from '../units';
 import { closeModal } from '../ui';
 import { NumberField } from './NumberField';
+import { PageSizeFields } from './PageSizeFields';
+import { collapsedPref } from '../prefs';
 import { SpreadCanvas } from './SpreadCanvas';
 
 /**
@@ -57,7 +59,7 @@ function same(a: Selection | null, b: Selection): boolean {
   return a.kind === 'center' ? b.kind === 'center' && a.axis === b.axis : b.kind !== 'center' && a.id === b.id;
 }
 
-export function GuidesEditor() {
+export function LayoutEditor() {
   const { project } = useProject();
   const s = sheetOf(project);
   const units = UNITS[s.layout];
@@ -224,10 +226,10 @@ export function GuidesEditor() {
 
   return (
     <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && closeModal()}>
-      <div className="modal editor guides-editor" data-modal>
+      <div className="modal editor guides-editor layout-editor" data-modal>
         <header className="modal-head">
           <div className="modal-title">
-            <span className="folio">Guides</span>
+            <span className="folio">Layout</span>
             <span className="muted data">
               {units.format(s.pageW)} × {units.format(s.pageH)} {units.suffix} ·{' '}
               {s.layout === 'print' ? 'every spread' : 'every frame'}
@@ -396,7 +398,54 @@ interface PanelProps {
   onRemove: (sel: Selection) => void;
 }
 
+type SectionId = 'page' | 'center' | 'borders' | 'lines';
+
+/** The section showing each kind of selection's settings. */
+const SECTION_OF: Record<Selection['kind'], SectionId> = { center: 'center', border: 'borders', line: 'lines' };
+
+interface SectionProps {
+  id: SectionId;
+  title: string;
+  /** Buttons beside the title (e.g. Add); using one opens the section. */
+  actions?: ReactNode;
+  collapsed: ReadonlySet<string>;
+  /** The section holding the selection, open even if folded. */
+  shown: SectionId | null;
+  onToggle: (id: SectionId, open: boolean) => void;
+  children: ReactNode;
+}
+
+/** A panel section whose title folds it away. */
+function PanelSection({ id, title, actions, collapsed, shown, onToggle, children }: SectionProps) {
+  const open = !collapsed.has(id) || id === shown;
+  return (
+    <section className={open ? '' : 'collapsed'}>
+      <header className="section-head">
+        <button className="section-toggle" aria-expanded={open} onClick={() => onToggle(id, !open)}>
+          <ChevronRight className="chevron" aria-hidden="true" />
+          <h3>{title}</h3>
+        </button>
+        {actions && <div onClickCapture={() => onToggle(id, true)}>{actions}</div>}
+      </header>
+      {open && children}
+    </section>
+  );
+}
+
 function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
+  const [collapsed, setCollapsed] = useState(() => new Set(collapsedPref.load()));
+  // A guide selected on the page shows its settings, even in a folded section.
+  const shown = selected ? SECTION_OF[selected.kind] : null;
+  const toggle = (id: SectionId, open: boolean) => {
+    // Folding the selection's section lets the selection go.
+    if (!open && id === shown) onSelect(null);
+    const next = new Set(collapsed);
+    if (open) next.delete(id);
+    else next.add(id);
+    setCollapsed(next);
+    collapsedPref.save([...next]);
+  };
+  const fold = { collapsed, shown, onToggle: toggle };
   const drop = dropGuide(s);
   const units = UNITS[s.layout];
   const num = { suffix: '', step: units.fieldStep, format: units.format };
@@ -435,17 +484,35 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
 
   return (
     <aside className="inspector guides-panel">
-      <section>
-        <h3>Center lines</h3>
+      <PanelSection id="page" title={s.layout === 'print' ? 'Page' : 'Frame'} {...fold}>
+        <PageSizeFields />
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={s.keepRelative}
+            onChange={(e) => projectStore.apply((d) => void (d.settings.keepRelative = e.target.checked))}
+          />
+          Keep photos relative to guides
+        </label>
+        <p className="help">
+          {s.keepRelative
+            ? 'When the size changes, photos move and scale with the guides.'
+            : 'When the size changes, photos keep their exact position.'}
+        </p>
+      </PanelSection>
+
+      <PanelSection id="center" title="Center lines" {...fold}>
         <div className="inline">
           {center('vertical', 'Vertical')}
           {center('horizontal', 'Horizontal')}
         </div>
-      </section>
+      </PanelSection>
 
-      <section>
-        <header className="section-head">
-          <h3>Border guides</h3>
+      <PanelSection
+        id="borders"
+        title="Border guides"
+        {...fold}
+        actions={
           <button
             className="btn ghost icon small"
             aria-label="Add border guide"
@@ -454,7 +521,8 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
           >
             <Plus />
           </button>
-        </header>
+        }
+      >
         {s.borders.length === 0 && <p className="help">None. Dropped photos fill the page.</p>}
         {s.borders.map((g) => (
           <BorderRow
@@ -467,28 +535,33 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
             onRemove={() => onRemove({ kind: 'border', id: g.id })}
           />
         ))}
-      </section>
+      </PanelSection>
 
-      <section>
-        <header className="section-head">
-          <h3>Guides</h3>
-          <button
-            className="btn ghost icon small"
-            aria-label="Add horizontal guide"
-            title="Add horizontal guide"
-            onClick={() => addLine('horizontal')}
-          >
-            <SeparatorHorizontal />
-          </button>
-          <button
-            className="btn ghost icon small"
-            aria-label="Add vertical guide"
-            title="Add vertical guide"
-            onClick={() => addLine('vertical')}
-          >
-            <SeparatorVertical />
-          </button>
-        </header>
+      <PanelSection
+        id="lines"
+        title="Guides"
+        {...fold}
+        actions={
+          <>
+            <button
+              className="btn ghost icon small"
+              aria-label="Add horizontal guide"
+              title="Add horizontal guide"
+              onClick={() => addLine('horizontal')}
+            >
+              <SeparatorHorizontal />
+            </button>
+            <button
+              className="btn ghost icon small"
+              aria-label="Add vertical guide"
+              title="Add vertical guide"
+              onClick={() => addLine('vertical')}
+            >
+              <SeparatorVertical />
+            </button>
+          </>
+        }
+      >
         {s.lines.length === 0 && <p className="help">Drag from a ruler to add one.</p>}
         {s.lines.map((l) => (
           <div
@@ -521,7 +594,7 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
             </button>
           </div>
         ))}
-      </section>
+      </PanelSection>
 
       <p className="help guides-note">
         {s.layout === 'print'
