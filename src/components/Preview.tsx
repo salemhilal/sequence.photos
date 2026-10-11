@@ -2,11 +2,12 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { folioLabel } from '../actions';
 import { useWindowEvent } from '../hooks';
+import { saveFrames } from '../frames';
 import { savePdf } from '../pdf';
 import { useProject } from '../store';
 import { closeModal, ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
-import { allSpreads } from '../spreads';
+import { allSpreads, sheetOf } from '../spreads';
 
 export function Preview() {
   const { project } = useProject();
@@ -21,7 +22,7 @@ export function Preview() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 900, h: 600 });
   const busy = ui.use((s) => s.busy);
-  const { settings } = project;
+  const sheet = sheetOf(project);
   const spreads = allSpreads(project);
   const spread = spreads[Math.min(index, spreads.length - 1)];
 
@@ -55,8 +56,10 @@ export function Preview() {
   );
 
   if (!spread) return null;
-  const scale = Math.min((stage.w - 40) / (2 * settings.pageW), (stage.h - 40) / settings.pageH);
-  const label = folioLabel(index, spreads.length);
+  // A book shows both pages' width (single pages on their side); a frame, its own.
+  const across = sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW;
+  const scale = Math.min((stage.w - 40) / across, (stage.h - 40) / sheet.pageH);
+  const label = folioLabel(index, spreads.length, sheet.layout);
 
   return (
     <div className="preview" data-modal>
@@ -67,8 +70,12 @@ export function Preview() {
         </span>
         <span className="spacer" />
         <span className="hint">← → to turn pages · Esc to exit</span>
-        <button className="btn" onClick={() => void savePdf()} disabled={busy !== null}>
-          {busy ?? 'Download PDF'}
+        <button
+          className="btn"
+          onClick={() => void (sheet.layout === 'print' ? savePdf() : saveFrames())}
+          disabled={busy !== null}
+        >
+          {busy ?? (sheet.layout === 'print' ? 'Download PDF' : 'Save images')}
         </button>
         <button className="btn" onClick={close}>
           Exit preview
@@ -79,7 +86,7 @@ export function Preview() {
           <ChevronLeft />
         </button>
         <div key={spread.id} className={`preview-spread turn-${dir}`}>
-          <SpreadCanvas spread={spread} settings={settings} scale={scale} clip className="book" />
+          <SpreadCanvas spread={spread} sheet={sheet} scale={scale} clip className="book" />
         </div>
         <button
           className="turn next"

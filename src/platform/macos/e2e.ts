@@ -3,6 +3,8 @@ import { getImage } from '../../db';
 import { projectLoaded } from '../../persistence';
 import { tourSeenPref } from '../../prefs';
 import { newProject } from '../../project';
+import { setLayoutSize } from '../../pageSize';
+import { sheetOf } from '../../spreads';
 import { projectStore } from '../../store';
 import { endTour } from '../../tour';
 import type { Project } from '../../types';
@@ -35,6 +37,15 @@ async function savedProject(path: string): Promise<Project> {
   return (JSON.parse(manifest) as { doc: Project }).doc;
 }
 
+/** An edit to tell files apart by: the page width. */
+function setWidth(w: number): void {
+  projectStore.apply((d) => setLayoutSize(d, { w, h: sheetOf(d).pageH }));
+}
+
+function pageWidth(p: Project): number {
+  return sheetOf(p).pageW;
+}
+
 async function scenarios(dir: string): Promise<void> {
   const a = `${dir}/Fixture A.photo-sequence`;
   const b = `${dir}/Fixture B.photo-sequence`;
@@ -62,21 +73,21 @@ async function scenarios(dir: string): Promise<void> {
   localStorage.setItem('photobook-theme', 'dark');
 
   // Save.
-  projectStore.apply((d) => void (d.settings.pageW = 11));
+  setWidth(11);
   check('marks unsaved changes', title()?.edited === true);
   check('saves over the file', (await save()) && !title()?.edited, ui.get().notice ?? '');
-  check('the file has the change', (await savedProject(a)).settings.pageW === 11);
+  check('the file has the change', pageWidth(await savedProject(a)) === 11);
 
   // Save As.
-  projectStore.apply((d) => void (d.settings.pageW = 12));
+  setWidth(12);
   check('saves as a new file', await saveAs(copy), ui.get().notice ?? '');
   check(
     'names the window after the new file',
     title()?.name === 'Saved As' && !title()?.edited,
     JSON.stringify(title()),
   );
-  check('the new file has the change', (await savedProject(copy)).settings.pageW === 12);
-  check('the old file keeps its own', (await savedProject(a)).settings.pageW === 11);
+  check('the new file has the change', pageWidth(await savedProject(copy)) === 12);
+  check('the old file keeps its own', pageWidth(await savedProject(a)) === 11);
   const copied = await savedProject(copy);
   check('the new file keeps every photo', Object.keys(copied.photos).length === 3);
 
@@ -86,17 +97,17 @@ async function scenarios(dir: string): Promise<void> {
   check('starts fresh history for each file', !projectStore.getSnapshot().canUndo);
 
   // Opening another, with unsaved changes: it asks first.
-  projectStore.apply((d) => void (d.settings.pageW = 9));
+  setWidth(9);
   const opening = openPath(a);
   await pause();
   const asked = ui.get().confirm;
   check('asks before replacing unsaved changes', !!asked);
   asked?.choose(asked.actions.findIndex((a) => a.label === 'Cancel'));
   await opening;
-  check('cancelling keeps the project', title()?.name === 'Fixture B' && projectStore.project.settings.pageW === 9);
+  check('cancelling keeps the project', title()?.name === 'Fixture B' && pageWidth(projectStore.project) === 9);
 
   // A file opened from Finder while photos are importing waits its turn.
-  projectStore.apply((d) => void (d.settings.pageW = 10));
+  setWidth(10);
   await save();
   ui.set({ importing: { done: 0, total: 1 } });
   const waiting = openPath(a);
@@ -113,13 +124,13 @@ async function scenarios(dir: string): Promise<void> {
 
   // Leave the state the relaunch expects: Fixture B, with an unsaved change.
   await openPath(b);
-  projectStore.apply((d) => void (d.settings.pageW = 9));
+  setWidth(9);
 }
 
 /** The second run, after quitting: the last project should come back as it was left. */
 async function afterRelaunch(): Promise<void> {
   await pause(500);
-  check('reopens the last project', photoCount() === 1 && projectStore.project.settings.pageW === 9);
+  check('reopens the last project', photoCount() === 1 && pageWidth(projectStore.project) === 9);
   check('runs the page’s startup script (the saved theme)', document.documentElement.dataset.theme === 'dark');
   check(
     'remembers it has unsaved changes',
@@ -147,7 +158,7 @@ async function sandboxOpen(): Promise<void> {
   );
   // Without its file, saving would ask where (a dialog nobody's there to answer).
   if (title()?.name !== 'Sandbox') return;
-  projectStore.apply((d) => void (d.settings.pageW = 13));
+  setWidth(13);
   check('saves over it, sandboxed', await save(), ui.get().notice ?? '');
 }
 
@@ -156,7 +167,7 @@ async function sandboxRelaunch(): Promise<void> {
   await until(() => title()?.name === 'Sandbox');
   check('remembers its file, sandboxed', title()?.name === 'Sandbox', JSON.stringify(title()));
   if (title()?.name !== 'Sandbox') return;
-  projectStore.apply((d) => void (d.settings.pageW = 14));
+  setWidth(14);
   check('still saves over it after relaunching (bookmark)', await save(), ui.get().notice ?? '');
 }
 

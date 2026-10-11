@@ -1,6 +1,7 @@
 import { newGuideId } from './ids';
 import { emptyProject } from './store';
 import { CURRENT_SCHEMA, type Project } from './types';
+import { DEFAULT_FRAME } from './units';
 import { InvalidProjectError, validateProject } from './validate';
 
 /**
@@ -19,10 +20,12 @@ const migrations: Record<number, (project: Raw) => Raw> = {
   /** 0 → 1: projects from before versioning. Fill in any missing settings. */
   0: (project) => {
     const base = emptyProject();
-    // Version 1's defaults: borders were numbers, and there were no line guides.
-    const v1: Raw = { ...base.settings, borders: [0.5, 1.25] };
+    // Version 1's defaults: the page size was in the settings, borders were numbers, and
+    // there were no line guides.
+    const v1: Raw = { ...base.settings, pageW: 10, pageH: 8, borders: [0.5, 1.25] };
     delete v1.lines;
     delete v1.dropBorder;
+    delete v1.sizes;
     return { ...project, settings: { ...v1, ...(project.settings as object) } };
   },
   /**
@@ -46,6 +49,21 @@ const migrations: Record<number, (project: Raw) => Raw> = {
       spreads: list.map((s) => ({ ...s, kind: 'middle' })),
       lastSpread: last && { ...last, kind: 'last' },
       settings: { ...settings, borders, lines: [], dropBorder: largest?.id ?? null },
+    };
+  },
+  /**
+   * 2 → 3: a project is a print book or a digital sequence. Every project so far is a
+   * book: its spreads, and its page size (from the settings), become a print layout. The
+   * settings keep a size for each kind, digital's starting at the default.
+   */
+  2: (project) => {
+    const { firstSpread, spreads, lastSpread, ...rest } = project;
+    const { pageW, pageH, ...settings } = project.settings as Raw;
+    const page = { w: pageW, h: pageH };
+    return {
+      ...rest,
+      layout: { kind: 'print', page, firstSpread, spreads, lastSpread },
+      settings: { ...settings, sizes: { print: { ...page }, digital: { ...DEFAULT_FRAME } } },
     };
   },
 };

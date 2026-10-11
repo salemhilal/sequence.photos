@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { projectStore, emptyProject } from './store';
+import type { Draft } from 'immer';
+import { setLayoutSize } from './pageSize';
+import { sheetOf } from './spreads';
+import type { Project } from './types';
 
-const pageW = () => projectStore.project.settings.pageW;
+const pageW = () => sheetOf(projectStore.project).pageW;
 const setPageW = (n: number, coalesce?: string) =>
-  projectStore.apply((d) => void (d.settings.pageW = n), coalesce ? { coalesce } : {});
+  projectStore.apply((d) => setLayoutSize(d, { w: n, h: 8 }), coalesce ? { coalesce } : {});
+const widen = (d: Draft<Project>, n: number) => setLayoutSize(d, { w: sheetOf(d).pageW + n, h: 8 });
 
 beforeEach(() => projectStore.reset(emptyProject()));
 
@@ -42,8 +47,8 @@ describe('undo and redo', () => {
 describe('gestures', () => {
   it('records a whole gesture as a single step, each preview starting from the beginning', () => {
     projectStore.begin();
-    projectStore.preview((d) => void (d.settings.pageW += 1));
-    projectStore.preview((d) => void (d.settings.pageW += 2));
+    projectStore.preview((d) => widen(d, 1));
+    projectStore.preview((d) => widen(d, 2));
     projectStore.end();
     expect(pageW()).toBe(12);
     projectStore.undo();
@@ -52,7 +57,7 @@ describe('gestures', () => {
 
   it('restores the starting project on cancel', () => {
     projectStore.begin();
-    projectStore.preview((d) => void (d.settings.pageW = 20));
+    projectStore.preview((d) => setLayoutSize(d, { w: 20, h: 8 }));
     projectStore.cancel();
     expect(pageW()).toBe(10);
     expect(projectStore.getSnapshot().canUndo).toBe(false);

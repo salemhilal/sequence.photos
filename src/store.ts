@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { produce, type Draft } from 'immer';
 import { newGuideId, newSpreadId } from './ids';
 import { CURRENT_SCHEMA, type Project } from './types';
+import { DEFAULT_FRAME, DEFAULT_PAGE } from './units';
 
 const HISTORY_LIMIT = 200;
 const COALESCE_MS = 1000;
@@ -179,15 +180,17 @@ export function emptyProject(): Project {
     schemaVersion: CURRENT_SCHEMA,
     photos: {},
     pile: [],
-    firstSpread: { kind: 'first', id: newSpreadId(), items: [] },
-    spreads: [
-      { kind: 'middle', id: newSpreadId(), items: [] },
-      { kind: 'middle', id: newSpreadId(), items: [] },
-    ],
-    lastSpread: { kind: 'last', id: newSpreadId(), items: [] },
+    layout: {
+      kind: 'print',
+      page: { ...DEFAULT_PAGE },
+      firstSpread: { kind: 'first', id: newSpreadId(), items: [] },
+      spreads: [
+        { kind: 'middle', id: newSpreadId(), items: [] },
+        { kind: 'middle', id: newSpreadId(), items: [] },
+      ],
+      lastSpread: { kind: 'last', id: newSpreadId(), items: [] },
+    },
     settings: {
-      pageW: 10,
-      pageH: 8,
       centerV: true,
       centerH: true,
       keepRelative: true,
@@ -197,6 +200,7 @@ export function emptyProject(): Project {
       ],
       lines: [],
       dropBorder: margin,
+      sizes: { print: { ...DEFAULT_PAGE }, digital: { ...DEFAULT_FRAME } },
     },
     nextZ: 1,
   };

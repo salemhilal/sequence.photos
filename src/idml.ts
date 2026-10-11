@@ -1,7 +1,7 @@
 import { dropGuide, edgesOf, linePosition, lineOnPage, pageRect, pageSides } from './geometry';
-import type { Project, PageSide, Settings, Spread } from './types';
+import type { Project, PageSide, Sheet, Spread } from './types';
 import type { ZipInput } from './zip';
-import { allSpreads } from './spreads';
+import { allSpreads, sheetOf } from './spreads';
 
 /**
  * Build an IDML file (InDesign Markup Language: a ZIP of XML that InDesign opens
@@ -36,7 +36,7 @@ export function buildIdml(project: Project, links: Map<string, LinkedImage>): Zi
   let nextId = 0;
   // InDesign names its own objects u1, u2, …; a distinct prefix keeps ours from matching them.
   const id = () => `pbs${++nextId}`;
-  const { settings } = project;
+  const sheet = sheetOf(project);
   const spreadFiles = allSpreads(project).map((spread, i) => {
     const spreadId = id();
     return {
@@ -63,7 +63,7 @@ ${spreadFiles.map((f) => `<idPkg:Spread src="${f.name}"/>`).join('\n')}
     { name: 'mimetype', data: new Blob(['application/vnd.adobe.indesign-idml-package']) },
     { name: 'designmap.xml', data: xmlBlob(designmap) },
     { name: 'META-INF/container.xml', data: xmlBlob(container) },
-    { name: 'Resources/Preferences.xml', data: xmlBlob(preferencesXml(settings)) },
+    { name: 'Resources/Preferences.xml', data: xmlBlob(preferencesXml(sheet)) },
     ...spreadFiles.map((f) => ({ name: f.name, data: xmlBlob(f.xml) })),
   ];
 }
@@ -72,7 +72,7 @@ ${spreadFiles.map((f) => `<idPkg:Spread src="${f.name}"/>`).join('\n')}
  * Page setup. PagesPerDocument is 1 whatever the book's length: InDesign starts from
  * a blank document with that many pages, and only its first spread is replaced by ours.
  */
-function preferencesXml(s: Settings): string {
+function preferencesXml(s: Sheet): string {
   const w = s.pageW * PT;
   const h = s.pageH * PT;
   return `${HEAD}
@@ -87,7 +87,7 @@ ${marginXml(s)}
  * Margins from the border guide dropped photos fit inside. For the document, with facing
  * pages, Left and Right are inside and outside; on a page, they're its own left and right.
  */
-function marginXml(s: Settings, side?: PageSide): string {
+function marginXml(s: Sheet, side?: PageSide): string {
   const drop = dropGuide(s);
   const g = drop ? edgesOf(drop) : { top: 0, bottom: 0, inside: 0, outside: 0 };
   const [left, right] = side === 'left' ? [g.outside, g.inside] : [g.inside, g.outside];
@@ -103,7 +103,7 @@ function spreadXml(
   id: () => string,
   links: Map<string, LinkedImage>,
 ): string {
-  const s = project.settings;
+  const s = sheetOf(project);
   const sides = pageSides(spread.kind);
   const first = allSpreads(project)
     .slice(0, index)
@@ -156,7 +156,7 @@ ${frames.join('\n')}
 }
 
 /** Ruler guides: the center lines, line guides, and every border guide but the margins' one. */
-function guidesXml(s: Settings, side: PageSide, pageIndex: number, id: () => string): string {
+function guidesXml(s: Sheet, side: PageSide, pageIndex: number, id: () => string): string {
   const w = s.pageW * PT;
   const h = s.pageH * PT;
   const margin = dropGuide(s);

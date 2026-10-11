@@ -4,9 +4,9 @@ import { bump, dropPhotos, folioLabel, putInPile, putOnPage, raise } from '../ac
 import { clearGhost, startDrag, trackGhost } from '../drag';
 import {
   borderBox,
+  edgeLabel,
   edgesOf,
   fitCentered,
-  fmt,
   pageRect,
   resizeRect,
   sideAt,
@@ -18,9 +18,10 @@ import {
 } from '../geometry';
 import type { Draft } from 'immer';
 import type { PhotoId, SpreadId } from '../ids';
-import { allSpreads, findSpread } from '../spreads';
+import { allSpreads, findSpread, sheetOf } from '../spreads';
+import { UNITS, type Units } from '../units';
 import { projectStore, useProject } from '../store';
-import type { BorderGuide, Project, Placement } from '../types';
+import type { BorderGuide, LayoutKind, PageSide, Project, Placement } from '../types';
 import { isTyping } from '../input';
 import { openPhotoMenu, toggleGuides, ui } from '../ui';
 import { shortcutLabel } from '../commands';
@@ -29,18 +30,22 @@ import { NumberField } from './NumberField';
 import { PhotoImg } from './PhotoImg';
 import { SpreadCanvas } from './SpreadCanvas';
 
-const PAD = 0.75;
+/** Room around the spread, as a share of its width (0.75 in on a 10 in book page). */
+const PAD_SHARE = 0.075;
 const SNAP_PX = 8;
 const CORNERS: Corner[] = ['nw', 'ne', 'sw', 'se'];
-const NUDGE = 1 / 16;
-const NUDGE_BIG = 1 / 2;
 
 export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const { project } = useProject();
   const book = allSpreads(project);
   const index = book.findIndex((s) => s.id === spreadId);
   const spread = book[index];
-  const { settings } = project;
+  const sheet = sheetOf(project);
+  const units = UNITS[sheet.layout];
+  const PAD = sheet.pageW * PAD_SHARE;
+  // A book's two pages (single ones on their side), or a frame.
+  const extentLeft = sheet.layout === 'print' ? -sheet.pageW : 0;
+  const across = sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW;
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 800, h: 500 });
   const [selected, setSelected] = useState<PhotoId | null>(null);
@@ -63,7 +68,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
     return () => ro.disconnect();
   }, []);
 
-  const scale = Math.max(4, Math.min(stage.w / (2 * settings.pageW + 2 * PAD), stage.h / (settings.pageH + 2 * PAD)));
+  const scale = Math.min(stage.w / (across + 2 * PAD), stage.h / (sheet.pageH + 2 * PAD));
 
   const selectedItem = spread?.items.find((i) => i.photoId === selected) ?? null;
 
@@ -109,7 +114,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
         if (e.key === 'ArrowRight') go(1);
         return;
       }
-      const n = e.shiftKey ? NUDGE_BIG : NUDGE;
+      const n = e.shiftKey ? units.nudgeBig : units.nudge;
       const dx = e.key === 'ArrowLeft' ? -n : e.key === 'ArrowRight' ? n : 0;
       const dy = e.key === 'ArrowUp' ? -n : e.key === 'ArrowDown' ? n : 0;
       updateItem(item.photoId, { x: item.x + dx, y: item.y + dy }, `nudge:${item.photoId}`);
@@ -120,7 +125,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   // Hidden guides aren't snapped to either: only the page edges are.
   const lines = snapLines(
     spread,
-    guidesHidden ? { ...settings, centerV: false, centerH: false, borders: [], lines: [] } : settings,
+    guidesHidden ? { ...sheet, centerV: false, centerH: false, borders: [], lines: [] } : sheet,
   );
   const threshold = SNAP_PX / scale;
 
@@ -231,7 +236,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
           <div className="modal-title">
             <span className="folio">{label}</span>
             <span className="muted data">
-              {fmt(settings.pageW)} × {fmt(settings.pageH)} in
+              {units.format(sheet.pageW)} × {units.format(sheet.pageH)} {units.suffix}
             </span>
           </div>
           <button
@@ -262,7 +267,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
             <div className="stage-center">
               <SpreadCanvas
                 spread={spread}
-                settings={settings}
+                sheet={sheet}
                 scale={scale}
                 pad={PAD}
                 guides={!guidesHidden}
@@ -274,7 +279,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
                     <div
                       className="guide-glow"
                       style={{
-                        left: (PAD + settings.pageW + glow.x) * scale,
+                        left: (PAD - extentLeft + glow.x) * scale,
                         top: (PAD + glow.y) * scale,
                         width: glow.w * scale,
                         height: glow.h * scale,
@@ -301,16 +306,18 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
 }
 
 /** A Fit button's name for a border guide: its distance, or the range of its distances. */
-function guideLabel(g: BorderGuide): string {
-  if (g.kind === 'even') return `Fit ${fmt(g.inset)} in guide`;
+function guideLabel(g: BorderGuide, u: Units): string {
+  if (g.kind === 'even') return `Fit ${u.format(g.inset)} ${u.suffix} guide`;
   const d = Object.values(edgesOf(g));
-  return `Fit ${fmt(Math.min(...d))}–${fmt(Math.max(...d))} in guide`;
+  return `Fit ${u.format(Math.min(...d))}–${u.format(Math.max(...d))} ${u.suffix} guide`;
 }
 
-/** A border guide's distances, for a tooltip: top, outside, bottom, inside. */
-function guideSummary(g: BorderGuide): string {
+/** A border guide's distances, for a tooltip: top, outside (left, in a frame), bottom, inside. */
+function guideSummary(g: BorderGuide, u: Units, layout: LayoutKind): string {
   const e = edgesOf(g);
-  return `Top ${fmt(e.top)} · Outside ${fmt(e.outside)} · Bottom ${fmt(e.bottom)} · Inside ${fmt(e.inside)} in`;
+  const [outside, inside] = [edgeLabel('outside', layout), edgeLabel('inside', layout)];
+  const f = u.format;
+  return `Top ${f(e.top)} · ${outside} ${f(e.outside)} · Bottom ${f(e.bottom)} · ${inside} ${f(e.inside)} ${u.suffix}`;
 }
 
 function findItem(d: Project | Draft<Project>, spreadId: SpreadId, photoId: PhotoId): Placement | undefined {
@@ -328,7 +335,8 @@ interface InspectorProps {
 
 function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorProps) {
   const [lock, setLock] = useState(true);
-  const { settings } = project;
+  const sheet = sheetOf(project);
+  const units = UNITS[sheet.layout];
   if (!item) {
     return (
       <aside className="inspector">
@@ -337,36 +345,49 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
       </aside>
     );
   }
-  const side = sideAt(item.x + item.w / 2);
-  const page = pageRect(side, settings);
+  const side = sideAt(sheet, item.x + item.w / 2);
+  const page = pageRect(side, sheet);
   const photo = project.photos[item.photoId];
   const aspect = item.w / item.h;
   const key = (f: string) => `inspect:${item.photoId}:${f}`;
   const fit = (box: Rect) => onChange(fitCentered({ pxW: item.w, pxH: item.h }, box, page));
   // Largest box first, as before per-edge guides: the outermost guide at the top.
-  const boxes = settings.borders
-    .map((g) => ({ g, box: borderBox(side, settings, g) }))
+  const boxes = sheet.borders
+    .map((g) => ({ g, box: borderBox(side, sheet, g) }))
     .sort((a, b) => b.box.w * b.box.h - a.box.w * a.box.h);
-  const ppi = photo ? Math.round(photo.pxW / item.w) : null;
+  // Print: the photo's pixels per inch. Digital: how much it's enlarged, if it is.
+  const where = side === 'whole' ? 'frame' : 'page';
+  const num = { suffix: units.suffix, step: units.fieldStep, format: units.format };
+  const ppi = photo && sheet.layout === 'print' ? Math.round(photo.pxW / item.w) : null;
+  const enlarged = photo && sheet.layout === 'digital' ? item.w / photo.pxW : null;
 
   return (
     <aside className="inspector">
       <div className="inspector-name" title={photo?.name}>
         {photo?.name}
       </div>
-      <div className="muted small">{side === 'left' ? 'Left' : 'Right'} page · measured from its top-left corner</div>
+      <div className="muted small">
+        {side === 'whole' ? 'Frame' : side === 'left' ? 'Left page' : 'Right page'} · measured from its top-left corner
+      </div>
       <div className="grid2">
-        <NumberField label="X" value={item.x - page.x} onCommit={(n) => onChange({ x: page.x + n }, key('x'))} />
-        <NumberField label="Y" value={item.y} onCommit={(n) => onChange({ y: n }, key('y'))} />
         <NumberField
+          {...num}
+          label="X"
+          value={item.x - page.x}
+          onCommit={(n) => onChange({ x: page.x + n }, key('x'))}
+        />
+        <NumberField {...num} label="Y" value={item.y} onCommit={(n) => onChange({ y: n }, key('y'))} />
+        <NumberField
+          {...num}
           label="W"
-          min={0.1}
+          min={units.minSize / 10}
           value={item.w}
           onCommit={(n) => onChange(lock ? { w: n, h: n / aspect } : { w: n }, key('w'))}
         />
         <NumberField
+          {...num}
           label="H"
-          min={0.1}
+          min={units.minSize / 10}
           value={item.h}
           onCommit={(n) => onChange(lock ? { h: n, w: n * aspect } : { h: n }, key('h'))}
         />
@@ -380,12 +401,17 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
           {ppi < 200 ? ' · may print soft' : ''}
         </div>
       )}
+      {enlarged !== null && enlarged > 1 && (
+        <div className="small warn">
+          <span className="data">Enlarged {Math.round(enlarged * 100)}%</span> · may look soft
+        </div>
+      )}
       <div className="inspector-actions">
         <button
           className="btn"
           onClick={() => onChange({ x: page.x + (page.w - item.w) / 2, y: (page.h - item.h) / 2 })}
         >
-          Center on page
+          Center on {where}
         </button>
         <button
           className="btn"
@@ -393,7 +419,7 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
           onPointerEnter={() => onHoverBox(page)}
           onPointerLeave={() => onHoverBox(null)}
         >
-          Fit page
+          Fit {where}
         </button>
         {boxes.map(({ g, box }) => (
           <button
@@ -402,9 +428,9 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
             onClick={() => fit(box)}
             onPointerEnter={() => onHoverBox(box)}
             onPointerLeave={() => onHoverBox(null)}
-            title={g.kind === 'edges' ? guideSummary(g) : undefined}
+            title={g.kind === 'edges' ? guideSummary(g, units, sheet.layout) : undefined}
           >
-            {guideLabel(g)}
+            {guideLabel(g, units)}
           </button>
         ))}
         <button className="btn" onClick={onToPile}>
@@ -433,8 +459,9 @@ function PileStrip({ spreadId }: { spreadId: SpreadId }) {
           // A click places the photo on the first empty page, or the right page.
           const spread = findSpread(projectStore.project, spreadId);
           if (!spread) return;
-          const side = spread.kind === 'last' ? 'left' : spread.kind === 'first' ? 'right' : 'left';
-          const taken = spread.items.some((i) => sideAt(i.x + i.w / 2) === side);
+          const sheet = sheetOf(projectStore.project);
+          const side: PageSide = spread.kind === 'frame' ? 'whole' : spread.kind === 'first' ? 'right' : 'left';
+          const taken = spread.items.some((i) => sideAt(sheet, i.x + i.w / 2) === side);
           const pick = spread.kind === 'middle' && taken ? 'right' : side;
           projectStore.apply((d) => putOnPage(d, [p.photoId], spreadId, pick));
           return;

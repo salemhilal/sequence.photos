@@ -17,6 +17,7 @@ import {
   tidyPile,
 } from './actions';
 import { toPhotoId } from './ids';
+import { convertLayout } from './convertLayout';
 import { allSpreads } from './spreads';
 import { projectStore, emptyProject } from './store';
 import type { PhotoMeta } from './types';
@@ -134,8 +135,8 @@ describe('spreads', () => {
   });
 
   it('never deletes the first or last page', () => {
-    deleteSpread(project().firstSpread.id);
-    deleteSpread(project().lastSpread.id);
+    deleteSpread(allSpreads(project())[0]!.id);
+    deleteSpread(allSpreads(project()).at(-1)!.id);
     expect(book()).toHaveLength(4);
   });
 
@@ -277,3 +278,40 @@ function sampleProjectForRaise() {
   project.nextZ = 3;
   return project;
 }
+
+describe('frames', () => {
+  beforeEach(() => {
+    projectStore.reset(convertLayout(emptyProject(), 'digital'));
+    addPhotosToPile(photos);
+  });
+
+  it('adds a frame anywhere, even first or last', () => {
+    const first = book()[0]!.id;
+    insertSpread(0);
+    expect(book()[1]!.id).toBe(first);
+    insertSpread(99);
+    expect(book()).toHaveLength(8);
+    expect(book().every((s) => s.kind === 'frame')).toBe(true);
+  });
+
+  it('moves any frame, and deletes any but the last one left', () => {
+    const ids = book().map((s) => s.id);
+    moveSpread(ids[0]!, 5);
+    expect(book().at(-1)!.id).toBe(ids[0]);
+    for (const id of ids) deleteSpread(id);
+    expect(book()).toHaveLength(1);
+  });
+
+  it('puts photos on the whole frame, fit inside the guide', () => {
+    const id = book()[2]!.id;
+    projectStore.apply((d) => putOnPage(d, [SQ], id, 'whole'));
+    const [p] = book()[2]!.items;
+    // 1080 px wide, inside the 54 px guide.
+    expect(p).toMatchObject({ x: 54, w: 972, h: 972 });
+  });
+
+  it('numbers frames one by one', () => {
+    expect(spreadLabel(4, 6, 'digital')).toBe('5');
+    expect(folioLabel(4, 6, 'digital')).toBe('05');
+  });
+});

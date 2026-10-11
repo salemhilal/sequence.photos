@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toPhotoId } from './ids';
+import { allSpreads } from './spreads';
 
 const A = toPhotoId('a');
 const B = toPhotoId('b');
@@ -41,9 +42,9 @@ describe('duplicatePhoto', () => {
   });
 
   it('keeps the copy on the same spread when the original is on a page', async () => {
-    projectStore.apply((d) => putOnPage(d, [A], d.spreads[0]!.id, 'right'));
+    projectStore.apply((d) => putOnPage(d, [A], allSpreads(d)[1]!.id, 'right'));
     const [id] = await duplicatePhotos([A]);
-    const items = projectStore.project.spreads[0]!.items.map((i) => i.photoId);
+    const items = allSpreads(projectStore.project)[1]!.items.map((i) => i.photoId);
     expect(items).toEqual([A, id]);
     expect(projectStore.project.pile).toHaveLength(0);
   });

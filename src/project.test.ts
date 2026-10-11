@@ -29,6 +29,7 @@ function pick(label: string): void {
 const A = toPhotoId('a');
 const B = toPhotoId('b');
 import { createZip } from './zip';
+import { allSpreads } from './spreads';
 
 function sampleProject(): Project {
   const project = emptyProject();
@@ -68,7 +69,7 @@ describe('project files', () => {
   it('exports and re-imports a project with its layout and images', async () => {
     const project = sampleProject();
     projectStore.reset(project);
-    projectStore.apply((d) => putOnPage(d, [B], d.spreads[0]!.id, 'right'));
+    projectStore.apply((d) => putOnPage(d, [B], allSpreads(d)[1]!.id, 'right'));
     const before = projectStore.project;
     await putImage('a', { full: new Blob(['full-a'], { type: 'image/jpeg' }), thumb: new Blob(['thumb-a']) });
     await putImage('b', { full: new Blob(['full-b'], { type: 'image/jpeg' }), thumb: new Blob(['thumb-b']) });

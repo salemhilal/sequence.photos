@@ -3,17 +3,21 @@ import { GripVertical, Plus, X } from 'lucide-react';
 import { deleteSpread, dropPhotos, folioLabel, insertSpread, moveSpread } from '../actions';
 import { clearGhost, sameTarget, startDrag, trackGhost } from '../drag';
 import { projectStore, useProject } from '../store';
-import type { Placement, Settings, Spread } from '../types';
+import type { LayoutKind, Placement, Sheet, Spread } from '../types';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH } from '../prefs';
 import { openPhotoMenu, setSidebarWidth, ui } from '../ui';
 import { PhotoImg } from './PhotoImg';
 import { SpreadCanvas } from './SpreadCanvas';
-import { allSpreads } from '../spreads';
+import { allSpreads, sheetOf } from '../spreads';
 
 const GHOST_MAX = 140;
-/** Narrowest a spread can be before the list falls back to one column. */
-const GRID_MIN_CELL = 280;
+/**
+ * Narrowest a spread (or a frame, half as wide: a book's page) can be before the list
+ * falls back to fewer columns, and the narrowest its picture gets.
+ */
+const GRID_MIN_CELL: Record<LayoutKind, number> = { print: 280, digital: 80 };
+const MIN_THUMB: Record<LayoutKind, number> = { print: 120, digital: 60 };
 /** Space between grid columns; the vertical insert gaps live here. */
 const GRID_GAP_X = 20;
 /** Horizontal padding inside each spread row. */
@@ -22,23 +26,25 @@ const ROW_PAD_X = 8;
 const MIN_DESK_WIDTH = 160;
 
 /** One column until two spreads fit side by side, then as many columns as fit. */
-function listLayout(contentWidth: number): { cols: number; thumbW: number } {
-  const cols = Math.max(1, Math.floor((contentWidth + GRID_GAP_X) / (GRID_MIN_CELL + GRID_GAP_X)));
+function listLayout(contentWidth: number, layout: LayoutKind): { cols: number; thumbW: number } {
+  const min = GRID_MIN_CELL[layout];
+  const cols = Math.max(1, Math.floor((contentWidth + GRID_GAP_X) / (min + GRID_GAP_X)));
   const cellW = (contentWidth - GRID_GAP_X * (cols - 1)) / cols;
-  return { cols, thumbW: Math.max(120, cellW - ROW_PAD_X) };
+  return { cols, thumbW: Math.max(MIN_THUMB[layout], cellW - ROW_PAD_X) };
 }
 
 export function Sidebar() {
   const { project } = useProject();
   const listRef = useRef<HTMLDivElement>(null);
   const [reorder, setReorder] = useState<{ id: string; dropIndex: number } | null>(null);
-  const { settings } = project;
-  // The whole book, in order; indexes below count through it.
+  const sheet = sheetOf(project);
+  const print = sheet.layout === 'print';
+  // The whole book (or sequence), in order; indexes below count through it.
   const spreads = allSpreads(project);
   const preferredWidth = ui.use((s) => s.sidebarWidth);
   const width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(preferredWidth, window.innerWidth - MIN_DESK_WIDTH));
   const [contentWidth, setContentWidth] = useState(width - 32);
-  const { cols, thumbW } = listLayout(contentWidth);
+  const { cols, thumbW } = listLayout(contentWidth, sheet.layout);
   const grid = cols > 1;
 
   useLayoutEffect(() => {
@@ -102,7 +108,9 @@ export function Sidebar() {
         }
         if (!best) return;
         const before = grid ? ev.clientX < best.r.left + best.r.width / 2 : ev.clientY < best.r.top + best.r.height / 2;
-        dropIndex = Math.min(Math.max(1, before ? best.idx : best.idx + 1), spreads.length - 1);
+        const at = before ? best.idx : best.idx + 1;
+        // A book's first and last spreads stay put; frames can go anywhere.
+        dropIndex = print ? Math.min(Math.max(1, at), spreads.length - 1) : at;
         setReorder({ id: spread.id, dropIndex });
       },
       onEnd: (_, moved) => {
@@ -124,17 +132,17 @@ export function Sidebar() {
         onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH, true)}
       />
       <div className="sidebar-head">
-        <span className="caps">Spreads</span>
+        <span className="caps">{print ? 'Spreads' : 'Frames'}</span>
         <button
           className="btn ghost icon small"
-          aria-label="Add spread at the end"
-          title="Add a spread before the back page"
-          onClick={() => insertSpread(spreads.length - 1)}
+          aria-label={print ? 'Add spread at the end' : 'Add frame at the end'}
+          title={print ? 'Add a spread before the back page' : 'Add a frame at the end'}
+          onClick={() => insertSpread(print ? spreads.length - 1 : spreads.length)}
         >
           <Plus />
         </button>
         <span className="spacer" />
-        <span className="caps muted">{spreads.length * 2 - 2} pages</span>
+        <span className="caps muted">{print ? `${spreads.length * 2 - 2} pages` : `${spreads.length} frames`}</span>
       </div>
       <div
         className={`sidebar-list${grid ? ' grid' : ''}`}
@@ -148,7 +156,7 @@ export function Sidebar() {
               spread={spread}
               index={i}
               total={spreads.length}
-              settings={settings}
+              sheet={sheet}
               thumbW={thumbW}
               dragging={reorder?.id === spread.id}
               onHeaderDown={onHeaderDown}
@@ -193,17 +201,19 @@ interface RowProps {
   spread: Spread;
   index: number;
   total: number;
-  settings: Settings;
+  sheet: Sheet;
   thumbW: number;
   dragging: boolean;
   onHeaderDown: (e: React.PointerEvent, s: Spread) => void;
 }
 
-function SpreadRow({ spread, index, total, settings, thumbW, dragging, onHeaderDown }: RowProps) {
+function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown }: RowProps) {
   const editing = ui.use((s) => s.editingSpreadId === spread.id);
-  const scale = thumbW / (2 * settings.pageW);
-  const middle = spread.kind === 'middle';
-  const label = folioLabel(index, total);
+  // Thumbnails are as wide as a book's two pages, or a frame.
+  const scale = thumbW / (sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW);
+  // A book's middle spreads move and delete; so does any frame but a sequence's only one.
+  const middle = spread.kind === 'middle' || (spread.kind === 'frame' && total > 1);
+  const label = folioLabel(index, total, sheet.layout);
 
   const open = () => ui.set({ editingSpreadId: spread.id });
 
@@ -250,7 +260,7 @@ function SpreadRow({ spread, index, total, settings, thumbW, dragging, onHeaderD
     <div className={`spread-row${editing ? ' editing' : ''}${dragging ? ' dragging' : ''}`} data-row-index={index}>
       <div
         className={`spread-row-head${middle ? ' draggable' : ''}`}
-        title={middle ? 'Drag to reorder' : 'The first and last pages stay in place'}
+        title={middle ? 'Drag to reorder' : spread.kind === 'frame' ? '' : 'The first and last pages stay in place'}
         onPointerDown={middle ? (e) => onHeaderDown(e, spread) : undefined}
       >
         <span className={`grip${middle ? '' : ' locked'}`} aria-hidden="true">
@@ -263,8 +273,8 @@ function SpreadRow({ spread, index, total, settings, thumbW, dragging, onHeaderD
         {middle && (
           <button
             className="row-delete"
-            aria-label={`Delete pages ${label}`}
-            title="Delete spread (photos return to the desk)"
+            aria-label={spread.kind === 'frame' ? `Delete frame ${label}` : `Delete pages ${label}`}
+            title={`Delete ${spread.kind === 'frame' ? 'frame' : 'spread'} (photos return to the desk)`}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => deleteSpread(spread.id)}
           >
@@ -274,7 +284,7 @@ function SpreadRow({ spread, index, total, settings, thumbW, dragging, onHeaderD
       </div>
       <SpreadCanvas
         spread={spread}
-        settings={settings}
+        sheet={sheet}
         scale={scale}
         clip
         droppable

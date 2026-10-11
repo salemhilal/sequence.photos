@@ -5,6 +5,7 @@ import { deleteFromProject, importPhotos } from './actions';
 import { exportIndesign } from './indesign';
 import { copyPhotos, duplicateAndSelect } from './clipboard';
 import { savePdf } from './pdf';
+import { saveFrames } from './frames';
 import { hasMod, isMac, isTextField, isTyping, MOD_LABEL } from './input';
 import { platform } from '#platform';
 import { pickFiles } from './files';
@@ -126,11 +127,19 @@ export const commands = {
     inFields: true,
     run: () => void savePdf(),
   },
+  // InDesign for print books; images for digital sequences.
   exportIndesign: {
     title: { browser: 'Export for InDesign', macos: 'Export for InDesign…' },
     bindings: [],
     scope: 'app',
-    run: () => void exportIndesign(),
+    run: () => (projectStore.project.layout.kind === 'print' ? void exportIndesign() : false),
+  },
+  saveImages: {
+    title: { browser: 'Save images', macos: 'Save Images…' },
+    bindings: [{ key: 'e', mod: true, shift: true }],
+    scope: 'app',
+    inFields: true,
+    run: () => (projectStore.project.layout.kind === 'digital' ? void saveFrames() : false),
   },
   preview: {
     title: 'Preview book',

@@ -15,6 +15,7 @@ import {
   Undo2,
   X,
   Ruler,
+  Images,
 } from 'lucide-react';
 import { usePasteHandler } from './clipboard';
 import { platform } from '#platform';
@@ -54,6 +55,7 @@ function onTouchDevice(): boolean {
 
 export default function App() {
   const { project, canUndo, canRedo } = useProject();
+  const digital = project.layout.kind === 'digital';
   // Dismissed for this visit only: a reload shows it again.
   const [mobileNotice, setMobileNotice] = useState(onTouchDevice);
   const editing = ui.use((s) => s.editingSpreadId);
@@ -123,7 +125,7 @@ export default function App() {
                 fileItem('importProject', <FolderOpen />),
                 fileItem('exportProject', <Download />),
                 fileItem('savePdf', <FileText />),
-                fileItem('exportIndesign', <Package />),
+                digital ? fileItem('saveImages', <Images />) : fileItem('exportIndesign', <Package />),
                 { ...fileItem('tour', <Compass />), separatorBefore: true },
                 fileItem('about', <Info />, false),
               ]}
@@ -163,9 +165,9 @@ export default function App() {
           className="btn accent has-hint"
           data-tour="preview"
           onClick={() => openModal('preview')}
-          title={`Preview book (${shortcutLabel('preview')})`}
+          title={`Preview (${shortcutLabel('preview')})`}
         >
-          Preview book
+          {digital ? 'Preview' : 'Preview book'}
           <ShortcutHint label={shortcutLabel('preview')} />
         </button>
         <button

@@ -52,6 +52,7 @@ Netlify runs `npm test && npm run build` for production, pull-request previews, 
 | Import project      | ⌘O      | Ctrl+O          |
 | Export              | ⌘S      | Ctrl+S          |
 | Save PDF            | ⇧⌘P     | Ctrl+Shift+P    |
+| Save images         | ⇧⌘E     | Ctrl+Shift+E    |
 | Show/hide spreads   | ⌘B      | Ctrl+B          |
 | Copy / paste photos | ⌘C / ⌘V | Ctrl+C / Ctrl+V |
 | Duplicate photos    | ⌘D      | Ctrl+D          |
@@ -63,10 +64,18 @@ Hold ⌘ / Ctrl to see them on screen.
 
 Right-click the desk to tidy photos into a grid or change the desk color.
 
+**Print or digital.** A project is a print book (spreads of facing pages, sized in
+inches) or a digital sequence (single frames, sized in pixels, like an Instagram
+carousel; 1080 × 1440 px by default, with Instagram's sizes as presets). Choose in
+Settings → Layout. Switching breaks a book's spreads into frames, each photo going with
+the page that holds its center; going back, frame 1 becomes the first page and the rest
+pair into spreads. Guides and photos convert in proportion to the page width.
+
 **Guides** (in the toolbar) sets up the guides photos snap to, on every spread and mirrored
 on facing pages: center lines, border guides (a distance from each edge: top, bottom,
-inside at the gutter, and outside), and straight guides you drag out of the rulers (hold
-Shift to snap to ⅛ in; drag one off the page to remove it). Click any guide to highlight
+inside at the gutter, and outside; left and right on a frame), and straight guides you
+drag out of the rulers (hold Shift to snap to ⅛ in, or 10 px; drag one off the page to
+remove it). Click any guide to highlight
 its settings. Photos dropped on a page fit inside the border guide marked **On drop**.
 
 File → Take the tour walks through the app with a few sample photos (it also runs on your first visit). Your own project is set aside while it runs and comes back when it ends.
@@ -141,9 +150,14 @@ photo-book-2026-09-26.photo-sequence
 
 Drop a project on the desk to open it. Plain `.zip` files with the same contents work too.
 
+## Images
+
+For a digital sequence, File → Save images saves a ZIP of JPEGs, one per frame at its
+pixel size (`01.jpg`, `02.jpg`, …, in order), drawn from the original photos.
+
 ## InDesign
 
-File → Export for InDesign saves a ZIP with an `.idml` file and a `Links/` folder of
+For a print book, File → Export for InDesign saves a ZIP with an `.idml` file and a `Links/` folder of
 the placed photos. Unzip it and open the `.idml` in InDesign (or Affinity Publisher):
 you get a facing-pages document at the book's size, the On drop border guide as
 margins, the other guides as ruler guides, and each photo in a frame, linked to its
