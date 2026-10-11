@@ -3,6 +3,7 @@ import { toGuideId, toPhotoId } from './ids';
 import { emptyProject } from './store';
 import type { Project } from './types';
 import { InvalidProjectError, validateProject } from './validate';
+import { allSpreads } from './spreads';
 
 const A = toPhotoId('a');
 const B = toPhotoId('b');
@@ -15,7 +16,7 @@ function sound(): Project {
     [B]: { id: B, name: 'b.jpg', pxW: 800, pxH: 1200 },
   };
   project.pile = [{ photoId: A, x: -3, y: 1, w: 2, h: 1.33, z: 1 }];
-  project.spreads[0]!.items = [{ photoId: B, x: -9, y: 0.5, w: 4, h: 6, z: 2 }];
+  allSpreads(project)[1]!.items = [{ photoId: B, x: -9, y: 0.5, w: 4, h: 6, z: 2 }];
   project.settings.borders.push({
     id: toGuideId('edges'),
     kind: 'edges',
@@ -95,7 +96,7 @@ describe('validateProject', () => {
     it('needs numbers, with a size', () => {
       expect(check((d) => (d.pile[0].x = null))).toThrow(/pile\[0\]\.x/);
       expect(check((d) => (d.pile[0].y = Infinity))).toThrow(/pile\[0\]\.y/);
-      expect(check((d) => (d.spreads[0].items[0].h = 0))).toThrow(/spreads\[0\]\.items\[0\]\.h/);
+      expect(check((d) => (d.layout.spreads[0].items[0].h = 0))).toThrow(/layout\.spreads\[0\]\.items\[0\]\.h/);
     });
 
     it('allows photos partly off the desk or page (negative positions)', () => {
@@ -107,35 +108,55 @@ describe('validateProject', () => {
     });
 
     it('refuses a photo in two places: the desk and a page, or twice on a page', () => {
-      expect(check((d) => d.lastSpread.items.push({ ...d.pile[0] }))).toThrow(
-        /lastSpread\.items\[0\]\.photoId: repeated id/,
+      expect(check((d) => d.layout.lastSpread.items.push({ ...d.pile[0] }))).toThrow(
+        /layout\.lastSpread\.items\[0\]\.photoId: repeated id/,
       );
-      expect(check((d) => d.spreads[0].items.push({ ...d.spreads[0].items[0] }))).toThrow(/repeated id/);
+      expect(check((d) => d.layout.spreads[0].items.push({ ...d.layout.spreads[0].items[0] }))).toThrow(/repeated id/);
     });
   });
 
   describe('spreads', () => {
     it('needs the first and last spreads in their places', () => {
-      expect(check((d) => delete d.firstSpread)).toThrow(/firstSpread/);
-      expect(check((d) => (d.lastSpread = d.spreads[1]))).toThrow(/lastSpread.kind/);
+      expect(check((d) => delete d.layout.firstSpread)).toThrow(/layout.firstSpread/);
+      expect(check((d) => (d.layout.lastSpread = d.layout.spreads[1]))).toThrow(/lastSpread.kind/);
     });
 
     it('refuses a first or last spread among the middle ones', () => {
-      expect(check((d) => d.spreads.push({ ...d.firstSpread, id: 'extra' }))).toThrow(/spreads\[2\]\.kind/);
+      expect(check((d) => d.layout.spreads.push({ ...d.layout.firstSpread, id: 'extra' }))).toThrow(
+        /layout\.spreads\[2\]\.kind/,
+      );
+    });
+
+    it('needs a known layout, and a digital one needs a frame', () => {
+      expect(check((d) => (d.layout.kind = 'scroll'))).toThrow(/layout.kind/);
+      expect(check((d) => (d.layout = { kind: 'digital', frame: { w: 1080, h: 1440 }, frames: [] }))).toThrow(
+        /layout.frames: none/,
+      );
+      expect(
+        check(
+          (d) =>
+            (d.layout = {
+              kind: 'digital',
+              frame: { w: 1080, h: 1440 },
+              frames: [{ ...d.layout.firstSpread, kind: 'frame' }, d.layout.lastSpread],
+            }),
+        ),
+      ).toThrow(/layout.frames\[1\]\.kind/);
     });
 
     it('allows a book with no middle spreads', () => {
-      expect(check((d) => (d.spreads = []))).not.toThrow();
+      expect(check((d) => (d.layout.spreads = []))).not.toThrow();
     });
 
     it('refuses repeated spread ids', () => {
-      expect(check((d) => (d.lastSpread.id = d.firstSpread.id))).toThrow(/lastSpread.id: repeated id/);
+      expect(check((d) => (d.layout.lastSpread.id = d.layout.firstSpread.id))).toThrow(/lastSpread.id: repeated id/);
     });
   });
 
   describe('settings', () => {
     it('needs a real page size and yes-or-no switches', () => {
-      expect(check((d) => (d.settings.pageW = 0))).toThrow(/settings.pageW/);
+      expect(check((d) => (d.layout.page.w = 0))).toThrow(/layout.page.w/);
+      expect(check((d) => delete d.settings.sizes.digital)).toThrow(/settings.sizes.digital/);
       expect(check((d) => (d.settings.centerV = 'yes'))).toThrow(/settings.centerV/);
       expect(check((d) => delete d.settings.keepRelative)).toThrow(/settings.keepRelative/);
     });
@@ -172,7 +193,7 @@ describe('validateProject', () => {
   it('returns ids of the right kinds', () => {
     const input = sound();
     const project = validateProject(input);
-    expect(project.firstSpread.id).toBe(input.firstSpread.id);
+    expect(allSpreads(project)[0]!.id).toBe(allSpreads(input)[0]!.id);
     expect(project.settings.lines.map((l) => l.id)).toEqual([toGuideId('v'), toGuideId('h')]);
     expect(Object.keys(project.photos)).toEqual([A, B]);
   });

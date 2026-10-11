@@ -4,46 +4,53 @@ import { startDrag } from '../drag';
 import {
   clampBorder,
   dropGuide,
+  edgeLabel,
   edgesOf,
-  fmt,
   lineAt,
   lineOnPage,
   linePosition,
   pageRect,
   pageSides,
   sideAt,
+  spreadLeft,
+  spreadWidth,
 } from '../geometry';
 import { useWindowEvent } from '../hooks';
 import { isTyping } from '../input';
 import { newGuideId, toSpreadId, type GuideId } from '../ids';
+import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
-import type { BorderGuide, Edges, LineGuide, Settings, Spread } from '../types';
+import type { BorderGuide, Edges, LayoutKind, LineGuide, PageSide, Sheet, Spread } from '../types';
+import { UNITS, type Units } from '../units';
 import { closeModal } from '../ui';
 import { NumberField } from './NumberField';
 import { SpreadCanvas } from './SpreadCanvas';
 
 /**
- * The guides view: a facing pair of empty pages with rulers along the top and left, and
- * the guide settings beside them. Guides apply to every spread, mirrored on facing pages.
- * Drag from a ruler to add a guide parallel to it; drag a guide off the page to remove it.
- * Clicking any guide selects it and highlights its settings.
+ * The guides view: a facing pair of empty pages (or one empty frame) with rulers along the
+ * top and left, and the guide settings beside them. Guides apply to every spread, mirrored
+ * on facing pages. Drag from a ruler to add a guide parallel to it; drag a guide off the
+ * page to remove it. Clicking any guide selects it and highlights its settings.
  */
 
-const PAD = 0.5;
+/** Room around the pages, as a share of a page's width (0.5 in on a 10 in page). */
+const PAD_SHARE = 0.05;
 /** Ruler thickness, in pixels. */
 const RULER = 20;
-/** Shift snaps a dragged guide to this, in inches. */
-const SNAP = 1 / 8;
-const SAMPLE: Spread = { id: toSpreadId('guides'), kind: 'middle', items: [] };
-const SIDES = pageSides(SAMPLE.kind);
-const EDGES = ['top', 'bottom', 'inside', 'outside'] as const;
+const SAMPLES: Record<LayoutKind, Spread> = {
+  print: { id: toSpreadId('guides'), kind: 'middle', items: [] },
+  digital: { id: toSpreadId('guides'), kind: 'frame', items: [] },
+};
+/** A border guide's fields, in pairs: a frame's left before its right. */
+const EDGES: Record<LayoutKind, (keyof Edges)[]> = {
+  print: ['top', 'bottom', 'inside', 'outside'],
+  digital: ['top', 'bottom', 'outside', 'inside'],
+};
 
 type Axis = LineGuide['axis'];
 
 /** What's selected: a guide from the rulers or a border guide (by id), or a center line. */
 type Selection = { kind: 'line' | 'border'; id: GuideId } | { kind: 'center'; axis: Axis };
-
-const round = (n: number) => Math.round(n * 1000) / 1000;
 
 function same(a: Selection | null, b: Selection): boolean {
   if (!a || a.kind !== b.kind) return false;
@@ -52,7 +59,14 @@ function same(a: Selection | null, b: Selection): boolean {
 
 export function GuidesEditor() {
   const { project } = useProject();
-  const s = project.settings;
+  const s = sheetOf(project);
+  const units = UNITS[s.layout];
+  const sample = SAMPLES[s.layout];
+  const sides = pageSides(sample.kind);
+  const PAD = s.pageW * PAD_SHARE;
+  /** The pages' (or frame's) left edge and width, around the canvas origin. */
+  const extentLeft = spreadLeft(sample.kind, s);
+  const across = spreadWidth(sample.kind, s);
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 800, h: 500 });
   const [selected, setSelected] = useState<Selection | null>(null);
@@ -94,14 +108,11 @@ export function GuidesEditor() {
   });
 
   // Where the spread sits in the stage: centered in the space beside the rulers.
-  const scale = Math.max(
-    4,
-    Math.min((stage.w - RULER) / (2 * s.pageW + 2 * PAD), (stage.h - RULER) / (s.pageH + 2 * PAD)),
-  );
-  const left = RULER + Math.max(0, (stage.w - RULER - (2 * s.pageW + 2 * PAD) * scale) / 2);
+  const scale = Math.min((stage.w - RULER) / (across + 2 * PAD), (stage.h - RULER) / (s.pageH + 2 * PAD));
+  const left = RULER + Math.max(0, (stage.w - RULER - (across + 2 * PAD) * scale) / 2);
   const top = RULER + Math.max(0, (stage.h - RULER - (s.pageH + 2 * PAD) * scale) / 2);
-  /** The gutter and the pages' top edge, in stage pixels. */
-  const gutterX = left + (PAD + s.pageW) * scale;
+  /** The canvas origin (a book's gutter, a frame's left edge) and the pages' top, in stage pixels. */
+  const gutterX = left + (PAD - extentLeft) * scale;
   const pageTop = top + PAD * scale;
 
   /** The guide the pointer is placing, or null over the ruler or off the page (to remove it). */
@@ -111,11 +122,11 @@ export function GuidesEditor() {
     const px = e.clientX - r.left;
     const py = e.clientY - r.top;
     const x = (px - gutterX) / scale;
-    let at = axis === 'horizontal' ? (py - pageTop) / scale : lineAt(sideAt(x), s, 'vertical', x);
-    if (e.shiftKey) at = Math.round(at / SNAP) * SNAP;
+    let at = axis === 'horizontal' ? (py - pageTop) / scale : lineAt(sideAt(s, x), s, 'vertical', x);
+    if (e.shiftKey) at = Math.round(at / units.snap) * units.snap;
     const overRuler = axis === 'horizontal' ? py < RULER : px < RULER;
     const size = axis === 'horizontal' ? s.pageH : s.pageW;
-    return overRuler || at <= 0 || at >= size ? null : { id, axis, at: round(at) };
+    return overRuler || at <= 0 || at >= size ? null : { id, axis, at: units.round(at) };
   };
 
   /** Drag a new guide out of a ruler (`existing` null) or an existing one, by id. */
@@ -135,9 +146,9 @@ export function GuidesEditor() {
         const g = guideAt(axis, id, ev);
         projectStore.preview((d) => void (d.settings.lines = place(g)));
         const r = stageRef.current?.getBoundingClientRect();
-        const from = axis === 'horizontal' ? 'from top' : 'from outside';
+        const from = axis === 'horizontal' ? 'top' : edgeLabel('outside', s.layout).toLowerCase();
         setDragLabel({
-          text: g ? `${fmt(g.at)} in ${from}` : 'Remove',
+          text: g ? `${units.format(g.at)} ${units.suffix} from ${from}` : 'Remove',
           x: ev.clientX - (r?.left ?? 0),
           y: ev.clientY - (r?.top ?? 0),
         });
@@ -161,11 +172,11 @@ export function GuidesEditor() {
 
   // Every guide, drawn over the canvas (whose origin is the gutter, at the pages' top).
   // Guides from the rulers can be dragged; the others are only selected.
-  const oX = (PAD + s.pageW) * scale;
+  const oX = gutterX - left;
   const oY = PAD * scale;
   const guides: ReactNode[] = [];
-  const draw = (key: string, axis: Axis, at: number, sel: Selection, side: 'left' | 'right' | null) => {
-    const page = side ? pageRect(side, s) : { x: -s.pageW, w: 2 * s.pageW };
+  const draw = (key: string, axis: Axis, at: number, sel: Selection, side: PageSide | null) => {
+    const page = side ? pageRect(side, s) : { x: extentLeft, w: across };
     const style =
       axis === 'horizontal'
         ? { top: oY + at * scale, left: oX + page.x * scale, width: page.w * scale }
@@ -186,7 +197,7 @@ export function GuidesEditor() {
     );
   };
   if (s.centerV) {
-    for (const side of SIDES) {
+    for (const side of sides) {
       const p = pageRect(side, s);
       draw(`cv-${side}`, 'vertical', p.x + p.w / 2, { kind: 'center', axis: 'vertical' }, side);
     }
@@ -195,9 +206,9 @@ export function GuidesEditor() {
   for (const b of s.borders) {
     const sel: Selection = { kind: 'border', id: b.id };
     const e = edgesOf(b);
-    for (const side of SIDES) {
+    for (const side of sides) {
       const p = pageRect(side, s);
-      const [l, r] = side === 'left' ? [e.outside, e.inside] : [e.inside, e.outside];
+      const [l, r] = side === 'right' ? [e.inside, e.outside] : [e.outside, e.inside];
       draw(`${b.id}-${side}-l`, 'vertical', p.x + l, sel, side);
       draw(`${b.id}-${side}-r`, 'vertical', p.x + p.w - r, sel, side);
       draw(`${b.id}-${side}-t`, 'horizontal', e.top, sel, side);
@@ -208,7 +219,7 @@ export function GuidesEditor() {
     if (!lineOnPage(s, l)) continue;
     const sel: Selection = { kind: 'line', id: l.id };
     if (l.axis === 'horizontal') draw(l.id, 'horizontal', l.at, sel, null);
-    else for (const side of SIDES) draw(`${l.id}-${side}`, 'vertical', linePosition(side, s, l), sel, side);
+    else for (const side of sides) draw(`${l.id}-${side}`, 'vertical', linePosition(side, s, l), sel, side);
   }
 
   return (
@@ -218,12 +229,14 @@ export function GuidesEditor() {
           <div className="modal-title">
             <span className="folio">Guides</span>
             <span className="muted data">
-              {fmt(s.pageW)} × {fmt(s.pageH)} in · every spread
+              {units.format(s.pageW)} × {units.format(s.pageH)} {units.suffix} ·{' '}
+              {s.layout === 'print' ? 'every spread' : 'every frame'}
             </span>
           </div>
           <span className="spacer" />
           <span className="hint">
-            Drag from a ruler to add a guide · Shift: snap to ⅛ in · Drag off the page to remove
+            Drag from a ruler to add a guide · Shift: snap to {snapLabel(units)} · Drag off the{' '}
+            {s.layout === 'print' ? 'page' : 'frame'} to remove
           </span>
           <button className="btn ghost icon" aria-label="Close" onClick={closeModal}>
             <X />
@@ -237,7 +250,8 @@ export function GuidesEditor() {
               origin={gutterX}
               scale={scale}
               size={s.pageW}
-              mirrored
+              steps={RULER_STEPS[s.layout]}
+              mirrored={s.layout === 'print'}
               onPointerDown={(e) => dragGuide(e, 'horizontal', null)}
             />
             <Ruler
@@ -246,13 +260,14 @@ export function GuidesEditor() {
               origin={pageTop}
               scale={scale}
               size={s.pageH}
+              steps={RULER_STEPS[s.layout]}
               onPointerDown={(e) => dragGuide(e, 'vertical', null)}
             />
             <div className="ruler-corner" />
             <div className="guides-canvas" style={{ left, top }}>
               <SpreadCanvas
-                spread={SAMPLE}
-                settings={s}
+                spread={sample}
+                sheet={s}
                 scale={scale}
                 pad={PAD}
                 overlay={<div className="line-guides">{guides}</div>}
@@ -272,6 +287,27 @@ export function GuidesEditor() {
   );
 }
 
+/** The snap distance, as the guides view names it. */
+function snapLabel(u: Units): string {
+  return u.suffix === 'in' ? '⅛ in' : `${u.snap} px`;
+}
+
+/**
+ * A ruler's markings: the finest ticks that stay a few pixels apart, and numbers at the
+ * smallest interval that leaves room for them.
+ */
+interface RulerSteps {
+  ticks: number[];
+  numbers: number[];
+  /** The least room between numbers, in screen pixels. */
+  room: number;
+}
+
+const RULER_STEPS: Record<LayoutKind, RulerSteps> = {
+  print: { ticks: [1 / 8, 1 / 4, 1 / 2, 1], numbers: [1, 2, 5], room: 16 },
+  digital: { ticks: [10, 25, 50, 100, 250], numbers: [50, 100, 250, 500, 1000], room: 36 },
+};
+
 interface RulerProps {
   axis: 'horizontal' | 'vertical';
   /** The ruler's length, in pixels. */
@@ -279,17 +315,20 @@ interface RulerProps {
   /** Where the measuring starts: the gutter (mirrored, for the top ruler) or the pages' top. */
   origin: number;
   scale: number;
-  /** The page's size along the ruler, in inches. */
+  /** The page's size along the ruler, in inches or pixels. */
   size: number;
+  steps: RulerSteps;
   /** Measure each page from its outside edge, meeting at the gutter. */
   mirrored?: boolean;
   onPointerDown: (e: React.PointerEvent) => void;
 }
 
-/** A ruler in inches: ⅛ in ticks (fewer when zoomed out), numbered every inch. */
-function Ruler({ axis, length, origin, scale, size, mirrored = false, onPointerDown }: RulerProps) {
-  const minor = [1 / 8, 1 / 4, 1 / 2, 1].find((step) => step * scale >= 6) ?? 1;
-  const every = scale >= 16 ? 1 : 2;
+/** A ruler in inches (⅛ in ticks, numbered every inch) or pixels, coarser when zoomed out. */
+function Ruler({ axis, length, origin, scale, size, steps, mirrored = false, onPointerDown }: RulerProps) {
+  const every = steps.numbers.find((n) => n * scale >= steps.room) ?? steps.numbers.at(-1)!;
+  const minor = steps.ticks.find((t) => t * scale >= 6 && every % t < 1e-9) ?? every;
+  /** Whether a distance is a whole number of `step`s. */
+  const on = (d: number, step: number) => Math.abs(d / step - Math.round(d / step)) < 1e-9;
   const ticks: ReactNode[] = [];
   // Pages along the ruler: [position of its 0, direction]. The top ruler measures each
   // page from its outside edge; the left one, from the top.
@@ -303,9 +342,9 @@ function Ruler({ axis, length, origin, scale, size, mirrored = false, onPointerD
     for (let i = 0; i * minor <= size + 1e-9; i++) {
       const d = i * minor;
       const at = zero + dir * d * scale;
-      const whole = Math.abs(d - Math.round(d)) < 1e-9;
-      const half = Math.abs(d * 2 - Math.round(d * 2)) < 1e-9;
-      const len = whole ? RULER * 0.55 : half ? RULER * 0.35 : RULER * 0.2;
+      const numbered = on(d, every);
+      const half = on(d, every / 2);
+      const len = numbered ? RULER * 0.55 : half ? RULER * 0.35 : RULER * 0.2;
       const key = `${p}-${i}`;
       ticks.push(
         axis === 'horizontal' ? (
@@ -314,16 +353,22 @@ function Ruler({ axis, length, origin, scale, size, mirrored = false, onPointerD
           <line key={key} y1={at} y2={at} x1={RULER} x2={RULER - len} />
         ),
       );
-      // Numbered every inch, but not at the gutter, where both pages end.
-      if (whole && Math.round(d) % every === 0 && !(mirrored && Math.abs(d - size) < 1e-9)) {
-        const label = fmt(d);
+      // Not numbered at the gutter, where both pages end.
+      if (numbered && !(mirrored && Math.abs(d - size) < 1e-9)) {
+        const label = String(Math.round(d * 1000) / 1000);
         ticks.push(
           axis === 'horizontal' ? (
             <text key={`${key}t`} x={at + (dir > 0 ? 3 : -3)} y={9} textAnchor={dir > 0 ? 'start' : 'end'}>
               {label}
             </text>
           ) : (
-            <text key={`${key}t`} x={3} y={at + 10}>
+            // Turned along the ruler when it's too long to fit across it.
+            <text
+              key={`${key}t`}
+              x={3}
+              y={at + 10}
+              {...(label.length > 2 && { x: 9, y: at + 3, textAnchor: 'end', transform: `rotate(-90 9 ${at + 3})` })}
+            >
               {label}
             </text>
           ),
@@ -345,7 +390,7 @@ function Ruler({ axis, length, origin, scale, size, mirrored = false, onPointerD
 }
 
 interface PanelProps {
-  s: Settings;
+  s: Sheet;
   selected: Selection | null;
   onSelect: (sel: Selection | null) => void;
   onRemove: (sel: Selection) => void;
@@ -353,18 +398,22 @@ interface PanelProps {
 
 function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
   const drop = dropGuide(s);
+  const units = UNITS[s.layout];
+  const num = { suffix: '', step: units.fieldStep, format: units.format };
   const addLine = (axis: Axis) => {
     const size = axis === 'vertical' ? s.pageW : s.pageH;
     const id = newGuideId();
-    projectStore.apply((d) => void d.settings.lines.push({ id, axis, at: Math.round(size / 3 / SNAP) * SNAP }));
+    const at = Math.round(size / 3 / units.snap) * units.snap;
+    projectStore.apply((d) => void d.settings.lines.push({ id, axis, at }));
     onSelect({ kind: 'line', id });
   };
   const addBorder = () => {
     const id = newGuideId();
     projectStore.apply((d) => {
       const last = d.settings.borders.at(-1);
-      const b: BorderGuide = { id, kind: 'even', inset: (last ? edgesOf(last).top : 0.25) + 0.25 };
-      clampBorder(b, d.settings);
+      const step = units.guideStep;
+      const b: BorderGuide = { id, kind: 'even', inset: (last ? edgesOf(last).top : step) + step };
+      clampBorder(b, s);
       d.settings.borders.push(b);
     });
     onSelect({ kind: 'border', id });
@@ -411,6 +460,7 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
           <BorderRow
             key={g.id}
             g={g}
+            s={s}
             isDrop={g.id === drop?.id}
             selected={same(selected, { kind: 'border', id: g.id })}
             onSelect={() => onSelect({ kind: 'border', id: g.id })}
@@ -448,14 +498,15 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
           >
             <span className="guide-kind">{l.axis === 'horizontal' ? 'Horizontal' : 'Vertical'}</span>
             <NumberField
+              {...num}
               value={l.at}
               min={0}
               onCommit={(n) =>
                 projectStore.apply(
                   (d) => {
                     const line = d.settings.lines.find((x) => x.id === l.id);
-                    const size = l.axis === 'vertical' ? d.settings.pageW : d.settings.pageH;
-                    if (line) line.at = Math.min(n, size - 0.05);
+                    const size = l.axis === 'vertical' ? s.pageW : s.pageH;
+                    if (line) line.at = Math.min(n, size - units.nudge);
                   },
                   { coalesce: `line:${l.id}` },
                 )
@@ -473,8 +524,10 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
       </section>
 
       <p className="help guides-note">
-        Every spread, mirrored on facing pages. Inside is the edge at the gutter; vertical guides are measured from the
-        outside edge. Shift snaps a dragged guide to ⅛ in.
+        {s.layout === 'print'
+          ? 'Every spread, mirrored on facing pages. Inside is the edge at the gutter; vertical guides are measured from the outside edge.'
+          : 'Every frame. Vertical guides are measured from the left edge.'}{' '}
+        Distances in {s.layout === 'print' ? 'inches' : 'pixels'}. Shift snaps a dragged guide to {snapLabel(units)}.
       </p>
     </aside>
   );
@@ -482,6 +535,7 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
 
 interface BorderRowProps {
   g: BorderGuide;
+  s: Sheet;
   isDrop: boolean;
   selected: boolean;
   onSelect: () => void;
@@ -489,8 +543,9 @@ interface BorderRowProps {
 }
 
 /** A border guide's settings. A linked (even) guide edits all four distances at once. */
-function BorderRow({ g, isDrop, selected, onSelect, onRemove }: BorderRowProps) {
+function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProps) {
   const e = edgesOf(g);
+  const units = UNITS[s.layout];
   const linked = g.kind === 'even';
   const update = (change: (b: BorderGuide) => BorderGuide, coalesce?: string) =>
     projectStore.apply(
@@ -499,7 +554,7 @@ function BorderRow({ g, isDrop, selected, onSelect, onRemove }: BorderRowProps) 
         const current = d.settings.borders[i];
         if (!current) return;
         const next = change(current);
-        clampBorder(next, d.settings);
+        clampBorder(next, s);
         d.settings.borders[i] = next;
       },
       coalesce ? { coalesce: `border:${g.id}:${coalesce}` } : {},
@@ -515,12 +570,14 @@ function BorderRow({ g, isDrop, selected, onSelect, onRemove }: BorderRowProps) 
   return (
     <div className={`border-guide pick${selected ? ' selected' : ''}`} onPointerDown={onSelect}>
       <div className="grid2">
-        {EDGES.map((edge) => (
+        {EDGES[s.layout].map((edge) => (
           <NumberField
             key={edge}
-            label={edge[0]!.toUpperCase() + edge.slice(1)}
+            label={edgeLabel(edge, s.layout)}
             value={e[edge]}
             min={0}
+            step={units.fieldStep}
+            format={units.format}
             suffix=""
             onCommit={(n) => set(edge, n)}
           />

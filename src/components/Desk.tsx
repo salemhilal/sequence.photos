@@ -352,7 +352,7 @@ export function Desk() {
               onPointerDown={(e) => e.stopPropagation()}
               onContextMenu={(e) => e.stopPropagation()}
             >
-              <span className="caps muted">Page size</span>
+              <span className="caps muted">Layout</span>
               <PageSizeFields />
               <p className="help">
                 You can change this anytime.

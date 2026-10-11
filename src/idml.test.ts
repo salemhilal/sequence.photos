@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { buildIdml } from './idml';
 import { emptyProject } from './store';
 import type { Project } from './types';
+import { allSpreads } from './spreads';
 
 async function build(project: Project, links = new Map()) {
   const entries = buildIdml(project, links);
@@ -18,7 +19,7 @@ function sample(): Project {
   const project = emptyProject(); // 10 × 8 in pages; borders 0.5 and 1.25; four spreads
   const a = toPhotoId('a');
   project.photos[a] = { id: a, name: 'a & b.jpg', pxW: 3000, pxH: 2000 };
-  project.spreads[0]!.items.push({ photoId: a, x: -9, y: 1, w: 6, h: 4, z: 1 });
+  allSpreads(project)[1]!.items.push({ photoId: a, x: -9, y: 1, w: 6, h: 4, z: 1 });
   return project;
 }
 

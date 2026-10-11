@@ -1,4 +1,15 @@
-import type { BorderGuide, Edges, LineGuide, PageSide, PhotoMeta, Settings, Spread, SpreadKind } from './types';
+import type {
+  BorderGuide,
+  Edges,
+  LayoutKind,
+  LineGuide,
+  PageSide,
+  PhotoMeta,
+  Sheet,
+  Spread,
+  SpreadKind,
+} from './types';
+import { UNITS } from './units';
 
 export interface Rect {
   x: number;
@@ -11,18 +22,43 @@ export interface Rect {
 export const PILE_PHOTO_SIZE = 2;
 
 export function pageSides(kind: SpreadKind): PageSide[] {
+  if (kind === 'frame') return ['whole'];
   if (kind === 'first') return ['right'];
   if (kind === 'last') return ['left'];
   return ['left', 'right'];
 }
 
-/** Page rectangle in gutter-relative spread coordinates. */
-export function pageRect(side: PageSide, s: Settings): Rect {
+/** Page rectangle in spread coordinates: gutter-relative in print, from the left edge in a frame. */
+export function pageRect(side: PageSide, s: Sheet): Rect {
   return { x: side === 'left' ? -s.pageW : 0, y: 0, w: s.pageW, h: s.pageH };
 }
 
-export function sideAt(x: number): PageSide {
+/** The page a point (or a photo's center) is on: a book's left or right page, or the frame. */
+export function sideAt(s: Sheet, x: number): PageSide {
+  if (s.layout === 'digital') return 'whole';
   return x < 0 ? 'left' : 'right';
+}
+
+/** The width of a spread's pages together: two pages, or one. */
+export function spreadWidth(kind: SpreadKind, s: Sheet): number {
+  return pageSides(kind).length * s.pageW;
+}
+
+/** Where a spread's pages start: the left page's outside edge, else the gutter (or a frame's left edge). */
+export function spreadLeft(kind: SpreadKind, s: Sheet): number {
+  return pageSides(kind)[0] === 'left' ? -s.pageW : 0;
+}
+
+/** Whether a page is laid out like a left page: outside at its left edge (a book's left pages, and frames). */
+function outsideLeft(side: PageSide): boolean {
+  return side !== 'right';
+}
+
+/** An edge's name: a frame has a left and right where a book page has an outside and inside. */
+export function edgeLabel(edge: keyof Edges, layout: LayoutKind): string {
+  if (layout === 'digital' && edge === 'outside') return 'Left';
+  if (layout === 'digital' && edge === 'inside') return 'Right';
+  return edge[0]!.toUpperCase() + edge.slice(1);
 }
 
 /** A border guide's distance from each edge, whichever kind it is. */
@@ -34,11 +70,11 @@ export function edgesOf(g: BorderGuide): Edges {
 
 /** How far a border guide is from a page's left and right edges: outside and inside swap on left pages. */
 function sideInsets(side: PageSide, e: Edges): { left: number; right: number } {
-  return side === 'left' ? { left: e.outside, right: e.inside } : { left: e.inside, right: e.outside };
+  return outsideLeft(side) ? { left: e.outside, right: e.inside } : { left: e.inside, right: e.outside };
 }
 
 /** A border guide's box on one page. */
-export function borderBox(side: PageSide, s: Settings, g: BorderGuide): Rect {
+export function borderBox(side: PageSide, s: Sheet, g: BorderGuide): Rect {
   const p = pageRect(side, s);
   const e = edgesOf(g);
   const { left, right } = sideInsets(side, e);
@@ -46,7 +82,7 @@ export function borderBox(side: PageSide, s: Settings, g: BorderGuide): Rect {
 }
 
 /** The border guide photos fit inside when dropped on a page: the chosen one, or else the largest. */
-export function dropGuide(s: Settings): BorderGuide | null {
+export function dropGuide(s: Sheet): BorderGuide | null {
   const chosen = s.borders.find((g) => g.id === s.dropBorder);
   if (chosen) return chosen;
   const area = (g: BorderGuide) => {
@@ -56,43 +92,41 @@ export function dropGuide(s: Settings): BorderGuide | null {
   return s.borders.reduce<BorderGuide | null>((best, g) => (!best || area(g) > area(best) ? g : best), null);
 }
 
-/** The smallest a border guide's box gets, in inches, so it always stays on the page. */
-const MIN_BOX = 0.25;
-
 /** Keeps a border guide's box on the page (after an edit, or when the page shrinks). */
-export function clampBorder(g: BorderGuide, s: Settings): void {
+export function clampBorder(g: BorderGuide, s: Pick<Sheet, 'layout' | 'pageW' | 'pageH'>): void {
+  const min = UNITS[s.layout].minBox;
   if (g.kind === 'even') {
-    g.inset = Math.max(0, Math.min(g.inset, (Math.min(s.pageW, s.pageH) - MIN_BOX) / 2));
+    g.inset = Math.max(0, Math.min(g.inset, (Math.min(s.pageW, s.pageH) - min) / 2));
     return;
   }
-  g.top = Math.max(0, Math.min(g.top, s.pageH - g.bottom - MIN_BOX));
-  g.bottom = Math.max(0, Math.min(g.bottom, s.pageH - g.top - MIN_BOX));
-  g.inside = Math.max(0, Math.min(g.inside, s.pageW - g.outside - MIN_BOX));
-  g.outside = Math.max(0, Math.min(g.outside, s.pageW - g.inside - MIN_BOX));
+  g.top = Math.max(0, Math.min(g.top, s.pageH - g.bottom - min));
+  g.bottom = Math.max(0, Math.min(g.bottom, s.pageH - g.top - min));
+  g.inside = Math.max(0, Math.min(g.inside, s.pageW - g.outside - min));
+  g.outside = Math.max(0, Math.min(g.outside, s.pageW - g.inside - min));
 }
 
 /** Where a photo dropped on a page is fitted: the drop guide's box, or the page. */
-export function dropBox(side: PageSide, s: Settings): Rect {
+export function dropBox(side: PageSide, s: Sheet): Rect {
   const g = dropGuide(s);
   return g ? borderBox(side, s, g) : pageRect(side, s);
 }
 
 /** A line guide's position on a page, in spread coordinates: x for vertical guides, y for horizontal. */
-export function linePosition(side: PageSide, s: Settings, l: LineGuide): number {
+export function linePosition(side: PageSide, s: Sheet, l: LineGuide): number {
   if (l.axis === 'horizontal') return l.at;
   const p = pageRect(side, s);
-  return side === 'left' ? p.x + l.at : p.x + p.w - l.at;
+  return outsideLeft(side) ? p.x + l.at : p.x + p.w - l.at;
 }
 
 /** The inverse of linePosition: the `at` for a guide through `v` on a page. */
-export function lineAt(side: PageSide, s: Settings, axis: LineGuide['axis'], v: number): number {
+export function lineAt(side: PageSide, s: Sheet, axis: LineGuide['axis'], v: number): number {
   if (axis === 'horizontal') return v;
   const p = pageRect(side, s);
-  return side === 'left' ? v - p.x : p.x + p.w - v;
+  return outsideLeft(side) ? v - p.x : p.x + p.w - v;
 }
 
 /** Whether a line guide falls on the page (it can end up off it when the page shrinks). */
-export function lineOnPage(s: Settings, l: LineGuide): boolean {
+export function lineOnPage(s: Sheet, l: LineGuide): boolean {
   return l.at > 0 && l.at < (l.axis === 'vertical' ? s.pageW : s.pageH);
 }
 
@@ -121,7 +155,7 @@ export interface GuideLines {
 }
 
 /** Visible guides for a spread: center lines, border boxes, and line guides, per page. */
-export function spreadGuides(spread: Spread, s: Settings): GuideLines {
+export function spreadGuides(spread: Spread, s: Sheet): GuideLines {
   const xs: number[] = [];
   const ys: number[] = [];
   const lines = s.lines.filter((l) => lineOnPage(s, l));
@@ -141,7 +175,7 @@ export function spreadGuides(spread: Spread, s: Settings): GuideLines {
 }
 
 /** Everything a photo can snap to: guides plus page edges (including the gutter). */
-export function snapLines(spread: Spread, s: Settings): GuideLines {
+export function snapLines(spread: Spread, s: Sheet): GuideLines {
   const g = spreadGuides(spread, s);
   const xs = [...g.xs];
   for (const side of pageSides(spread.kind)) {
@@ -333,16 +367,20 @@ function mapAxis(v: number, knots: Knots): number {
  * page's guides after a page-size change. Its edges are mapped through the guides, and
  * the photo is refit into that box, keeping its proportions, around the box's center.
  */
-export function relayoutRect(r: Rect, from: Settings, to: Settings): Rect {
+export function relayoutRect(r: Rect, from: Sheet, to: Sheet): Rect {
   const b = from.borders.map(edgesOf);
   const vertical = from.lines.filter((l) => l.axis === 'vertical').map((l) => l.at);
   const horizontal = from.lines.filter((l) => l.axis === 'horizontal').map((l) => l.at);
   const outside = [...b.map((g) => g.outside), ...vertical];
   const inside = b.map((g) => g.inside);
-  // Left page: outside at its start. Right page: inside at its start.
+  // Left page (and a frame): outside at its start. Right page: inside at its start.
   const xs: Knots = [];
-  pageKnots(xs, -from.pageW, -to.pageW, from.pageW, to.pageW, outside, inside);
-  pageKnots(xs, 0, 0, from.pageW, to.pageW, inside, outside);
+  if (from.layout === 'digital') {
+    pageKnots(xs, 0, 0, from.pageW, to.pageW, outside, inside);
+  } else {
+    pageKnots(xs, -from.pageW, -to.pageW, from.pageW, to.pageW, outside, inside);
+    pageKnots(xs, 0, 0, from.pageW, to.pageW, inside, outside);
+  }
   const ys: Knots = [];
   pageKnots(
     ys,

@@ -3,14 +3,15 @@ import {
   CURRENT_SCHEMA,
   type BorderGuide,
   type Project,
-  type FirstSpread,
-  type LastSpread,
+  type Layout,
   type LineGuide,
-  type MiddleSpread,
   type PhotoMeta,
   type Placement,
   type Settings,
+  type Size,
+  type SpreadKind,
 } from './types';
+import { hasFrames } from './spreads';
 
 /**
  * Checking a whole project before the app uses it. Projects come from outside the code's
@@ -89,7 +90,7 @@ function placement(v: unknown, placed: Set<string>, photos: Record<PhotoId, Phot
   };
 }
 
-function spread<K extends 'first' | 'middle' | 'last'>(
+function spread<K extends SpreadKind>(
   v: unknown,
   kind: K,
   ids: Set<string>,
@@ -129,16 +130,42 @@ function settings(v: unknown, where: string): Settings {
   const lines = list(s.lines, `${where}.lines`).map((g, i) => line(g, guideIds, `${where}.lines[${i}]`));
   // A drop guide that's gone isn't damage: it means the largest (see dropGuide).
   const dropBorder = s.dropBorder === null ? null : toGuideId(text(s.dropBorder, `${where}.dropBorder`));
+  const sizes = record(s.sizes, `${where}.sizes`);
   return {
-    pageW: num(s.pageW, `${where}.pageW`, { min: 0, above: true }),
-    pageH: num(s.pageH, `${where}.pageH`, { min: 0, above: true }),
     centerV: bool(s.centerV, `${where}.centerV`),
     centerH: bool(s.centerH, `${where}.centerH`),
     keepRelative: bool(s.keepRelative, `${where}.keepRelative`),
     borders,
     lines,
     dropBorder,
+    sizes: { print: size(sizes.print, `${where}.sizes.print`), digital: size(sizes.digital, `${where}.sizes.digital`) },
   };
+}
+
+function size(v: unknown, where: string): Size {
+  const s = record(v, where);
+  return { w: num(s.w, `${where}.w`, { min: 0, above: true }), h: num(s.h, `${where}.h`, { min: 0, above: true }) };
+}
+
+/** The layout: a print book's spreads, each in its place, or a digital sequence's frames (at least one). */
+function layout(v: unknown, item: (p: unknown, where: string) => Placement): Layout {
+  const l = record(v, 'layout');
+  const ids = new Set<string>();
+  if (l.kind === 'print') {
+    return {
+      kind: 'print',
+      page: size(l.page, 'layout.page'),
+      firstSpread: spread(l.firstSpread, 'first', ids, item, 'layout.firstSpread'),
+      spreads: list(l.spreads, 'layout.spreads').map((s, i) => spread(s, 'middle', ids, item, `layout.spreads[${i}]`)),
+      lastSpread: spread(l.lastSpread, 'last', ids, item, 'layout.lastSpread'),
+    };
+  }
+  if (l.kind === 'digital') {
+    const frames = list(l.frames, 'layout.frames').map((s, i) => spread(s, 'frame', ids, item, `layout.frames[${i}]`));
+    if (!hasFrames(frames)) fail('layout.frames: none');
+    return { kind: 'digital', frame: size(l.frame, 'layout.frame'), frames };
+  }
+  return fail('layout.kind');
 }
 
 /** The project, checked; throws InvalidProjectError, naming the first problem, if it's damaged. */
@@ -155,27 +182,19 @@ export function validateProject(v: unknown): Project {
 
   const placed = new Set<string>();
   const item = (p: unknown, where: string) => placement(p, placed, photos, where);
-  const spreadIds = new Set<string>();
   const pile = list(d.pile, 'pile').map((p, i) => item(p, `pile[${i}]`));
-  const firstSpread: FirstSpread = spread(d.firstSpread, 'first', spreadIds, item, 'firstSpread');
-  const spreads: MiddleSpread[] = list(d.spreads, 'spreads').map((s, i) =>
-    spread(s, 'middle', spreadIds, item, `spreads[${i}]`),
-  );
-  const lastSpread: LastSpread = spread(d.lastSpread, 'last', spreadIds, item, 'lastSpread');
+  const book = layout(d.layout, item);
 
   // New placements go on top: nextZ stays above every z (repaired if it isn't).
-  const zs = [...pile, firstSpread, ...spreads, lastSpread].flatMap((x) =>
-    ('items' in x ? x.items : [x]).map((p) => p.z),
-  );
+  const spreads = book.kind === 'print' ? [book.firstSpread, ...book.spreads, book.lastSpread] : book.frames;
+  const zs = [...pile, ...spreads.flatMap((s) => s.items)].map((p) => p.z);
   const nextZ = Math.max(num(d.nextZ, 'nextZ'), ...zs.map((z) => z + 1));
 
   return {
     schemaVersion: CURRENT_SCHEMA,
     photos,
     pile,
-    firstSpread,
-    spreads,
-    lastSpread,
+    layout: book,
     settings: settings(d.settings, 'settings'),
     nextZ,
   };

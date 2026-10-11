@@ -44,6 +44,9 @@ export async function setUpMenu(): Promise<void> {
   // Its wording follows the sidebar (see sync below).
   const sidebar = await command('toggleSidebar', undefined, 'Hide Spreads');
   const guides = await command('toggleGuides', undefined, 'Hide Guides');
+  // For print books and digital sequences respectively (see sync below).
+  const indesign = await command('exportIndesign');
+  const images = await command('saveImages');
 
   const menu = await Menu.new({
     items: [
@@ -78,7 +81,8 @@ export async function setUpMenu(): Promise<void> {
           await command('saveAs'),
           await separator(),
           await command('savePdf'),
-          await command('exportIndesign'),
+          indesign,
+          images,
         ],
       }),
       await Submenu.new({
@@ -130,14 +134,23 @@ export async function setUpMenu(): Promise<void> {
     const { canUndo, canRedo } = projectStore.getSnapshot();
     const typing = isTextField(document.activeElement);
     const { sidebarOpen, guidesHidden } = ui.get();
-    const state = { undo: canUndo || typing, redo: canRedo || typing, sidebar: sidebarOpen, guides: !guidesHidden };
+    const print = projectStore.project.layout.kind === 'print';
+    const state = {
+      undo: canUndo || typing,
+      redo: canRedo || typing,
+      sidebar: sidebarOpen,
+      guides: !guidesHidden,
+      print,
+    };
     const key = JSON.stringify(state);
     if (key === shown) return;
     shown = key;
     void undo.setEnabled(state.undo);
     void redo.setEnabled(state.redo);
-    void sidebar.setText(state.sidebar ? 'Hide Spreads' : 'Show Spreads');
+    void sidebar.setText(`${state.sidebar ? 'Hide' : 'Show'} ${state.print ? 'Spreads' : 'Frames'}`);
     void guides.setText(state.guides ? 'Hide Guides' : 'Show Guides');
+    void indesign.setEnabled(state.print);
+    void images.setEnabled(!state.print);
   };
   sync();
   projectStore.subscribe(sync);

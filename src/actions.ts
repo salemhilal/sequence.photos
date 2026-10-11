@@ -2,11 +2,11 @@ import type { Draft } from 'immer';
 import { getImage, putImage, type StoredImage } from './db';
 import { importFiles, setUrl } from './images';
 import { newPhotoId, newSpreadId, type PhotoId, type SpreadId } from './ids';
-import { allSpreads, findSpread, middleIndex } from './spreads';
+import { allSpreads, findSpread, middleIndex, sheetOf } from './spreads';
 import { projectStore } from './store';
 import { dropBox, fitCentered, pageRect, pileSize, PILE_PHOTO_SIZE } from './geometry';
 import type { DropTarget } from './drag';
-import type { Project, PageSide, PhotoMeta, Placement } from './types';
+import type { LayoutKind, Project, PageSide, PhotoMeta, Placement, Spread } from './types';
 import { DESK_PPI, deskGeometry } from './deskGeometry';
 import { ui } from './ui';
 
@@ -47,18 +47,21 @@ export function addPhotosToPile(photos: PhotoMeta[]): void {
 export function placementOnPage(d: Draft<Project> | Project, photoId: PhotoId, side: PageSide): Placement | null {
   const photo = d.photos[photoId];
   if (!photo) return null;
-  const page = pageRect(side, d.settings);
-  const r = fitCentered(photo, dropBox(side, d.settings), page);
+  const sheet = sheetOf(d);
+  const page = pageRect(side, sheet);
+  const r = fitCentered(photo, dropBox(side, sheet), page);
   return { photoId, ...r, z: 0 };
 }
 
 /** Where a photo is: on the desk, on a spread, or (if unplaced) nowhere. */
-export type Location<D extends Project | Draft<Project>> =
-  | { where: 'desk'; placement: D['pile'][number] }
-  | { where: 'spread'; spread: ReturnType<typeof allSpreads<D>>[number]; placement: D['pile'][number] }
-  | null;
+export type Location<S, P> = { where: 'desk'; placement: P } | { where: 'spread'; spread: S; placement: P } | null;
 
-export function locate<D extends Project | Draft<Project>>(d: D, photoId: PhotoId): Location<D> {
+export function locate(d: Project, photoId: PhotoId): Location<Spread, Placement>;
+export function locate(d: Draft<Project>, photoId: PhotoId): Location<Draft<Spread>, Draft<Placement>>;
+export function locate(
+  d: Project | Draft<Project>,
+  photoId: PhotoId,
+): Location<Spread | Draft<Spread>, Placement | Draft<Placement>> {
   const onDesk = d.pile.find((p) => p.photoId === photoId);
   if (onDesk) return { where: 'desk', placement: onDesk };
   for (const spread of allSpreads(d)) {
@@ -124,11 +127,22 @@ export function putOnPage(d: Draft<Project>, photoIds: PhotoId[], spreadId: Spre
   }
 }
 
-/** Recipe: add a spread before book position `index` and put photos on its left page. */
-export function putOnNewSpread(d: Draft<Project>, photoIds: PhotoId[], index: number): void {
+/**
+ * Recipe: add a spread (a book's middle spread, or a frame) before position `index` in
+ * the book, and return its id. A book's first and last spreads stay first and last.
+ */
+function addSpread(d: Draft<Project>, index: number): SpreadId {
+  const l = d.layout;
   const id = newSpreadId();
-  d.spreads.splice(middleIndex(d, index), 0, { kind: 'middle', id, items: [] });
-  putOnPage(d, photoIds, id, 'left');
+  if (l.kind === 'print') l.spreads.splice(middleIndex(l.spreads, index), 0, { kind: 'middle', id, items: [] });
+  else l.frames.splice(Math.min(Math.max(0, index), l.frames.length), 0, { kind: 'frame', id, items: [] });
+  return id;
+}
+
+/** Recipe: add a spread before position `index` and put photos on it (a new spread's left page). */
+export function putOnNewSpread(d: Draft<Project>, photoIds: PhotoId[], index: number): void {
+  const id = addSpread(d, index);
+  putOnPage(d, photoIds, id, d.layout.kind === 'print' ? 'left' : 'whole');
 }
 
 /** Recipe: return a photo to the pile, centered on a desk point (defaults to the visible center). */
@@ -255,21 +269,28 @@ export function deleteFromProject(photoIds: PhotoId[]): void {
   ui.set((s) => ({ selection: s.selection.filter((id) => !ids.has(id)) }));
 }
 
-/** Insert a new middle spread before book position `index`. First and last spreads stay put. */
+/** Insert a new spread (or frame) before position `index`. A book's first and last spreads stay put. */
 export function insertSpread(index: number): void {
-  projectStore.apply((d) => {
-    d.spreads.splice(middleIndex(d, index), 0, { kind: 'middle', id: newSpreadId(), items: [] });
-  });
+  projectStore.apply((d) => void addSpread(d, index));
 }
 
-/** Delete a middle spread (the first and last aren't in that list, so can't be), returning its photos to the desk. */
+/**
+ * Delete a spread, returning its photos to the desk: a book's middle spread (the first and
+ * last aren't in that list, so can't be), or any frame but a sequence's only one.
+ */
 export function deleteSpread(spreadId: SpreadId): void {
   projectStore.apply((d) => {
-    const idx = d.spreads.findIndex((s) => s.id === spreadId);
-    const spread = d.spreads[idx];
+    const l = d.layout;
+    let spread: Draft<Spread> | undefined;
+    if (l.kind === 'print') {
+      const idx = l.spreads.findIndex((s) => s.id === spreadId);
+      if (idx >= 0) spread = l.spreads.splice(idx, 1)[0];
+    } else {
+      const idx = l.frames.findIndex((s) => s.id === spreadId);
+      if (idx >= 0 && l.frames.length > 1) spread = l.frames.splice(idx, 1)[0];
+    }
     if (!spread) return;
     const ids = spread.items.map((i) => i.photoId);
-    d.spreads.splice(idx, 1);
     const v = deskGeometry.visible();
     ids.forEach((id, n) => {
       putInPile(d, id, {
@@ -281,29 +302,37 @@ export function deleteSpread(spreadId: SpreadId): void {
   if (ui.get().editingSpreadId === spreadId) ui.set({ editingSpreadId: null });
 }
 
-/** Move a middle spread so it sits at book position `toIndex` (counted after its removal). */
+/** Move a book's middle spread, or a frame, to position `toIndex` (counted after its removal). */
 export function moveSpread(spreadId: SpreadId, toIndex: number): void {
   projectStore.apply((d) => {
-    const from = d.spreads.findIndex((s) => s.id === spreadId);
-    const spread = d.spreads[from];
-    if (!spread) return;
-    d.spreads.splice(from, 1);
-    d.spreads.splice(middleIndex(d, toIndex), 0, spread);
+    const l = d.layout;
+    if (l.kind === 'print') {
+      const from = l.spreads.findIndex((s) => s.id === spreadId);
+      const [spread] = from >= 0 ? l.spreads.splice(from, 1) : [];
+      if (spread) l.spreads.splice(middleIndex(l.spreads, toIndex), 0, spread);
+    } else {
+      const from = l.frames.findIndex((s) => s.id === spreadId);
+      const [frame] = from >= 0 ? l.frames.splice(from, 1) : [];
+      if (frame) l.frames.splice(Math.min(Math.max(0, toIndex), l.frames.length), 0, frame);
+    }
   });
 }
 
-/** Folio-style page labels, zero-padded like a book's: "01", "02–03", "08". */
-export function folioLabel(index: number, total: number): string {
-  const width = Math.max(2, String(total * 2).length);
-  return spreadLabel(index, total)
+/**
+ * Folio-style labels, zero-padded like a book's page numbers: "01", "02–03", "08" for a
+ * book's spreads, or "01", "02", … for a sequence's frames.
+ */
+export function folioLabel(index: number, total: number, layout: LayoutKind = 'print'): string {
+  const width = Math.max(2, String(layout === 'print' ? total * 2 : total).length);
+  return spreadLabel(index, total, layout)
     .split('–')
     .map((n) => n.padStart(width, '0'))
     .join('–');
 }
 
-/** Page labels, e.g. "1", "2–3", counting single first/last pages. */
-export function spreadLabel(index: number, total: number): string {
-  if (index === 0) return '1';
+/** Page labels, e.g. "1", "2–3", counting a book's single first and last pages; a frame's number. */
+export function spreadLabel(index: number, total: number, layout: LayoutKind = 'print'): string {
+  if (layout === 'digital' || index === 0) return String(index + 1);
   const left = index * 2;
   if (index === total - 1) return String(left);
   return `${left}–${left + 1}`;

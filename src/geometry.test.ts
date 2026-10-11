@@ -17,13 +17,14 @@ import {
   type Rect,
 } from './geometry';
 import { toGuideId, toSpreadId } from './ids';
-import type { BorderGuide, Settings, Spread } from './types';
+import type { BorderGuide, Sheet, Spread } from './types';
 
 function even(id: string, inset: number): BorderGuide {
   return { id: toGuideId(id), kind: 'even', inset };
 }
 
-const settings: Settings = {
+const settings: Sheet = {
+  layout: 'print',
   pageW: 10,
   pageH: 8,
   centerV: true,
@@ -102,7 +103,7 @@ describe('guides', () => {
   });
 
   it('places vertical line guides from each page’s outside edge, and horizontal ones from the top', () => {
-    const s: Settings = {
+    const s: Sheet = {
       ...settings,
       centerV: false,
       centerH: false,
@@ -237,7 +238,7 @@ describe('relayoutRect', () => {
   });
 
   it('keeps a photo’s edge on a vertical line guide', () => {
-    const s: Settings = { ...settings, borders: [], lines: [{ id: toGuideId('v'), axis: 'vertical', at: 2 }] };
+    const s: Sheet = { ...settings, borders: [], lines: [{ id: toGuideId('v'), axis: 'vertical', at: 2 }] };
     const to = { ...s, pageW: 8, pageH: 6.4 };
     // On the right page, from the guide (8 in from the gutter) to the page's outside edge.
     const r = relayoutRect({ x: 8, y: 0, w: 2, h: 8 }, s, to);

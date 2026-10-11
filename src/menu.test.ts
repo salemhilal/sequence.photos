@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runFromMenu } from './commands';
 import { projectStore, emptyProject } from './store';
 import { ui } from './ui';
+import { setLayoutSize } from './pageSize';
+import { sheetOf } from './spreads';
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -12,20 +14,20 @@ afterEach(() => {
 
 describe('runFromMenu', () => {
   it('runs the command', () => {
-    projectStore.apply((d) => void (d.settings.pageW = 12));
+    projectStore.apply((d) => setLayoutSize(d, { w: 12, h: 8 }));
     expect(runFromMenu('undo')).toBe(true);
-    expect(projectStore.project.settings.pageW).toBe(10);
+    expect(sheetOf(projectStore.project).pageW).toBe(10);
   });
 
   it('gives a focused text field its own editing instead', () => {
-    projectStore.apply((d) => void (d.settings.pageW = 12));
+    projectStore.apply((d) => setLayoutSize(d, { w: 12, h: 8 }));
     const input = document.createElement('input');
     document.body.append(input);
     input.focus();
     const fallback = vi.fn();
     expect(runFromMenu('undo', fallback)).toBe(false);
     expect(fallback).toHaveBeenCalled();
-    expect(projectStore.project.settings.pageW).toBe(12);
+    expect(sheetOf(projectStore.project).pageW).toBe(12);
   });
 
   it('leaves desk commands alone while something covers the desk', () => {

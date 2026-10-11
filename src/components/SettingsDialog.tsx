@@ -80,7 +80,7 @@ export function SettingsDialog() {
     <Dialog title="Settings" onClose={closeModal} className="settings">
       <div className="settings-body">
         <section className="setting">
-          <h3>Page size</h3>
+          <h3>Layout</h3>
           <div className="setting-controls">
             <PageSizeFields />
             <label className="check">

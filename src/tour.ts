@@ -1,4 +1,5 @@
 import { toPhotoId } from './ids';
+import { allSpreads } from './spreads';
 import { platform } from '#platform';
 import { produce } from 'immer';
 import { putOnPage } from './actions';
@@ -114,7 +115,8 @@ export function sampleProject(): Project {
     });
   });
   return produce(project, (d) => {
-    const spread = d.spreads[0]!;
+    // The book's first two-page spread (the sample is always a print book).
+    const spread = allSpreads(d)[1]!;
     putOnPage(d, [toPhotoId('tour-leaves')], spread.id, 'left');
     putOnPage(d, [toPhotoId('tour-lily')], spread.id, 'right');
   });
@@ -150,7 +152,7 @@ export function goToStep(index: number): void {
   ui.set({
     tour: index,
     modal: step.modal ?? null,
-    editingSpreadId: step.editor ? (projectStore.project.spreads[0]?.id ?? null) : null,
+    editingSpreadId: step.editor ? (allSpreads(projectStore.project)[1]?.id ?? null) : null,
   });
 }
 

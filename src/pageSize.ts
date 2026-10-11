@@ -1,30 +1,59 @@
+import type { Draft } from 'immer';
 import { clampBorder, relayoutRect } from './geometry';
-import { allSpreads, findSpread } from './spreads';
+import { allSpreads, findSpread, sheetOf } from './spreads';
 import { projectStore } from './store';
-import type { Project } from './types';
+import { convertLayout } from './convertLayout';
+import type { LayoutKind, Project, Sheet, Size } from './types';
 
 /**
- * The project a run of page-size edits is computed from. Relaying out from this fixed
- * starting point (not from the previous size) keeps a run of edits order-independent and
+ * The project a run of size changes is computed from. Relaying out from this fixed
+ * starting point (not from the previous size) keeps a run of changes order-independent and
  * exactly reversible: 10 → 8 → 10 puts every photo, and every border guide, back where it
  * was. The run ends when anything else changes the project.
  */
 let resizeRun: { base: Project; out: Project } | null = null;
 
+/** The last switch between print and digital, so switching straight back restores what was there. */
+let lastSwitch: { from: Project; to: Project } | null = null;
+
 /**
- * Change the page size: one undo step, applied when the field is done (blur or Enter),
- * not as you type, so a half-typed size never moves photos or cuts guides down. Photos
- * keep their place relative to the guides (if chosen), and border guides stay on the page.
+ * Turn the project into a print book or a digital sequence (see convertLayout): one undo
+ * step. Photos moved with the guides to a new shape don't come back exactly when moved
+ * back, so switching straight back, with nothing changed between, restores the project
+ * as it was.
  */
-export function setPageSize(dim: 'pageW' | 'pageH', n: number): void {
+export function switchLayout(kind: LayoutKind): void {
   const now = projectStore.project;
-  if (now.settings[dim] === n) return;
+  if (now.layout.kind === kind) return;
+  const back = lastSwitch?.to === now && lastSwitch.from.layout.kind === kind;
+  projectStore.replace(back && lastSwitch ? lastSwitch.from : convertLayout(now, kind));
+  lastSwitch = { from: now, to: projectStore.project };
+}
+
+/** Set the page's (print) or frames' (digital) size, and remember it for its layout kind. */
+export function setLayoutSize(d: Draft<Project>, size: Size): void {
+  const l = d.layout;
+  // Field by field, so setting the size it already is changes nothing.
+  for (const s of [l.kind === 'print' ? l.page : l.frame, d.settings.sizes[l.kind]]) {
+    s.w = size.w;
+    s.h = size.h;
+  }
+}
+
+/**
+ * Change the page or frame size (Settings' Apply): one undo step. Photos keep their place
+ * relative to the guides (if chosen), and border guides stay on the page.
+ */
+export function setPageSize(size: Size): void {
+  const now = projectStore.project;
+  const current = sheetOf(now);
+  if (current.pageW === size.w && current.pageH === size.h) return;
   if (resizeRun?.out !== now) resizeRun = { base: now, out: now };
   const { base } = resizeRun;
+  const from = sheetOf(base);
+  const to: Sheet = { ...from, pageW: size.w, pageH: size.h };
   projectStore.apply((d) => {
-    const to = { ...base.settings, pageW: d.settings.pageW, pageH: d.settings.pageH, [dim]: n };
-    d.settings.pageW = to.pageW;
-    d.settings.pageH = to.pageH;
+    setLayoutSize(d, size);
     // From the run's start, not from now: each guide and photo as it was before the run.
     d.settings.borders = base.settings.borders.map((b) => {
       const g = { ...b };
@@ -35,8 +64,8 @@ export function setPageSize(dim: 'pageW' | 'pageH', n: number): void {
     for (const spread of allSpreads(d)) {
       const was = findSpread(base, spread.id);
       for (const item of spread.items) {
-        const from = was?.items.find((i) => i.photoId === item.photoId);
-        if (from) Object.assign(item, relayoutRect(from, base.settings, to));
+        const start = was?.items.find((i) => i.photoId === item.photoId);
+        if (start) Object.assign(item, relayoutRect(start, from, to));
       }
     }
   });

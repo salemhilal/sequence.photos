@@ -1,13 +1,13 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { sameTarget } from '../drag';
 import { pageRect, pageSides, spreadGuides, type SnapFeedback } from '../geometry';
-import type { Placement, Settings, Spread } from '../types';
+import type { Placement, Sheet, Spread } from '../types';
 import { ui } from '../ui';
 import { PhotoImg } from './PhotoImg';
 
 interface Props {
   spread: Spread;
-  settings: Settings;
+  sheet: Sheet;
   /** Pixels per inch. */
   scale: number;
   /** Margin around the spread, in inches, where off-page photo edges remain visible. */
@@ -27,7 +27,7 @@ interface Props {
 /** Renders a spread at a given scale. Item coordinates are relative to the gutter. */
 export function SpreadCanvas({
   spread,
-  settings,
+  sheet,
   scale,
   pad = 0,
   guides = false,
@@ -41,10 +41,14 @@ export function SpreadCanvas({
 }: Props) {
   const hovered = ui.use((s) => s.hover);
   const sides = pageSides(spread.kind);
-  const originX = (pad + settings.pageW) * scale;
+  // A book's canvas spans both pages (single first and last pages sit on their side); a
+  // frame's spans the frame.
+  const extentLeft = sheet.layout === 'print' ? -sheet.pageW : 0;
+  const extentW = sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW;
+  const originX = (pad - extentLeft) * scale;
   const originY = pad * scale;
-  const width = (2 * settings.pageW + 2 * pad) * scale;
-  const height = (settings.pageH + 2 * pad) * scale;
+  const width = (extentW + 2 * pad) * scale;
+  const height = (sheet.pageH + 2 * pad) * scale;
 
   const box = (x: number, y: number, w: number, h: number): CSSProperties => ({
     left: originX + x * scale,
@@ -53,30 +57,27 @@ export function SpreadCanvas({
     height: h * scale,
   });
 
-  const pagesX = sides[0] === 'left' ? -settings.pageW : 0;
-  const pagesW = sides.length * settings.pageW;
+  const pagesX = sides[0] === 'left' ? -sheet.pageW : 0;
+  const pagesW = sides.length * sheet.pageW;
   // Center lines are drawn in their own color.
-  const g = guides ? spreadGuides(spread, { ...settings, centerV: false, centerH: false }) : null;
+  const g = guides ? spreadGuides(spread, { ...sheet, centerV: false, centerH: false }) : null;
   const vLines = g
     ? [
         ...g.xs.map((at) => ({ at, center: false })),
-        ...(settings.centerV
-          ? sides.map((side) => ({ at: pageRect(side, settings).x + settings.pageW / 2, center: true }))
+        ...(sheet.centerV
+          ? sides.map((side) => ({ at: pageRect(side, sheet).x + sheet.pageW / 2, center: true }))
           : []),
       ]
     : [];
   const hLines = g
-    ? [
-        ...g.ys.map((at) => ({ at, center: false })),
-        ...(settings.centerH ? [{ at: settings.pageH / 2, center: true }] : []),
-      ]
+    ? [...g.ys.map((at) => ({ at, center: false })), ...(sheet.centerH ? [{ at: sheet.pageH / 2, center: true }] : [])]
     : [];
   const items = [...spread.items].sort((a, b) => a.z - b.z);
 
   return (
     <div className={`spread-canvas ${className ?? ''}`} style={{ width, height }} onPointerDown={onPointerDown}>
       {sides.map((side) => {
-        const r = pageRect(side, settings);
+        const r = pageRect(side, sheet);
         const hover = sameTarget(hovered, { kind: 'page', spreadId: spread.id, side });
         return (
           <div
@@ -93,7 +94,7 @@ export function SpreadCanvas({
       <div
         className="spread-items"
         style={
-          clip ? { ...box(pagesX, 0, pagesW, settings.pageH), overflow: 'hidden' } : { left: 0, top: 0, width, height }
+          clip ? { ...box(pagesX, 0, pagesW, sheet.pageH), overflow: 'hidden' } : { left: 0, top: 0, width, height }
         }
       >
         {items.map((p) => {
@@ -115,10 +116,10 @@ export function SpreadCanvas({
         })}
       </div>
 
-      {!clip && pad > 0 && <div className="offpage-mask" style={box(pagesX, 0, pagesW, settings.pageH)} />}
+      {!clip && pad > 0 && <div className="offpage-mask" style={box(pagesX, 0, pagesW, sheet.pageH)} />}
       {!clip && (
-        <div className="page-outline" style={box(pagesX, 0, pagesW, settings.pageH)}>
-          {sides.length === 2 && <div className="gutter" style={{ left: settings.pageW * scale }} />}
+        <div className="page-outline" style={box(pagesX, 0, pagesW, sheet.pageH)}>
+          {sides.length === 2 && <div className="gutter" style={{ left: sheet.pageW * scale }} />}
         </div>
       )}
 
@@ -128,7 +129,7 @@ export function SpreadCanvas({
             <div
               key={`x${i}`}
               className={`guide guide-v${center ? ' center' : ''}${snapHit?.xs.includes(round(at)) ? ' hit' : ''}`}
-              style={{ left: originX + at * scale, top: originY, height: settings.pageH * scale }}
+              style={{ left: originX + at * scale, top: originY, height: sheet.pageH * scale }}
             />
           ))}
           {sides.map((side) =>
@@ -138,8 +139,8 @@ export function SpreadCanvas({
                 className={`guide guide-h${center ? ' center' : ''}${snapHit?.ys.includes(round(at)) ? ' hit' : ''}`}
                 style={{
                   top: originY + at * scale,
-                  left: originX + pageRect(side, settings).x * scale,
-                  width: settings.pageW * scale,
+                  left: originX + pageRect(side, sheet).x * scale,
+                  width: sheet.pageW * scale,
                 }}
               />
             )),

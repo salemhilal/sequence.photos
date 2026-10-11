@@ -3,18 +3,22 @@ import { pageSides } from './geometry';
 import { platform } from '#platform';
 import { projectStore } from './store';
 import { ui } from './ui';
-import { allSpreads } from './spreads';
+import { allSpreads, sheetOf } from './spreads';
+import type { LayoutKind } from './types';
 
-const PT_PER_INCH = 72;
+/** PDF points per unit: 72 to the inch, and a pixel to a point (as image editors do). */
+const PT: Record<LayoutKind, number> = { print: 72, digital: 1 };
 
 /**
  * Render the book as a PDF: one PDF page per spread, at true size, with the first
- * and last pages as single pages. Photos are cropped at the page edges; guides are omitted.
+ * and last pages as single pages (or one page per frame, a point to the pixel).
+ * Photos are cropped at the page edges; guides are omitted.
  */
 export async function renderPdf(onProgress: (done: number, total: number) => void): Promise<Blob> {
   const { PDFDocument } = await import('pdf-lib');
   const project = projectStore.project;
-  const { pageW, pageH } = project.settings;
+  const { pageW, pageH, layout } = sheetOf(project);
+  const pt = PT[layout];
   const pdf = await PDFDocument.create();
   pdf.setTitle('Photo book');
   pdf.setCreator('Sequence');
@@ -23,7 +27,7 @@ export async function renderPdf(onProgress: (done: number, total: number) => voi
   for (const [i, spread] of book.entries()) {
     const sides = pageSides(spread.kind);
     const left = sides[0] === 'left' ? -pageW : 0;
-    const page = pdf.addPage([sides.length * pageW * PT_PER_INCH, pageH * PT_PER_INCH]);
+    const page = pdf.addPage([sides.length * pageW * pt, pageH * pt]);
 
     for (const p of [...spread.items].sort((a, b) => a.z - b.z)) {
       const img = await getImage(p.photoId);
@@ -36,11 +40,11 @@ export async function renderPdf(onProgress: (done: number, total: number) => voi
         .catch(() => null);
       if (!embedded) continue;
       page.drawImage(embedded, {
-        x: (p.x - left) * PT_PER_INCH,
+        x: (p.x - left) * pt,
         // PDF's origin is the bottom-left corner.
-        y: (pageH - p.y - p.h) * PT_PER_INCH,
-        width: p.w * PT_PER_INCH,
-        height: p.h * PT_PER_INCH,
+        y: (pageH - p.y - p.h) * pt,
+        width: p.w * pt,
+        height: p.h * pt,
       });
     }
     onProgress(i + 1, book.length);

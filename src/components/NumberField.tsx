@@ -8,6 +8,8 @@ interface Props {
   step?: number;
   label?: string;
   suffix?: string;
+  /** The value as shown (default: inches, eighths exact). */
+  format?: (n: number) => string;
   /** Called when editing starts and ends (focus and blur). */
   onBegin?: () => void;
   onEnd?: () => void;
@@ -23,6 +25,7 @@ export function NumberField({
   step = 0.125,
   label,
   suffix = 'in',
+  format = fmt,
   onBegin,
   onEnd,
   commitOnBlur = false,
@@ -45,9 +48,9 @@ export function NumberField({
         inputMode="decimal"
         step={step}
         min={min}
-        value={draft ?? fmt(value)}
+        value={draft ?? format(value)}
         onFocus={() => {
-          setDraft(fmt(value));
+          setDraft(format(value));
           onBegin?.();
         }}
         onBlur={() => {
@@ -65,7 +68,7 @@ export function NumberField({
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
           if (e.key === 'Escape' && commitOnBlur) {
             // Leave it as it was.
-            setDraft(fmt(value));
+            setDraft(format(value));
             e.stopPropagation();
             requestAnimationFrame(() => (e.target as HTMLInputElement).blur());
           }
