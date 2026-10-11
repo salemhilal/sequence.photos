@@ -88,11 +88,18 @@ function SizeForm({ kind, current }: { kind: LayoutKind; current: Size }) {
         {field('w', 'W')}
         {field('h', 'H')}
         <span className="muted data">{units.suffix}</span>
+      </div>
+      <div className="inline">
         <button type="submit" className={`btn${changed ? ' primary' : ''}`} disabled={!changed}>
           Apply
         </button>
         {changed && (
-          <button type="button" className="btn ghost" onClick={() => setDraft(current)}>
+          <button
+            type="button"
+            className="btn ghost"
+            title={`Back to ${current.w} × ${current.h} ${units.suffix}`}
+            onClick={() => setDraft(current)}
+          >
             Revert
           </button>
         )}
