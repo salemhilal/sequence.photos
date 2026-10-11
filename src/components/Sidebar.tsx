@@ -16,7 +16,7 @@ const GHOST_MAX = 140;
  * Narrowest a spread (or a frame, half as wide: a book's page) can be before the list
  * falls back to fewer columns, and the narrowest its picture gets.
  */
-const GRID_MIN_CELL: Record<LayoutKind, number> = { print: 280, digital: 110 };
+const GRID_MIN_CELL: Record<LayoutKind, number> = { print: 280, digital: 96 };
 const MIN_THUMB: Record<LayoutKind, number> = { print: 120, digital: 60 };
 /** Space between grid columns; the vertical insert gaps live here. */
 const GRID_GAP_X = 20;
@@ -25,10 +25,20 @@ const ROW_PAD_X = 8;
 /** The desk keeps at least this much room when the sidebar is widened. */
 const MIN_DESK_WIDTH = 160;
 
-/** One column until two spreads fit side by side, then as many columns as fit. */
-function listLayout(contentWidth: number, layout: LayoutKind): { cols: number; thumbW: number } {
+/** The list's side padding, as in styles.css: one column, and the grid (roomier). */
+const LIST_PAD_X = 16;
+const GRID_PAD_X = 24;
+
+/**
+ * One column until two spreads fit side by side, then as many columns as fit. Worked out
+ * from the list's whole width, not its content's: the grid's padding differs, and
+ * measuring inside it would flip between one column and two at some widths.
+ */
+function listLayout(listWidth: number, layout: LayoutKind): { cols: number; thumbW: number } {
   const min = GRID_MIN_CELL[layout];
-  const cols = Math.max(1, Math.floor((contentWidth + GRID_GAP_X) / (min + GRID_GAP_X)));
+  const inGrid = listWidth - 2 * GRID_PAD_X;
+  const cols = Math.max(1, Math.floor((inGrid + GRID_GAP_X) / (min + GRID_GAP_X)));
+  const contentWidth = cols > 1 ? inGrid : listWidth - 2 * LIST_PAD_X;
   const cellW = (contentWidth - GRID_GAP_X * (cols - 1)) / cols;
   return { cols, thumbW: Math.max(MIN_THUMB[layout], cellW - ROW_PAD_X) };
 }
@@ -43,18 +53,14 @@ export function Sidebar() {
   const spreads = allSpreads(project);
   const preferredWidth = ui.use((s) => s.sidebarWidth);
   const width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(preferredWidth, window.innerWidth - MIN_DESK_WIDTH));
-  const [contentWidth, setContentWidth] = useState(width - 32);
-  const { cols, thumbW } = listLayout(contentWidth, sheet.layout);
+  const [listWidth, setListWidth] = useState(width);
+  const { cols, thumbW } = listLayout(listWidth, sheet.layout);
   const grid = cols > 1;
 
   useLayoutEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() =>
-      setContentWidth(
-        el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft) - parseFloat(getComputedStyle(el).paddingRight),
-      ),
-    );
+    const ro = new ResizeObserver(() => setListWidth(el.clientWidth));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
