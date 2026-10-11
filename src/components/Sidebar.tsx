@@ -267,9 +267,7 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
           <GripVertical />
         </span>
         <span className="spread-label">{label}</span>
-        <span className="muted data">
-          {spread.items.length ? `${spread.items.length} photo${spread.items.length === 1 ? '' : 's'}` : ''}
-        </span>
+        <span className="spacer" />
         {middle && (
           <button
             className="row-delete"
