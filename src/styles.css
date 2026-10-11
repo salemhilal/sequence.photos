@@ -1701,6 +1701,18 @@ body.col-resizing * {
   color: inherit;
   font: 12px var(--font);
 }
+/* Two choices, each half the toggle. */
+.segmented.halves {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+}
+.segmented.halves label {
+  text-align: center;
+}
+.layout-fields .field-label {
+  font-size: 12px;
+  color: var(--muted);
+}
 /* In the Layout panel, the size form fills its width. */
 .guides-panel .layout-fields,
 .guides-panel .size-form {

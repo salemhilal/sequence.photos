@@ -231,8 +231,7 @@ export function LayoutEditor() {
           <div className="modal-title">
             <span className="folio">Layout</span>
             <span className="muted data">
-              {units.format(s.pageW)} × {units.format(s.pageH)} {units.suffix} ·{' '}
-              {s.layout === 'print' ? 'every spread' : 'every frame'}
+              {units.format(s.pageW)} × {units.format(s.pageH)} {units.suffix}
             </span>
           </div>
           <span className="spacer" />
@@ -484,7 +483,7 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
 
   return (
     <aside className="inspector guides-panel">
-      <PanelSection id="page" title={s.layout === 'print' ? 'Page' : 'Frame'} {...fold}>
+      <PanelSection id="page" title="Spreads" {...fold}>
         <PageSizeFields />
         <label className="check">
           <input
