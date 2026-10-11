@@ -16,7 +16,7 @@ const GHOST_MAX = 140;
  * Narrowest a spread (or a frame, half as wide: a book's page) can be before the list
  * falls back to fewer columns, and the narrowest its picture gets.
  */
-const GRID_MIN_CELL: Record<LayoutKind, number> = { print: 280, digital: 80 };
+const GRID_MIN_CELL: Record<LayoutKind, number> = { print: 280, digital: 110 };
 const MIN_THUMB: Record<LayoutKind, number> = { print: 120, digital: 60 };
 /** Space between grid columns; the vertical insert gaps live here. */
 const GRID_GAP_X = 20;
