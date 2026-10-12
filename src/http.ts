@@ -83,7 +83,15 @@ export interface RequestContext {
   params: Readonly<Partial<Record<string, string>>>;
   log: LogFields;
   waitUntil(promise: Promise<unknown>): void;
+  /**
+   * Applies a rate limit (README "Abuse and rate limits"); throws 429 when over it.
+   * `ip` keys on the client's IP; `user` on an Instagram user id.
+   */
+  rateLimit(scope: RateLimitScope): Promise<void>;
 }
+
+export type RateLimitScope =
+  { kind: 'ip'; group: 'auth' | 'meta' } | { kind: 'user'; userId: string };
 
 export type LogFields = {
   -readonly [
@@ -180,6 +188,8 @@ export async function handleRequest(
         waitUntil: (promise) => {
           ctx.waitUntil(promise);
         },
+        // Wired to the rate-limit bindings in milestone 4.
+        rateLimit: () => Promise.resolve(),
       });
     } else if (onPath.length > 0) {
       const allow = [...new Set(onPath.map((m) => m.def.method))].join(', ');

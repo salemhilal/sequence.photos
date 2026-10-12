@@ -1,5 +1,6 @@
 // The Worker: routes requests to handlers, and runs the scheduled sweep.
 
+import { callback, redeem, renew } from './auth';
 import { handleRequest, HttpError, type Handler, type RouteDef } from './http';
 
 // Filled in by later milestones.
@@ -14,7 +15,7 @@ export const ROUTE_TABLE: readonly RouteDef[] = [
     path: /^\/auth\/callback$/,
     route: 'GET /auth/callback',
     cors: false,
-    handler: notImplemented,
+    handler: callback,
   },
   {
     method: 'POST',
@@ -22,7 +23,7 @@ export const ROUTE_TABLE: readonly RouteDef[] = [
     route: 'POST /auth/redeem',
     cors: true,
     preflightRoute: 'OPTIONS /auth/redeem',
-    handler: notImplemented,
+    handler: redeem,
   },
   {
     method: 'POST',
@@ -30,7 +31,7 @@ export const ROUTE_TABLE: readonly RouteDef[] = [
     route: 'POST /auth/renew',
     cors: true,
     preflightRoute: 'OPTIONS /auth/renew',
-    handler: notImplemented,
+    handler: renew,
   },
   {
     method: 'POST',

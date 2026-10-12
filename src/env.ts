@@ -25,7 +25,12 @@ const origin = v.pipe(
   v.check((s) => new URL(s).origin === s, 'must be a bare origin'),
 );
 
-const ReturnUrlsSchema = v.record(v.pipe(v.string(), v.regex(/^[a-z][a-z0-9-]{0,31}$/)), httpUrl);
+// No fragment: the callback appends its own (`#instagram=…`).
+const returnUrl = v.pipe(
+  httpUrl,
+  v.check((s) => !s.includes('#'), 'must not have a fragment'),
+);
+const ReturnUrlsSchema = v.record(v.pipe(v.string(), v.regex(/^[a-z][a-z0-9-]{0,31}$/)), returnUrl);
 const AllowedOriginsSchema = v.array(origin);
 
 function parseJsonVar(name: string, text: string): unknown {
