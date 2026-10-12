@@ -1,7 +1,6 @@
 // Sequence's server: Instagram sign-in and short-lived frame hosting. See README.md.
 //
-// Values marked PLACEHOLDER must be filled in by the owner before deploying (see
-// README "Setup"). Secrets (IG_APP_SECRET, SERVER_SECRET) are never in this file: use
+// Secrets (IG_APP_SECRET, SERVER_SECRET) are never in this file: use
 // `wrangler secret put` (and `.dev.vars` locally).
 {
   "$schema": "node_modules/wrangler/config-schema.json",
@@ -38,13 +37,13 @@
   "secrets": { "required": ["IG_APP_SECRET", "SERVER_SECRET"] },
 
   "vars": {
-    // PLACEHOLDER: the Instagram app's id (Meta dashboard → Instagram → API setup with
-    // Instagram business login).
-    "IG_APP_ID": "PLACEHOLDER_IG_APP_ID",
+    // The Instagram app's id (Meta dashboard → Instagram → API setup with Instagram
+    // business login). Public: it's in every sign-in URL.
+    "IG_APP_ID": "1673773837797048",
     "GRAPH_VERSION": "v26.0",
-    // PLACEHOLDER: this Worker's /auth/callback URL, registered exactly as the Meta
-    // app's OAuth redirect URI.
-    "CALLBACK_URL": "https://sequence-server.PLACEHOLDER.workers.dev/auth/callback",
+    // This Worker's /auth/callback URL, registered exactly as the Meta app's OAuth
+    // redirect URI.
+    "CALLBACK_URL": "https://sequence-server.sequence-photos.workers.dev/auth/callback",
     // JSON map: `client` (from the OAuth state) → where to send the user back.
     "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\"}",
     // JSON array of origins allowed by CORS on /auth/redeem, /auth/renew, /uploads*.
@@ -73,12 +72,13 @@
       ],
       "secrets": { "required": ["IG_APP_SECRET", "SERVER_SECRET"] },
       "vars": {
-        // PLACEHOLDER: the dev Meta app's Instagram app id.
-        "IG_APP_ID": "PLACEHOLDER_DEV_IG_APP_ID",
+        // The same Meta app as production for now (a separate dev app would be safer;
+        // see README). Its callback URL below must also be registered with the app.
+        "IG_APP_ID": "1673773837797048",
         "GRAPH_VERSION": "v26.0",
-        // PLACEHOLDER: the dev Worker's callback URL (or http://localhost:8787/auth/callback
-        // when running `wrangler dev`, if registered with the dev Meta app).
-        "CALLBACK_URL": "https://sequence-server-dev.PLACEHOLDER.workers.dev/auth/callback",
+        // The dev Worker's callback URL (or http://localhost:8787/auth/callback when
+        // running `wrangler dev`, if registered with the Meta app).
+        "CALLBACK_URL": "https://sequence-server-dev.sequence-photos.workers.dev/auth/callback",
         "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\",\"dev\":\"http://localhost:5175/app/\"}",
         "ALLOWED_ORIGINS": "[\"https://sequence.photos\",\"http://localhost:5175\"]",
         "MAX_FRAMES": "10",
