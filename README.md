@@ -62,9 +62,10 @@ Constraints that shaped this design:
 4. **No usable token in any URL.** The sign-in redirect carries only a sealed bundle
    that's useless without a secret the app kept (PKCE-style), so an intercepted redirect
    (another app claiming the URL scheme, browser history, extensions) gets nothing.
-5. **Log nothing.** Workers Logs is on by default for new Workers and records full
-   request URLs (which here contain codes, signatures, and frame ids) for 3 days, so it's
-   turned off explicitly. Tracing too (subrequest URLs carry `client_secret`).
+5. **Log enough to debug, never a secret.** Cloudflare's automatic request logs record
+   full URLs (which here contain codes, signatures, and frame ids), so they're off; the
+   Worker writes its own log line per request instead, with every secret stripped (see
+   Logging).
 
 ## Strict TypeScript
 
@@ -178,7 +179,8 @@ enrollment. If the enrollment is too old, the user reconnects.
 ### `POST /uploads`
 
 Start an upload batch. `Authorization: Bearer <instagram token>`, JSON body
-`{ enrollment, count }` with `count` 1–10.
+`{ enrollment, count }` with `count` from 1 to `MAX_FRAMES` (a var, `10` to start: the
+API's documented carousel limit; see Open questions).
 
 1. Verify the enrollment (signature, expiry).
 2. `GET graph.instagram.com/<version>/me?fields=user_id&access_token=…`; it must succeed
@@ -198,14 +200,16 @@ Start an upload batch. `Authorization: Bearer <instagram token>`, JSON body
 
 Upload one frame.
 
-1. `id` must match `^[A-Za-z0-9_-]{22}$` and `i` must match `^[0-9]$`; build the R2 key
+1. `id` must match `^[A-Za-z0-9_-]{22}$` and `i` must be a decimal integer below
+   `MAX_FRAMES` without leading zeros (`^(0|[1-9][0-9]?)$`); build the R2 key
    from the parsed values (`frames/<id>/<i>.jpg`). Verify the signature and expiry.
 2. `Content-Length` is required and must be ≤ **8 MB** (8,388,608 bytes: Instagram's
    limit for images, so a larger file would fail anyway). Reject before reading.
 3. Read the body (`arrayBuffer()`; at most 8 MB) and check it's a real JPEG: starts with
    `FF D8 FF`, ends with `FF D9`, and its markers parse to a start-of-frame segment
-   (SOF0–SOF2) whose dimensions are within Instagram's documented bounds (width
-   320–1440 px; confirm the current bounds at implementation time). Reject otherwise
+   (SOF0–SOF2) whose dimensions are plausible for a frame (width 320–1440 px, height at
+   most 2560 px: Instagram scales widths outside 320–1440 rather than refusing them, but
+   the app always sends 320–1440, so anything else isn't from Sequence). Reject otherwise
    (`415`).
 4. **Write once:** a conditional R2 `put` (or `head` first) so an existing object is
    never replaced; `409` if it exists. This stops a leaked or replayed URL from swapping
@@ -267,11 +271,47 @@ Both POSTs: body `application/x-www-form-urlencoded`, capped at 8 KB, with a
 `200`. **Unverified:** whether Instagram-Login apps sign these with the Instagram app
 secret or the Meta app secret; test with Meta's dashboard tools.
 
+## Logging
+
+Workers Logs (free plan: 3 days' retention) with **automatic invocation logs off**
+(`observability.logs.invocation_logs: false`) and tracing off (subrequest URLs carry
+`client_secret` and tokens). The Worker logs instead, through one function in
+`src/log.ts`, as structured JSON (`console.log({ … })`), so Workers Logs can filter on
+fields:
+
+- **One line per request:** method, the **route template** (e.g.
+  `PUT /uploads/:id/:i.jpg`, never the raw path), status, duration, Cloudflare location
+  (`request.cf.colo`), and the outcome (`ok`, or an error code like `bad_signature`,
+  `expired`, `not_jpeg`, `too_large`, `exists`, `enrollment_mismatch`).
+- **Correlation without secrets:** `batch` = the first 8 hex characters of
+  SHA-256(`id`), so an upload's POST, PUTs, GETs (Instagram's fetches), DELETE, and its
+  sweep can be followed without logging the id (which is what grants access to the
+  frames). Likewise `user` = a short hash of the Instagram `user_id` for auth and upload
+  requests, and the frame index `i`.
+- **Query parameters by name only:** e.g. `query: ["exp", "sig"]`, values never logged.
+- **Instagram failures:** the endpoint called (route only, no query), HTTP status, and
+  Instagram's `error.code`, `error.error_subcode`, `error.type`, and `fbtrace_id` (Meta's
+  id for the request, for their support). Not `error.message` (it can echo input).
+- **Sizes and frames:** body length, and for frames the parsed width × height.
+- **Sweep runs:** objects listed, deleted, pages.
+- **Never logged:** tokens, `code`, `state`, `sig`, `verifier`, sealed values,
+  enrollments, `client_secret`, `signed_request`, raw URLs or query strings, request or
+  response bodies, headers (`Authorization`), image bytes, usernames.
+
+Redaction is by **allowlist**: `log()` accepts a typed record of known fields only (no
+free-form strings from requests), so a new field can't leak by accident. Uncaught
+exceptions are caught at the router and logged as the error's name and the route, not
+its message (messages can contain URLs). A test fails if any log line contains a
+query string, a 22-character id, or known secret values used in the test.
+
+`wrangler tail` (live, owner-only) shows these same lines; with invocation logs off it
+doesn't add raw request URLs.
+
 ## Abuse and rate limits
 
 - Uploads need an enrollment + matching token (above), so the server isn't a public
   image host.
-- Per batch: at most 10 write-once frames of ≤ 8 MB, for ≤ 30 minutes.
+- Per batch: at most `MAX_FRAMES` write-once frames of ≤ 8 MB, for ≤ 30 minutes.
 - Workers Rate Limiting binding (confirm it's on the free plan) as a speed bump, not a
   quota (periods are 10 or 60 seconds only; counters are per location and approximate):
   `/uploads` at ~3 per 60 s per Instagram `user_id`; `/auth/*` and `/meta/*` at ~10 per
@@ -334,8 +374,9 @@ are rejected at sign-in.)
   (later).
 - **File → Post to Instagram…** (digital projects, when connected): a dialog with the
   caption, feed or story, and a preview. Checks before uploading:
-  - Feed: 1 frame (single image) or 2–10 (carousel); aspect ratio within 4:5 to 1.91:1
-    (the default 3:4 is likely rejected; see Open questions).
+  - Feed: 1 frame (single image) or 2–10 (carousel; the API's limit, though the
+    Instagram app allows 20); aspect ratio within 4:5 to 1.91:1 (documented, so the
+    default 3:4 can't post to the feed; see Open questions).
   - Story: frames post one by one.
   - Each JPEG: scaled to at most 1440 px wide, ≤ 8 MB (lower the quality if needed).
 - **Posting** (all with `access_token=<token>`, against
@@ -377,6 +418,7 @@ src/
   meta.ts         Meta callbacks, signed_request verification
   instagram.ts    typed Instagram calls + response guards
   http.ts         CORS, errors, headers, input validation
+  log.ts          the one logging function (allowlisted fields, hashing)
 test/             vitest with @cloudflare/vitest-pool-workers (R2 in-process,
                   Instagram mocked via fetch mock)
 wrangler.jsonc
@@ -387,12 +429,11 @@ wrangler.jsonc
 - `name`, `main`, `compatibility_date`.
 - R2 binding `FRAMES` (bucket `sequence-frames`).
 - Cron `*/15 * * * *`.
-- `"observability": { "enabled": false }` (and no tracing). If metrics are ever wanted:
-  invocation logs stay off, and the code logs only the route template, status, and
-  duration.
+- `"observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false } }`,
+  no tracing (see Logging).
 - Rate limit bindings (see Abuse).
 - Vars: `IG_APP_ID`, `GRAPH_VERSION` (pin the current version at implementation time),
-  `CALLBACK_URL`, `RETURN_URLS`, `ALLOWED_ORIGINS`.
+  `CALLBACK_URL`, `RETURN_URLS`, `ALLOWED_ORIGINS`, `MAX_FRAMES` (`10`).
 - An `env.dev` block with its own name, R2 bucket, `RETURN_URLS`/`ALLOWED_ORIGINS`
   including `localhost`, and its own secrets.
 
@@ -425,7 +466,8 @@ wrangler.jsonc
   accounts; redeem with right and wrong verifiers; renew with matching and mismatched
   users; upload batch → PUT → GET → DELETE; a second PUT to the same frame (`409`);
   expired and bad signatures; GET of a frame over an hour old; the sweep with more than
-  one page; a test that nothing logs a URL or query string.
+  one page; log lines for each route carry the route template, status, and `batch`
+  hash, and never a query string, id, or any secret used in the test.
 - End to end, by hand, with a tester account once Meta is set up: connect, post a
   single image, a carousel, a story. Also check a 3:4 frame to settle the open question.
 
@@ -437,13 +479,16 @@ storage.
 
 ## Open questions
 
-- **3:4 frames:** Instagram's API documents 4:5 to 1.91:1 for feed images; the app's
-  default is 3:4 (1080 × 1440). Test with the real API; then change the default to 4:5,
-  trim when posting, or explain.
-- **Carousel limit:** the API allows 10 items (the Instagram app allows 20). Sequences
-  longer than 10: refuse, or offer to post the first 10.
+- **3:4 frames:** the API reference requires feed images within 4:5 to 1.91:1; the
+  app's default is 3:4 (1080 × 1440). Confirm with the real API; then change the default
+  to 4:5, trim when posting, or explain.
+- **Carousel limit:** the API reference says carousels take up to 10 items, though the
+  Instagram app has allowed 20 since 2024 and scheduling tools (e.g. Later) report the
+  API still caps them at 10. Test a 20-item carousel with a tester account; if it posts,
+  raise `MAX_FRAMES` to 20 (the server's index check and the app's check follow it).
+  Until then, sequences longer than the limit: refuse, or offer to post the first ten.
 - **Publishing limit:** Meta's docs say both 100 and 50 posts per 24 hours in different
   places; read `content_publishing_limit` rather than assuming.
 - **Unverified:** which secret signs Meta's callbacks for Instagram-Login apps; the
   Workers free plan's request body limit (believed 100 MB; we need ≤ 8 MB) and Rate
-  Limiting availability; Instagram's current image width bounds.
+  Limiting availability.
