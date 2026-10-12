@@ -1498,6 +1498,48 @@ body.col-resizing * {
 .settings {
   width: 460px;
 }
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+.settings-tabs button {
+  margin-bottom: -1px;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.settings-tabs button:hover {
+  color: inherit;
+}
+.settings-tabs button.on {
+  border-bottom-color: var(--accent);
+  color: inherit;
+}
+.settings-tabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.text-field {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--fill);
+  color: inherit;
+  font: 12px var(--mono);
+}
+.text-field:focus {
+  outline: none;
+  border-color: var(--accent);
+}
 .settings-body {
   padding: 4px 20px 16px;
   overflow-y: auto;

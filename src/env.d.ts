@@ -3,6 +3,8 @@ interface ImportMetaEnv {
   readonly VITE_SITE_DOMAIN: string;
   /** The Mac app's App Store page (see .env). */
   readonly VITE_APP_STORE_URL: string;
+  /** Sequence's server, for posting to Instagram; empty until it's deployed (see .env). */
+  readonly VITE_SERVER_URL: string;
 }
 
 /** The app's version from package.json, inlined by Vite at build time. */
