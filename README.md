@@ -89,8 +89,9 @@ Secrets (via `wrangler secret put`, never committed):
 - `IG_APP_SECRET`: the Instagram app's secret.
 - `SERVER_SECRET`: 32+ random bytes. Separate keys are derived from it with HKDF-SHA256,
   one per purpose (labels `sequence/v1/seal`, `sequence/v1/enroll`,
-  `sequence/v1/upload`), so a value made for one purpose can't be passed off as another.
-  Derive once per isolate and cache the `CryptoKey`s.
+  `sequence/v1/upload`, and `sequence/v1/log` for log hashes), so a value made for one
+  purpose can't be passed off as another. Derive once per isolate and cache the
+  `CryptoKey`s.
 
 Signed values: `base64url(payload) + "." + base64url(HMAC-SHA256(key, versioned message))`.
 Verify with `crypto.subtle.verify` (constant time), never a hand-written comparison.
@@ -211,9 +212,10 @@ Upload one frame.
    most 2560 px: Instagram scales widths outside 320–1440 rather than refusing them, but
    the app always sends 320–1440, so anything else isn't from Sequence). Reject otherwise
    (`415`).
-4. **Write once:** a conditional R2 `put` (or `head` first) so an existing object is
-   never replaced; `409` if it exists. This stops a leaked or replayed URL from swapping
-   an image after the user previewed it, and bounds R2 writes per batch.
+4. **Write once:** a `head` first (a quick `409` before reading the body), then a
+   conditional R2 `put` (`If-None-Match: *`) so an existing object is never replaced;
+   `409` if it exists. This stops a leaked or replayed URL from swapping an image after
+   the user previewed it, and bounds R2 writes per batch.
 5. Store with `httpMetadata.contentType = image/jpeg` and no custom metadata (R2's own
    `uploaded` time is enough). → `204`.
 
@@ -225,10 +227,10 @@ quality if a frame still doesn't fit.
 
 ### `GET /frames/<id>/<i>.jpg`
 
-Serve a frame to Instagram's fetcher. Public (no auth); the id is the secret. Validate
-`id` and `i` as above. `404` if missing or **older than 1 hour by R2's `uploaded` time**,
-even before the sweep runs. Headers: `Content-Type: image/jpeg`,
-`X-Content-Type-Options: nosniff`,
+Serve a frame to Instagram's fetcher (`HEAD` too, with the same checks and headers and
+no body). Public (no auth); the id is the secret. Validate `id` and `i` as above. `404`
+if missing or **older than 1 hour by R2's `uploaded` time**, even before the sweep runs.
+Headers: `Content-Type: image/jpeg`, `X-Content-Type-Options: nosniff`,
 `Content-Security-Policy: default-src 'none'; sandbox`, `Content-Disposition: inline`,
 `Cache-Control: no-store`, `X-Robots-Tag: noindex`. No CORS headers.
 
@@ -266,9 +268,11 @@ For App Review, Meta requires these URLs in the app's settings:
 
 Both POSTs: body `application/x-www-form-urlencoded`, capped at 8 KB, with a
 `signed_request` of the form `<sig>.<payload>` (base64url). Verify HMAC-SHA256 over the
-**encoded** payload with the app secret; payload `algorithm` must be `HMAC-SHA256` and
-`expires`/`issued_at` sane. Nothing to delete (nothing is stored per user); respond
-`200`. **Unverified:** whether Instagram-Login apps sign these with the Instagram app
+**encoded** payload with the app secret; payload `algorithm` must be `HMAC-SHA256`,
+`issued_at` within the last day (and at most 5 minutes ahead), `expires` a non-negative
+integer if present. Both base64url parts must be canonical (no padding, no `+`/`/`). A
+body over 8 KB is a `413`; anything else wrong is a `400`. Nothing to delete (nothing is
+stored per user); respond `200`. **Unverified:** whether Instagram-Login apps sign these with the Instagram app
 secret or the Meta app secret; test with Meta's dashboard tools.
 
 ## Logging
@@ -286,8 +290,10 @@ fields:
 - **Correlation without secrets:** `batch` = the first 8 hex characters of
   SHA-256(`id`), so an upload's POST, PUTs, GETs (Instagram's fetches), DELETE, and its
   sweep can be followed without logging the id (which is what grants access to the
-  frames). Likewise `user` = a short hash of the Instagram `user_id` for auth and upload
-  requests, and the frame index `i`.
+  frames). Likewise `user` = a short **keyed** hash (HMAC with an HKDF label
+  `sequence/v1/log`; user ids are public, so a plain hash could be checked against a
+  known account) of the Instagram `user_id` for auth and upload requests, and the frame
+  index `i`.
 - **Query parameters by name only:** e.g. `query: ["exp", "sig"]`, values never logged.
 - **Instagram failures:** the endpoint called (route only, no query), HTTP status, and
   Instagram's `error.code`, `error.error_subcode`, `error.type`, and `fbtrace_id` (Meta's
@@ -314,8 +320,11 @@ doesn't add raw request URLs.
 - Per batch: at most `MAX_FRAMES` write-once frames of ≤ 8 MB, for ≤ 30 minutes.
 - Workers Rate Limiting binding (confirm it's on the free plan) as a speed bump, not a
   quota (periods are 10 or 60 seconds only; counters are per location and approximate):
-  `/uploads` at ~3 per 60 s per Instagram `user_id`; `/auth/*` and `/meta/*` at ~10 per
-  60 s per IP.
+  `/uploads` at ~3 per 60 s per Instagram `user_id` (`UPLOAD_RATE_LIMIT`, keyed by the
+  keyed user hash); `/auth/*` and `/meta/*` at ~10 per 60 s per IP (`IP_RATE_LIMIT`,
+  keys `auth:<ip>` and `meta:<ip>` from `CF-Connecting-IP`). Over the limit: `429`. It
+  fails open: a missing binding or a failing `limit()` call lets the request through
+  (the latter logged as an exception).
 - Past the Workers free tier, requests fail rather than bill; the remaining cost
   exposure is R2 operations and storage, bounded by the above.
 
@@ -419,8 +428,8 @@ src/
   instagram.ts    typed Instagram calls + response guards
   http.ts         CORS, errors, headers, input validation
   log.ts          the one logging function (allowlisted fields, hashing)
-test/             vitest with @cloudflare/vitest-pool-workers (R2 in-process,
-                  Instagram mocked via fetch mock)
+test/             vitest with @cloudflare/vitest-plugin (formerly vitest-pool-workers;
+                  R2 in-process, Instagram faked with a fetch spy)
 wrangler.jsonc
 ```
 
@@ -451,7 +460,13 @@ wrangler.jsonc
    same for `--env dev`).
 4. `wrangler r2 bucket create sequence-frames` (and the dev bucket), plus the 1-day
    lifecycle rule.
-5. Later, for App Review: privacy policy URL, the Meta callback URLs above, a screencast
+5. Fill in the placeholder vars in `wrangler.jsonc` (`IG_APP_ID`, `CALLBACK_URL`, for
+   both environments), then `npm run types`.
+6. After the first deploy, on the real R2 bucket: upload a frame, then `PUT` the same
+   signed URL again and check it returns `409` and the first image is unchanged (that R2
+   honours the conditional put). Check that the rate-limit bindings work on the free
+   plan (an 11th `/auth/redeem` from one IP within a minute should get `429`).
+7. Later, for App Review: privacy policy URL, the Meta callback URLs above, a screencast
    of connecting and posting.
 
 ## Testing
@@ -461,7 +476,7 @@ wrangler.jsonc
   verifier); `signed_request` parsing; JPEG structure and dimension checks (truncated,
   polyglot, oversize, wrong dimensions); input formats (`id`, `i`, `state`); response
   guards for Instagram JSON.
-- Worker (vitest-pool-workers): callback happy path and every error path (mocked
+- Worker (`@cloudflare/vitest-plugin`): callback happy path and every error path (mocked
   Instagram), including unknown client (`400`, no redirect) and non-professional
   accounts; redeem with right and wrong verifiers; renew with matching and mismatched
   users; upload batch → PUT → GET → DELETE; a second PUT to the same frame (`409`);
@@ -470,6 +485,35 @@ wrangler.jsonc
   hash, and never a query string, id, or any secret used in the test.
 - End to end, by hand, with a tester account once Meta is set up: connect, post a
   single image, a carousel, a story. Also check a 3:4 frame to settle the open question.
+
+## Development
+
+Node 22+ and npm. Nothing here touches a Cloudflare or Meta account.
+
+```sh
+npm install
+cp .dev.vars.example .dev.vars   # then fill in IG_APP_SECRET and SERVER_SECRET
+npm run dev                      # wrangler dev --env dev: local Worker, local R2
+```
+
+`npm run dev` runs the `dev` environment locally, on <http://localhost:8787>, with a
+local R2 bucket (under `.wrangler/`) and simulated rate limits. Secrets come from
+`.dev.vars` (never committed); `SERVER_SECRET` must be at least 43 characters, e.g.
+`openssl rand -base64 32 | tr '+/' '-_' | tr -d '='`. Signing in for real needs the dev
+Meta app's secret, and the dev Meta app's redirect URI set to the `CALLBACK_URL` in use.
+
+| Command | What it does |
+| --- | --- |
+| `npm test` | vitest, inside workerd (`@cloudflare/vitest-plugin`), with a local R2 bucket and Instagram faked |
+| `npm run typecheck` | checks `worker-configuration.d.ts` is current, then `tsc` |
+| `npm run lint` | typescript-eslint, strict and type-aware; no `any`, unsafe access, non-null assertions, or `as` |
+| `npm run format` / `format:check` | prettier |
+| `npm run types` | regenerates `worker-configuration.d.ts` (the `Env` type) from `wrangler.jsonc`; run after any change to it |
+
+Tests use fixed secrets and high rate limits from `vitest.config.ts`, not `.dev.vars`.
+They print a harmless "Missing required secrets" warning. Locally, `wrangler dev` prints
+its own line per request with the raw path; deployed, with invocation logs off, only the
+Worker's redacted lines are recorded.
 
 ## Out of scope (for now)
 
@@ -489,6 +533,8 @@ storage.
   Until then, sequences longer than the limit: refuse, or offer to post the first ten.
 - **Publishing limit:** Meta's docs say both 100 and 50 posts per 24 hours in different
   places; read `content_publishing_limit` rather than assuming.
-- **Unverified:** which secret signs Meta's callbacks for Instagram-Login apps; the
+- **Unverified:** which secret signs Meta's callbacks for Instagram-Login apps (the
+  Worker verifies with `IG_APP_SECRET`; if Meta uses the Meta app's secret, add it as a
+  separate secret and verify with that); the
   Workers free plan's request body limit (believed 100 MB; we need ≤ 8 MB) and Rate
   Limiting availability.

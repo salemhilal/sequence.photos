@@ -6,6 +6,7 @@ import { decodeUtf8, getKeys, type Keys } from './keys';
 import {
   errorName,
   log,
+  Tag,
   METHODS,
   queryNames,
   type Method,
@@ -113,6 +114,53 @@ export interface RouteDef {
   handler: Handler;
 }
 
+// --- Rate limits ------------------------------------------------------------------------
+
+function isRateLimit(value: unknown): value is RateLimit {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'limit' in value &&
+    typeof value.limit === 'function'
+  );
+}
+
+/**
+ * A speed bump, not a quota (README "Abuse and rate limits"). Keys: `auth:<ip>` and
+ * `meta:<ip>` on IP_RATE_LIMIT; `user:<keyed user hash>` on UPLOAD_RATE_LIMIT, so the
+ * raw user id never leaves the Worker. Fails open: a missing binding, a request without
+ * `CF-Connecting-IP` (only seen locally), or a throwing `limit()` lets the request
+ * through (the last one logged as an exception). Over the limit → 429.
+ */
+async function applyRateLimit(
+  scope: RateLimitScope,
+  request: Request,
+  env: Env,
+  keys: Keys,
+  route: Route,
+): Promise<void> {
+  const binding: unknown = scope.kind === 'user' ? env.UPLOAD_RATE_LIMIT : env.IP_RATE_LIMIT;
+  if (!isRateLimit(binding)) return;
+
+  let key: string;
+  if (scope.kind === 'user') {
+    key = `user:${(await Tag.user(keys.log, scope.userId)).hex}`;
+  } else {
+    const ip = request.headers.get('CF-Connecting-IP');
+    if (ip === null || ip === '') return;
+    key = `${scope.group}:${ip}`;
+  }
+
+  let success: boolean;
+  try {
+    ({ success } = await binding.limit({ key }));
+  } catch (error) {
+    log({ event: 'exception', route, name: errorName(error) });
+    return;
+  }
+  if (!success) throw new HttpError(429, 'rate_limited');
+}
+
 function toMethod(method: string): Method | 'other' {
   return METHODS.find((m) => m === method) ?? 'other';
 }
@@ -174,22 +222,23 @@ export async function handleRequest(
       cors = true;
       response = preflight(request, config);
     } else if (found) {
-      route = found.def.route;
+      const matchedRoute = found.def.route;
+      route = matchedRoute;
       cors = found.def.cors;
+      const keys = await getKeys(env.SERVER_SECRET);
       response = await found.def.handler({
         request,
         url,
         env,
         config,
-        keys: await getKeys(env.SERVER_SECRET),
+        keys,
         now: Math.floor(Date.now() / 1000),
         params: found.match?.groups ?? {},
         log: fields,
         waitUntil: (promise) => {
           ctx.waitUntil(promise);
         },
-        // Wired to the rate-limit bindings in milestone 4.
-        rateLimit: () => Promise.resolve(),
+        rateLimit: (scope) => applyRateLimit(scope, request, env, keys, matchedRoute),
       });
     } else if (onPath.length > 0) {
       const allow = [...new Set(onPath.map((m) => m.def.method))].join(', ');

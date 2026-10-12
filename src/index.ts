@@ -2,12 +2,10 @@
 
 import { callback, redeem, renew } from './auth';
 import { getFrame } from './frames';
-import { handleRequest, HttpError, type Handler, type RouteDef } from './http';
+import { dataDeletion, deauthorize, deletionStatus } from './meta';
+import { handleRequest, type RouteDef } from './http';
 import { runSweep } from './sweep';
 import { createBatch, deleteBatch, putFrame } from './uploads';
-
-// Filled in by later milestones.
-const notImplemented: Handler = () => Promise.reject(new HttpError(501, 'not_implemented'));
 
 const ID = '(?<id>[^/]+)';
 const INDEX = '(?<i>[^/]+)';
@@ -79,21 +77,21 @@ export const ROUTE_TABLE: readonly RouteDef[] = [
     path: /^\/meta\/deauthorize$/,
     route: 'POST /meta/deauthorize',
     cors: false,
-    handler: notImplemented,
+    handler: deauthorize,
   },
   {
     method: 'POST',
     path: /^\/meta\/data-deletion$/,
     route: 'POST /meta/data-deletion',
     cors: false,
-    handler: notImplemented,
+    handler: dataDeletion,
   },
   {
     method: 'GET',
     path: /^\/meta\/deletion$/,
     route: 'GET /meta/deletion',
     cors: false,
-    handler: notImplemented,
+    handler: deletionStatus,
   },
 ];
 

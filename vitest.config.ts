@@ -14,6 +14,12 @@ export default defineConfig({
           SERVER_SECRET: 'test-server-secret-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
           CALLBACK_URL: 'https://server.test/auth/callback',
         },
+        // High limits so ordinary tests never trip them; test/ratelimit.test.ts checks the
+        // limiting itself with fake bindings.
+        ratelimits: {
+          UPLOAD_RATE_LIMIT: { namespace_id: '9001', simple: { limit: 10_000, period: 60 } },
+          IP_RATE_LIMIT: { namespace_id: '9002', simple: { limit: 10_000, period: 60 } },
+        },
       },
     }),
   ],

@@ -77,7 +77,6 @@ export const OUTCOMES = [
   'missing_permission',
   'not_professional',
   'instagram_unavailable',
-  'not_implemented',
   'internal_error',
 ] as const;
 export type Outcome = (typeof OUTCOMES)[number];
