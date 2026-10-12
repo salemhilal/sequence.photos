@@ -1,7 +1,10 @@
 // The Worker: routes requests to handlers, and runs the scheduled sweep.
 
 import { callback, redeem, renew } from './auth';
+import { getFrame } from './frames';
 import { handleRequest, HttpError, type Handler, type RouteDef } from './http';
+import { runSweep } from './sweep';
+import { createBatch, deleteBatch, putFrame } from './uploads';
 
 // Filled in by later milestones.
 const notImplemented: Handler = () => Promise.reject(new HttpError(501, 'not_implemented'));
@@ -39,7 +42,7 @@ export const ROUTE_TABLE: readonly RouteDef[] = [
     route: 'POST /uploads',
     cors: true,
     preflightRoute: 'OPTIONS /uploads',
-    handler: notImplemented,
+    handler: createBatch,
   },
   {
     method: 'PUT',
@@ -47,7 +50,7 @@ export const ROUTE_TABLE: readonly RouteDef[] = [
     route: 'PUT /uploads/:id/:i.jpg',
     cors: true,
     preflightRoute: 'OPTIONS /uploads/:id/:i.jpg',
-    handler: notImplemented,
+    handler: putFrame,
   },
   {
     method: 'DELETE',
@@ -55,14 +58,21 @@ export const ROUTE_TABLE: readonly RouteDef[] = [
     route: 'DELETE /uploads/:id',
     cors: true,
     preflightRoute: 'OPTIONS /uploads/:id',
-    handler: notImplemented,
+    handler: deleteBatch,
   },
   {
     method: 'GET',
     path: new RegExp(`^/frames/${ID}/${INDEX}\\.jpg$`),
     route: 'GET /frames/:id/:i.jpg',
     cors: false,
-    handler: notImplemented,
+    handler: getFrame,
+  },
+  {
+    method: 'HEAD',
+    path: new RegExp(`^/frames/${ID}/${INDEX}\\.jpg$`),
+    route: 'HEAD /frames/:id/:i.jpg',
+    cors: false,
+    handler: getFrame,
   },
   {
     method: 'POST',
@@ -91,7 +101,7 @@ export default {
   fetch(request, env, ctx) {
     return handleRequest(request, env, ctx, ROUTE_TABLE);
   },
-  async scheduled() {
-    // The sweep (milestone 3).
+  scheduled(_controller, env, ctx) {
+    ctx.waitUntil(runSweep(env));
   },
 } satisfies ExportedHandler<Env>;

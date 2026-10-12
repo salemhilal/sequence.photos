@@ -157,6 +157,12 @@ export const LIFETIME = {
 export const ENROLL_RENEW_GRACE = 30 * 24 * 60 * 60;
 
 /**
+ * How long a frame is served after upload (by R2's `uploaded` time), and the age past
+ * which the sweep deletes it. Leaves room for Meta's recommended container polling.
+ */
+export const FRAME_MAX_AGE = 60 * 60;
+
+/**
  * Allowance for clock differences between the isolate that set an `exp` and the one
  * checking it, in the "too far in the future" check only.
  */

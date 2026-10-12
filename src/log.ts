@@ -43,6 +43,7 @@ export const ROUTES = [
   'PUT /uploads/:id/:i.jpg',
   'DELETE /uploads/:id',
   'GET /frames/:id/:i.jpg',
+  'HEAD /frames/:id/:i.jpg',
   'POST /meta/deauthorize',
   'POST /meta/data-deletion',
   'GET /meta/deletion',

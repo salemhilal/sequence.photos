@@ -102,7 +102,7 @@ export type LogFields = {
 export type Handler = (ctx: RequestContext) => Promise<Response>;
 
 export interface RouteDef {
-  method: Exclude<Method, 'OPTIONS' | 'HEAD'>;
+  method: Exclude<Method, 'OPTIONS'>;
   /** Anchored, with named groups for parameters. */
   path: RegExp;
   route: Route;
