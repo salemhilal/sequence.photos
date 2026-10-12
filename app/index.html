@@ -18,15 +18,8 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Photos spread out on Sequence's desk, with the book's spreads beside them" />
     <meta name="twitter:card" content="summary_large_image" />
-    <script>
-      // Apply a saved light/dark choice before first paint (see src/theme.ts).
-      try {
-        var t = localStorage.getItem('photobook-theme');
-        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
-        var d = localStorage.getItem('photobook-desk');
-        if (d && /^#[0-9a-f]{6}$/i.test(d)) document.documentElement.style.setProperty('--desk', d);
-      } catch (e) {}
-    </script>
+    <!-- Before first paint: the saved theme and desk color. -->
+    <script src="/app/boot.js"></script>
   </head>
   <body>
     <div id="root"></div>
