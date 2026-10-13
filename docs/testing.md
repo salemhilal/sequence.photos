@@ -19,7 +19,7 @@ switch it to digital in Layout (and back).
       build has none of the website's pages.
 - [ ] `npm run test:app`: the Mac app end-to-end test passes (open, Save, Save As, relaunch,
       sandboxed).
-- [ ] In `sequence-server`: `npm test`, `npm run typecheck`, `npm run lint`.
+- [ ] In `server/`: `npm test`, `npm run typecheck`, `npm run lint`, `npm run format:check`.
 
 ## Startup and projects
 

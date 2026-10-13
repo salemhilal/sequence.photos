@@ -1,3 +1,4 @@
+import type { UploadBatch, UploadsRequest } from '../server/src/api';
 import { INSTAGRAM } from './config';
 import { isRecord } from './guards';
 import { freshConnection, markNeedsReconnect, RECONNECT, SERVER_ERROR, type InstagramConnection } from './instagram';
@@ -141,12 +142,6 @@ async function waitUntilReady(token: string, container: string, signal?: AbortSi
 
 // --- Sequence's server ------------------------------------------------------------------
 
-interface UploadBatch {
-  id: string;
-  frames: { put: string; url: string }[];
-  delete: string;
-}
-
 function parseBatch(v: unknown, count: number): UploadBatch | null {
   if (!isRecord(v) || typeof v.id !== 'string' || typeof v.delete !== 'string' || !Array.isArray(v.frames)) {
     return null;
@@ -163,7 +158,7 @@ async function startUpload(connection: InstagramConnection, count: number, signa
     res = await fetch(`${connection.server}/uploads`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${connection.token}` },
-      body: JSON.stringify({ enrollment: connection.enrollment, count }),
+      body: JSON.stringify({ enrollment: connection.enrollment, count } satisfies UploadsRequest),
       signal,
     });
   } catch {

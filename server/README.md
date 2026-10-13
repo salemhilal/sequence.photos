@@ -1,18 +1,19 @@
-# sequence-server
+# Sequence's server
 
 The server side of [Sequence](https://sequence.photos), for posting digital sequences to
 Instagram. This README is the spec: what the server does, and why.
 
-- **App repo:** `salemhilal/sequence.photos`, checked out at `~/Code/photobook-sequencer`.
-  It's a Vite + React + TypeScript app (website at `sequence.photos/app/`, and a Tauri
-  Mac app from the same code).
-- **This repo:** `salemhilal/sequence-server` (private), at `~/Code/sequence-server`.
+It lives in `server/` of the app's repo (`salemhilal/sequence.photos`), beside the
+Vite + React + TypeScript app (the website at `sequence.photos/app/`, and a Tauri Mac app
+from the same code), with its own `package.json` and tooling: run its commands from
+`server/`. It began as a separate repo, `salemhilal/sequence-server`, whose history it
+keeps.
 
 ## Background
 
 Sequence is a tool for laying out photo sequences. A project is either a **print book**
-(spreads, in inches) or a **digital sequence** (single frames, in pixels; 1080 × 1440 by
-default, with Instagram presets). The app already renders a digital sequence's frames as
+(spreads, in inches) or a **digital sequence** (single frames, in pixels; 1080 × 1350,
+4:5, by default, with Instagram presets). The app already renders a digital sequence's frames as
 JPEGs (`src/frames.ts`, `renderFrames`). This work adds **posting a digital sequence to
 Instagram**:
 
@@ -351,7 +352,9 @@ anything); the enrollment and token checks are.
 
 ## Shared API types (`src/api.ts`)
 
-Dependency-free so the app can vendor a copy (later: a package):
+Dependency-free, so the app imports it directly (`../server/src/api`) and the two can't
+drift; `formats.ts` checks at compile time that the request types match the schemas the
+server parses with:
 
 ```ts
 export interface InstagramConnection {
@@ -404,7 +407,7 @@ types (`schemaFor` in `src/formats.ts`), so the two can't drift apart.
 (No profile picture: its CDN URL expires. No account type: non-professional accounts
 are rejected at sign-in.)
 
-## The app's side (in the app repo, after the server works)
+## The app's side (`src/` in this repo)
 
 - **Content Security Policy first (must ship with the Instagram code):** the website
   stores a refreshable publishing token, so every page gets a strict CSP, generated at
@@ -422,8 +425,9 @@ are rejected at sign-in.)
 - **File → Post to Instagram…** (digital projects, when connected): a dialog with the
   caption, feed or story, and a preview. Checks before uploading:
   - Feed: 1 frame (single image) or 2–10 (carousel; the API's limit, though the
-    Instagram app allows 20); aspect ratio within 4:5 to 1.91:1 (documented, so the
-    default 3:4 can't post to the feed; see Open questions).
+    Instagram app allows 20); aspect ratio within 4:5 to 1.91:1, so other shapes (like
+    the 3:4 preset, which the Instagram app takes for manual uploads) are cropped or
+    expanded to the nearest one.
   - Stories: one per frame, up to 10 at a time (a batch's limit, `MAX_FRAMES`). All of
     them are created and processed before any is published, so a cancel or failure
     can't leave some up; a failure while publishing says how many went up.
@@ -446,7 +450,7 @@ are rejected at sign-in.)
   7. `DELETE` the upload batch, only after publishing succeeds or the post is abandoned
      (in a `finally`).
   8. Show the post: `GET /<mediaId>?fields=permalink`.
-- **Privacy policy** (`privacy/index.html` in the app repo) and the App Store privacy
+- **Privacy policy** (`privacy/index.html`) and the App Store privacy
   answers: when you post to Instagram, the frames are uploaded to Sequence's server for
   Instagram to fetch, and deleted after posting (automatically within about an hour and
   a half otherwise); your Instagram token stays on your device.
@@ -529,7 +533,7 @@ wrangler.jsonc
   one page; log lines for each route carry the route template, status, and `batch`
   hash, and never a query string, id, or any secret used in the test.
 - End to end, by hand, with a tester account once Meta is set up: connect, post a
-  single image, a carousel, a story. Also check a 3:4 frame to settle the open question.
+  single image, a carousel, a story.
 
 ## Development
 
@@ -574,9 +578,6 @@ storage.
 
 ## Open questions
 
-- **3:4 frames:** the API reference requires feed images within 4:5 to 1.91:1; the
-  app's default is 3:4 (1080 × 1440). Confirm with the real API; then change the default
-  to 4:5, trim when posting, or explain.
 - **Carousel limit:** the API reference says carousels take up to 10 items, though the
   Instagram app has allowed 20 since 2024 and scheduling tools (e.g. Later) report the
   API still caps them at 10. Test a 20-item carousel with a tester account; if it posts,
