@@ -1,7 +1,7 @@
 # sequence-server
 
 The server side of [Sequence](https://sequence.photos), for posting digital sequences to
-Instagram. This README is the plan: everything a fresh session needs to build it.
+Instagram. This README is the spec: what the server does, and why.
 
 - **App repo:** `salemhilal/sequence.photos`, checked out at `~/Code/photobook-sequencer`.
   It's a Vite + React + TypeScript app (website at `sequence.photos/app/`, and a Tauri
@@ -74,13 +74,12 @@ TypeScript, strict, with no `any` anywhere:
 - `tsconfig.json`: `"strict": true`, `"noUncheckedIndexedAccess": true`,
   `"exactOptionalPropertyTypes": true`, `"noImplicitOverride": true`,
   `"noFallthroughCasesInSwitch": true`, `"verbatimModuleSyntax": true`.
-- Lint (oxlint or typescript-eslint) with `no-explicit-any`, `no-unsafe-*`, and
-  `no-non-null-assertion` as errors.
+- Lint (typescript-eslint, strict and type-aware) with `no-explicit-any`, `no-unsafe-*`,
+  `no-non-null-assertion`, and `as` casts (other than `as const`) as errors.
 - **Every external input** (Instagram responses, request bodies, query parameters, Meta
-  `signed_request`s) is parsed from `unknown`/`string` with type guards or a small schema
-  library (e.g. `valibot`); never cast with `as`.
-- Types: `wrangler types` (or `@cloudflare/workers-types`), Worker `Env` typed from
-  `wrangler.jsonc`.
+  `signed_request`s, the vars) is parsed from `unknown`/`string` with type guards or
+  valibot schemas (`src/formats.ts` holds the shared ones); never cast with `as`.
+- Types: `wrangler types` generates the Worker's `Env` from `wrangler.jsonc`.
 
 ## Secrets and keys
 
@@ -130,8 +129,9 @@ exactly). The authorization code is single-use and valid for 1 hour.
    with `#instagram_error=cancelled&state=<state>`.
 3. `POST https://api.instagram.com/oauth/access_token` (form: `client_id`,
    `client_secret`, `grant_type=authorization_code`, `redirect_uri`, `code`). The
-   response is `{ data: [{ access_token, user_id, permissions }] }` — read `data[0]`.
-   Check `permissions` includes `instagram_business_content_publish`.
+   response is `{ data: [{ access_token, user_id, permissions }] }` — read `data[0]`
+   (its `user_id` isn't used: see step 5). Check `permissions` includes
+   `instagram_business_content_publish`.
 4. `GET https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=…&access_token=…`
    → long-lived token, `expires_in` (~60 days).
 5. `GET https://graph.instagram.com/<version>/me?fields=user_id,username,account_type&access_token=…`.
@@ -173,7 +173,12 @@ When the app refreshes its Instagram token (below), it also renews the enrollmen
 `POST /auth/renew` with body `{ enrollment }` and `Authorization: Bearer <token>`. The
 server checks the enrollment's signature (allowing it to be expired by up to 30 days),
 then calls `/me?fields=user_id` with the token; the `user_id` must match. Returns a new
-enrollment. If the enrollment is too old, the user reconnects.
+enrollment (`RenewResponse`). If the enrollment is too old, the user reconnects.
+
+Errors: `401` if the enrollment is malformed, forged, or too old, Instagram refuses the
+token, or the user ids differ; `502` (logged as `instagram_unavailable`) if Instagram
+didn't answer, timed out, or failed with a 5xx, so the app can retry later; `413` for a
+body over 4 KB.
 
 ## Frames
 
@@ -183,10 +188,12 @@ Start an upload batch. `Authorization: Bearer <instagram token>`, JSON body
 `{ enrollment, count }` with `count` from 1 to `MAX_FRAMES` (a var, `10` to start: the
 API's documented carousel limit; see Open questions).
 
-1. Verify the enrollment (signature, expiry).
+1. Verify the enrollment (signature, expiry); else `401`. Then the per-user rate limit
+   (see Abuse).
 2. `GET graph.instagram.com/<version>/me?fields=user_id&access_token=…`; it must succeed
-   and its `user_id` must equal the enrollment's. Else `401`. Don't store or log the
-   token.
+   and its `user_id` must equal the enrollment's. Else `401`, or `502`
+   (`instagram_unavailable`) if Instagram is unavailable, as for renew. Don't store or
+   log the token.
 3. Make the batch `id`: 128 random bits as base64url (exactly 22 characters).
 4. Return `UploadBatch`:
    - `frames[i].put`: `PUT /uploads/<id>/<i>.jpg?exp=<unix>&sig=<…>`, signed with the
@@ -206,7 +213,7 @@ Upload one frame.
    from the parsed values (`frames/<id>/<i>.jpg`). Verify the signature and expiry.
 2. `Content-Length` is required and must be ≤ **8 MB** (8,388,608 bytes: Instagram's
    limit for images, so a larger file would fail anyway). Reject before reading.
-3. Read the body (`arrayBuffer()`; at most 8 MB) and check it's a real JPEG: starts with
+3. Read the body (streamed, stopping past 8 MB) and check it's a real JPEG: starts with
    `FF D8 FF`, ends with `FF D9`, and its markers parse to a start-of-frame segment
    (SOF0–SOF2) whose dimensions are plausible for a frame (width 320–1440 px, height at
    most 2560 px: Instagram scales widths outside 320–1440 rather than refusing them, but
@@ -297,7 +304,12 @@ fields:
 - **Query parameters by name only:** e.g. `query: ["exp", "sig"]`, values never logged.
 - **Instagram failures:** the endpoint called (route only, no query), HTTP status, and
   Instagram's `error.code`, `error.error_subcode`, `error.type`, and `fbtrace_id` (Meta's
-  id for the request, for their support). Not `error.message` (it can echo input).
+  id for the request, for their support). Not `error.message` (it can echo input). For a
+  `2xx` that didn't match its schema, `fields`: the names of the fields that failed
+  (e.g. `data.0.access_token`, never values), or `(not json)`, or `(too_large)` for a
+  response over 64 KB (the cap is enforced while reading). Instagram sends some ids as
+  bare JSON numbers longer than a JavaScript number holds exactly, so `"user_id"` and
+  `"id"` numbers are quoted before parsing to keep every digit.
 - **Sizes and frames:** body length, and for frames the parsed width × height.
 - **Sweep runs:** objects listed, deleted, pages.
 - **Never logged:** tokens, `code`, `state`, `sig`, `verifier`, sealed values,
@@ -333,7 +345,8 @@ doesn't add raw request URLs.
 For `/auth/redeem`, `/auth/renew`, and `/uploads*` only: allow origins from env
 `ALLOWED_ORIGINS` (`https://sequence.photos`; `http://localhost:5175` only in the `dev`
 environment; the Mac app's origin later). Allow `Authorization`, `Content-Type`; methods
-`POST, PUT, DELETE`. Origins aren't a security boundary (non-browsers can send
+`POST, PUT, DELETE`. A preflight from any other origin gets `403` (logged as
+`forbidden_origin`). Origins aren't a security boundary (non-browsers can send
 anything); the enrollment and token checks are.
 
 ## Shared API types (`src/api.ts`)
@@ -361,7 +374,32 @@ export interface UploadBatch {
 }
 
 export type InstagramError = 'cancelled' | 'exchange_failed' | 'missing_permission' | 'not_professional';
+
+/** `POST /auth/redeem` body. */
+export interface RedeemRequest {
+  sealed: string;
+  verifier: string;
+}
+
+/** `POST /auth/renew` body (with `Authorization: Bearer <token>`). */
+export interface RenewRequest {
+  enrollment: string;
+}
+
+/** `POST /auth/renew` response. */
+export interface RenewResponse {
+  enrollment: string;
+}
+
+/** `POST /uploads` body (with `Authorization: Bearer <token>`). */
+export interface UploadsRequest {
+  enrollment: string;
+  count: number;
+}
 ```
+
+The server's schemas for the request bodies are checked at compile time against these
+types (`schemaFor` in `src/formats.ts`), so the two can't drift apart.
 
 (No profile picture: its CDN URL expires. No account type: non-professional accounts
 are rejected at sign-in.)
@@ -417,21 +455,27 @@ are rejected at sign-in.)
 
 ```
 src/
-  index.ts        router: fetch + scheduled handlers
-  env.ts          Env type (bindings, vars, secrets)
+  index.ts        the route table, and the fetch + scheduled handlers
+  router.ts       routing, error responses, default and CORS headers, the request log line
+  http.ts         HttpError, JSON responses, reading bodies (with size caps)
+  ratelimit.ts    the rate limit bindings (see Abuse)
+  env.ts          parses the vars into a typed, validated Config
   api.ts          shared request/response types
-  keys.ts         HKDF key derivation, sign/verify, seal/unseal
+  formats.ts      input formats: shared patterns, valibot schemas, parsers, parseJsonWith
+  encoding.ts     UTF-8 and base64url helpers
+  keys.ts         HKDF key derivation, sign/verify, enrollment, seal/unseal
   auth.ts         /auth/callback, /auth/redeem, /auth/renew
   uploads.ts      /uploads, PUT, DELETE
   jpeg.ts         JPEG structure and dimension checks
   frames.ts       GET /frames
+  storage.ts      frame keys in R2, FRAME_MAX_AGE, list-and-delete
   sweep.ts        scheduled cleanup
   meta.ts         Meta callbacks, signed_request verification
   instagram.ts    typed Instagram calls + response guards
-  http.ts         CORS, errors, headers, input validation
   log.ts          the one logging function (allowlisted fields, hashing)
 test/             vitest with @cloudflare/vitest-plugin (formerly vitest-pool-workers;
                   R2 in-process, Instagram faked with a fetch spy)
+worker-configuration.d.ts   the `Env` type, generated by `npm run types`
 wrangler.jsonc
 ```
 
@@ -443,8 +487,7 @@ wrangler.jsonc
 - `"observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false } }`,
   no tracing (see Logging).
 - Rate limit bindings (see Abuse).
-- Vars: `IG_APP_ID`, `GRAPH_VERSION` (pin the current version at implementation time),
-  `CALLBACK_URL`, `RETURN_URLS`, `ALLOWED_ORIGINS`, `MAX_FRAMES` (`10`).
+- Vars: `IG_APP_ID`, `GRAPH_VERSION` (pinned, e.g. `v26.0`), `CALLBACK_URL`, `RETURN_URLS`, `ALLOWED_ORIGINS`, `MAX_FRAMES` (`10`).
 - An `env.dev` block with its own name, R2 bucket, `RETURN_URLS`/`ALLOWED_ORIGINS`
   including `localhost`, and its own secrets.
 
@@ -462,8 +505,8 @@ wrangler.jsonc
    same for `--env dev`).
 4. `wrangler r2 bucket create sequence-frames` (and the dev bucket), plus the 1-day
    lifecycle rule.
-5. Fill in the placeholder vars in `wrangler.jsonc` (`IG_APP_ID`, `CALLBACK_URL`, for
-   both environments), then `npm run types`.
+5. Check the vars in `wrangler.jsonc` (`IG_APP_ID`, `CALLBACK_URL`, for both
+   environments) match the Meta app; run `npm run types` after any change.
 6. After the first deploy, on the real R2 bucket: upload a frame, then `PUT` the same
    signed URL again and check it returns `409` and the first image is unchanged (that R2
    honours the conditional put). Check that the rate-limit bindings work on the free
@@ -517,7 +560,8 @@ which Instagram can't fetch (it fails with error 9004). Use the deployed `dev` W
 a tunnel (e.g. `cloudflared tunnel --url http://localhost:8787`) with its address in
 `CALLBACK_URL` and the Meta app's redirect URIs.
 
-Tests use fixed secrets and high rate limits from `vitest.config.ts`, not `.dev.vars`.
+Tests use fixed secrets, vars, and high rate limits from `vitest.config.ts`, not
+`.dev.vars` or `wrangler.jsonc`'s dev values.
 They print a harmless "Missing required secrets" warning. Locally, `wrangler dev` prints
 its own line per request with the raw path; deployed, with invocation logs off, only the
 Worker's redacted lines are recorded.
