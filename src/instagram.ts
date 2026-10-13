@@ -38,7 +38,7 @@ export interface InstagramConnection {
   needsReconnect?: true;
 }
 
-export type InstagramError = 'cancelled' | 'exchange_failed' | 'missing_permission' | 'not_professional';
+type InstagramError = 'cancelled' | 'exchange_failed' | 'missing_permission' | 'not_professional';
 
 const STORAGE_KEY = 'photobook-instagram';
 const PENDING_KEY = 'photobook-instagram-pending';
@@ -164,7 +164,7 @@ interface Pending {
   server: string;
 }
 
-export interface SignInPlan {
+interface SignInPlan {
   url: string;
   pending: Pending;
 }
@@ -208,7 +208,7 @@ export async function connectInstagram(): Promise<string | null> {
 }
 
 /** What came back in the URL's fragment, if it's a sign-in's return. */
-export type SignInReturn =
+type SignInReturn =
   { kind: 'connected'; sealed: string; state: string } | { kind: 'error'; error: InstagramError; state: string };
 
 const ERRORS: readonly InstagramError[] = ['cancelled', 'exchange_failed', 'missing_permission', 'not_professional'];
@@ -323,7 +323,7 @@ export function enrollmentExpiry(enrollment: string): number {
 
 /** A new token from Instagram (no secret needed), or the same connection if that fails. */
 async function refreshToken(c: InstagramConnection, now: number): Promise<InstagramConnection> {
-  const url = new URL('https://graph.instagram.com/refresh_access_token');
+  const url = new URL(`${INSTAGRAM.graphOrigin}/refresh_access_token`);
   url.searchParams.set('grant_type', 'ig_refresh_token');
   url.searchParams.set('access_token', c.token);
   let res: Response;

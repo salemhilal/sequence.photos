@@ -3,19 +3,17 @@ import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
 import { useWindowEvent } from '../hooks';
 import { useInstagram } from '../instagram';
 import {
-  CancelledError,
   fits,
   hashtagCount,
   LIMITS,
   postImageLayout,
-  postToInstagram,
   ratioLabel,
   targetRatio,
   type Fit,
   type PostImageLayout,
   type PostKind,
-  type PostStep,
-} from '../instagramPost';
+} from '../instagramImage';
+import { CancelledError, postToInstagram, type PostStep } from '../instagramPost';
 import { allSpreads, sheetOf } from '../spreads';
 import { useProject } from '../store';
 import type { Frame, Sheet } from '../types';
@@ -24,7 +22,8 @@ import { SpreadCanvas } from './SpreadCanvas';
 
 /**
  * File → Post to Instagram: the post's settings beside a preview of how it'll look on
- * Instagram (a feed post's carousel, or stories). Posting is in instagramPost.ts.
+ * Instagram (a feed post's carousel, or stories). Posting is in instagramPost.ts; the
+ * images, in instagramImage.ts.
  */
 
 type Status =
@@ -181,7 +180,7 @@ export function InstagramPost() {
                 <h3>Size</h3>
                 <p className="help">
                   {kind === 'feed'
-                    ? `These frames are ${ratioLabel(size.w / size.h)}. Instagram’s feed takes 4:5 (tall) to 1.91:1 (wide).`
+                    ? `These frames are ${ratioLabel(size.w / size.h)}. Instagram’s feed takes ${ratioLabel(LIMITS.minRatio)} (tall) to ${ratioLabel(LIMITS.maxRatio)} (wide).`
                     : `These frames are too tall for stories.`}
                 </p>
                 <div className="segmented halves" role="radiogroup" aria-label="Fit">

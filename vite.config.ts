@@ -37,6 +37,8 @@ function securityHeaders(env: Record<string, string>, inlineScripts: string[]): 
     "font-src 'self' data:",
     [
       'connect-src',
+      // Instagram's API: INSTAGRAM.graphOrigin in src/config.ts (which reads import.meta.env,
+      // so can't be loaded here).
       "'self' blob: data: https://graph.instagram.com",
       ...servers,
       'http://localhost:* http://127.0.0.1:*',

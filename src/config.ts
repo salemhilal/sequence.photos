@@ -26,17 +26,21 @@ export const APP_STORE_URL = required('VITE_APP_STORE_URL', env.VITE_APP_STORE_U
 export const SERVER_URL = required('VITE_SERVER_URL', env.VITE_SERVER_URL);
 export const DEV_SERVER_URL = required('VITE_DEV_SERVER_URL', env.VITE_DEV_SERVER_URL);
 
+const GRAPH_ORIGIN = 'https://graph.instagram.com';
+
 /** Instagram API with Instagram Login. The app id is public (it's in every sign-in URL). */
 export const INSTAGRAM = {
   appId: required('VITE_INSTAGRAM_APP_ID', env.VITE_INSTAGRAM_APP_ID),
   authorizeUrl: 'https://www.instagram.com/oauth/authorize',
+  /** Instagram's API, which the Content Security Policies allow (see vite.config.ts). */
+  graphOrigin: GRAPH_ORIGIN,
   /** Matches the server's GRAPH_VERSION (sequence-server's wrangler.jsonc). */
-  graphUrl: 'https://graph.instagram.com/v26.0',
+  graphUrl: `${GRAPH_ORIGIN}/v26.0`,
   scopes: ['instagram_business_basic', 'instagram_business_content_publish'],
   /**
    * Where the server sends someone back after signing in, by the app's address: the
    * `client` in the sign-in state, which the server looks up in its RETURN_URLS. Only the
    * development server knows `dev` (this computer's `npm run dev`).
    */
-  clients: { [SITE_URL]: 'web', 'http://localhost:5175': 'dev' } as Readonly<Record<string, string>>,
+  clients: { [SITE_URL]: 'web', 'http://localhost:5175': 'dev' } as Readonly<Record<string, 'web' | 'dev'>>,
 } as const;
