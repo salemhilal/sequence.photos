@@ -3,12 +3,12 @@
 
 import * as v from 'valibot';
 import type { UploadBatch } from './api';
+import { requireEnrolledUser } from './auth';
 import { Enrollment, isBatchId, parseBearer, parseExp, parseFrameIndex } from './formats';
 import { contentLength, HttpError, jsonResponse, MAX_JSON_BODY, readBody, readJson } from './http';
-import { getMe } from './instagram';
 import { checkJpeg, MAX_FRAME_BYTES } from './jpeg';
 import { randomBase64Url } from './encoding';
-import { LIFETIME, readEnrollment, sign, verify, type Signed } from './keys';
+import { LIFETIME, sign, verify, type Signed } from './keys';
 import { Tag } from './log';
 import type { Handler, RequestContext } from './router';
 import { batchPrefix, deleteWhere, frameKey } from './storage';
@@ -24,22 +24,10 @@ export const createBatch: Handler = async (ctx) => {
   if (token === null) throw new HttpError(401, 'unauthorized');
   const body = await readJson(ctx.request, MAX_JSON_BODY, UploadsBody);
   if (body.count > ctx.config.maxFrames) throw new HttpError(400, 'bad_request');
-
-  // The enrollment first: it's local and cheap, and stops strangers before Instagram.
-  const enrollment = await readEnrollment(ctx.keys, body.enrollment, ctx.now);
-  if (!enrollment.ok) {
-    throw new HttpError(401, enrollment.reason === 'expired' ? 'expired' : 'bad_signature');
-  }
-  ctx.log.user = await Tag.user(ctx.keys.log, enrollment.userId);
-  await ctx.rateLimit({ kind: 'user', userId: enrollment.userId });
-
-  const me = await getMe(ctx.config, token);
-  if (!me.ok) {
-    throw me.failure === 'unavailable'
-      ? new HttpError(502, 'instagram_unavailable')
-      : new HttpError(401, 'unauthorized');
-  }
-  if (me.value.userId !== enrollment.userId) throw new HttpError(401, 'enrollment_mismatch');
+  await requireEnrolledUser(ctx, token, body.enrollment, {
+    // Per user, so after the enrollment names one; before Instagram is called.
+    beforeInstagram: (userId) => ctx.rateLimit({ kind: 'user', userId }),
+  });
 
   // 128 random bits: 22 base64url characters.
   const id = randomBase64Url(16);

@@ -9,7 +9,6 @@ import {
   Enrollment,
   isBase64Url32,
   isUsername,
-  isUserId,
   parseBearer,
 } from './formats';
 import { HttpError, jsonResponse, MAX_JSON_BODY, readJson } from './http';
@@ -30,7 +29,7 @@ import {
   unseal,
 } from './keys';
 import { Tag, type Outcome } from './log';
-import type { Handler } from './router';
+import type { Handler, RequestContext } from './router';
 
 interface OAuthState {
   client: string;
@@ -60,8 +59,45 @@ function redirect(location: string): Response {
   return new Response(null, { status: 303, headers: { Location: location } });
 }
 
+/** A sign-in step's Instagram failure, as the callback's log outcome. */
 function failureOutcome(failure: Failure): Outcome {
   return failure === 'unavailable' ? 'instagram_unavailable' : 'exchange_failed';
+}
+
+/** An Instagram failure checking an app's token: 502 if Instagram is down, else 401. */
+function instagramFailure(failure: Failure): HttpError {
+  return failure === 'unavailable'
+    ? new HttpError(502, 'instagram_unavailable')
+    : new HttpError(401, 'unauthorized');
+}
+
+export interface EnrolledUserOptions {
+  /** How long past its `exp` the enrollment is still accepted (renewal). */
+  grace?: number;
+  /** Runs with the enrollment's user id after it's read, before Instagram is called. */
+  beforeInstagram?: (userId: string) => Promise<void>;
+}
+
+/**
+ * Checks for an enrolled user with a matching token: the enrollment first (local and
+ * cheap, so strangers are stopped before Instagram), then `/me` with the token, whose
+ * user id must be the enrollment's. Tags the log with the user. Returns the user id.
+ */
+export async function requireEnrolledUser(
+  ctx: RequestContext,
+  token: string,
+  enrollment: string,
+  options: EnrolledUserOptions = {},
+): Promise<string> {
+  const read = await readEnrollment(ctx.keys, enrollment, ctx.now, options.grace);
+  if (!read.ok) throw new HttpError(401, read.reason === 'expired' ? 'expired' : 'bad_signature');
+  ctx.log.user = await Tag.user(ctx.keys.log, read.userId);
+  await options.beforeInstagram?.(read.userId);
+
+  const me = await getMe(ctx.config, token);
+  if (!me.ok) throw instagramFailure(me.failure);
+  if (me.value.userId !== read.userId) throw new HttpError(401, 'enrollment_mismatch');
+  return read.userId;
 }
 
 /** `GET /auth/callback`: Instagram's OAuth redirect. */
@@ -153,25 +189,10 @@ export const renew: Handler = async (ctx) => {
   const token = parseBearer(ctx.request.headers.get('Authorization'));
   if (token === null) throw new HttpError(401, 'unauthorized');
   const body = await readJson(ctx.request, MAX_JSON_BODY, RenewBody);
+  const userId = await requireEnrolledUser(ctx, token, body.enrollment, {
+    grace: ENROLL_RENEW_GRACE,
+  });
 
-  const enrollment = await readEnrollment(ctx.keys, body.enrollment, ctx.now, ENROLL_RENEW_GRACE);
-  if (!enrollment.ok) {
-    throw new HttpError(401, enrollment.reason === 'expired' ? 'expired' : 'bad_signature');
-  }
-  ctx.log.user = await Tag.user(ctx.keys.log, enrollment.userId);
-
-  const me = await getMe(ctx.config, token);
-  if (!me.ok) {
-    throw me.failure === 'unavailable'
-      ? new HttpError(502, 'instagram_unavailable')
-      : new HttpError(401, 'unauthorized');
-  }
-  if (!isUserId(me.value.userId) || me.value.userId !== enrollment.userId) {
-    throw new HttpError(401, 'enrollment_mismatch');
-  }
-
-  const response: RenewResponse = {
-    enrollment: await makeEnrollment(ctx.keys, enrollment.userId, ctx.now),
-  };
+  const response: RenewResponse = { enrollment: await makeEnrollment(ctx.keys, userId, ctx.now) };
   return jsonResponse(response);
 };
