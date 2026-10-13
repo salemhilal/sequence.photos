@@ -1,10 +1,8 @@
-import { exports } from 'cloudflare:workers';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { env, exports } from 'cloudflare:workers';
+import { describe, expect, it } from 'vitest';
+import { ROUTE_TABLE } from '../src/index';
+import { handleRequest } from '../src/router';
 import { captureLogs } from './helpers';
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe('router', () => {
   function fetchWorker(input: string, init?: RequestInit): Promise<Response> {
@@ -64,5 +62,27 @@ describe('router', () => {
     });
     expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://sequence.photos');
     expect(response.headers.get('Vary')).toBe('Origin');
+  });
+
+  it('answers a plain 500, logging no config values, when the config is invalid', async () => {
+    const logs = captureLogs();
+    const badEnv = { ...env, RETURN_URLS: '{"web":"javascript:alert(1)"}' };
+    const response = await handleRequest(
+      new Request('https://server.test/uploads', {
+        method: 'POST',
+        headers: { Origin: 'http://localhost:5175' },
+      }),
+      badEnv,
+      ROUTE_TABLE,
+    );
+    expect(response.status).toBe(500);
+    expect(await response.text()).toBe('Internal Server Error');
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    expect(logs.records()).toEqual([
+      { event: 'exception', route: 'unmatched', name: 'Error' },
+      expect.objectContaining({ event: 'request', status: 500, outcome: 'internal_error' }),
+    ]);
+    for (const line of logs.lines()) expect(line).not.toContain('javascript');
   });
 });

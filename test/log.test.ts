@@ -1,12 +1,8 @@
 import { env, exports } from 'cloudflare:workers';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { toBase64Url, utf8 } from '../src/encoding';
 import { getKeys } from '../src/keys';
 import { log, queryNames, Tag, toRecord, type RequestLine } from '../src/log';
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe('tags', () => {
   it('batch tags are the first 8 hex characters of SHA-256(id)', async () => {

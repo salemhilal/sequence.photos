@@ -1,12 +1,8 @@
 import { env } from 'cloudflare:workers';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { getConfig } from '../src/env';
 import { exchangeCode, exchangeLongLived, getMe, isProfessional } from '../src/instagram';
 import { captureLogs, fakeInstagram, json, SHORT_TOKEN, USER_ID } from './helpers';
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 const config = () => getConfig(env);
 
@@ -64,10 +60,10 @@ describe('response guards', () => {
           },
         }),
       );
+    const instagram = fakeInstagram();
     for (const me of [() => json(big), streamed]) {
-      vi.restoreAllMocks();
       const logs = captureLogs();
-      fakeInstagram({ me });
+      instagram.set({ me });
       expect(await getMe(config(), 'token')).toEqual({ ok: false, failure: 'rejected' });
       expect(logs.records()).toEqual([
         {
@@ -81,6 +77,7 @@ describe('response guards', () => {
   });
 
   it('rejects malformed exchange responses', async () => {
+    const instagram = fakeInstagram();
     for (const body of [
       { data: [{ access_token: '' }] },
       { data: [{ access_token: 1 }] },
@@ -89,8 +86,7 @@ describe('response guards', () => {
       null,
       [],
     ]) {
-      vi.restoreAllMocks();
-      fakeInstagram({ exchange: () => json(body) });
+      instagram.set({ exchange: () => json(body) });
       expect(await exchangeCode(config(), 'secret', 'code')).toEqual({
         ok: false,
         failure: 'rejected',
@@ -99,25 +95,27 @@ describe('response guards', () => {
   });
 
   it('requires a positive integer expires_in on the long-lived token', async () => {
+    const instagram = fakeInstagram();
     for (const expires_in of [undefined, 0, -1, 1.5, '5184000']) {
-      vi.restoreAllMocks();
-      fakeInstagram({ longLived: () => json({ access_token: 'IGAAlong', expires_in }) });
+      instagram.set({ longLived: () => json({ access_token: 'IGAAlong', expires_in }) });
       expect((await exchangeLongLived('secret', SHORT_TOKEN)).ok).toBe(false);
     }
   });
 
   it('reads /me, with a string or numeric user id', async () => {
-    fakeInstagram({ me: () => json({ user_id: 17841400000, username: 'u' }) });
+    const instagram = fakeInstagram({
+      me: () => json({ user_id: 17841400000, username: 'u' }),
+    });
     expect(await getMe(config(), 'token', ['username'])).toEqual({
       ok: true,
       value: { userId: '17841400000', username: 'u' },
     });
-    vi.restoreAllMocks();
-    fakeInstagram({ me: () => json({ id: USER_ID }) });
+    instagram.set({ me: () => json({ id: USER_ID }) });
     expect(await getMe(config(), 'token')).toEqual({ ok: false, failure: 'rejected' });
   });
 
   it('classifies 5xx, timeouts, and network errors as unavailable; 4xx as rejected', async () => {
+    const instagram = fakeInstagram();
     const logs = captureLogs();
     for (const [me, failure] of [
       [() => new Response('', { status: 502 }), 'unavailable'],
@@ -126,7 +124,7 @@ describe('response guards', () => {
       [() => json({ error: { code: 190 } }, 401), 'rejected'],
     ] as const) {
       const before = logs.records().length;
-      fakeInstagram({ me });
+      instagram.set({ me });
       expect(await getMe(config(), 'token')).toEqual({ ok: false, failure });
       // One `instagram` line per failed call.
       expect(logs.records().slice(before)).toEqual([

@@ -1,53 +1,39 @@
 import { env } from 'cloudflare:workers';
 import * as v from 'valibot';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getKeys, LIFETIME, makeEnrollment, sign } from '../src/keys';
+import { getKeys, LIFETIME, sign } from '../src/keys';
 import { FRAME_MAX_AGE } from '../src/storage';
-import { call, captureLogs, fakeInstagram, graphError, json, LONG_TOKEN, USER_ID } from './helpers';
+import {
+  Batch,
+  call,
+  captureLogs,
+  fakeInstagram,
+  graphError,
+  json,
+  LONG_TOKEN,
+  newEnrollment,
+  nowSeconds,
+  path,
+  postJson,
+  requestRecord,
+  USER_ID,
+} from './helpers';
 import { concat, makeJpeg, PNG } from './jpegs';
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.restoreAllMocks();
 });
-
-const Batch = v.strictObject({
-  id: v.string(),
-  frames: v.array(v.strictObject({ put: v.string(), url: v.string() })),
-  delete: v.string(),
-});
-type Batch = v.InferOutput<typeof Batch>;
-
-const nowSeconds = () => Math.floor(Date.now() / 1000);
-
-async function enrollment(userId = USER_ID, issuedAt = nowSeconds()): Promise<string> {
-  return makeEnrollment(await getKeys(env.SERVER_SECRET), userId, issuedAt);
-}
 
 function postUploads(body: unknown, token: string | null = LONG_TOKEN): Promise<Response> {
-  return call('/uploads', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token === null ? {} : { Authorization: `Bearer ${token}` }),
-    },
-    body: JSON.stringify(body),
-  });
+  return postJson('/uploads', body, token);
 }
 
 async function startBatch(count: number): Promise<Batch> {
-  fakeInstagram({ me: () => json({ user_id: USER_ID }) });
-  const response = await postUploads({ enrollment: await enrollment(), count });
+  const instagram = fakeInstagram({ me: () => json({ user_id: USER_ID }) });
+  const response = await postUploads({ enrollment: await newEnrollment(), count });
+  instagram.restore();
   expect(response.status).toBe(200);
-  const batch = v.parse(Batch, await response.json());
-  vi.restoreAllMocks();
-  return batch;
-}
-
-/** Strips the origin, for `call`. */
-function path(url: string): string {
-  const parsed = new URL(url);
-  return parsed.pathname + parsed.search;
+  return v.parse(Batch, await response.json());
 }
 
 function put(url: string, body: BodyInit): Promise<Response> {
@@ -71,7 +57,7 @@ describe('POST /uploads', () => {
     const { requests } = fakeInstagram({ me: () => json({ user_id: USER_ID }) });
     const logs = captureLogs();
     const now = nowSeconds();
-    const response = await postUploads({ enrollment: await enrollment(), count: 3 });
+    const response = await postUploads({ enrollment: await newEnrollment(), count: 3 });
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     const batch = v.parse(Batch, await response.json());
@@ -112,7 +98,7 @@ describe('POST /uploads', () => {
 
   it('allows 1 to MAX_FRAMES frames', async () => {
     fakeInstagram({ me: () => json({ user_id: USER_ID }) });
-    const good = await enrollment();
+    const good = await newEnrollment();
     expect((await postUploads({ enrollment: good, count: 1 })).status).toBe(200);
     expect((await postUploads({ enrollment: good, count: 10 })).status).toBe(200);
     for (const count of [0, 11, -1, 1.5, '3', null]) {
@@ -123,7 +109,7 @@ describe('POST /uploads', () => {
 
   it('checks the enrollment before calling Instagram', async () => {
     const instagram = fakeInstagram({ me: () => json({ user_id: USER_ID }) });
-    const expired = await enrollment(USER_ID, nowSeconds() - LIFETIME.ENROLL - 1);
+    const expired = await newEnrollment(nowSeconds() - LIFETIME.ENROLL - 1);
     expect((await postUploads({ enrollment: expired, count: 1 })).status).toBe(401);
     expect((await postUploads({ enrollment: 'forged.value', count: 1 })).status).toBe(401);
     expect(instagram.requests).toHaveLength(0);
@@ -131,7 +117,7 @@ describe('POST /uploads', () => {
 
   it('requires a bearer token', async () => {
     fakeInstagram({ me: () => json({ user_id: USER_ID }) });
-    expect((await postUploads({ enrollment: await enrollment(), count: 1 }, null)).status).toBe(
+    expect((await postUploads({ enrollment: await newEnrollment(), count: 1 }, null)).status).toBe(
       401,
     );
   });
@@ -139,18 +125,27 @@ describe('POST /uploads', () => {
   it("refuses a token for someone else (any app's token passes /me)", async () => {
     fakeInstagram({ me: () => json({ user_id: '17841499999999999' }) });
     const logs = captureLogs();
-    expect((await postUploads({ enrollment: await enrollment(), count: 1 })).status).toBe(401);
+    expect((await postUploads({ enrollment: await newEnrollment(), count: 1 })).status).toBe(401);
     expect(logs.records()).toContainEqual(
       expect.objectContaining({ event: 'request', outcome: 'enrollment_mismatch' }),
     );
   });
 
   it('401s when Instagram rejects the token, 502s when it is down', async () => {
-    fakeInstagram({ me: () => graphError(400) });
-    expect((await postUploads({ enrollment: await enrollment(), count: 1 })).status).toBe(401);
-    vi.restoreAllMocks();
-    fakeInstagram({ me: () => new Response('', { status: 500 }) });
-    expect((await postUploads({ enrollment: await enrollment(), count: 1 })).status).toBe(502);
+    const instagram = fakeInstagram({ me: () => graphError(400) });
+    expect((await postUploads({ enrollment: await newEnrollment(), count: 1 })).status).toBe(401);
+    instagram.set({ me: () => new Response('', { status: 500 }) });
+    const logs = captureLogs();
+    expect((await postUploads({ enrollment: await newEnrollment(), count: 1 })).status).toBe(502);
+    expect(requestRecord(logs.records())).toMatchObject({ outcome: 'instagram_unavailable' });
+  });
+
+  it('413s a body over 4 KB', async () => {
+    const instagram = fakeInstagram({ me: () => json({ user_id: USER_ID }) });
+    const enrollment = await newEnrollment();
+    const response = await postUploads({ enrollment, count: 1, pad: 'x'.repeat(4096) });
+    expect(response.status).toBe(413);
+    expect(instagram.requests).toHaveLength(0);
   });
 });
 

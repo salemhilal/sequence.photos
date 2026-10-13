@@ -11,10 +11,10 @@ import { env } from 'cloudflare:workers';
 import * as v from 'valibot';
 import { afterEach, expect, it, vi } from 'vitest';
 import worker from '../src/index';
-import { randomBase64Url, sha256Base64Url, toBase64Url, utf8 } from '../src/encoding';
-import { getKeys, makeEnrollment } from '../src/keys';
+import { randomBase64Url, sha256Base64Url } from '../src/encoding';
 import { ROUTES } from '../src/log';
 import {
+  Batch,
   call,
   captureLogs,
   CODE,
@@ -23,46 +23,19 @@ import {
   graphError,
   json,
   LONG_TOKEN,
+  newEnrollment,
+  nowSeconds,
+  path,
+  postJson,
   SHORT_TOKEN,
+  signMetaRequest,
   USER_ID,
 } from './helpers';
 import { makeJpeg } from './jpegs';
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.restoreAllMocks();
 });
-
-const Batch = v.strictObject({
-  id: v.string(),
-  frames: v.array(v.strictObject({ put: v.string(), url: v.string() })),
-  delete: v.string(),
-});
-
-function path(url: string): string {
-  const parsed = new URL(url);
-  return parsed.pathname + parsed.search;
-}
-
-async function metaSignedRequest(): Promise<string> {
-  const encoded = toBase64Url(
-    utf8(
-      JSON.stringify({
-        algorithm: 'HMAC-SHA256',
-        issued_at: Math.floor(Date.now() / 1000),
-        user_id: USER_ID,
-      }),
-    ),
-  );
-  const key = await crypto.subtle.importKey(
-    'raw',
-    utf8(env.IG_APP_SECRET),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  return `${toBase64Url(new Uint8Array(await crypto.subtle.sign('HMAC', key, utf8(encoded))))}.${encoded}`;
-}
 
 it('no log line carries a query string, an id, or a secret, on any route', async () => {
   const logs = captureLogs();
@@ -115,26 +88,14 @@ it('no log line carries a query string, an id, or a secret, on any route', async
   }
 
   meReply = () => json({ user_id: USER_ID });
-  const renewal = await call('/auth/renew', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${LONG_TOKEN}` },
-    body: JSON.stringify({ enrollment: connection.enrollment }),
-  });
+  const renewal = await postJson('/auth/renew', { enrollment: connection.enrollment });
   expect(renewal.status).toBe(200);
   secrets.push(v.parse(v.object({ enrollment: v.string() }), await renewal.json()).enrollment);
 
   // --- Frames ---
-  const enrollment = await makeEnrollment(
-    await getKeys(env.SERVER_SECRET),
-    USER_ID,
-    Math.floor(Date.now() / 1000),
-  );
+  const enrollment = await newEnrollment();
   secrets.push(enrollment);
-  const started = await call('/uploads', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${LONG_TOKEN}` },
-    body: JSON.stringify({ enrollment, count: 2 }),
-  });
+  const started = await postJson('/uploads', { enrollment, count: 2 });
   expect(started.status).toBe(200);
   const batch = v.parse(Batch, await started.json());
   const [frame0, frame1] = batch.frames;
@@ -161,20 +122,14 @@ it('no log line carries a query string, an id, or a secret, on any route', async
 
   // Instagram failing, with a message echoing the token.
   meReply = () => graphError(400);
-  expect(
-    (
-      await call('/uploads', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${LONG_TOKEN}` },
-        body: JSON.stringify({ enrollment, count: 1 }),
-      })
-    ).status,
-  ).toBe(401);
+  expect((await postJson('/uploads', { enrollment, count: 1 })).status).toBe(401);
 
   expect((await call(path(batch.delete), { method: 'DELETE' })).status).toBe(204);
 
   // --- Meta ---
-  const signedRequest = await metaSignedRequest();
+  const signedRequest = (
+    await signMetaRequest({ algorithm: 'HMAC-SHA256', issued_at: nowSeconds(), user_id: USER_ID })
+  ).value;
   secrets.push(signedRequest);
   const form = new URLSearchParams({ signed_request: signedRequest }).toString();
   expect((await call('/meta/deauthorize', { method: 'POST', body: form })).status).toBe(200);

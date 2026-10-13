@@ -1,14 +1,10 @@
 import { env } from 'cloudflare:workers';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ROUTE_TABLE } from '../src/index';
-import { getKeys, makeEnrollment } from '../src/keys';
+import { getKeys } from '../src/keys';
 import { Tag } from '../src/log';
 import { handleRequest } from '../src/router';
-import { captureLogs, fakeInstagram, json, LONG_TOKEN, USER_ID } from './helpers';
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+import { captureLogs, fakeInstagram, json, LONG_TOKEN, newEnrollment, USER_ID } from './helpers';
 
 /** A rate limiter that records keys and answers from `decide`. */
 function fakeLimiter(decide: (key: string) => boolean | Promise<boolean>): {
@@ -51,11 +47,7 @@ function redeemFrom(ip: string | null): Request {
 }
 
 async function uploadsRequest(): Promise<Request> {
-  const enrollment = await makeEnrollment(
-    await getKeys(env.SERVER_SECRET),
-    USER_ID,
-    Math.floor(Date.now() / 1000),
-  );
+  const enrollment = await newEnrollment();
   return new Request('https://server.test/uploads', {
     method: 'POST',
     headers: { Authorization: `Bearer ${LONG_TOKEN}` },
@@ -141,10 +133,15 @@ describe('rate limits', () => {
     expect(limiter.keys).toEqual([]);
   });
 
-  it('calls the real (local) binding', async () => {
-    // The test config raises the limit, so this only shows the binding is wired and works.
+  it('calls the real (local) binding without failing open', async () => {
+    // The test config raises the limit, so nothing is limited here: this shows the
+    // binding is wired and its limit() works. A throwing limit() would let the requests
+    // through too, but log an exception.
+    const logs = captureLogs();
     for (let i = 0; i < 12; i++) {
       expect((await run(redeemFrom('198.51.100.1'), env)).status).toBe(400);
     }
+    expect(logs.records()).toHaveLength(12);
+    expect(logs.records()).not.toContainEqual(expect.objectContaining({ event: 'exception' }));
   });
 });

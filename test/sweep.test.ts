@@ -18,7 +18,6 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.restoreAllMocks();
 });
 
 const HOUR_AND_A_BIT = (FRAME_MAX_AGE + 60) * 1000;

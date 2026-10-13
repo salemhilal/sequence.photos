@@ -1,16 +1,9 @@
 import { env } from 'cloudflare:workers';
 import * as v from 'valibot';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { randomBase64Url, sha256Base64Url } from '../src/encoding';
-import {
-  ENROLL_RENEW_GRACE,
-  getKeys,
-  LIFETIME,
-  makeEnrollment,
-  readEnrollment,
-  seal,
-} from '../src/keys';
 import { parseState } from '../src/auth';
+import { ENROLL_RENEW_GRACE, getKeys, LIFETIME, readEnrollment, seal } from '../src/keys';
 import {
   call,
   captureLogs,
@@ -21,13 +14,13 @@ import {
   graphError,
   json,
   LONG_TOKEN,
+  newEnrollment,
+  nowSeconds,
+  postJson,
+  requestRecord,
   SHORT_TOKEN,
   USER_ID,
 } from './helpers';
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 const Connection = v.strictObject({
   token: v.string(),
@@ -39,7 +32,6 @@ const Connection = v.strictObject({
 });
 
 const RETURN_URL = 'http://localhost:5175/app/';
-const nowSeconds = () => Math.floor(Date.now() / 1000);
 
 interface SignIn {
   state: string;
@@ -57,22 +49,11 @@ function callback(query: Record<string, string>): Promise<Response> {
 }
 
 function redeem(body: unknown): Promise<Response> {
-  return call('/auth/redeem', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: typeof body === 'string' ? body : JSON.stringify(body),
-  });
+  return postJson('/auth/redeem', body, null);
 }
 
 function renew(enrollment: string, token: string | null = LONG_TOKEN): Promise<Response> {
-  return call('/auth/renew', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token === null ? {} : { Authorization: `Bearer ${token}` }),
-    },
-    body: JSON.stringify({ enrollment }),
-  });
+  return postJson('/auth/renew', { enrollment }, token);
 }
 
 /** Expects a redirect to the app with `#instagram_error=<code>&state=<state>`. */
@@ -84,12 +65,6 @@ function expectError(response: Response, code: string, state: string): void {
   expect(fragment.get('instagram_error')).toBe(code);
   expect(fragment.get('state')).toBe(state);
   expect(fragment.has('instagram')).toBe(false);
-}
-
-function requestRecord(records: unknown[]): unknown {
-  return records.find(
-    (r) => typeof r === 'object' && r !== null && 'event' in r && r.event === 'request',
-  );
 }
 
 describe('parseState', () => {
@@ -213,12 +188,15 @@ describe('GET /auth/callback', () => {
   });
 
   it('accepts Creator accounts', async () => {
-    fakeInstagram({
-      me: () => json({ user_id: USER_ID, username: 'someone', account_type: 'MEDIA_CREATOR' }),
-    });
-    const { state } = await newSignIn();
-    const location = (await callback({ code: CODE, state })).headers.get('Location');
-    expect(fragmentParams(location).has('instagram')).toBe(true);
+    const instagram = fakeInstagram();
+    for (const accountType of ['MEDIA_CREATOR', 'CREATOR']) {
+      instagram.set({
+        me: () => json({ user_id: USER_ID, username: 'someone', account_type: accountType }),
+      });
+      const { state } = await newSignIn();
+      const location = (await callback({ code: CODE, state })).headers.get('Location');
+      expect(fragmentParams(location).has('instagram')).toBe(true);
+    }
   });
 
   describe('without a usable state: 400, no redirect', () => {
@@ -434,14 +412,10 @@ describe('POST /auth/redeem', () => {
 });
 
 describe('POST /auth/renew', () => {
-  async function enrollment(issuedAt: number, userId = USER_ID): Promise<string> {
-    return makeEnrollment(await getKeys(env.SERVER_SECRET), userId, issuedAt);
-  }
-
   it('renews for the same user', async () => {
     const { requests } = fakeInstagram({ me: () => json({ user_id: USER_ID }) });
     const now = nowSeconds();
-    const response = await renew(await enrollment(now - 40 * 86400));
+    const response = await renew(await newEnrollment(now - 40 * 86400));
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     const renewed = v.parse(
@@ -460,26 +434,26 @@ describe('POST /auth/renew', () => {
   it('renews an enrollment expired by less than 30 days', async () => {
     fakeInstagram({ me: () => json({ user_id: USER_ID }) });
     const issued = nowSeconds() - LIFETIME.ENROLL - ENROLL_RENEW_GRACE + 3600;
-    expect((await renew(await enrollment(issued))).status).toBe(200);
+    expect((await renew(await newEnrollment(issued))).status).toBe(200);
   });
 
   it('refuses one expired by more than that: reconnect', async () => {
     const instagram = fakeInstagram({ me: () => json({ user_id: USER_ID }) });
     const issued = nowSeconds() - LIFETIME.ENROLL - ENROLL_RENEW_GRACE - 3600;
-    expect((await renew(await enrollment(issued))).status).toBe(401);
+    expect((await renew(await newEnrollment(issued))).status).toBe(401);
     expect(instagram.requests).toHaveLength(0);
   });
 
   it('refuses a token for another user', async () => {
     fakeInstagram({ me: () => json({ user_id: '17841499999999999' }) });
     const logs = captureLogs();
-    expect((await renew(await enrollment(nowSeconds()))).status).toBe(401);
+    expect((await renew(await newEnrollment())).status).toBe(401);
     expect(requestRecord(logs.records())).toMatchObject({ outcome: 'enrollment_mismatch' });
   });
 
   it('refuses a forged or malformed enrollment without calling Instagram', async () => {
     const instagram = fakeInstagram({ me: () => json({ user_id: USER_ID }) });
-    const real = await enrollment(nowSeconds());
+    const real = await newEnrollment();
     const forged = `${real.slice(0, -2)}${real.endsWith('AA') ? 'BA' : 'AA'}`;
     expect((await renew(forged)).status).toBe(401);
     expect((await renew('nope')).status).toBe(401);
@@ -488,14 +462,23 @@ describe('POST /auth/renew', () => {
 
   it('requires a bearer token', async () => {
     fakeInstagram();
-    expect((await renew(await enrollment(nowSeconds()), null)).status).toBe(401);
+    expect((await renew(await newEnrollment(), null)).status).toBe(401);
   });
 
   it('401s when Instagram rejects the token, 502s when Instagram is down', async () => {
-    fakeInstagram({ me: () => graphError(400) });
-    expect((await renew(await enrollment(nowSeconds()))).status).toBe(401);
-    vi.restoreAllMocks();
-    fakeInstagram({ me: () => new Response('', { status: 503 }) });
-    expect((await renew(await enrollment(nowSeconds()))).status).toBe(502);
+    const instagram = fakeInstagram({ me: () => graphError(400) });
+    expect((await renew(await newEnrollment())).status).toBe(401);
+    instagram.set({ me: () => new Response('', { status: 503 }) });
+    const logs = captureLogs();
+    expect((await renew(await newEnrollment())).status).toBe(502);
+    expect(requestRecord(logs.records())).toMatchObject({ outcome: 'instagram_unavailable' });
+  });
+
+  it('413s a body over 4 KB', async () => {
+    const instagram = fakeInstagram();
+    const enrollment = await newEnrollment();
+    const response = await postJson('/auth/renew', { enrollment, pad: 'x'.repeat(4096) });
+    expect(response.status).toBe(413);
+    expect(instagram.requests).toHaveLength(0);
   });
 });
