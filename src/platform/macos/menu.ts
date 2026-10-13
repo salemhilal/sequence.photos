@@ -46,7 +46,7 @@ export async function setUpMenu(): Promise<void> {
   const guides = await command('toggleGuides', undefined, 'Hide Guides');
   // For print books and digital sequences respectively (see sync below).
   const indesign = await command('exportIndesign');
-  const images = await command('saveImages');
+  const images = await command('exportFrames');
 
   const menu = await Menu.new({
     items: [

@@ -55,7 +55,7 @@ Netlify runs `npm test && npm run build` for production, pull-request previews, 
 | Import project      | ⌘O      | Ctrl+O          |
 | Export              | ⌘S      | Ctrl+S          |
 | Save PDF            | ⇧⌘P     | Ctrl+Shift+P    |
-| Save images         | ⇧⌘E     | Ctrl+Shift+E    |
+| Export frames       | ⇧⌘E     | Ctrl+Shift+E    |
 | Show/hide spreads   | ⌘B      | Ctrl+B          |
 | Copy / paste photos | ⌘C / ⌘V | Ctrl+C / Ctrl+V |
 | Duplicate photos    | ⌘D      | Ctrl+D          |
@@ -155,7 +155,7 @@ Drop a project on the desk to open it. Plain `.zip` files with the same contents
 
 ## Images
 
-For a digital sequence, File → Save images saves a ZIP of JPEGs, one per frame at its
+For a digital sequence, File → Export frames as images saves a ZIP of JPEGs, one per frame at its
 pixel size (`01.jpg`, `02.jpg`, …, in order), drawn from the original photos.
 
 ## InDesign

@@ -71,10 +71,13 @@ export async function renderFrame(
 async function decode(p: Placement): Promise<ImageBitmap | null> {
   const img = await getImage(p.photoId);
   if (!img) return null;
-  // A photo scaled far past its frame would decode huge; Safari (the Mac app) refuses
-  // images over about 16 megapixels. Past that it's decoded smaller and drawn scaled up:
-  // only that extreme case loses any detail.
-  const k = Math.min(1, Math.sqrt(MAX_DECODE_PIXELS / (p.w * p.h)));
+  // Decoded at its placed size, but never past the photo's own resolution (an enlarged
+  // photo has no more detail to give, so drawing it larger loses nothing), nor past about
+  // 16 megapixels, which Safari (the Mac app) refuses. A photo scaled far past its frame
+  // would otherwise decode huge, mostly for the parts cropped off.
+  const meta = projectStore.project.photos[p.photoId];
+  const own = meta ? Math.min(1, meta.pxW / p.w, meta.pxH / p.h) : 1;
+  const k = Math.min(own, Math.sqrt(MAX_DECODE_PIXELS / (p.w * p.h)));
   const size = {
     resizeWidth: Math.max(1, Math.round(p.w * k)),
     resizeHeight: Math.max(1, Math.round(p.h * k)),
@@ -90,7 +93,7 @@ async function decode(p: Placement): Promise<ImageBitmap | null> {
 }
 
 /** Save the frames as a ZIP of JPEGs, reporting progress and errors in the UI. */
-export async function saveFrames(): Promise<void> {
+export async function exportFrames(): Promise<void> {
   if (ui.get().busy || ui.get().importing) return;
   const { layout } = projectStore.project;
   if (layout.kind !== 'digital') return;
@@ -110,7 +113,7 @@ export async function saveFrames(): Promise<void> {
     );
     if (saved && missing) ui.set({ notice: "Some photos' images were missing, so they're left out." });
   } catch {
-    ui.set({ notice: "Couldn't save the images." });
+    ui.set({ notice: "Couldn't export the frames." });
   } finally {
     ui.set({ busy: null });
   }

@@ -152,7 +152,7 @@ export default function App() {
                 fileItem('importProject', <FolderOpen />),
                 fileItem('exportProject', <Download />),
                 fileItem('savePdf', <FileText />),
-                digital ? fileItem('saveImages', <Images />) : fileItem('exportIndesign', <Package />),
+                digital ? fileItem('exportFrames', <Images />) : fileItem('exportIndesign', <Package />),
                 {
                   ...fileItem('postToInstagram', <Send />, working || instagramBlocked !== null),
                   note: instagramBlocked ?? undefined,

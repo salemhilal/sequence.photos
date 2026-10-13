@@ -161,7 +161,7 @@ switch it to digital in Layout (and back).
 - [ ] Folio and "n / total" are right.
 - [ ] Controls fade after the pointer rests about a second; moving or Tab brings them back;
       they stay while hovered and while saving.
-- [ ] **[P≠D]** The header button: Download PDF [P] or Save images [D], with progress.
+- [ ] **[P≠D]** The header button: Download PDF [P] or Export frames as images [D], with progress.
 - [ ] Escape, Exit preview, or ⌘P closes.
 
 ## Exports and project files
@@ -171,9 +171,9 @@ switch it to digital in Layout (and back).
 - [ ] **[D]** PDF: a page per frame, 1 pt per px; titled "Sequence", `sequence-DATE.pdf`.
 - [ ] **[P]** Export for InDesign: a ZIP with an `.idml` and `Links/`; opens in InDesign with
       facing pages, margins from the On drop guide, ruler guides, linked photos.
-- [ ] **[D]** Export for InDesign is absent (web) or disabled (Mac). **[P]** Save images is
+- [ ] **[D]** Export for InDesign is absent (web) or disabled (Mac). **[P]** Export frames as images is
       absent or disabled.
-- [ ] **[D]** Save images (⌘⇧E): `sequence-DATE.zip` with 01.jpg, 02.jpg… at the frame's size,
+- [ ] **[D]** Export frames as images (⌘⇧E): `sequence-DATE.zip` with 01.jpg, 02.jpg… at the frame's size,
       on white.
 - [ ] Export project (⌘S) and import it into a fresh project (⌘O): "Opened … · N photos. Undo
       to go back."; ⌘Z restores. A digital project comes back digital.
@@ -301,7 +301,7 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
 - [ ] No web File menu or Undo/Redo buttons; the toolbar is the title bar (file name, "—
       Edited", drag to move the window).
 - [ ] Menus in title case with shortcuts. File: New Project, Open…, Add Photos…, Close, Save,
-      Save As… (⌘⇧S), Save PDF…, Export for InDesign… [P], Save Images… [D].
+      Save As… (⌘⇧S), Save PDF…, Export for InDesign… [P], Export Frames as Images… [D].
 - [ ] View: Preview, Layout…, Hide/Show Guides, Hide/Show Spreads [P] or Frames [D], following
       their state.
 - [ ] Edit: Cut, Copy, Paste in text fields; Copy with photos selected copies them; Undo
@@ -310,7 +310,7 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
       a `.photo-sequence` open it; after a relaunch, Save still writes the same file.
 - [ ] Quitting or closing with unsaved changes asks to save; unsaved changes survive a quit
       and relaunch.
-- [ ] Save PDF…, Save Images…, and Export for InDesign… suggest the document's name ("Trip.pdf",
+- [ ] Save PDF…, Export Frames as Images…, and Export for InDesign… suggest the document's name ("Trip.pdf",
       "Trip (images).zip", "Trip (InDesign).zip"); an untitled project gets a dated name.
 - [ ] Settings is one page (Appearance, Desk), with no tabs; no Instagram and no Storage section.
 - [ ] Opening a project from a newer version says to update from the App Store (no Reload).
