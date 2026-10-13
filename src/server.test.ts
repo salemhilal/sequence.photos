@@ -21,6 +21,7 @@ describe('normalizeServerUrl', () => {
       'https://example.com',
       'http://example.com',
       'https://localhost:8787',
+      'http://[::1]:8787',
       `${SERVER_URL}/path`,
       `${SERVER_URL}/?q=1`,
       'ftp://localhost',

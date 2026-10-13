@@ -13,7 +13,7 @@ On a new machine, see [docs/setup.md](docs/setup.md).
 ```bash
 nvm use        # Node 24 (needs ≥ 20.19)
 npm install
-npm run dev    # → http://localhost:5173
+npm run dev    # → http://localhost:5175
 ```
 
 The site has four pages: the landing page (`index.html`, at `/`), the app

@@ -198,6 +198,9 @@ export default defineConfig(({ mode }) => {
       // The Mac app's end-to-end test build (npm run test:app).
       __E2E__: JSON.stringify(process.env.PBS_E2E_BUILD === '1'),
     },
+    // `npm run dev`: the address the development Instagram client (INSTAGRAM.clients in
+    // src/config.ts) and server know. The Mac app's dev UI uses its own (--port 5176).
+    server: { port: 5175, strictPort: true },
     // Tauri's dev server output reads better without Vite clearing the terminal.
     clearScreen: false,
     test: {

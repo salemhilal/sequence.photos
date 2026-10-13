@@ -9,7 +9,7 @@ import { createPref } from './prefs';
  * `wrangler dev`). Only those: the web app's Content Security Policy allows no others.
  */
 
-const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
+const LOCAL_HOSTS = ['localhost', '127.0.0.1'];
 
 /**
  * A server address as the app stores it (its origin, no trailing slash), or null if it
