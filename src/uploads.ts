@@ -18,7 +18,8 @@ import {
 } from './http';
 import { getMe } from './instagram';
 import { checkJpeg, MAX_FRAME_BYTES } from './jpeg';
-import { LIFETIME, randomBase64Url, readEnrollment, sign, verify, type Signed } from './keys';
+import { randomBase64Url } from './encoding';
+import { LIFETIME, readEnrollment, sign, verify, type Signed } from './keys';
 import { Tag } from './log';
 
 /** The R2 key for a frame, built only from validated parts. */

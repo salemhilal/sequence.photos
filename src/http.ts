@@ -2,7 +2,8 @@
 
 import * as v from 'valibot';
 import { getConfig, type Config } from './env';
-import { decodeUtf8, getKeys, type Keys } from './keys';
+import { decodeUtf8 } from './encoding';
+import { getKeys, type Keys } from './keys';
 import {
   errorName,
   log,

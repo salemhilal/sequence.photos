@@ -5,7 +5,7 @@
 // by mistake) reaches the logs. Values that would identify a batch or a user are logged
 // as short hashes (`Tag`s), which only this module can make.
 
-import { utf8 } from './keys';
+import { utf8 } from './encoding';
 
 /** A short, non-reversible hash for correlating log lines. */
 export class Tag {

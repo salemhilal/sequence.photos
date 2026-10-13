@@ -11,14 +11,8 @@ import { env } from 'cloudflare:workers';
 import * as v from 'valibot';
 import { afterEach, expect, it, vi } from 'vitest';
 import worker from '../src/index';
-import {
-  getKeys,
-  makeEnrollment,
-  randomBase64Url,
-  sha256Base64Url,
-  toBase64Url,
-  utf8,
-} from '../src/keys';
+import { randomBase64Url, sha256Base64Url, toBase64Url, utf8 } from '../src/encoding';
+import { getKeys, makeEnrollment } from '../src/keys';
 import { ROUTES } from '../src/log';
 import {
   call,

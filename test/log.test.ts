@@ -1,6 +1,7 @@
 import { env, exports } from 'cloudflare:workers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getKeys, toBase64Url, utf8 } from '../src/keys';
+import { toBase64Url, utf8 } from '../src/encoding';
+import { getKeys } from '../src/keys';
 import { log, queryNames, Tag, toRecord, type RequestLine } from '../src/log';
 
 afterEach(() => {

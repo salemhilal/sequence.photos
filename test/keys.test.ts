@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import type { InstagramConnection } from '../src/api';
+import { fromBase64Url, sha256Base64Url, toBase64Url, utf8 } from '../src/encoding';
 import {
   ENROLL_RENEW_GRACE,
-  fromBase64Url,
   getKeys,
   LIFETIME,
   makeEnrollment,
@@ -11,12 +11,9 @@ import {
   readEnrollment,
   SEAL_LIFETIME,
   seal,
-  sha256Base64Url,
   sign,
   timingSafeEqualStrings,
-  toBase64Url,
   unseal,
-  utf8,
   verify,
   type Signed,
 } from '../src/keys';
@@ -27,24 +24,6 @@ const USER = '17841400000000000';
 const OTHER_SECRET = 'another-server-secret-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
 
 const keys = () => getKeys(env.SERVER_SECRET);
-
-describe('base64url', () => {
-  it('round-trips bytes', () => {
-    const bytes = new Uint8Array([0, 1, 2, 250, 251, 252, 253, 254, 255]);
-    const text = toBase64Url(bytes);
-    expect(text).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(fromBase64Url(text)).toEqual(bytes);
-  });
-
-  it('rejects padding, other alphabets, impossible lengths, and non-canonical spellings', () => {
-    expect(fromBase64Url('AA==')).toBeNull();
-    expect(fromBase64Url('A+/A')).toBeNull();
-    expect(fromBase64Url('AAAAA')).toBeNull();
-    // "AB" decodes to the same byte as "AA" (unused low bits set).
-    expect(fromBase64Url('AA')).toEqual(new Uint8Array([0]));
-    expect(fromBase64Url('AB')).toBeNull();
-  });
-});
 
 describe('HKDF key derivation', () => {
   // Expected values computed independently with Node's crypto.hkdfSync + createHmac:

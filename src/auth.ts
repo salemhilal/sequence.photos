@@ -2,6 +2,7 @@
 
 import * as v from 'valibot';
 import type { InstagramConnection, InstagramError, RenewResponse } from './api';
+import { sha256Base64Url } from './encoding';
 import { HttpError, jsonResponse, parseBearer, parseState, readJson, type Handler } from './http';
 import {
   exchangeCode,
@@ -17,7 +18,6 @@ import {
   makeEnrollment,
   readEnrollment,
   seal,
-  sha256Base64Url,
   timingSafeEqualStrings,
   unseal,
 } from './keys';

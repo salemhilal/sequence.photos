@@ -6,7 +6,7 @@
 
 import * as v from 'valibot';
 import { HttpError, jsonResponse, readBody, type Handler } from './http';
-import { decodeUtf8, fromBase64Url, randomBase64Url, utf8 } from './keys';
+import { decodeUtf8, fromBase64Url, randomBase64Url, utf8 } from './encoding';
 
 /** Form bodies from Meta are small. Larger → 413. */
 export const MAX_SIGNED_REQUEST_BODY = 8 * 1024;

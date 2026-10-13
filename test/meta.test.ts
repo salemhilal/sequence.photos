@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import * as v from 'valibot';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { toBase64Url, utf8 } from '../src/keys';
+import { toBase64Url, utf8 } from '../src/encoding';
 import { ISSUED_AT_MAX_AGE, verifySignedRequest } from '../src/meta';
 import { call, captureLogs } from './helpers';
 

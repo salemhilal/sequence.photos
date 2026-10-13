@@ -1,15 +1,14 @@
 import { env } from 'cloudflare:workers';
 import * as v from 'valibot';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { randomBase64Url, sha256Base64Url } from '../src/encoding';
 import {
   ENROLL_RENEW_GRACE,
   getKeys,
   LIFETIME,
   makeEnrollment,
-  randomBase64Url,
   readEnrollment,
   seal,
-  sha256Base64Url,
 } from '../src/keys';
 import {
   call,
