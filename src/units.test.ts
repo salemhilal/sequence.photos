@@ -10,6 +10,9 @@ describe('UNITS', () => {
     expect(round(2.8751)).toBe(2.88);
     expect(format(2.875)).toBe('2.875');
     expect(format(1 / 3)).toBe('0.33');
+    expect(format(0.125)).toBe('0.125');
+    expect(format(2.68333)).toBe('2.68');
+    expect(format(10)).toBe('10');
   });
 
   it('keeps pixels whole', () => {

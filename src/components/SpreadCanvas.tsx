@@ -16,9 +16,9 @@ import { PhotoImg } from './PhotoImg';
 interface Props {
   spread: Spread;
   sheet: Sheet;
-  /** Pixels per inch. */
+  /** Screen pixels per unit (an inch in print, a pixel in digital). */
   scale: number;
-  /** Margin around the spread, in inches, where off-page photo edges remain visible. */
+  /** Margin around the spread, in its units, where off-page photo edges remain visible. */
   pad?: number;
   guides?: boolean;
   /** Clip photos to the pages (for preview). */

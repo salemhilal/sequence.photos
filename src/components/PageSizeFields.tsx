@@ -14,7 +14,7 @@ const KINDS: { value: LayoutKind; label: string }[] = [
 /**
  * What the project is (a print book or a digital sequence) and its page or frame size, in
  * inches or pixels. A typed size waits for Apply, so the project changes once, not with
- * every keystroke. Used in Settings and on a new project's empty desk.
+ * every keystroke. Used in the Layout view and on a new project's empty desk.
  */
 export function PageSizeFields() {
   const { project } = useProject();
@@ -56,9 +56,9 @@ function SizeForm({ kind, current }: { kind: LayoutKind; current: Size }) {
   const field = (dim: 'w' | 'h', label: string) => (
     <NumberField
       label={label}
+      units={units}
       min={units.minSize}
-      step={units.fieldStep}
-      suffix=""
+      suffix={false}
       value={draft[dim]}
       onCommit={(n) => setDraft((d) => ({ ...d, [dim]: units.round(n) }))}
     />

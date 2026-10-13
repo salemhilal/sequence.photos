@@ -20,7 +20,7 @@ import { newGuideId, toSpreadId, type GuideId } from '../ids';
 import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { BorderGuide, Edges, LayoutKind, LineGuide, PageSide, Sheet, Spread } from '../types';
-import { TERMS, UNITS, type Units } from '../units';
+import { TERMS, UNITS } from '../units';
 import { closeModal } from '../ui';
 import { NumberField } from './NumberField';
 import { PageSizeFields } from './PageSizeFields';
@@ -236,7 +236,7 @@ export function LayoutEditor() {
           </div>
           <span className="spacer" />
           <span className="hint">
-            Drag from a ruler to add a guide · Shift: snap to {snapLabel(units)} · Drag off the {terms.page} to remove
+            Drag from a ruler to add a guide · Shift: snap to {units.snapLabel} · Drag off the {terms.page} to remove
           </span>
           <button className="btn ghost icon" aria-label="Close" onClick={closeModal}>
             <X />
@@ -285,11 +285,6 @@ export function LayoutEditor() {
       </div>
     </div>
   );
-}
-
-/** The snap distance, as the guides view names it. */
-function snapLabel(u: Units): string {
-  return u.suffix === 'in' ? '⅛ in' : `${u.snap} px`;
 }
 
 /**
@@ -447,7 +442,6 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
   const drop = dropGuide(s);
   const units = UNITS[s.layout];
   const terms = TERMS[s.layout];
-  const num = { suffix: '', step: units.fieldStep, format: units.format };
   const addLine = (axis: Axis) => {
     const size = axis === 'vertical' ? s.pageW : s.pageH;
     const id = newGuideId();
@@ -570,7 +564,8 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
           >
             <span className="guide-kind">{l.axis === 'horizontal' ? 'Horizontal' : 'Vertical'}</span>
             <NumberField
-              {...num}
+              units={units}
+              suffix={false}
               value={l.at}
               min={0}
               onCommit={(n) =>
@@ -596,7 +591,7 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
       </PanelSection>
 
       <p className="help guides-note">
-        {terms.guidesNote} Distances in {terms.unitName}. Shift snaps a dragged guide to {snapLabel(units)}.
+        {terms.guidesNote} Distances in {terms.unitName}. Shift snaps a dragged guide to {units.snapLabel}.
       </p>
     </aside>
   );
@@ -645,10 +640,9 @@ function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProp
             key={edge}
             label={terms.edges[edge]}
             value={e[edge]}
+            units={units}
+            suffix={false}
             min={0}
-            step={units.fieldStep}
-            format={units.format}
-            suffix=""
             onCommit={(n) => set(edge, units.round(n))}
           />
         ))}

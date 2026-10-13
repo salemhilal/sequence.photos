@@ -1726,7 +1726,7 @@ body.col-resizing * {
   outline-offset: 1px;
 }
 
-/* Layout and size (Settings, and a new project's desk) */
+/* Layout and size (the Layout view, and a new project's desk) */
 .layout-fields,
 .size-form {
   display: flex;

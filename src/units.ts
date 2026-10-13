@@ -11,14 +11,17 @@ export interface Units {
   /** An arrow-key nudge, and with Shift. */
   nudge: number;
   nudgeBig: number;
-  /** What Shift snaps a dragged guide to. */
+  /** What Shift snaps a dragged guide to, and its name. */
   snap: number;
+  snapLabel: string;
   /** The smallest a border guide's box gets, so it stays on the page. */
   minBox: number;
   /** How much each new border guide steps in from the last. */
   guideStep: number;
   /** The smallest page or frame. */
   minSize: number;
+  /** The smallest side a placed photo gets. */
+  minPhoto: number;
   /** Steps in a number field. */
   fieldStep: number;
   /** Values as they're kept and shown: eighths of an inch exactly, else hundredths; whole pixels. */
@@ -38,9 +41,11 @@ export const UNITS: Record<LayoutKind, Units> = {
     nudge: 1 / 16,
     nudgeBig: 1 / 2,
     snap: 1 / 8,
+    snapLabel: '⅛ in',
     minBox: 0.25,
     guideStep: 0.25,
     minSize: 1,
+    minPhoto: 0.1,
     fieldStep: 0.125,
     round: roundInches,
     format: (n) => roundInches(n).toString(),
@@ -50,9 +55,11 @@ export const UNITS: Record<LayoutKind, Units> = {
     nudge: 1,
     nudgeBig: 10,
     snap: 10,
+    snapLabel: '10 px',
     minBox: 24,
     guideStep: 25,
     minSize: 100,
+    minPhoto: 10,
     fieldStep: 1,
     round: Math.round,
     format: (n) => Math.round(n).toString(),

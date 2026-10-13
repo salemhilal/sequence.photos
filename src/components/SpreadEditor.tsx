@@ -190,7 +190,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
           !ev.shiftKey,
           ev.altKey ? null : lines,
           threshold,
-          units.minSize / 10,
+          units.minPhoto,
         );
         setSnapHit(hit);
         projectStore.preview((d) => {
@@ -364,7 +364,6 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
     .sort((a, b) => b.box.w * b.box.h - a.box.w * a.box.h);
   // Print: the photo's pixels per inch. Digital: how much it's enlarged, if it is.
   const where = side === 'whole' ? 'frame' : 'page';
-  const num = { suffix: units.suffix, step: units.fieldStep, format: units.format };
   const ppi = photo && sheet.layout === 'print' ? Math.round(photo.pxW / item.w) : null;
   const enlarged = photo && sheet.layout === 'digital' ? item.w / photo.pxW : null;
 
@@ -378,25 +377,30 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
       </div>
       <div className="grid2">
         <NumberField
-          {...num}
+          units={units}
           label="X"
           value={item.x - page.x}
           onCommit={(n) => onChange({ x: page.x + units.round(n) }, key('x'))}
         />
-        <NumberField {...num} label="Y" value={item.y} onCommit={(n) => onChange({ y: units.round(n) }, key('y'))} />
         <NumberField
-          {...num}
+          units={units}
+          label="Y"
+          value={item.y}
+          onCommit={(n) => onChange({ y: units.round(n) }, key('y'))}
+        />
+        <NumberField
+          units={units}
           label="W"
-          min={units.minSize / 10}
+          min={units.minPhoto}
           value={item.w}
           onCommit={(n) =>
             onChange(lock ? { w: units.round(n), h: units.round(n / aspect) } : { w: units.round(n) }, key('w'))
           }
         />
         <NumberField
-          {...num}
+          units={units}
           label="H"
-          min={units.minSize / 10}
+          min={units.minPhoto}
           value={item.h}
           onCommit={(n) =>
             onChange(lock ? { h: units.round(n), w: units.round(n * aspect) } : { h: units.round(n) }, key('h'))

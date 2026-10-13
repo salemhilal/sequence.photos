@@ -230,7 +230,7 @@ export function resizeRect(
   lockAspect: boolean,
   lines: GuideLines | null,
   threshold: number,
-  /** The smallest a side gets: 0.1 in, or 10 px in a frame (see UNITS). */
+  /** The smallest a side gets: the units' minPhoto (0.1 in, or 10 px in a frame). */
   min = 0.1,
 ): { rect: Rect; hit: SnapFeedback } {
   const west = corner === 'nw' || corner === 'sw';
@@ -293,17 +293,11 @@ export function intersects(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
-/** Inches for display: to the hundredth, but eighths exactly (2.875, not 2.88). */
-export function fmt(n: number): string {
-  const eighths = Math.abs(n * 8 - Math.round(n * 8)) < 1e-9;
-  return (eighths ? Math.round(n * 1000) / 1000 : Math.round(n * 100) / 100).toString();
-}
-
 type Knots = [old: number, next: number][];
 
 /**
  * Guide positions along one axis of one page, paired old → new: its edges and center
- * always, then each guide (inches from the page's start or end), kept only if it's on
+ * always, then each guide (its distance from the page's start or end), kept only if it's on
  * the page at both sizes and in the same order among the others.
  */
 function pageKnots(
