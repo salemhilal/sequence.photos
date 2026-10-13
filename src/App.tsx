@@ -62,6 +62,19 @@ export default function App() {
   const digital = project.layout.kind === 'digital';
   const terms = TERMS[project.layout.kind];
   const instagram = useInstagram();
+  // Why File → Post to Instagram is disabled, if it is.
+  // (An expired token is caught when posting, which says to reconnect.)
+  const instagramReady = instagram !== null && !instagram.needsReconnect;
+  const instagramBlocked =
+    !digital && !instagramReady
+      ? 'Needs a digital project (Layout) and Instagram connected (Settings).'
+      : !digital
+        ? 'Needs a digital project: switch in Layout.'
+        : instagram === null
+          ? 'Connect Instagram in Settings first.'
+          : !instagramReady
+            ? 'Reconnect Instagram in Settings first.'
+            : null;
   // Dismissed for this visit only: a reload shows it again.
   const [mobileNotice, setMobileNotice] = useState(onTouchDevice);
   const editing = ui.use((s) => s.editingSpreadId);
@@ -138,7 +151,10 @@ export default function App() {
                 fileItem('exportProject', <Download />),
                 fileItem('savePdf', <FileText />),
                 digital ? fileItem('saveImages', <Images />) : fileItem('exportIndesign', <Package />),
-                ...(digital && instagram ? [fileItem('postToInstagram', <Send />)] : []),
+                {
+                  ...fileItem('postToInstagram', <Send />, working || instagramBlocked !== null),
+                  note: instagramBlocked ?? undefined,
+                },
                 { ...fileItem('tour', <Compass />), separatorBefore: true },
                 fileItem('about', <Info />, false),
               ]}

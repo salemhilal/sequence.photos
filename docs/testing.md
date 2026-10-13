@@ -37,8 +37,9 @@ switch it to digital in Layout (and back).
 
 ## Desk
 
-- [ ] Add photos (⌘I or the button): progress in the status bar, then a loose grid in view. An
-      unreadable file: "Couldn't read N files".
+- [ ] Add photos (⌘I or the button): progress in the status bar, then the photos at full size
+      (sharp at 100% zoom), in rows of six below anything already on the desk, with the view
+      zoomed to fit them. An unreadable file: "Couldn't read N files".
 - [ ] Drop image files from the Finder: "Drop to add photos", then they're added.
 - [ ] Drop a `.photo-sequence` file: "Drop to open project", then it opens after a confirm.
 - [ ] Paste an image copied in another app (⌘V): added as "Pasted image HH.MM.png".
@@ -121,9 +122,11 @@ switch it to digital in Layout (and back).
 
 - [ ] Opens from the toolbar's Layout button (Mac: View → Layout…). Escape, ×, or the
       backdrop close it, including right after clicking the format toggle or a checkbox.
-- [ ] **[P→D]** For print → For digital: each page becomes a frame in book order (a photo
-      across the gutter goes with the page holding its center); the remembered digital size;
-      guides in px. One ⌘Z undoes it, right after the click too.
+- [ ] Picking For print or For digital changes nothing until Apply: the form shows that
+      format's units and last size, with a note; Revert puts it back.
+- [ ] **[P→D]** For digital, Apply: each page becomes a frame in book order (a photo across the
+      gutter goes with the page holding its center), at the size in the form; guides in px.
+      One ⌘Z undoes it.
 - [ ] **[D→P]** Switching straight back restores the book exactly. After editing: frame 1 is
       the first page, the rest pair into spreads, a leftover becomes the last page.
 - [ ] Each format remembers its own last size.
@@ -213,7 +216,9 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 ### Posting
 
-- [ ] **[D]** File → Post to Instagram… appears only when connected; **[P]** never.
+- [ ] File → Post to Instagram… is always listed. It's disabled, with the reason under it, unless
+      the project is digital and Instagram is connected ("Needs a digital project…", "Connect
+      Instagram in Settings first.", "Reconnect Instagram in Settings first.").
 - [ ] The pane: @user in the header; Feed post or Stories; "A carousel of N frames" / "N
       stories, one per frame".
 - [ ] Preview: arrows and ←/→; feed shows dots and "n/N", a white card, and the caption with

@@ -147,8 +147,11 @@ export const commands = {
     title: 'Post to Instagram…',
     bindings: [],
     scope: 'app',
-    run: () =>
-      projectStore.project.layout.kind === 'digital' && instagramConnection() ? openModal('instagram') : false,
+    run: () => {
+      const connection = instagramConnection();
+      const ready = projectStore.project.layout.kind === 'digital' && connection && !connection.needsReconnect;
+      return ready ? openModal('instagram') : false;
+    },
   },
   preview: {
     // The toolbar says "Preview book" for a book; menus just "Preview".
