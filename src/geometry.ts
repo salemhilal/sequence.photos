@@ -253,16 +253,22 @@ export function resizeRect(
 
   const sx = lines ? snapPoints([mx], lines.xs, threshold) : { delta: 0, line: null };
   const sy = lines ? snapPoints([my], lines.ys, threshold) : { delta: 0, line: null };
+  // The new size, measured from the fixed corner (so the floor never moves it, and
+  // dragging past it stops at the smallest size).
+  let w: number;
+  let h: number;
 
   if (!lockAspect) {
     mx += sx.delta;
     my += sy.delta;
     if (sx.line !== null) hit.xs.push(sx.line);
     if (sy.line !== null) hit.ys.push(sy.line);
+    w = Math.max(min, west ? ax - mx : mx - ax);
+    h = Math.max(min, north ? ay - my : my - ay);
   } else {
     // Size follows whichever axis the pointer moved further along, or the axis that snapped.
-    let w = Math.abs(mx - ax);
-    let h = Math.abs(my - ay);
+    w = Math.abs(mx - ax);
+    h = Math.abs(my - ay);
     const useX =
       sx.line !== null && (sy.line === null || Math.abs(sx.delta) <= Math.abs(sy.delta))
         ? true
@@ -284,19 +290,10 @@ export function resizeRect(
       h = Math.max(min, Math.abs(my - ay));
       w = h * aspect;
     }
-    mx = west ? ax - w : ax + w;
-    my = north ? ay - h : ay + h;
   }
 
-  const x1 = Math.min(ax, mx);
-  const y1 = Math.min(ay, my);
   return {
-    rect: {
-      x: x1,
-      y: y1,
-      w: Math.max(min, Math.abs(mx - ax)),
-      h: Math.max(min, Math.abs(my - ay)),
-    },
+    rect: { x: west ? ax - w : ax, y: north ? ay - h : ay, w, h },
     hit,
   };
 }

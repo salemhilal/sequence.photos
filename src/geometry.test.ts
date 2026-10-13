@@ -207,10 +207,7 @@ describe('resizeRect', () => {
     expect(resizeRect(px, 'nw', 395, 195, true, null, 0, 10).rect).toEqual({ x: 480, y: 290, w: 20, h: 10 });
   });
 
-  // Bug: unlocked, the floor widens the rect past the anchored (south-east) corner, to
-  // { x: 495, y: 295, w: 10, h: 10 }, so the corner that should stay put moves by up to
-  // the minimum. (Locked, it's right: the dragged corner is recomputed from the anchor.)
-  it.fails('keeps the anchored corner put when a north-west handle is dragged below the minimum', () => {
+  it('keeps the anchored corner put when a north-west handle is dragged below the minimum', () => {
     const px = { x: 100, y: 100, w: 400, h: 200 };
     expect(resizeRect(px, 'nw', 395, 195, false, null, 0, 10).rect).toEqual({ x: 490, y: 290, w: 10, h: 10 });
   });
