@@ -28,6 +28,9 @@ npm run test:watch   # re-run on save
 npm run test:app     # Mac app, end to end: open, Save, Save As, relaunch (needs Rust)
 ```
 
+Before a release, go through [docs/testing.md](docs/testing.md): the automated checks and a
+pass through the app by hand.
+
 `test:app` builds a test version of the Mac app and runs it on fixture projects (its
 window shows for a few seconds), then checks the saved files from outside the app. Its
 storage is kept apart from the real app's and deleted afterwards.
