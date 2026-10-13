@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { platform } from '#platform';
 import { Dialog } from './Dialog';
 import type { ThemePref } from '../theme';
 import { setTheme, closeModal, ui } from '../ui';
 import { DeskColorPicker } from './DeskColorPicker';
+import { Segmented } from './Segmented';
 import { InstagramSetting } from './settings/InstagramSetting';
 import { ServerSetting } from './settings/ServerSetting';
 import { StorageRow } from './settings/StorageRow';
@@ -14,24 +15,9 @@ const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'dark', label: 'Dark' },
 ];
 
-function ThemePicker() {
+function ThemePicker({ labelledBy }: { labelledBy: string }) {
   const theme = ui.use((s) => s.theme);
-  return (
-    <div className="segmented" role="radiogroup" aria-labelledby="appearance-label">
-      {THEMES.map((t) => (
-        <label key={t.value} className={theme === t.value ? 'on' : ''}>
-          <input
-            type="radio"
-            name="theme"
-            value={t.value}
-            checked={theme === t.value}
-            onChange={() => setTheme(t.value)}
-          />
-          {t.label}
-        </label>
-      ))}
-    </div>
-  );
+  return <Segmented labelledBy={labelledBy} options={THEMES} value={theme} onChange={setTheme} />;
 }
 
 type Tab = 'general' | 'advanced';
@@ -68,15 +54,17 @@ export function SettingsDialog() {
 }
 
 function AdvancedSettings() {
+  const heading = useId();
   return (
     <section className="setting">
-      <h3 id="server-label">Server</h3>
-      <ServerSetting />
+      <h3 id={heading}>Server</h3>
+      <ServerSetting labelledBy={heading} />
     </section>
   );
 }
 
 function GeneralSettings() {
+  const appearance = useId();
   return (
     <>
       {platform.kind === 'browser' && (
@@ -86,9 +74,9 @@ function GeneralSettings() {
         </section>
       )}
       <section className="setting">
-        <h3 id="appearance-label">Appearance</h3>
+        <h3 id={appearance}>Appearance</h3>
         <div className="setting-controls">
-          <ThemePicker />
+          <ThemePicker labelledBy={appearance} />
         </div>
       </section>
 

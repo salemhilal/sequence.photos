@@ -5,6 +5,7 @@ import { useProject } from '../store';
 import type { LayoutKind, Size } from '../types';
 import { FRAME_PRESETS, UNITS } from '../units';
 import { NumberField } from './NumberField';
+import { Segmented } from './Segmented';
 
 const KINDS: { value: LayoutKind; label: string }[] = [
   { value: 'print', label: 'For print' },
@@ -28,20 +29,7 @@ export function PageSizeFields() {
       <span className="field-label" id={`${id}-label`}>
         Layout format
       </span>
-      <div className="segmented halves" role="radiogroup" aria-labelledby={`${id}-label`}>
-        {KINDS.map((k) => (
-          <label key={k.value} className={sheet.layout === k.value ? 'on' : ''}>
-            <input
-              type="radio"
-              name={id}
-              value={k.value}
-              checked={sheet.layout === k.value}
-              onChange={() => switchLayout(k.value)}
-            />
-            {k.label}
-          </label>
-        ))}
-      </div>
+      <Segmented halves labelledBy={`${id}-label`} options={KINDS} value={sheet.layout} onChange={switchLayout} />
       <SizeForm key={`${sheet.layout}:${current.w}x${current.h}`} kind={sheet.layout} current={current} />
     </div>
   );

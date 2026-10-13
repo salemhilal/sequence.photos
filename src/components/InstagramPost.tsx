@@ -18,6 +18,7 @@ import { allSpreads, sheetOf } from '../spreads';
 import { useProject } from '../store';
 import type { Frame, Sheet } from '../types';
 import { closeModal, lockModal } from '../ui';
+import { Segmented } from './Segmented';
 import { SpreadCanvas } from './SpreadCanvas';
 
 /**
@@ -152,20 +153,7 @@ export function InstagramPost() {
           <aside className="inspector instagram-panel">
             <section>
               <h3>Post as</h3>
-              <div className="segmented halves" role="radiogroup" aria-label="Post as">
-                {KINDS.map((k) => (
-                  <label key={k.value} className={kind === k.value ? 'on' : ''}>
-                    <input
-                      type="radio"
-                      name="post-kind"
-                      checked={kind === k.value}
-                      disabled={posting}
-                      onChange={() => setKind(k.value)}
-                    />
-                    {k.label}
-                  </label>
-                ))}
-              </div>
+              <Segmented halves label="Post as" options={KINDS} value={kind} onChange={setKind} disabled={posting} />
               <p className="help">
                 {kind === 'feed'
                   ? frames.length > 1
@@ -183,20 +171,17 @@ export function InstagramPost() {
                     ? `These frames are ${ratioLabel(size.w / size.h)}. Instagram’s feed takes ${ratioLabel(LIMITS.minRatio)} (tall) to ${ratioLabel(LIMITS.maxRatio)} (wide).`
                     : `These frames are too tall for stories.`}
                 </p>
-                <div className="segmented halves" role="radiogroup" aria-label="Fit">
-                  {(['crop', 'expand'] as const).map((f) => (
-                    <label key={f} className={fit === f ? 'on' : ''}>
-                      <input
-                        type="radio"
-                        name="post-fit"
-                        checked={fit === f}
-                        disabled={posting}
-                        onChange={() => setFit(f)}
-                      />
-                      {f === 'crop' ? 'Crop' : 'Expand'} to {ratioLabel(ratio)}
-                    </label>
-                  ))}
-                </div>
+                <Segmented
+                  halves
+                  label="Fit"
+                  options={[
+                    { value: 'crop', label: `Crop to ${ratioLabel(ratio)}` },
+                    { value: 'expand', label: `Expand to ${ratioLabel(ratio)}` },
+                  ]}
+                  value={fit}
+                  onChange={setFit}
+                  disabled={posting}
+                />
                 <p className="help">
                   {fit === 'crop'
                     ? `Trims the ${tall ? 'top and bottom' : 'sides'} of each frame.`

@@ -7,6 +7,7 @@ import {
   serverUrl,
   serverUrlPref,
 } from '../../server';
+import { Segmented } from '../Segmented';
 
 type ServerChoice = 'default' | 'dev' | 'local';
 const SERVER_CHOICES: { value: ServerChoice; label: string }[] = [
@@ -25,7 +26,7 @@ function choiceOf(server: string): ServerChoice {
  * Which server posts to Instagram: Sequence's (the default), the development one, or one
  * on this computer (e.g. `wrangler dev`). Saved for this browser.
  */
-export function ServerSetting() {
+export function ServerSetting({ labelledBy }: { labelledBy: string }) {
   const [server, setServer] = useState(serverUrl);
   const choice = choiceOf(server);
   const [local, setLocal] = useState(choice === 'local' ? server : LOCAL_DEFAULT);
@@ -44,20 +45,7 @@ export function ServerSetting() {
 
   return (
     <div className="setting-controls">
-      <div className="segmented" role="radiogroup" aria-labelledby="server-label">
-        {SERVER_CHOICES.map((c) => (
-          <label key={c.value} className={choice === c.value ? 'on' : ''}>
-            <input
-              type="radio"
-              name="server"
-              value={c.value}
-              checked={choice === c.value}
-              onChange={() => pick(c.value)}
-            />
-            {c.label}
-          </label>
-        ))}
-      </div>
+      <Segmented labelledBy={labelledBy} options={SERVER_CHOICES} value={choice} onChange={pick} />
       {choice === 'local' ? (
         <form
           className="inline"
