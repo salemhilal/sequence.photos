@@ -18,7 +18,10 @@ import {
 } from './actions';
 import { toPhotoId } from './ids';
 import { convertLayout } from './convertLayout';
+import { DESK_PPI, deskGeometry } from './deskGeometry';
+import { DESK_PHOTO_PX } from './geometry';
 import { allSpreads } from './spreads';
+import { ui } from './ui';
 import { projectStore, emptyProject } from './store';
 import type { PhotoMeta } from './types';
 
@@ -46,11 +49,32 @@ beforeEach(() => {
 });
 
 describe('adding photos', () => {
-  it('scatters new photos on the desk at 2" on the long edge', () => {
+  it('places new photos at full size: as large as their preview stays sharp at 100%', () => {
     expect(project().pile).toHaveLength(3);
     const land = project().pile.find((p) => p.photoId === LAND);
-    expect(land?.w).toBe(2);
-    expect(land?.h).toBeCloseTo(2 / 1.8);
+    expect(land?.w).toBeCloseTo(DESK_PHOTO_PX / DESK_PPI);
+    expect(land?.h).toBeCloseTo(DESK_PHOTO_PX / DESK_PPI / 1.8);
+  });
+
+  it('places photos smaller than the preview at their own size', () => {
+    addPhotosToPile([{ id: toPhotoId('small'), name: 'small.jpg', pxW: 480, pxH: 240 }]);
+    expect(project().pile.find((p) => p.photoId === 'small')).toMatchObject({ w: 10, h: 5 });
+  });
+
+  it('lays a batch out in rows of six, and zooms the view to fit it', () => {
+    projectStore.reset(emptyProject());
+    const batch = Array.from({ length: 8 }, (_, i) => ({
+      id: toPhotoId(`b${i}`),
+      name: `b${i}.jpg`,
+      pxW: 1000,
+      pxH: 1000,
+    }));
+    ui.set({ view: { panX: 0, panY: 0, zoom: 1 } });
+    addPhotosToPile(batch);
+    const rows = new Set(project().pile.map((p) => Math.round(p.y)));
+    expect(rows.size).toBe(2);
+    expect(project().pile.filter((p) => Math.round(p.y) === Math.min(...rows))).toHaveLength(6);
+    expect(ui.get().view.zoom).toBeLessThan(1);
   });
 
   it('adds later batches below the existing pile', () => {
@@ -111,7 +135,13 @@ describe('putInPile', () => {
     projectStore.apply((d) => putOnPage(d, [SQ], middle().id, 'right'));
     projectStore.apply((d) => putInPile(d, SQ, { x: 10, y: 10 }));
     expect(middle().items).toHaveLength(0);
-    expect(project().pile.find((p) => p.photoId === SQ)).toMatchObject({ x: 9, y: 9, w: 2, h: 2 });
+    const side = 1000 / DESK_PPI;
+    expect(project().pile.find((p) => p.photoId === SQ)).toMatchObject({
+      x: 10 - side / 2,
+      y: 10 - side / 2,
+      w: side,
+      h: side,
+    });
   });
 });
 
@@ -182,34 +212,46 @@ describe('tidyPile', () => {
     });
 
   it('lines photos up on a grid, keeping their reading order', () => {
-    place(LAND, 5.2, 0.9);
-    place(PORT, 0.3, 1.2);
-    place(SQ, 2.6, 4.4);
+    // Positions for 2" photos, scaled to these full-size ones.
+    const k = DESK_PHOTO_PX / DESK_PPI / 2;
+    place(LAND, 5.2 * k, 0.9 * k);
+    place(PORT, 0.3 * k, 1.2 * k);
+    place(SQ, 2.6 * k, 4.4 * k);
+    // A view zoomed out enough for two of these side by side.
+    const visible = deskGeometry.visible;
+    deskGeometry.visible = () => ({ x: 0, y: 0, w: 20 * k, h: 12 * k });
     tidyPile();
+    deskGeometry.visible = visible;
     const byId = Object.fromEntries(project().pile.map((p) => [p.photoId, p]));
     // Row 1: port, land (left to right); row 2: sq.
     expect(byId.port!.y).toBeLessThan(byId.sq!.y);
     expect(byId.port!.x).toBeLessThan(byId.land!.x);
     const centerY = (id: string) => byId[id]!.y + byId[id]!.h / 2;
     expect(centerY(PORT)).toBeCloseTo(centerY(LAND));
-    // Grid cells are the largest photo plus a small gap.
+    // Grid cells are the largest photo plus a gap in proportion.
     const centerX = (id: string) => byId[id]!.x + byId[id]!.w / 2;
-    expect(centerX(LAND) - centerX(PORT)).toBeCloseTo(2.3);
+    expect(centerX(LAND) - centerX(PORT)).toBeCloseTo((DESK_PHOTO_PX / DESK_PPI) * 1.08);
     expect(centerX(SQ)).toBeCloseTo(centerX(PORT));
   });
 
   it('wraps rows that are wider than the visible desk', () => {
+    // 96 px photos are 2" on the desk.
     const extra = Array.from({ length: 12 }, (_, i) => ({
       id: toPhotoId(`x${i}`),
       name: `x${i}.jpg`,
-      pxW: 1000,
-      pxH: 1000,
+      pxW: 96,
+      pxH: 96,
     }));
     addPhotosToPile(extra);
-    project().pile.forEach((p, i) => place(p.photoId, i * 2.5, 1));
-    tidyPile();
-    // The default visible desk is 20" wide: 8 columns of 2.3" cells.
-    const rows = new Set(project().pile.map((p) => Math.round(p.y + p.h / 2)));
+    const ids = extra.map((p) => p.id);
+    ids.forEach((id, i) => place(id, i * 2.5, 1));
+    tidyPile(ids);
+    // The default visible desk is 20" wide: 9 columns of 2.16" cells.
+    const rows = new Set(
+      project()
+        .pile.filter((p) => ids.includes(p.photoId))
+        .map((p) => Math.round(p.y + p.h / 2)),
+    );
     expect(rows.size).toBe(2);
   });
 
@@ -245,7 +287,8 @@ describe('dropPhotos', () => {
     expect(book()).toHaveLength(5);
     expect(book()[1]!.items.map((i) => i.photoId)).toEqual([LAND]);
     projectStore.apply((d) => void dropPhotos(d, { kind: 'desk' }, [SQ], { x: 10, y: 10 }));
-    expect(project().pile.find((p) => p.photoId === SQ)).toMatchObject({ x: 9, y: 9 });
+    const half = 1000 / DESK_PPI / 2;
+    expect(project().pile.find((p) => p.photoId === SQ)).toMatchObject({ x: 10 - half, y: 10 - half });
   });
 
   it('does nothing without a target', () => {

@@ -37,7 +37,8 @@ describe('duplicatePhoto', () => {
     expect(id).not.toBe(A);
     expect(project.photos[id!]).toMatchObject({ name: 'IMG_1 copy.jpg', pxW: 1200, pxH: 800 });
     const [orig, copy] = [A, id!].map((pid) => project.pile.find((p) => p.photoId === pid)!);
-    expect(copy!.x - orig!.x).toBeCloseTo(0.25);
+    // In proportion to the photo: 0.25 in for a 2 in photo.
+    expect(copy!.x - orig!.x).toBeCloseTo((0.25 * Math.max(orig!.w, orig!.h)) / 2);
     expect(copy!.w).toBe(orig!.w);
     expect(copy!.z).toBeGreaterThan(orig!.z);
     expect(images.has(id!)).toBe(true);
@@ -73,12 +74,13 @@ describe('duplicatePhoto', () => {
     expect(copy!.y - orig!.y).toBeCloseTo(27);
   });
 
-  it('offsets a copy on the desk by inches, even in a sequence', async () => {
+  it('offsets a copy on the desk in proportion to the photo, even in a sequence', async () => {
     projectStore.reset(convertLayout(projectStore.project, 'digital'));
     const [id] = await duplicatePhotos([A], 0.5);
     const [orig, copy] = [A, id!].map((pid) => projectStore.project.pile.find((p) => p.photoId === pid)!);
-    expect(copy!.x - orig!.x).toBeCloseTo(0.5);
-    expect(copy!.y - orig!.y).toBeCloseTo(0.5);
+    const step = (0.5 * Math.max(orig!.w, orig!.h)) / 2;
+    expect(copy!.x - orig!.x).toBeCloseTo(step);
+    expect(copy!.y - orig!.y).toBeCloseTo(step);
   });
 
   it('duplicates several photos as one undo step, at a chosen offset', async () => {
@@ -88,7 +90,7 @@ describe('duplicatePhoto', () => {
     expect(ids).toHaveLength(2);
     const b = projectStore.project.pile.find((p) => p.photoId === B)!;
     const bCopy = projectStore.project.pile.find((p) => p.photoId === ids[1])!;
-    expect(bCopy.y - b.y).toBeCloseTo(0.5);
+    expect(bCopy.y - b.y).toBeCloseTo((0.5 * Math.max(b.w, b.h)) / 2);
     projectStore.undo();
     expect(Object.keys(projectStore.project.photos).sort()).toEqual([A, B]);
   });

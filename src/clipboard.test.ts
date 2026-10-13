@@ -73,7 +73,9 @@ describe('copy and paste', () => {
     expect(pile).toHaveLength(6);
     const a = pile.find((p) => p.photoId === A)!;
     const copiesOfA = pile.filter((p) => projectStore.project.photos[p.photoId]!.name === 'a copy.jpg');
-    expect(copiesOfA.map((p) => Math.round((p.x - a.x) * 100) / 100)).toEqual([0.25, 0.5]);
+    // Each paste steps further, in proportion to the photo.
+    const step = (0.25 * Math.max(a.w, a.h)) / 2;
+    expect(copiesOfA.map((p) => Math.round(((p.x - a.x) / step) * 100) / 100)).toEqual([1, 2]);
     expect(ui.get().selection).toHaveLength(2);
   });
 

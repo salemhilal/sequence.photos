@@ -1,3 +1,4 @@
+import { DESK_PPI } from './deskGeometry';
 import type { BorderGuide, Edges, LineGuide, PageSide, PhotoMeta, Sheet, Spread, SpreadKind } from './types';
 import { UNITS } from './units';
 
@@ -8,8 +9,11 @@ export interface Rect {
   h: number;
 }
 
-/** Longest edge of a photo when it lands on the desk. */
-export const PILE_PHOTO_SIZE = 2;
+/**
+ * A desk photo's longest side at 100% zoom, in screen pixels: the size of the preview the
+ * app keeps of each photo (images.ts), so on the desk it's as large as it stays sharp.
+ */
+export const DESK_PHOTO_PX = 1400;
 
 export function pageSides(kind: SpreadKind): PageSide[] {
   if (kind === 'frame') return ['whole'];
@@ -134,10 +138,10 @@ export function fitCentered(photo: Pick<PhotoMeta, 'pxW' | 'pxH'>, box: Rect, ce
 }
 
 export function pileSize(photo: PhotoMeta): { w: number; h: number } {
+  // Its own size if smaller than the preview; in desk inches.
+  const long = Math.min(Math.max(photo.pxW, photo.pxH), DESK_PHOTO_PX) / DESK_PPI;
   const aspect = photo.pxW / photo.pxH;
-  return aspect >= 1
-    ? { w: PILE_PHOTO_SIZE, h: PILE_PHOTO_SIZE / aspect }
-    : { w: PILE_PHOTO_SIZE * aspect, h: PILE_PHOTO_SIZE };
+  return aspect >= 1 ? { w: long, h: long / aspect } : { w: long * aspect, h: long };
 }
 
 export interface GuideLines {
