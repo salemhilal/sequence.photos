@@ -6,7 +6,7 @@
 
 import * as v from 'valibot';
 import type { Config } from './env';
-import { isUserId } from './keys';
+import { isUserId, Token } from './formats';
 import { log, type InstagramEndpoint } from './log';
 
 const OAUTH_TOKEN_URL = 'https://api.instagram.com/oauth/access_token';
@@ -26,7 +26,6 @@ export type Result<T> = { ok: true; value: T } | { ok: false; failure: Failure }
 
 // --- Guards -----------------------------------------------------------------------------
 
-const Token = v.pipe(v.string(), v.minLength(1), v.maxLength(2048));
 /** Ids arrive as strings, but accept a number that's still exact. */
 const UserIdField = v.union([
   v.pipe(v.string(), v.check(isUserId)),

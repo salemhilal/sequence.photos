@@ -8,6 +8,17 @@
 import * as v from 'valibot';
 import type { InstagramConnection } from './api';
 import { decodeUtf8, fromBase64Url, toBase64Url, utf8 } from './encoding';
+import {
+  BASE64URL_32_SOURCE,
+  Base64Url32,
+  Enrollment,
+  isUserId,
+  Token,
+  UNIX_SECONDS_SOURCE,
+  USER_ID_SOURCE,
+  UserId,
+  Username,
+} from './formats';
 
 // --- Comparison -------------------------------------------------------------------------
 
@@ -174,13 +185,10 @@ export async function verify(
 // `base64url(message) + "." + base64url(HMAC(enroll key, message))`, where message is
 // `v1\nENROLL\n<userId>\n<exp>`.
 
-const ENROLLMENT_PATTERN = /^([A-Za-z0-9_-]{1,200})\.([A-Za-z0-9_-]{43})$/;
-const ENROLLMENT_MESSAGE = /^v1\nENROLL\n([0-9]{1,32})\n([1-9][0-9]{0,11})$/;
-
-/** Instagram user ids are decimal strings. */
-export function isUserId(value: string): boolean {
-  return /^[0-9]{1,32}$/.test(value);
-}
+const ENROLLMENT_PATTERN = new RegExp(`^([A-Za-z0-9_-]{1,200})\\.(${BASE64URL_32_SOURCE})$`);
+const ENROLLMENT_MESSAGE = new RegExp(
+  `^v1\\nENROLL\\n(${USER_ID_SOURCE})\\n(${UNIX_SECONDS_SOURCE})$`,
+);
 
 export async function makeEnrollment(keys: Keys, userId: string, now: number): Promise<string> {
   if (!isUserId(userId)) throw new Error('invalid user id');
@@ -231,18 +239,18 @@ export interface SignInHandoff {
 }
 
 const ConnectionSchema = v.strictObject({
-  token: v.pipe(v.string(), v.minLength(1), v.maxLength(2048)),
+  token: Token,
   expiresAt: v.pipe(v.number(), v.safeInteger()),
   refreshedAt: v.pipe(v.number(), v.safeInteger()),
-  userId: v.pipe(v.string(), v.regex(/^[0-9]{1,32}$/)),
-  username: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
-  enrollment: v.pipe(v.string(), v.maxLength(512)),
+  userId: UserId,
+  username: Username,
+  enrollment: Enrollment,
 });
 
 const SealedSchema = v.strictObject({
   v: v.literal(1),
   connection: ConnectionSchema,
-  challenge: v.pipe(v.string(), v.regex(/^[A-Za-z0-9_-]{43}$/)),
+  challenge: Base64Url32,
   exp: v.pipe(v.number(), v.safeInteger()),
 });
 

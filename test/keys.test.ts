@@ -203,6 +203,13 @@ describe('seal and unseal', () => {
     expect(await unseal(k, sealed, NOW)).toBeNull();
   });
 
+  it('applies the sign-in checks to the sealed connection (e.g. the username)', async () => {
+    const k = await keys();
+    const bad = { ...connection, username: '<script>' };
+    const sealed = await seal(k, { connection: bad, challenge: 'c'.repeat(43) }, NOW);
+    expect(await unseal(k, sealed, NOW)).toBeNull();
+  });
+
   it('rejects tampering, truncation, garbage, and another key', async () => {
     const k = await keys();
     const sealed = await seal(k, { connection, challenge: 'c'.repeat(43) }, NOW);

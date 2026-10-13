@@ -3,6 +3,7 @@
 // a typed, validated `Config` once per isolate.
 
 import * as v from 'valibot';
+import { CLIENT_NAME, MAX_FRAMES_PATTERN } from './formats';
 
 export interface Config {
   igAppId: string;
@@ -30,7 +31,7 @@ const returnUrl = v.pipe(
   httpUrl,
   v.check((s) => !s.includes('#'), 'must not have a fragment'),
 );
-const ReturnUrlsSchema = v.record(v.pipe(v.string(), v.regex(/^[a-z][a-z0-9-]{0,31}$/)), returnUrl);
+const ReturnUrlsSchema = v.record(v.pipe(v.string(), v.regex(CLIENT_NAME)), returnUrl);
 const AllowedOriginsSchema = v.array(origin);
 
 function parseJsonVar(name: string, text: string): unknown {
@@ -53,8 +54,7 @@ export function parseConfig(env: Env): Config {
   );
   if (!allowedOrigins.success) throw new Error('ALLOWED_ORIGINS is invalid');
 
-  // The frame index check (`^(0|[1-9][0-9]?)$`) allows at most two digits.
-  if (!/^[1-9][0-9]?$/.test(env.MAX_FRAMES)) throw new Error('MAX_FRAMES is invalid');
+  if (!MAX_FRAMES_PATTERN.test(env.MAX_FRAMES)) throw new Error('MAX_FRAMES is invalid');
   if (!/^v[0-9]+\.[0-9]+$/.test(env.GRAPH_VERSION)) throw new Error('GRAPH_VERSION is invalid');
   if (!v.is(httpUrl, env.CALLBACK_URL)) throw new Error('CALLBACK_URL is invalid');
   if (!/^[0-9A-Za-z_-]{1,64}$/.test(env.IG_APP_ID)) throw new Error('IG_APP_ID is invalid');

@@ -3,8 +3,8 @@
 
 import * as v from 'valibot';
 import type { UploadBatch } from './api';
-import { isBatchId, parseBearer, parseExp, parseFrameIndex } from './formats';
-import { contentLength, HttpError, jsonResponse, readBody, readJson } from './http';
+import { Enrollment, isBatchId, parseBearer, parseExp, parseFrameIndex } from './formats';
+import { contentLength, HttpError, jsonResponse, MAX_JSON_BODY, readBody, readJson } from './http';
 import { getMe } from './instagram';
 import { checkJpeg, MAX_FRAME_BYTES } from './jpeg';
 import { randomBase64Url } from './encoding';
@@ -23,7 +23,7 @@ export function batchPrefix(id: string): string {
 }
 
 const UploadsBody = v.strictObject({
-  enrollment: v.pipe(v.string(), v.maxLength(512)),
+  enrollment: Enrollment,
   count: v.pipe(v.number(), v.safeInteger(), v.minValue(1)),
 });
 
@@ -31,7 +31,7 @@ const UploadsBody = v.strictObject({
 export const createBatch: Handler = async (ctx) => {
   const token = parseBearer(ctx.request.headers.get('Authorization'));
   if (token === null) throw new HttpError(401, 'unauthorized');
-  const body = await readJson(ctx.request, 4096, UploadsBody);
+  const body = await readJson(ctx.request, MAX_JSON_BODY, UploadsBody);
   if (body.count > ctx.config.maxFrames) throw new HttpError(400, 'bad_request');
 
   // The enrollment first: it's local and cheap, and stops strangers before Instagram.

@@ -3,8 +3,16 @@
 import * as v from 'valibot';
 import type { InstagramConnection, InstagramError, RenewResponse } from './api';
 import { sha256Base64Url } from './encoding';
-import { isBase64Url32, parseBearer } from './formats';
-import { HttpError, jsonResponse, readJson } from './http';
+import {
+  Base64Url32,
+  CLIENT_NAME,
+  Enrollment,
+  isBase64Url32,
+  isUsername,
+  isUserId,
+  parseBearer,
+} from './formats';
+import { HttpError, jsonResponse, MAX_JSON_BODY, readJson } from './http';
 import {
   exchangeCode,
   exchangeLongLived,
@@ -15,7 +23,6 @@ import {
 } from './instagram';
 import {
   ENROLL_RENEW_GRACE,
-  isUserId,
   makeEnrollment,
   readEnrollment,
   seal,
@@ -24,9 +31,6 @@ import {
 } from './keys';
 import { Tag, type Outcome } from './log';
 import type { Handler } from './router';
-
-/** Instagram usernames: letters, digits, periods, underscores (30 max; some slack). */
-const USERNAME = /^[A-Za-z0-9._]{1,64}$/;
 
 interface OAuthState {
   client: string;
@@ -47,7 +51,7 @@ export function parseState(value: string | null): OAuthState | null {
   ) {
     return null;
   }
-  if (!/^[a-z][a-z0-9-]{0,31}$/.test(client)) return null;
+  if (!CLIENT_NAME.test(client)) return null;
   if (!isBase64Url32(nonce) || !isBase64Url32(challenge)) return null;
   return { client, nonce, challenge };
 }
@@ -102,7 +106,7 @@ export const callback: Handler = async (ctx) => {
   const { userId, username, accountType } = me.value;
   ctx.log.user = await Tag.user(ctx.keys.log, userId);
   if (!isProfessional(accountType)) return fail('not_professional', 'not_professional');
-  if (username === undefined || !USERNAME.test(username)) {
+  if (username === undefined || !isUsername(username)) {
     return fail('exchange_failed', 'exchange_failed');
   }
 
@@ -120,14 +124,14 @@ export const callback: Handler = async (ctx) => {
 
 const RedeemBody = v.strictObject({
   sealed: v.pipe(v.string(), v.maxLength(4096)),
-  verifier: v.pipe(v.string(), v.regex(/^[A-Za-z0-9_-]{43}$/)),
+  verifier: Base64Url32,
 });
 
 /** `POST /auth/redeem`: the sealed handoff + the app's verifier → the connection. */
 export const redeem: Handler = async (ctx) => {
   await ctx.rateLimit({ kind: 'ip', group: 'auth' });
   // Anything wrong is a 400 with no detail, including an oversize body.
-  const body = await readJson(ctx.request, 4096, RedeemBody).catch((error: unknown) => {
+  const body = await readJson(ctx.request, MAX_JSON_BODY, RedeemBody).catch((error: unknown) => {
     throw error instanceof HttpError ? new HttpError(400, error.outcome) : error;
   });
   const handoff = await unseal(ctx.keys, body.sealed, ctx.now);
@@ -140,7 +144,7 @@ export const redeem: Handler = async (ctx) => {
 };
 
 const RenewBody = v.strictObject({
-  enrollment: v.pipe(v.string(), v.maxLength(512)),
+  enrollment: Enrollment,
 });
 
 /** `POST /auth/renew`: a still-recent enrollment + a token for the same user → a new one. */
@@ -148,7 +152,7 @@ export const renew: Handler = async (ctx) => {
   await ctx.rateLimit({ kind: 'ip', group: 'auth' });
   const token = parseBearer(ctx.request.headers.get('Authorization'));
   if (token === null) throw new HttpError(401, 'unauthorized');
-  const body = await readJson(ctx.request, 4096, RenewBody);
+  const body = await readJson(ctx.request, MAX_JSON_BODY, RenewBody);
 
   const enrollment = await readEnrollment(ctx.keys, body.enrollment, ctx.now, ENROLL_RENEW_GRACE);
   if (!enrollment.ok) {

@@ -69,6 +69,9 @@ export async function readBody(request: Request, max: number): Promise<Uint8Arra
   return body;
 }
 
+/** JSON request bodies (redeem, renew, uploads) are small. Larger → 413 (400 for redeem). */
+export const MAX_JSON_BODY = 4096;
+
 /** Reads a JSON body of at most `max` bytes and parses it with `schema`; else 400. */
 export async function readJson<S extends v.GenericSchema>(
   request: Request,
