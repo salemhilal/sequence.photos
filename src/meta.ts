@@ -7,6 +7,7 @@
 import * as v from 'valibot';
 import { HttpError, jsonResponse, readBody } from './http';
 import { decodeUtf8, fromBase64Url, randomBase64Url, utf8 } from './encoding';
+import { parseJsonWith } from './formats';
 import type { Handler } from './router';
 
 /** Form bodies from Meta are small. Larger → 413. */
@@ -57,16 +58,9 @@ export async function verifySignedRequest(
     return { ok: false, reason: 'bad_signature' };
   }
 
-  const text = decodeUtf8(payloadBytes);
-  let json: unknown;
-  try {
-    json = text === null ? undefined : JSON.parse(text);
-  } catch {
-    return { ok: false, reason: 'malformed' };
-  }
-  const payload = v.safeParse(SignedRequestPayload, json);
-  if (!payload.success) return { ok: false, reason: 'malformed' };
-  const issuedAt = payload.output.issued_at;
+  const payload = parseJsonWith(SignedRequestPayload, payloadBytes);
+  if (payload === null) return { ok: false, reason: 'malformed' };
+  const issuedAt = payload.issued_at;
   if (issuedAt < now - ISSUED_AT_MAX_AGE || issuedAt > now + ISSUED_AT_MAX_SKEW) {
     return { ok: false, reason: 'expired' };
   }

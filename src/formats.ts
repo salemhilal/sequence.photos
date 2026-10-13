@@ -2,6 +2,7 @@
 // and the server's own signed and sealed values. Each rule lives here once.
 
 import * as v from 'valibot';
+import { decodeUtf8 } from './encoding';
 
 // --- Patterns ---------------------------------------------------------------------------
 //
@@ -82,4 +83,24 @@ export function parseBearer(header: string | null): string | null {
   if (header === null || header.length > MAX_AUTHORIZATION_LENGTH) return null;
   const match = BEARER.exec(header);
   return match?.[1] ?? null;
+}
+
+/**
+ * Parses JSON (text, or strict UTF-8 bytes) with `schema`. Null if the bytes aren't UTF-8,
+ * the text isn't JSON, or the value doesn't match.
+ */
+export function parseJsonWith<S extends v.GenericSchema>(
+  schema: S,
+  input: string | ArrayBuffer | Uint8Array,
+): v.InferOutput<S> | null {
+  const text = typeof input === 'string' ? input : decodeUtf8(input);
+  if (text === null) return null;
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const parsed = v.safeParse(schema, json);
+  return parsed.success ? parsed.output : null;
 }

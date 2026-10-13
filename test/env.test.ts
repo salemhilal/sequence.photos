@@ -19,7 +19,7 @@ describe('config', () => {
     );
     expect(() => parseConfig({ ...env, MAX_FRAMES: '100' })).toThrow('MAX_FRAMES is invalid');
     expect(() => parseConfig({ ...env, RETURN_URLS: 'secret-ish{' })).toThrow(
-      'RETURN_URLS is not valid JSON',
+      'RETURN_URLS is invalid',
     );
   });
 });

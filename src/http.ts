@@ -1,7 +1,7 @@
 // Errors, JSON responses, and request bodies.
 
 import * as v from 'valibot';
-import { decodeUtf8 } from './encoding';
+import { parseJsonWith } from './formats';
 import type { Outcome } from './log';
 
 // --- Errors and responses ---------------------------------------------------------------
@@ -78,15 +78,7 @@ export async function readJson<S extends v.GenericSchema>(
   max: number,
   schema: S,
 ): Promise<v.InferOutput<S>> {
-  const text = decodeUtf8(await readBody(request, max));
-  if (text === null) throw new HttpError(400, 'bad_request');
-  let json: unknown;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new HttpError(400, 'bad_request');
-  }
-  const parsed = v.safeParse(schema, json);
-  if (!parsed.success) throw new HttpError(400, 'bad_request');
-  return parsed.output;
+  const body = parseJsonWith(schema, await readBody(request, max));
+  if (body === null) throw new HttpError(400, 'bad_request');
+  return body;
 }

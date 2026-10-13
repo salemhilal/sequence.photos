@@ -13,6 +13,7 @@ import {
   Base64Url32,
   Enrollment,
   isUserId,
+  parseJsonWith,
   Token,
   UNIX_SECONDS_SOURCE,
   USER_ID_SOURCE,
@@ -287,17 +288,9 @@ export async function unseal(
   } catch {
     return null;
   }
-  const text = decodeUtf8(plaintext);
-  if (text === null) return null;
-  let json: unknown;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    return null;
-  }
-  const parsed = v.safeParse(SealedSchema, json);
-  if (!parsed.success) return null;
-  const { exp, connection, challenge } = parsed.output;
+  const parsed = parseJsonWith(SealedSchema, plaintext);
+  if (parsed === null) return null;
+  const { exp, connection, challenge } = parsed;
   if (exp <= now || exp > now + SEAL_LIFETIME + CLOCK_SKEW) return null;
   return { connection, challenge };
 }

@@ -6,7 +6,7 @@
 
 import * as v from 'valibot';
 import type { Config } from './env';
-import { isUserId, Token } from './formats';
+import { isUserId, parseJsonWith, Token } from './formats';
 import { log, type InstagramEndpoint } from './log';
 
 const OAUTH_TOKEN_URL = 'https://api.instagram.com/oauth/access_token';
@@ -121,20 +121,15 @@ async function call<S extends v.GenericSchema>(
     return { ok: false, failure: 'unavailable' };
   }
 
-  let json: unknown = undefined;
-  if (text.length <= MAX_RESPONSE_BYTES) {
-    try {
-      json = JSON.parse(quoteIds(text));
-    } catch {
-      // Left undefined: fails the schema below.
-    }
-  }
+  // Null if not JSON: fails the schema below.
+  const json =
+    text.length <= MAX_RESPONSE_BYTES ? parseJsonWith(v.unknown(), quoteIds(text)) : null;
 
   let fields: string | undefined;
   if (response.ok) {
     const parsed = v.safeParse(schema, json);
     if (parsed.success) return { ok: true, value: parsed.output };
-    fields = json === undefined ? '(not json)' : failedFields(parsed.issues);
+    fields = json === null ? '(not json)' : failedFields(parsed.issues);
   }
 
   const error = v.safeParse(ErrorResponse, json);
