@@ -229,8 +229,19 @@ export async function finishSignIn(): Promise<string | null> {
   if (!back) return null;
   history.replaceState(history.state, '', location.pathname + location.search);
   const pending = takePending();
-  if (!pending || pending.state !== back.state) return null;
-  if (back.kind === 'error') return ERROR_MESSAGES[back.error];
+  // Why a return was ignored or failed, for debugging (nothing secret).
+  if (!pending) {
+    console.warn('Instagram sign-in: ignored a return, as this tab has no sign-in in progress.');
+    return null;
+  }
+  if (pending.state !== back.state) {
+    console.warn('Instagram sign-in: ignored a return that doesn’t match the sign-in this tab started.');
+    return null;
+  }
+  if (back.kind === 'error') {
+    console.warn(`Instagram sign-in: the server reported ${back.error}.`);
+    return ERROR_MESSAGES[back.error];
+  }
 
   let res: Response;
   try {
@@ -239,12 +250,16 @@ export async function finishSignIn(): Promise<string | null> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sealed: back.sealed, verifier: pending.verifier }),
     });
-  } catch {
+  } catch (error) {
     // Unreachable, or not allowed (CORS, or the Content Security Policy).
+    console.warn(`Instagram sign-in: couldn’t reach ${pending.server}/auth/redeem.`, error);
     return SERVER_ERROR;
   }
   const connection = res.ok ? parseConnection(await res.json().catch(() => null)) : null;
-  if (!connection) return ERROR_MESSAGES.exchange_failed;
+  if (!connection) {
+    console.warn(`Instagram sign-in: /auth/redeem answered ${res.status}${res.ok ? ' with an unexpected body' : ''}.`);
+    return ERROR_MESSAGES.exchange_failed;
+  }
   set(connection);
   return `Connected to Instagram as @${connection.username}.`;
 }
