@@ -24,13 +24,47 @@ describe('response guards', () => {
     });
   });
 
+  it('keeps every digit of long numeric ids (Instagram sends them unquoted)', async () => {
+    // 17 digits: more than a JavaScript number holds exactly.
+    const raw = (body: string) =>
+      new Response(body, { headers: { 'Content-Type': 'application/json' } });
+    fakeInstagram({
+      exchange: () =>
+        raw(
+          `{"data":[{"access_token":"${SHORT_TOKEN}","user_id":17841412345678901,"permissions":"a"}]}`,
+        ),
+      me: () =>
+        raw(
+          '{"user_id": 17841412345678901, "username": "someone", "account_type": "BUSINESS", "id": 9007199254740993}',
+        ),
+    });
+    expect(await exchangeCode(config(), 'secret', 'code')).toMatchObject({ ok: true });
+    expect(await getMe(config(), 'token', ['username', 'account_type'])).toMatchObject({
+      ok: true,
+      value: { userId: '17841412345678901' },
+    });
+  });
+
+  it('logs which fields a 2xx response failed on, by name only', async () => {
+    const logs = captureLogs();
+    fakeInstagram({
+      exchange: () => json({ data: [{ access_token: SHORT_TOKEN, permissions: [1] }] }),
+    });
+    expect(await exchangeCode(config(), 'secret', 'code')).toEqual({
+      ok: false,
+      failure: 'rejected',
+    });
+    const line = logs.records().find((r) => typeof r === 'object' && r !== null && 'fields' in r);
+    expect(line).toMatchObject({ event: 'instagram', status: 200 });
+    expect(JSON.stringify(line)).not.toContain(SHORT_TOKEN);
+  });
+
   it('rejects malformed exchange responses', async () => {
     for (const body of [
       { data: [{ access_token: '' }] },
       { data: [{ access_token: 1 }] },
       { data: [{ access_token: SHORT_TOKEN, permissions: [1] }] },
       { data: [{ access_token: SHORT_TOKEN, user_id: 'abc' }] },
-      { data: [{ access_token: SHORT_TOKEN, user_id: 2 ** 60 }] },
       { data: 'x' },
       null,
       [],

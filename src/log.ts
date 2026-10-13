@@ -147,6 +147,8 @@ export interface InstagramLine {
   subcode?: number;
   type?: string;
   fbtraceId?: string;
+  /** A 2xx response that didn't match its schema: the failing fields' names, never values. */
+  fields?: string;
 }
 
 export interface SweepLine {
@@ -218,6 +220,8 @@ export function toRecord(line: LogLine): LogRecord {
       // e.g. `OAuthException`.
       put('type', matching(/^[A-Za-z]{1,64}$/, line.type));
       put('fbtraceId', matching(/^[A-Za-z0-9_-]{1,64}$/, line.fbtraceId));
+      // Schema field names only (e.g. `data.0.user_id`), so a tight pattern.
+      put('fields', matching(/^[A-Za-z0-9_.,()]{1,200}$/, line.fields));
       break;
     case 'sweep':
       put('event', 'sweep');

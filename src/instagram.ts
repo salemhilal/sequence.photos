@@ -89,6 +89,21 @@ const ErrorResponse = v.object({
 
 // --- Calls ------------------------------------------------------------------------------
 
+/**
+ * Instagram sends some ids as bare JSON numbers, and they're longer than a JavaScript
+ * number holds exactly (about 17 digits), so they're quoted before parsing to keep every
+ * digit.
+ */
+export function quoteIds(text: string): string {
+  return text.replace(/("(?:user_id|id)"\s*:\s*)(\d+)/g, '$1"$2"');
+}
+
+/** The schema fields a response failed on, by name (never values), for the log. */
+function failedFields(issues: readonly v.BaseIssue<unknown>[]): string {
+  const names = issues.map((i) => i.path?.map((p) => String(p.key)).join('.') ?? '(root)');
+  return [...new Set(names)].join(',');
+}
+
 /** Makes the call and parses the response; logs and classifies any failure. */
 async function call<S extends v.GenericSchema>(
   endpoint: InstagramEndpoint,
@@ -110,15 +125,17 @@ async function call<S extends v.GenericSchema>(
   let json: unknown = undefined;
   if (text.length <= MAX_RESPONSE_BYTES) {
     try {
-      json = JSON.parse(text);
+      json = JSON.parse(quoteIds(text));
     } catch {
       // Left undefined: fails the schema below.
     }
   }
 
+  let fields: string | undefined;
   if (response.ok) {
     const parsed = v.safeParse(schema, json);
     if (parsed.success) return { ok: true, value: parsed.output };
+    fields = json === undefined ? '(not json)' : failedFields(parsed.issues);
   }
 
   const error = v.safeParse(ErrorResponse, json);
@@ -135,6 +152,7 @@ async function call<S extends v.GenericSchema>(
     ...(subcode === undefined ? {} : { subcode }),
     ...(type === undefined ? {} : { type }),
     ...(fbtraceId === undefined ? {} : { fbtraceId }),
+    ...(fields === undefined ? {} : { fields }),
   });
   return { ok: false, failure: response.status >= 500 ? 'unavailable' : 'rejected' };
 }
