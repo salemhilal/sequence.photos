@@ -140,12 +140,14 @@ export interface SignInPlan {
  * Instagram's sign-in URL for this app address and server, or why it can't sign in from
  * here: an app address the server doesn't send people back to.
  */
+/** When the chosen server can't be used from here. */
+export const SERVER_ERROR = 'Couldn’t connect to the Sequence server. Check the server in the Advanced tab.';
+
 export async function planSignIn(origin: string, server: string): Promise<SignInPlan | { error: string }> {
   const client = INSTAGRAM.clients[origin];
   if (!client) return { error: 'Instagram can’t be connected from this address.' };
-  if (client === 'dev' && server === SERVER_URL) {
-    return { error: 'To connect from this computer, choose the Development server in Settings → Advanced.' };
-  }
+  // Only the development server sends sign-ins back to this computer.
+  if (client === 'dev' && server === SERVER_URL) return { error: SERVER_ERROR };
   const verifier = randomToken();
   const state = `${client}.${randomToken()}.${await challengeOf(verifier)}`;
   const params = new URLSearchParams({
@@ -230,17 +232,19 @@ export async function finishSignIn(): Promise<string | null> {
   if (!pending || pending.state !== back.state) return null;
   if (back.kind === 'error') return ERROR_MESSAGES[back.error];
 
+  let res: Response;
   try {
-    const res = await fetch(`${pending.server}/auth/redeem`, {
+    res = await fetch(`${pending.server}/auth/redeem`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sealed: back.sealed, verifier: pending.verifier }),
     });
-    const connection = res.ok ? parseConnection(await res.json()) : null;
-    if (!connection) return ERROR_MESSAGES.exchange_failed;
-    set(connection);
-    return `Connected to Instagram as @${connection.username}.`;
   } catch {
-    return ERROR_MESSAGES.exchange_failed;
+    // Unreachable, or not allowed (CORS, or the Content Security Policy).
+    return SERVER_ERROR;
   }
+  const connection = res.ok ? parseConnection(await res.json().catch(() => null)) : null;
+  if (!connection) return ERROR_MESSAGES.exchange_failed;
+  set(connection);
+  return `Connected to Instagram as @${connection.username}.`;
 }

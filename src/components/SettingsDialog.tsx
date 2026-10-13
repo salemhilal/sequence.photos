@@ -239,12 +239,16 @@ function InstagramSetting() {
       >
         {busy ? 'Opening Instagram…' : expired ? 'Reconnect Instagram' : 'Connect Instagram'}
       </button>
-      {error && <p className="help warn">{error}</p>}
-      <p className="help">
-        {expired
-          ? `The connection to @${connection.username} expired. Connect again to keep posting.`
-          : 'Post digital sequences to Instagram. Needs a Business or Creator account.'}
-      </p>
+      {/* An error takes the description's place. */}
+      {error ? (
+        <p className="help warn">{error}</p>
+      ) : (
+        <p className="help">
+          {expired
+            ? `The connection to @${connection.username} expired. Connect again to keep posting.`
+            : 'Post digital sequences to Instagram. Needs a Business or Creator account.'}
+        </p>
+      )}
     </div>
   );
 }

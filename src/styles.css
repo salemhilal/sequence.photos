@@ -1582,6 +1582,9 @@ body.col-resizing * {
   font-size: 12px;
   color: var(--muted);
 }
+.setting .help.warn {
+  color: var(--warn);
+}
 .setting .check {
   gap: 8px;
 }
