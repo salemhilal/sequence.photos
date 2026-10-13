@@ -28,7 +28,8 @@ export function hitTest(clientX: number, clientY: number): DropTarget {
     if (kind === 'page') {
       const spreadId = el.dataset.spread;
       const side = el.dataset.side;
-      if (spreadId && (side === 'left' || side === 'right'))
+      // A book's left or right page, or a frame (all one page).
+      if (spreadId && (side === 'left' || side === 'right' || side === 'whole'))
         return { kind: 'page', spreadId: toSpreadId(spreadId), side };
     }
     if (kind === 'desk') return { kind: 'desk' };
