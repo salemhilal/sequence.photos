@@ -69,7 +69,7 @@ Right-click the desk to tidy photos into a grid or change the desk color.
 
 **Print or digital.** A project is a print book (spreads of facing pages, sized in
 inches) or a digital sequence (single frames, sized in pixels, like an Instagram
-carousel; 1080 × 1440 px by default, with Instagram's sizes as presets). Choose in
+carousel; 1080 × 1350 px (4:5) by default, with Instagram's sizes as presets). Choose in
 **Layout** (in the toolbar). Switching breaks a book's spreads into frames, each photo going with
 the page that holds its center; going back, frame 1 becomes the first page and the rest
 pair into spreads. Guides and photos convert in proportion to the page width.

@@ -168,8 +168,8 @@ export function InstagramPost() {
                 <h3>Size</h3>
                 <p className="help">
                   {kind === 'feed'
-                    ? `These frames are ${ratioLabel(size.w / size.h)}. Instagram’s feed takes ${ratioLabel(LIMITS.minRatio)} (tall) to ${ratioLabel(LIMITS.maxRatio)} (wide).`
-                    : `These frames are too tall for stories.`}
+                    ? `These frames have an aspect ratio of ${ratioLabel(size.w / size.h)}. Instagram’s upload API only takes feed posts from ${ratioLabel(LIMITS.minRatio)} (tall) to ${ratioLabel(LIMITS.maxRatio)} (wide), even where the Instagram app takes others.`
+                    : `These frames have an aspect ratio of ${ratioLabel(size.w / size.h)}, too tall for stories through Instagram’s upload API.`}
                 </p>
                 <Segmented
                   halves

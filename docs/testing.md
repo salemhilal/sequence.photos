@@ -129,7 +129,8 @@ switch it to digital in Layout (and back).
 - [ ] Each format remembers its own last size.
 - [ ] Size: editing W or H shows Apply (primary) and Revert; Revert restores; Apply resizes in
       one undo step; Enter applies. 10 → 8 → 10 puts photos and guides back exactly.
-- [ ] **[D]** Presets: Instagram 3:4, 4:5, square, landscape, story; a custom size shows
+- [ ] **[D]** A new sequence is 1080 × 1350 (4:5). Presets: Instagram 4:5, 3:4 (app uploads),
+      square, landscape, story; a custom size shows
       "Custom".
 - [ ] **[P≠D]** Smallest size 1 in [P] or 100 px [D].
 - [ ] Keep photos relative to guides: on, photos follow the guides on resize; off, they stay

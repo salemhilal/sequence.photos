@@ -141,15 +141,16 @@ export const TERMS: Record<LayoutKind, Terms> = {
 export const DEFAULT_PAGE: Size = { w: 10, h: 8 };
 
 /**
- * A new digital sequence's frames: Instagram's tallest feed format, 3:4, at the 1080 px
- * width it shows posts at (larger uploads are scaled down to it).
+ * A new digital sequence's frames: 4:5, the tallest shape Instagram's API posts as is, at
+ * the 1080 px width Instagram shows posts at (larger uploads are scaled down to it).
  */
-export const DEFAULT_FRAME: Size = { w: 1080, h: 1440 };
+export const DEFAULT_FRAME: Size = { w: 1080, h: 1350 };
 
 /** Instagram's feed and story sizes, offered as presets for digital frames. */
 export const FRAME_PRESETS: { label: string; size: Size }[] = [
-  { label: 'Instagram 3:4', size: { w: 1080, h: 1440 } },
   { label: 'Instagram 4:5', size: { w: 1080, h: 1350 } },
+  // The Instagram app takes 3:4; its upload API doesn't (posting crops or expands it).
+  { label: 'Instagram 3:4 (app uploads)', size: { w: 1080, h: 1440 } },
   { label: 'Instagram square', size: { w: 1080, h: 1080 } },
   { label: 'Instagram landscape', size: { w: 1080, h: 566 } },
   { label: 'Instagram story', size: { w: 1080, h: 1920 } },
