@@ -16,6 +16,7 @@ import {
   X,
   Ruler,
   Images,
+  Send,
 } from 'lucide-react';
 import { usePasteHandler } from './clipboard';
 import { platform } from '#platform';
@@ -26,6 +27,8 @@ import { ContextMenus } from './components/ContextMenu';
 import { Desk } from './components/Desk';
 import { FileMenu } from './components/FileMenu';
 import { LayoutEditor } from './components/LayoutEditor';
+import { InstagramPost } from './components/InstagramPost';
+import { useInstagram } from './instagram';
 import { PhotoImg } from './components/PhotoImg';
 import { Preview } from './components/Preview';
 import { QuickLook } from './components/QuickLook';
@@ -56,6 +59,7 @@ function onTouchDevice(): boolean {
 export default function App() {
   const { project, canUndo, canRedo } = useProject();
   const digital = project.layout.kind === 'digital';
+  const instagram = useInstagram();
   // Dismissed for this visit only: a reload shows it again.
   const [mobileNotice, setMobileNotice] = useState(onTouchDevice);
   const editing = ui.use((s) => s.editingSpreadId);
@@ -126,6 +130,7 @@ export default function App() {
                 fileItem('exportProject', <Download />),
                 fileItem('savePdf', <FileText />),
                 digital ? fileItem('saveImages', <Images />) : fileItem('exportIndesign', <Package />),
+                ...(digital && instagram ? [fileItem('postToInstagram', <Send />)] : []),
                 { ...fileItem('tour', <Compass />), separatorBefore: true },
                 fileItem('about', <Info />, false),
               ]}
@@ -204,6 +209,7 @@ export default function App() {
       {modal === 'about' && <AboutDialog />}
       {modal === 'preview' && <Preview />}
       {modal === 'layout' && <LayoutEditor />}
+      {modal === 'instagram' && <InstagramPost />}
       <QuickLook />
       <Tour />
       <ConfirmDialog />

@@ -6,6 +6,7 @@ import { exportIndesign } from './indesign';
 import { copyPhotos, duplicateAndSelect } from './clipboard';
 import { savePdf } from './pdf';
 import { saveFrames } from './frames';
+import { instagramConnection } from './instagram';
 import { hasMod, isMac, isTextField, isTyping, MOD_LABEL } from './input';
 import { platform } from '#platform';
 import { pickFiles } from './files';
@@ -140,6 +141,14 @@ export const commands = {
     scope: 'app',
     inFields: true,
     run: () => (projectStore.project.layout.kind === 'digital' ? void saveFrames() : false),
+  },
+  // Digital sequences, with an Instagram account connected (Settings), on the web.
+  postToInstagram: {
+    title: 'Post to Instagram…',
+    bindings: [],
+    scope: 'app',
+    run: () =>
+      projectStore.project.layout.kind === 'digital' && instagramConnection() ? openModal('instagram') : false,
   },
   preview: {
     title: 'Preview book',

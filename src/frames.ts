@@ -22,25 +22,41 @@ export async function renderFrames(
   const files: ZipInput[] = [];
   let missing = 0;
   for (const [i, frame] of frames.entries()) {
-    const canvas = new OffscreenCanvas(w, h);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('No 2D canvas');
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, w, h);
-    for (const p of [...frame.items].sort((a, b) => a.z - b.z)) {
-      const bitmap = await decode(p);
-      if (!bitmap) {
-        missing++;
-        continue;
-      }
-      ctx.drawImage(bitmap, p.x, p.y, p.w, p.h);
-      bitmap.close();
-    }
-    const data = await canvas.convertToBlob({ type: 'image/jpeg', quality: QUALITY });
+    const rendered = await renderFrame(frame, w, h);
+    missing += rendered.missing;
+    const data = await rendered.canvas.convertToBlob({ type: 'image/jpeg', quality: QUALITY });
     files.push({ name: `${String(i + 1).padStart(digits, '0')}.jpg`, data });
     onProgress(i + 1);
   }
   return { files, missing };
+}
+
+/**
+ * One frame drawn at its pixel size, on white: each photo from its original, resized once
+ * to its placed size, and cropped at the frame's edges. `missing` counts photos whose
+ * images couldn't be read (left out).
+ */
+export async function renderFrame(
+  frame: Frame,
+  w: number,
+  h: number,
+): Promise<{ canvas: OffscreenCanvas; missing: number }> {
+  const canvas = new OffscreenCanvas(w, h);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('No 2D canvas');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+  let missing = 0;
+  for (const p of [...frame.items].sort((a, b) => a.z - b.z)) {
+    const bitmap = await decode(p);
+    if (!bitmap) {
+      missing++;
+      continue;
+    }
+    ctx.drawImage(bitmap, p.x, p.y, p.w, p.h);
+    bitmap.close();
+  }
+  return { canvas, missing };
 }
 
 /**

@@ -263,3 +263,62 @@ export async function finishSignIn(): Promise<string | null> {
   set(connection);
   return `Connected to Instagram as @${connection.username}.`;
 }
+
+// --- Keeping the connection fresh -------------------------------------------------------
+
+const DAY = 24 * 60 * 60;
+/** Refresh once the token is this old (it lasts ~60 days; Instagram refuses under a day). */
+const REFRESH_AFTER = 30 * DAY;
+
+/** A connection problem the user has to fix by connecting again. */
+export class ReconnectError extends Error {}
+
+/**
+ * The connection, refreshed first if it's getting old: a new Instagram token (no secret
+ * needed), then a new enrollment from the server for it. Throws ReconnectError when
+ * it's gone or expired, or Error with a message for anything else.
+ */
+export async function freshConnection(now = Date.now() / 1000): Promise<InstagramConnection> {
+  const connection = current;
+  if (!connection || connection.expiresAt <= now) {
+    throw new ReconnectError('Your Instagram connection expired. Connect again in Settings.');
+  }
+  if (now - connection.refreshedAt < REFRESH_AFTER) return connection;
+
+  let token = connection.token;
+  let expiresAt = connection.expiresAt;
+  try {
+    const url = new URL('https://graph.instagram.com/refresh_access_token');
+    url.searchParams.set('grant_type', 'ig_refresh_token');
+    url.searchParams.set('access_token', connection.token);
+    const res = await fetch(url);
+    const body: unknown = await res.json().catch(() => null);
+    if (res.ok && isRecord(body) && typeof body.access_token === 'string' && typeof body.expires_in === 'number') {
+      token = body.access_token;
+      expiresAt = Math.floor(now + body.expires_in);
+    } else if (res.status === 400 || res.status === 401) {
+      throw new ReconnectError('Your Instagram connection expired. Connect again in Settings.');
+    }
+  } catch (error) {
+    if (error instanceof ReconnectError) throw error;
+    // Instagram unreachable: carry on with the current token, which is still valid.
+    return connection;
+  }
+
+  // The enrollment follows the token. If renewing it fails, keep the new token anyway.
+  let enrollment = connection.enrollment;
+  try {
+    const res = await fetch(`${serverUrl()}/auth/renew`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ enrollment }),
+    });
+    const body: unknown = await res.json().catch(() => null);
+    if (res.ok && isRecord(body) && typeof body.enrollment === 'string') enrollment = body.enrollment;
+  } catch {
+    // Retried at the next refresh.
+  }
+  const next = { ...connection, token, expiresAt, refreshedAt: Math.floor(now), enrollment };
+  set(next);
+  return next;
+}

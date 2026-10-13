@@ -1774,6 +1774,229 @@ body.col-resizing * {
   border-color: var(--accent);
 }
 
+/* Post to Instagram */
+.instagram-post .inspector {
+  width: 300px;
+  gap: 0;
+  padding: 0;
+}
+.instagram-panel section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.instagram-panel h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+.instagram-panel .help {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.instagram-panel .help.warn {
+  color: var(--warn);
+}
+.instagram-panel .segmented {
+  display: grid;
+}
+.instagram-actions {
+  border-bottom: 0;
+}
+.instagram-actions .btn {
+  justify-content: center;
+}
+.instagram-done {
+  margin: 0;
+  font-weight: 500;
+}
+.text-area {
+  width: 100%;
+  resize: vertical;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--fill);
+  color: inherit;
+  font: 13px/1.45 var(--font);
+}
+.text-area:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.instagram-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* The preview mimics Instagram's own look, light whatever the app's theme. */
+.ig-card {
+  overflow: hidden;
+  border-radius: 10px;
+  background: #fff;
+  color: #000;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+  font:
+    14px/1.4 -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+.ig-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.ig-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #f9ce34, #ee2a7b, #6228d7);
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+}
+.ig-user {
+  font-weight: 600;
+  font-size: 14px;
+}
+.ig-media,
+.ig-story {
+  position: relative;
+  overflow: hidden;
+}
+.ig-track {
+  display: flex;
+  height: 100%;
+  transition: transform 250ms ease-out;
+}
+.ig-slide {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+}
+.ig-image {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+}
+/* Frames are posted on white, whatever the app's page color. */
+.ig-image .page {
+  background: #fff;
+  box-shadow: none;
+}
+.ig-count {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 12px;
+}
+.ig-arrow {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: -14px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  color: #000;
+  cursor: pointer;
+}
+.ig-arrow .lucide {
+  width: 16px;
+  height: 16px;
+}
+.ig-arrow.prev {
+  left: 10px;
+}
+.ig-arrow.next {
+  right: 10px;
+}
+.ig-dots {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 0 2px;
+}
+.ig-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c7c7c7;
+}
+.ig-dots span.on {
+  background: #0095f6;
+}
+.ig-caption {
+  margin: 0;
+  padding: 8px 12px 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.ig-tag {
+  color: #00376b;
+}
+.ig-story {
+  border-radius: 12px;
+  background: #111;
+  color: #fff;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+  font:
+    14px/1.4 -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+.ig-story .ig-head {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.ig-progress {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  gap: 3px;
+}
+.ig-progress span {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.35);
+}
+.ig-progress span.seen {
+  background: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ig-track {
+    transition: none;
+  }
+}
+
 /* Preview */
 .preview {
   position: fixed;
