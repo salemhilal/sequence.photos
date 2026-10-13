@@ -33,4 +33,10 @@ export const INSTAGRAM = {
   /** Matches the server's GRAPH_VERSION (sequence-server's wrangler.jsonc). */
   graphUrl: 'https://graph.instagram.com/v26.0',
   scopes: ['instagram_business_basic', 'instagram_business_content_publish'],
+  /**
+   * Where the server sends someone back after signing in, by the app's address: the
+   * `client` in the sign-in state, which the server looks up in its RETURN_URLS. Only the
+   * development server knows `dev` (this computer's `npm run dev`).
+   */
+  clients: { [SITE_URL]: 'web', 'http://localhost:5175': 'dev' } as Readonly<Record<string, string>>,
 } as const;
