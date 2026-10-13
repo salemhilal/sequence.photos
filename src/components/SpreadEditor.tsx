@@ -497,7 +497,7 @@ function PileStrip({ spreadId }: { spreadId: SpreadId }) {
               style={{ width: (56 * p.w) / p.h }}
               onPointerDown={(e) => onDown(e, p)}
               onContextMenu={(e) => openPhotoMenu(e, p.photoId)}
-              title={`Drag onto the ${sheetOf(projectStore.project).layout === 'print' ? 'page' : 'frame'}, or click to add`}
+              title={`Drag onto the ${sheetOf(project).layout === 'print' ? 'page' : 'frame'}, or click to add`}
             >
               <PhotoImg id={p.photoId} />
             </div>

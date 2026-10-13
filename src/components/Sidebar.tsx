@@ -249,7 +249,7 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
   // Thumbnails are as wide as a book's two pages, or a frame.
   const scale = thumbW / (sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW);
   // A book's middle spreads move and delete; so does any frame but a sequence's only one.
-  const middle = spread.kind === 'middle' || (spread.kind === 'frame' && total > 1);
+  const movable = spread.kind === 'middle' || (spread.kind === 'frame' && total > 1);
   const label = folioLabel(index, total, sheet.layout);
 
   const open = () => ui.set({ editingSpreadId: spread.id });
@@ -296,16 +296,16 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
   return (
     <div className={`spread-row${editing ? ' editing' : ''}${dragging ? ' dragging' : ''}`} data-row-index={index}>
       <div
-        className={`spread-row-head${middle ? ' draggable' : ''}`}
-        title={middle ? 'Drag to reorder' : spread.kind === 'frame' ? '' : 'The first and last pages stay in place'}
-        onPointerDown={middle ? (e) => onHeaderDown(e, spread) : undefined}
+        className={`spread-row-head${movable ? ' draggable' : ''}`}
+        title={movable ? 'Drag to reorder' : spread.kind === 'frame' ? '' : 'The first and last pages stay in place'}
+        onPointerDown={movable ? (e) => onHeaderDown(e, spread) : undefined}
       >
-        <span className={`grip${middle ? '' : ' locked'}`} aria-hidden="true">
+        <span className={`grip${movable ? '' : ' locked'}`} aria-hidden="true">
           <GripVertical />
         </span>
         <span className="spread-label">{label}</span>
         <span className="spacer" />
-        {middle && (
+        {movable && (
           <button
             className="row-delete"
             aria-label={spread.kind === 'frame' ? `Delete frame ${label}` : `Delete pages ${label}`}

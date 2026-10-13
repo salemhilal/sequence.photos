@@ -177,13 +177,13 @@ export interface SignInPlan {
   pending: Pending;
 }
 
+/** When the chosen server can't be used from here. */
+export const SERVER_ERROR = 'Couldn’t connect to the Sequence server. Check the server in the Advanced tab.';
+
 /**
  * Instagram's sign-in URL for this app address and server, or why it can't sign in from
  * here: an app address the server doesn't send people back to.
  */
-/** When the chosen server can't be used from here. */
-export const SERVER_ERROR = 'Couldn’t connect to the Sequence server. Check the server in the Advanced tab.';
-
 export async function planSignIn(origin: string, server: string): Promise<SignInPlan | { error: string }> {
   const client = INSTAGRAM.clients[origin];
   if (!client) return { error: 'Instagram can’t be connected from this address.' };
@@ -273,8 +273,7 @@ export async function finishSignIn(): Promise<string | null> {
   if (!back) return null;
   history.replaceState(history.state, '', location.pathname + location.search);
   const pending = takePending();
-  // Why a return was ignored or failed, for debugging (nothing secret).
-  // Ignored, so a link can't connect someone to another account; but say so.
+  // Ignored (see above), but say so. The warnings say why, for debugging (nothing secret).
   if (!pending || pending.state !== back.state) {
     console.warn('Instagram sign-in: ignored a return this tab didn’t start.');
     return OTHER_TAB;

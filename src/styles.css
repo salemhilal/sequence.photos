@@ -1803,7 +1803,8 @@ body.col-resizing * {
 .instagram-panel .segmented {
   display: grid;
 }
-.instagram-actions {
+/* The last section: nothing below it to divide from. */
+.instagram-panel .instagram-actions {
   border-bottom: 0;
 }
 .instagram-actions .btn {
