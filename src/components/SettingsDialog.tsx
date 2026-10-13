@@ -5,7 +5,7 @@ import { formatBytes, readStorageStatus, requestPersistence, type StorageStatus 
 import type { ThemePref } from '../theme';
 import { setTheme, closeModal, ui } from '../ui';
 import { DeskColorPicker } from './DeskColorPicker';
-import { DEFAULT_SERVER_URL, normalizeServerUrl, serverUrlPref } from '../server';
+import { DEV_SERVER_URL, normalizeServerUrl, SERVER_URL, serverUrlPref } from '../server';
 
 const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -76,59 +76,82 @@ const TABS: { value: Tab; label: string }[] = [
   { value: 'advanced', label: 'Advanced' },
 ];
 
-/** The server address: the deployed default, or this browser's override. */
-function ServerUrlSetting() {
+type ServerChoice = 'default' | 'dev' | 'local';
+const SERVER_CHOICES: { value: ServerChoice; label: string }[] = [
+  { value: 'default', label: 'Sequence' },
+  { value: 'dev', label: 'Development' },
+  { value: 'local', label: 'Local' },
+];
+const LOCAL_DEFAULT = 'http://localhost:8787';
+
+function choiceOf(saved: string): ServerChoice {
+  if (saved === '' || saved === SERVER_URL) return 'default';
+  return saved === DEV_SERVER_URL ? 'dev' : 'local';
+}
+
+/**
+ * Which server posts to Instagram: Sequence's (the default), the development one, or one
+ * on this computer (e.g. `wrangler dev`). Saved for this browser.
+ */
+function ServerSetting() {
   const [saved, setSaved] = useState(() => serverUrlPref.load());
-  const [draft, setDraft] = useState(saved);
-  const normalized = draft.trim() === '' ? '' : normalizeServerUrl(draft);
-  const changed = normalized !== null && normalized !== saved;
+  const choice = choiceOf(saved);
+  const [local, setLocal] = useState(choice === 'local' ? saved : LOCAL_DEFAULT);
+  const localUrl = normalizeServerUrl(local);
   const save = (value: string) => {
     serverUrlPref.save(value);
     setSaved(value);
-    setDraft(value);
+  };
+  const pick = (c: ServerChoice) => {
+    if (c === 'default') save('');
+    else if (c === 'dev') save(DEV_SERVER_URL);
+    else if (localUrl) save(localUrl);
+    else save(LOCAL_DEFAULT);
   };
 
   return (
-    <form
-      className="setting-controls"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (changed) save(normalized);
-      }}
-    >
-      <input
-        className="text-field"
-        type="url"
-        aria-label="Server address"
-        placeholder={DEFAULT_SERVER_URL ?? 'https://…'}
-        value={draft}
-        spellCheck={false}
-        autoComplete="off"
-        onChange={(e) => setDraft(e.target.value)}
-      />
-      {normalized === null && (
-        <p className="help warn">Use an https address, or http://localhost for a server on this computer.</p>
-      )}
-      <div className="inline">
-        <button type="submit" className={`btn${changed ? ' primary' : ''}`} disabled={!changed}>
-          Save
-        </button>
-        {saved !== '' && (
-          <button type="button" className="btn ghost" onClick={() => save('')}>
-            Use default
-          </button>
-        )}
+    <div className="setting-controls">
+      <div className="segmented" role="radiogroup" aria-labelledby="server-label">
+        {SERVER_CHOICES.map((c) => (
+          <label key={c.value} className={choice === c.value ? 'on' : ''}>
+            <input
+              type="radio"
+              name="server"
+              value={c.value}
+              checked={choice === c.value}
+              onChange={() => pick(c.value)}
+            />
+            {c.label}
+          </label>
+        ))}
       </div>
-      <p className="help">
-        {saved !== ''
-          ? 'This browser uses the address above. '
-          : DEFAULT_SERVER_URL
-            ? 'Using Sequence’s server. '
-            : 'No server is set up yet. '}
-        Used to post to Instagram. Leave empty for the default
-        {DEFAULT_SERVER_URL ? ` (${DEFAULT_SERVER_URL})` : ''}.
-      </p>
-    </form>
+      {choice === 'local' ? (
+        <form
+          className="inline"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (localUrl) save(localUrl);
+          }}
+        >
+          <input
+            className="text-field"
+            type="url"
+            aria-label="Local server address"
+            value={local}
+            spellCheck={false}
+            autoComplete="off"
+            onChange={(e) => setLocal(e.target.value)}
+          />
+          <button type="submit" className="btn" disabled={!localUrl || localUrl === saved}>
+            Save
+          </button>
+        </form>
+      ) : (
+        <p className="help data">{choice === 'dev' ? DEV_SERVER_URL : SERVER_URL}</p>
+      )}
+      {choice === 'local' && !localUrl && <p className="help warn">Use an http://localhost address.</p>}
+      <p className="help">Posts to Instagram go through this server. For development only; keep Sequence otherwise.</p>
+    </div>
   );
 }
 
@@ -162,8 +185,8 @@ export function SettingsDialog() {
 function AdvancedSettings() {
   return (
     <section className="setting">
-      <h3>Server</h3>
-      <ServerUrlSetting />
+      <h3 id="server-label">Server</h3>
+      <ServerSetting />
     </section>
   );
 }

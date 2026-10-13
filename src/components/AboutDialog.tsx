@@ -1,4 +1,5 @@
 import { CodeXml, ExternalLink, Mail, Shield } from 'lucide-react';
+import { PRIVACY_URL, REPO_URL } from '../config';
 import { closeModal } from '../ui';
 import { Dialog } from './Dialog';
 
@@ -19,11 +20,11 @@ export function AboutDialog() {
             <Mail />
             hi@sequence.photos
           </a>
-          <a href="https://github.com/salemhilal/sequence.photos" target="_blank" rel="noopener noreferrer">
+          <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
             <CodeXml />
             Source on GitHub
           </a>
-          <a href={`https://${import.meta.env.VITE_SITE_DOMAIN}/privacy/`} target="_blank" rel="noopener noreferrer">
+          <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
             <Shield />
             Privacy policy
           </a>

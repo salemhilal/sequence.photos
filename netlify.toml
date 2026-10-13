@@ -7,17 +7,8 @@
 [build.environment]
   NODE_VERSION = "24"
 
-# The app's Content Security Policy: only its own scripts, and network requests only to
-# itself, Instagram's API, and Sequence's server (sequence-server, on workers.dev), or a
-# server on this computer for development (Settings → Advanced). It guards the
-# Instagram token the app keeps (see sequence-server's README). The Mac app has its own,
-# in src-tauri/tauri.conf.json. Inline styles: React's style props need them.
-[[headers]]
-  for = "/app/*"
-  [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' blob: data: https://graph.instagram.com https://*.workers.dev http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
+# The app's Content Security Policy and other security headers are generated at build
+# time from .env, as dist/_headers (see securityHeaders in vite.config.ts).
 
 # The service worker and app manifest must always be fetched fresh, so updates are noticed.
 [[headers]]

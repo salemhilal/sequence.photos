@@ -1,9 +1,11 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react';
-import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { fileURLToPath } from 'node:url';
-import { defineConfig, type ResolvedConfig } from 'vite';
+import { defineConfig, loadEnv, type Plugin, type ResolvedConfig } from 'vite';
 import { VitePWA, type VitePluginPWAAPI } from 'vite-plugin-pwa';
 
 const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
@@ -14,6 +16,72 @@ function appSlash(req: IncomingMessage, res: ServerResponse, next: () => void): 
   if (req.url !== '/app' && !req.url?.startsWith('/app?')) return next();
   res.writeHead(301, { Location: `/app/${req.url.slice(4)}` });
   res.end();
+}
+
+/**
+ * The web app's security headers, as a Netlify `_headers` file. The Content Security
+ * Policy allows only the site's own scripts (plus the hashes of the app page's inline
+ * scripts, computed here, so they never go stale) and network requests only to the site,
+ * Instagram's API, and Sequence's servers from .env, or a server on this computer for
+ * development (Settings → Advanced). It guards the Instagram token the app keeps. The Mac
+ * app has its own, in src-tauri/tauri.conf.json. Inline styles: React's style props.
+ */
+function securityHeaders(env: Record<string, string>, inlineScripts: string[]): string {
+  const hashes = inlineScripts.map((code) => `'sha256-${createHash('sha256').update(code).digest('base64')}'`);
+  const servers = [env.VITE_SERVER_URL, env.VITE_DEV_SERVER_URL].map((u) => new URL(u ?? '').origin);
+  const csp = [
+    "default-src 'self'",
+    ['script-src', "'self'", ...hashes].join(' '),
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' blob: data:",
+    "font-src 'self' data:",
+    [
+      'connect-src',
+      "'self' blob: data: https://graph.instagram.com",
+      ...servers,
+      'http://localhost:* http://127.0.0.1:*',
+    ].join(' '),
+    "worker-src 'self'",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join('; ');
+  return [
+    '/app/*',
+    `  Content-Security-Policy: ${csp}`,
+    '  X-Content-Type-Options: nosniff',
+    '  Referrer-Policy: strict-origin-when-cross-origin',
+    '',
+  ].join('\n');
+}
+
+/** Writes dist/_headers (see securityHeaders), and applies it in `vite preview` too. */
+function webSecurityHeaders(mode: string): Plugin {
+  return {
+    name: 'web-security-headers',
+    // After the HTML pages are written, so the app page's final inline scripts are hashed.
+    writeBundle(options) {
+      const dir = options.dir ?? 'dist';
+      const html = readFileSync(join(dir, 'app/index.html'), 'utf8');
+      const inline = [...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1] ?? '');
+      const env = loadEnv(mode, process.cwd(), 'VITE_');
+      writeFileSync(join(dir, '_headers'), securityHeaders(env, inline));
+    },
+    configurePreviewServer(server) {
+      const file = 'dist/_headers';
+      if (!existsSync(file)) return;
+      const headers = readFileSync(file, 'utf8')
+        .split('\n')
+        .filter((line) => line.startsWith('  '))
+        .map((line) => line.trim().split(/:\s(.*)/s));
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.startsWith('/app/')) for (const [k, v] of headers) if (k && v) res.setHeader(k, v);
+        next();
+      });
+    },
+  };
 }
 
 export default defineConfig(({ mode }) => {
@@ -87,6 +155,8 @@ export default defineConfig(({ mode }) => {
         configureServer: (server) => void server.middlewares.use(appSlash),
         configurePreviewServer: (server) => void server.middlewares.use(appSlash),
       },
+      // The website only: the Mac app's policy is in src-tauri/tauri.conf.json.
+      ...(app ? [] : [webSecurityHeaders(mode)]),
     ],
     // Where the website and the Mac app differ (see src/platform/types.ts): each build
     // gets its own implementation, so the app's code is never part of the website.

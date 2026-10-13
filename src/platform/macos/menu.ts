@@ -1,5 +1,6 @@
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { REPO_URL } from '../../config';
 import { commandTitle, runFromMenu, shortcutAccelerator, type CommandId } from '../../commands';
 import { isTextField } from '../../input';
 import { projectStore } from '../../store';
@@ -10,8 +11,6 @@ import { quit } from './documents';
  * The Mac app's menu bar, built from the command table (so it always matches the
  * shortcuts), with the standard macOS items around it.
  */
-
-const REPO = 'https://github.com/salemhilal/sequence.photos';
 
 /** Menu bar items are in title case ("Add Photos…"); commands are named in sentence case. */
 const SMALL_WORDS = new Set(['a', 'an', 'and', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
@@ -120,7 +119,7 @@ export async function setUpMenu(): Promise<void> {
         text: 'Help',
         items: [
           await command('tour'),
-          await MenuItem.new({ text: 'Sequence on GitHub', action: () => void openUrl(REPO) }),
+          await MenuItem.new({ text: 'Sequence on GitHub', action: () => void openUrl(REPO_URL) }),
         ],
       }),
     ],
