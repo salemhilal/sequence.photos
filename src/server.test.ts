@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEV_SERVER_URL, SERVER_URL } from './config';
-import { normalizeServerUrl } from './server';
+import { DEV_SERVER_URL, SERVER_URL, SITE_URL } from './config';
+import { defaultServerUrl, normalizeServerUrl } from './server';
 
 describe('normalizeServerUrl', () => {
   it("accepts Sequence's servers, as their origins", () => {
@@ -27,5 +27,12 @@ describe('normalizeServerUrl', () => {
     ]) {
       expect(normalizeServerUrl(bad), bad).toBeNull();
     }
+  });
+});
+
+describe('defaultServerUrl', () => {
+  it("is Sequence's server on the website, and the development server on this computer", () => {
+    expect(defaultServerUrl(SITE_URL)).toBe(SERVER_URL);
+    expect(defaultServerUrl('http://localhost:5175')).toBe(DEV_SERVER_URL);
   });
 });

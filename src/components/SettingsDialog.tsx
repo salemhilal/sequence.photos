@@ -6,7 +6,7 @@ import type { ThemePref } from '../theme';
 import { setTheme, closeModal, ui } from '../ui';
 import { DeskColorPicker } from './DeskColorPicker';
 import { connectInstagram, disconnectInstagram, useInstagram } from '../instagram';
-import { DEV_SERVER_URL, normalizeServerUrl, SERVER_URL, serverUrlPref } from '../server';
+import { defaultServerUrl, DEV_SERVER_URL, normalizeServerUrl, SERVER_URL, serverUrl, serverUrlPref } from '../server';
 
 const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -85,9 +85,9 @@ const SERVER_CHOICES: { value: ServerChoice; label: string }[] = [
 ];
 const LOCAL_DEFAULT = 'http://localhost:8787';
 
-function choiceOf(saved: string): ServerChoice {
-  if (saved === '' || saved === SERVER_URL) return 'default';
-  return saved === DEV_SERVER_URL ? 'dev' : 'local';
+function choiceOf(server: string): ServerChoice {
+  if (server === SERVER_URL) return 'default';
+  return server === DEV_SERVER_URL ? 'dev' : 'local';
 }
 
 /**
@@ -95,19 +95,20 @@ function choiceOf(saved: string): ServerChoice {
  * on this computer (e.g. `wrangler dev`). Saved for this browser.
  */
 function ServerSetting() {
-  const [saved, setSaved] = useState(() => serverUrlPref.load());
-  const choice = choiceOf(saved);
-  const [local, setLocal] = useState(choice === 'local' ? saved : LOCAL_DEFAULT);
+  const [server, setServer] = useState(serverUrl);
+  const choice = choiceOf(server);
+  const [local, setLocal] = useState(choice === 'local' ? server : LOCAL_DEFAULT);
   const localUrl = normalizeServerUrl(local);
+  // The default (Sequence's, or the development server's when running locally) is
+  // stored as no choice, so it follows the default if that changes.
   const save = (value: string) => {
-    serverUrlPref.save(value);
-    setSaved(value);
+    serverUrlPref.save(value === defaultServerUrl() ? '' : value);
+    setServer(value);
   };
   const pick = (c: ServerChoice) => {
-    if (c === 'default') save('');
+    if (c === 'default') save(SERVER_URL);
     else if (c === 'dev') save(DEV_SERVER_URL);
-    else if (localUrl) save(localUrl);
-    else save(LOCAL_DEFAULT);
+    else save(localUrl ?? LOCAL_DEFAULT);
   };
 
   return (
@@ -143,7 +144,7 @@ function ServerSetting() {
             autoComplete="off"
             onChange={(e) => setLocal(e.target.value)}
           />
-          <button type="submit" className="btn" disabled={!localUrl || localUrl === saved}>
+          <button type="submit" className="btn" disabled={!localUrl || localUrl === server}>
             Save
           </button>
         </form>
@@ -151,7 +152,7 @@ function ServerSetting() {
         <p className="help data">{choice === 'dev' ? DEV_SERVER_URL : SERVER_URL}</p>
       )}
       {choice === 'local' && !localUrl && <p className="help warn">Use an http://localhost address.</p>}
-      <p className="help">Posts to Instagram go through this server. For development only; keep Sequence otherwise.</p>
+      <p className="help">Posts to Instagram go through this server. Change it only for development.</p>
     </div>
   );
 }
