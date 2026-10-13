@@ -310,4 +310,7 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
       a `.photo-sequence` open it; after a relaunch, Save still writes the same file.
 - [ ] Quitting or closing with unsaved changes asks to save; unsaved changes survive a quit
       and relaunch.
-- [ ] No Instagram (Settings or the File menu) and no Storage section.
+- [ ] Save PDF…, Save Images…, and Export for InDesign… suggest the document's name ("Trip.pdf",
+      "Trip (images).zip", "Trip (InDesign).zip"); an untitled project gets a dated name.
+- [ ] Settings is one page (Appearance, Desk), with no tabs; no Instagram and no Storage section.
+- [ ] Opening a project from a newer version says to update from the App Store (no Reload).

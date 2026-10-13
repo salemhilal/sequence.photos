@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import {
   Download,
   FilePlus,
@@ -27,7 +27,6 @@ import { ContextMenus } from './components/ContextMenu';
 import { Desk } from './components/Desk';
 import { FileMenu } from './components/FileMenu';
 import { LayoutEditor } from './components/LayoutEditor';
-import { InstagramPost } from './components/InstagramPost';
 import { useInstagram } from './instagram';
 import { PhotoImg } from './components/PhotoImg';
 import { Preview } from './components/Preview';
@@ -45,6 +44,9 @@ import { takeOver } from './tabLock';
 import { checkForUpdate, reloadToUpdate } from './update';
 import { allSpreads, findSpread } from './spreads';
 import { TERMS } from './units';
+
+// Loaded when opened: it's the website's only (the Mac app doesn't post to Instagram).
+const InstagramPost = lazy(() => import('./components/InstagramPost').then((m) => ({ default: m.InstagramPost })));
 
 const NOTICE_MS = 6000;
 
@@ -233,7 +235,11 @@ export default function App() {
       {modal === 'about' && <AboutDialog />}
       {modal === 'preview' && <Preview />}
       {modal === 'layout' && <LayoutEditor />}
-      {modal === 'instagram' && <InstagramPost />}
+      {modal === 'instagram' && (
+        <Suspense fallback={null}>
+          <InstagramPost />
+        </Suspense>
+      )}
       <QuickLook />
       <Tour />
       <ConfirmDialog />
@@ -241,9 +247,11 @@ export default function App() {
       <DragGhost />
       {saveFailed && (
         <div className="save-failed" role="alert">
-          Couldn't save your work. Your browser's storage may be full.
+          {platform.kind === 'macos'
+            ? 'Couldn’t keep a copy of your work in the app’s storage.'
+            : 'Couldn’t save your work. Your browser’s storage may be full.'}
           <button className="btn primary" onClick={() => runCommand('exportProject')}>
-            Export a copy
+            {platform.kind === 'macos' ? 'Save to a file' : 'Export a copy'}
           </button>
         </div>
       )}
@@ -300,10 +308,17 @@ function OutdatedScreen() {
     <div className="screen-message" role="alert">
       <span className="wordmark">SEQUENCE</span>
       <h1>This project was saved by a newer version of Sequence.</h1>
-      <p>Reload to update. Your saved project hasn't been changed.</p>
-      <button className="btn primary" onClick={reloadToUpdate}>
-        Reload
-      </button>
+      {platform.kind === 'macos' ? (
+        // The Mac app updates through the App Store, not by reloading.
+        <p>Update Sequence from the App Store to open it. Your saved project hasn't been changed.</p>
+      ) : (
+        <>
+          <p>Reload to update. Your saved project hasn't been changed.</p>
+          <button className="btn primary" onClick={reloadToUpdate}>
+            Reload
+          </button>
+        </>
+      )}
     </div>
   );
 }

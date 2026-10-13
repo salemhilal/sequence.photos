@@ -497,6 +497,12 @@ button {
   user-select: none;
 }
 .status {
+  /* Long messages ("Rendering frame 12 of 30…") end in "…" rather than running under the
+     Mac app's centered window title. */
+  max-width: 26vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
   font-family: var(--mono);
   font-size: 11px;

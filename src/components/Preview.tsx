@@ -4,6 +4,8 @@ import { folioLabel } from '../actions';
 import { useWindowEvent } from '../hooks';
 import { saveFrames } from '../frames';
 import { savePdf } from '../pdf';
+import { platform } from '#platform';
+import { commandTitle } from '../commands';
 import { useProject } from '../store';
 import { closeModal, ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
@@ -120,7 +122,11 @@ export function Preview() {
           onClick={() => void (sheet.layout === 'print' ? savePdf() : saveFrames())}
           disabled={busy !== null}
         >
-          {busy ?? terms.save}
+          {/* The Mac app names it as its menu does (Save PDF…, Save Images…). */}
+          {busy ??
+            (platform.kind === 'macos'
+              ? commandTitle(sheet.layout === 'print' ? 'savePdf' : 'saveImages')
+              : terms.save)}
         </button>
         <button className="btn" onClick={close}>
           Exit preview
