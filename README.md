@@ -368,12 +368,12 @@ are rejected at sign-in.)
 
 ## The app's side (in the app repo, after the server works)
 
-- **Content Security Policy first (blocks shipping this):** the website stores a
-  refreshable publishing token, so add a strict CSP for `/app/*` in `netlify.toml`
-  `[[headers]]`: `script-src 'self'`, `connect-src 'self' https://graph.instagram.com
-  <server origin>`, `object-src 'none'`, `base-uri 'none'`, `frame-ancestors 'none'`
-  (plus what the app already needs, e.g. `img-src` for `blob:`/`data:`). Consider Trusted
-  Types.
+- **Content Security Policy first (must ship with the Instagram code):** the website
+  stores a refreshable publishing token, so every page gets a strict CSP, generated at
+  build time as `dist/_headers` from the app's `.env` (`securityHeaders` in the app's
+  `vite.config.ts`): `script-src 'self'` plus hashes of inline scripts, `connect-src`
+  limited to the site, `graph.instagram.com`, Sequence's two servers, and localhost (for
+  development), `object-src 'none'`, `base-uri 'none'`, `frame-ancestors 'none'`.
 - **Settings → Instagram:** "Connect Instagram" starts sign-in (above; web: same tab;
   Mac: system browser and a link back, later). Connected: shows `@username` and
   "Disconnect", which forgets everything stored and says that to fully revoke access,
@@ -386,7 +386,9 @@ are rejected at sign-in.)
   - Feed: 1 frame (single image) or 2–10 (carousel; the API's limit, though the
     Instagram app allows 20); aspect ratio within 4:5 to 1.91:1 (documented, so the
     default 3:4 can't post to the feed; see Open questions).
-  - Story: frames post one by one.
+  - Stories: one per frame, up to 10 at a time (a batch's limit, `MAX_FRAMES`). All of
+    them are created and processed before any is published, so a cancel or failure
+    can't leave some up; a failure while publishing says how many went up.
   - Each JPEG: scaled to at most 1440 px wide, ≤ 8 MB (lower the quality if needed).
 - **Posting** (all with `access_token=<token>`, against
   `https://graph.instagram.com/<version>`):
@@ -399,9 +401,9 @@ are rejected at sign-in.)
   4. Containers: `POST /<userId>/media` with `image_url` (and `is_carousel_item=true`
      for carousels; `media_type=STORIES` for stories); then for a carousel,
      `POST /<userId>/media` with `media_type=CAROUSEL&children=<ids>&caption=…`.
-  5. Poll `GET /<containerId>?fields=status_code` until `FINISHED`: start after a few
-     seconds and back off toward Meta's guidance (about once a minute, at most 5
-     minutes). `ERROR`/`EXPIRED` → explain.
+  5. Poll `GET /<containerId>?fields=status_code` until `FINISHED`: check after a
+     second, then back off toward Meta's guidance (about once a minute, at most 5
+     minutes). `ERROR`/`EXPIRED` → explain. Cancelling works until publishing starts.
   6. `POST /<userId>/media_publish` with `creation_id`.
   7. `DELETE` the upload batch, only after publishing succeeds or the post is abandoned
      (in a `finally`).
@@ -509,6 +511,11 @@ Meta app's secret, and the dev Meta app's redirect URI set to the `CALLBACK_URL`
 | `npm run lint` | typescript-eslint, strict and type-aware; no `any`, unsafe access, non-null assertions, or `as` |
 | `npm run format` / `format:check` | prettier |
 | `npm run types` | regenerates `worker-configuration.d.ts` (the `Env` type) from `wrangler.jsonc`; run after any change to it |
+
+A local server can't post to Instagram for real: its frame URLs are on `localhost`,
+which Instagram can't fetch (it fails with error 9004). Use the deployed `dev` Worker, or
+a tunnel (e.g. `cloudflared tunnel --url http://localhost:8787`) with its address in
+`CALLBACK_URL` and the Meta app's redirect URIs.
 
 Tests use fixed secrets and high rate limits from `vitest.config.ts`, not `.dev.vars`.
 They print a harmless "Missing required secrets" warning. Locally, `wrangler dev` prints
