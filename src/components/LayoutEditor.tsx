@@ -28,8 +28,8 @@ import { collapsedPref } from '../prefs';
 import { SpreadCanvas } from './SpreadCanvas';
 
 /**
- * The guides view: a facing pair of empty pages (or one empty frame) with rulers along the
- * top and left, and the guide settings beside them. Guides apply to every spread, mirrored
+ * The Layout view: a facing pair of empty pages (or one empty frame) with rulers along the
+ * top and left, and the layout's settings (its size and guides) beside them. Guides apply to every spread, mirrored
  * on facing pages. Drag from a ruler to add a guide parallel to it; drag a guide off the
  * page to remove it. Clicking any guide selects it and highlights its settings.
  */
@@ -39,8 +39,8 @@ const PAD_SHARE = 0.05;
 /** Ruler thickness, in pixels. */
 const RULER = 20;
 const SAMPLES: Record<LayoutKind, Spread> = {
-  print: { id: toSpreadId('guides'), kind: 'middle', items: [] },
-  digital: { id: toSpreadId('guides'), kind: 'frame', items: [] },
+  print: { id: toSpreadId('layout'), kind: 'middle', items: [] },
+  digital: { id: toSpreadId('layout'), kind: 'frame', items: [] },
 };
 /** A border guide's fields, in pairs: a frame's left before its right. */
 const EDGES: Record<LayoutKind, (keyof Edges)[]> = {
@@ -226,7 +226,7 @@ export function LayoutEditor() {
 
   return (
     <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && closeModal()}>
-      <div className="modal editor guides-editor layout-editor" data-modal>
+      <div className="modal editor layout-editor" data-modal>
         <header className="modal-head">
           <div className="modal-title">
             <span className="folio">Layout</span>
@@ -243,7 +243,7 @@ export function LayoutEditor() {
           </button>
         </header>
         <div className="editor-body">
-          <div className="editor-stage guides-stage" ref={stageRef}>
+          <div className="editor-stage" ref={stageRef}>
             <Ruler
               axis="horizontal"
               length={stage.w}
@@ -264,13 +264,13 @@ export function LayoutEditor() {
               onPointerDown={(e) => dragGuide(e, 'vertical', null)}
             />
             <div className="ruler-corner" />
-            <div className="guides-canvas" style={{ left, top }}>
+            <div className="layout-canvas" style={{ left, top }}>
               <SpreadCanvas
                 spread={sample}
                 sheet={s}
                 scale={scale}
                 pad={PAD}
-                overlay={<div className="line-guides">{guides}</div>}
+                overlay={guides}
                 onPointerDown={() => setSelected(null)}
               />
             </div>
@@ -280,7 +280,7 @@ export function LayoutEditor() {
               </div>
             )}
           </div>
-          <GuidesPanel s={s} selected={selected} onSelect={setSelected} onRemove={remove} />
+          <LayoutPanel s={s} selected={selected} onSelect={setSelected} onRemove={remove} />
         </div>
       </div>
     </div>
@@ -425,7 +425,7 @@ function PanelSection({ id, title, actions, collapsed, shown, onToggle, children
   );
 }
 
-function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
+function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
   const [collapsed, setCollapsed] = useState(() => new Set(collapsedPref.load()));
   // A guide selected on the page shows its settings, even in a folded section.
   const shown = selected ? SECTION_OF[selected.kind] : null;
@@ -476,7 +476,7 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
   };
 
   return (
-    <aside className="inspector guides-panel">
+    <aside className="inspector layout-panel">
       <PanelSection id="page" title="Spreads" {...fold}>
         <PageSizeFields />
         <label className="check">
@@ -590,7 +590,7 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
         ))}
       </PanelSection>
 
-      <p className="help guides-note">
+      <p className="help layout-note">
         {terms.guidesNote} Distances in {terms.unitName}. Shift snaps a dragged guide to {units.snapLabel}.
       </p>
     </aside>

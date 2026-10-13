@@ -1116,7 +1116,7 @@ body.col-resizing * {
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
-.guides-canvas {
+.layout-canvas {
   position: absolute;
 }
 /* A guide from the rulers: a 1px line in a wider band, easy to grab. */
@@ -1180,19 +1180,19 @@ body.col-resizing * {
   white-space: nowrap;
 }
 /* .inspector (below) sets these too. */
-.inspector.guides-panel {
+.inspector.layout-panel {
   width: 270px;
   gap: 0;
   padding: 0;
 }
-.guides-panel section {
+.layout-panel section {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 14px;
   border-bottom: 1px solid var(--border);
 }
-.guides-panel h3 {
+.layout-panel h3 {
   margin: 0;
   font-size: 13px;
   font-weight: 500;
@@ -1243,42 +1243,42 @@ body.col-resizing * {
 .section-head .btn {
   color: var(--muted);
 }
-.guides-panel .help {
+.layout-panel .help {
   margin: 0;
   font-size: 12px;
   color: var(--muted);
 }
-.guides-note {
+.layout-note {
   padding: 14px;
 }
-.guides-panel .inline {
+.layout-panel .inline {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.guides-panel .num-field {
+.layout-panel .num-field {
   min-width: 0;
 }
-.guides-panel .num-field input {
+.layout-panel .num-field input {
   flex: 1;
   width: auto;
 }
-.guides-panel .guide-row .num-field {
+.layout-panel .guide-row .num-field {
   flex: 1;
 }
 /* Rows that match a guide on the page: selecting either highlights both. */
-.guides-panel .pick {
+.layout-panel .pick {
   margin: 0 -6px;
   padding: 4px 6px;
   border-radius: var(--radius);
 }
-.guides-panel .pick.selected {
+.layout-panel .pick.selected {
   background: var(--accent-soft);
   transition: background-color 120ms ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
   .line-guide.selected::after,
-  .guides-panel .pick.selected {
+  .layout-panel .pick.selected {
     transition: none;
   }
 }
@@ -1759,14 +1759,14 @@ body.col-resizing * {
   color: var(--muted);
 }
 /* In the Layout panel, the size form fills its width. */
-.guides-panel .layout-fields,
-.guides-panel .size-form {
+.layout-panel .layout-fields,
+.layout-panel .size-form {
   align-items: stretch;
 }
-.guides-panel .size-form select {
+.layout-panel .size-form select {
   width: 100%;
 }
-.guides-panel .size-form .num-field {
+.layout-panel .size-form .num-field {
   flex: 1;
 }
 .size-form select:focus-visible {
