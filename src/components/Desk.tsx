@@ -7,6 +7,7 @@ import { clearGhost, startDrag, trackGhost } from '../drag';
 import { intersects, resizeRect, type Corner, type Rect } from '../geometry';
 import { projectStore, useProject } from '../store';
 import type { Placement } from '../types';
+import { TERMS } from '../units';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
 import { isTyping } from '../input';
 import { deskCovered, openPhotoMenu, openModal, openQuickLook, ui } from '../ui';
@@ -340,7 +341,7 @@ export function Desk() {
           <p>
             Add or drop photos or exported projects here.
             <br />
-            They land on this desk, where you can drag them onto {project.layout.kind === 'print' ? 'pages' : 'frames'}.
+            They land on this desk, where you can drag them onto {TERMS[project.layout.kind].pages}.
           </p>
           <button className="btn primary" onPointerDown={(e) => e.stopPropagation()} onClick={addPhotos}>
             Add photos

@@ -5,6 +5,7 @@ import { projectStore } from './store';
 import { ui } from './ui';
 import { allSpreads, sheetOf } from './spreads';
 import type { LayoutKind } from './types';
+import { TERMS } from './units';
 
 /** PDF points per unit: 72 to the inch, and a pixel to a point (as image editors do). */
 const PT: Record<LayoutKind, number> = { print: 72, digital: 1 };
@@ -21,7 +22,7 @@ export async function renderPdf(onProgress: (done: number, total: number) => voi
   const { pageH, layout } = sheet;
   const pt = PT[layout];
   const pdf = await PDFDocument.create();
-  pdf.setTitle(layout === 'print' ? 'Photo book' : 'Sequence');
+  pdf.setTitle(TERMS[layout].pdfTitle);
   pdf.setCreator('Sequence');
 
   const book = allSpreads(project);
@@ -58,7 +59,7 @@ export async function renderPdf(onProgress: (done: number, total: number) => voi
 export async function savePdf(): Promise<void> {
   if (ui.get().busy || ui.get().importing) return;
   try {
-    const name = projectStore.project.layout.kind === 'print' ? 'photo-book' : 'sequence';
+    const name = TERMS[projectStore.project.layout.kind].fileStem;
     await platform.saveFile(`${name}-${new Date().toISOString().slice(0, 10)}.pdf`, () => {
       ui.set({ busy: 'Rendering PDF…' });
       return renderPdf((done, total) => ui.set({ busy: `Rendering PDF ${done} of ${total}…` }));

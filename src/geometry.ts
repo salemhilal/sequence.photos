@@ -1,14 +1,4 @@
-import type {
-  BorderGuide,
-  Edges,
-  LayoutKind,
-  LineGuide,
-  PageSide,
-  PhotoMeta,
-  Sheet,
-  Spread,
-  SpreadKind,
-} from './types';
+import type { BorderGuide, Edges, LineGuide, PageSide, PhotoMeta, Sheet, Spread, SpreadKind } from './types';
 import { UNITS } from './units';
 
 export interface Rect {
@@ -60,13 +50,6 @@ export function sheetExtent(s: Pick<Sheet, 'layout' | 'pageW'>): { left: number;
 /** Whether a page is laid out like a left page: outside at its left edge (a book's left pages, and frames). */
 function outsideLeft(side: PageSide): boolean {
   return side !== 'right';
-}
-
-/** An edge's name: a frame has a left and right where a book page has an outside and inside. */
-export function edgeLabel(edge: keyof Edges, layout: LayoutKind): string {
-  if (layout === 'digital' && edge === 'outside') return 'Left';
-  if (layout === 'digital' && edge === 'inside') return 'Right';
-  return edge[0]!.toUpperCase() + edge.slice(1);
 }
 
 /** A border guide's distance from each edge, whichever kind it is. */

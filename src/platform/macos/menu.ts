@@ -5,6 +5,7 @@ import { commandTitle, runFromMenu, shortcutAccelerator, type CommandId } from '
 import { isTextField } from '../../input';
 import { projectStore } from '../../store';
 import { ui } from '../../ui';
+import { TERMS } from '../../units';
 import { quit } from './documents';
 
 /**
@@ -133,23 +134,23 @@ export async function setUpMenu(): Promise<void> {
     const { canUndo, canRedo } = projectStore.getSnapshot();
     const typing = isTextField(document.activeElement);
     const { sidebarOpen, guidesHidden } = ui.get();
-    const print = projectStore.project.layout.kind === 'print';
+    const layout = projectStore.project.layout.kind;
     const state = {
       undo: canUndo || typing,
       redo: canRedo || typing,
       sidebar: sidebarOpen,
       guides: !guidesHidden,
-      print,
+      layout,
     };
     const key = JSON.stringify(state);
     if (key === shown) return;
     shown = key;
     void undo.setEnabled(state.undo);
     void redo.setEnabled(state.redo);
-    void sidebar.setText(`${state.sidebar ? 'Hide' : 'Show'} ${state.print ? 'Spreads' : 'Frames'}`);
+    void sidebar.setText(`${state.sidebar ? 'Hide' : 'Show'} ${TERMS[state.layout].Spreads}`);
     void guides.setText(state.guides ? 'Hide Guides' : 'Show Guides');
-    void indesign.setEnabled(state.print);
-    void images.setEnabled(!state.print);
+    void indesign.setEnabled(state.layout === 'print');
+    void images.setEnabled(state.layout === 'digital');
   };
   sync();
   projectStore.subscribe(sync);

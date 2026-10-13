@@ -5,6 +5,7 @@ import { clearGhost, sameTarget, startDrag, trackGhost } from '../drag';
 import { projectStore, useProject } from '../store';
 import type { LayoutKind, Placement, Sheet, Spread } from '../types';
 import { sheetExtent, sideAt } from '../geometry';
+import { TERMS } from '../units';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH } from '../prefs';
 import { openPhotoMenu, setSidebarWidth, ui } from '../ui';
@@ -50,6 +51,7 @@ export function Sidebar() {
   const [reorder, setReorder] = useState<{ id: string; dropIndex: number } | null>(null);
   const sheet = sheetOf(project);
   const print = sheet.layout === 'print';
+  const terms = TERMS[sheet.layout];
   // The whole book (or sequence), in order; indexes below count through it.
   const spreads = allSpreads(project);
   const preferredWidth = ui.use((s) => s.sidebarWidth);
@@ -139,19 +141,17 @@ export function Sidebar() {
         onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH, true)}
       />
       <div className="sidebar-head">
-        <span className="caps">{print ? 'Spreads' : 'Frames'}</span>
+        <span className="caps">{terms.Spreads}</span>
         <button
           className="btn ghost icon small"
-          aria-label={print ? 'Add spread at the end' : 'Add frame at the end'}
-          title={print ? 'Add a spread before the back page' : 'Add a frame at the end'}
+          aria-label={`Add ${terms.spread} at the end`}
+          title={terms.addAtEnd}
           onClick={() => insertSpread(print ? spreads.length - 1 : spreads.length)}
         >
           <Plus />
         </button>
         <span className="spacer" />
-        <span className="caps muted">
-          {print ? `${spreads.length * 2 - 2} pages` : `${spreads.length} ${spreads.length === 1 ? 'frame' : 'frames'}`}
-        </span>
+        <span className="caps muted">{terms.count(spreads.length)}</span>
       </div>
       <div
         className={`sidebar-list${grid ? ' grid' : ''}`}
@@ -162,12 +162,7 @@ export function Sidebar() {
           <div key={spread.id} className="spread-cell">
             {/* A book's first and last spreads stay put; frames can go anywhere. */}
             {(i > 0 || !print) && (
-              <InsertGap
-                index={i}
-                active={reorder?.dropIndex === i}
-                vertical={grid}
-                noun={print ? 'spread' : 'frame'}
-              />
+              <InsertGap index={i} active={reorder?.dropIndex === i} vertical={grid} noun={terms.spread} />
             )}
             <SpreadRow
               spread={spread}

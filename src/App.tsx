@@ -44,6 +44,7 @@ import { openModal, toggleSidebar, ui } from './ui';
 import { takeOver } from './tabLock';
 import { checkForUpdate, reloadToUpdate } from './update';
 import { allSpreads, findSpread } from './spreads';
+import { TERMS } from './units';
 
 const NOTICE_MS = 6000;
 
@@ -59,6 +60,7 @@ function onTouchDevice(): boolean {
 export default function App() {
   const { project, canUndo, canRedo } = useProject();
   const digital = project.layout.kind === 'digital';
+  const terms = TERMS[project.layout.kind];
   const instagram = useInstagram();
   // Dismissed for this visit only: a reload shows it again.
   const [mobileNotice, setMobileNotice] = useState(onTouchDevice);
@@ -183,15 +185,15 @@ export default function App() {
           onClick={() => openModal('preview')}
           title={`Preview (${shortcutLabel('preview')})`}
         >
-          {digital ? 'Preview' : 'Preview book'}
+          {terms.preview}
           <ShortcutHint label={shortcutLabel('preview')} />
         </button>
         <button
           className={`btn ghost icon has-hint${sidebarOpen ? '' : ' active'}`}
-          aria-label={`${sidebarOpen ? 'Hide' : 'Show'} ${digital ? 'frames' : 'spreads'}`}
+          aria-label={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads}`}
           aria-pressed={!sidebarOpen}
           onClick={toggleSidebar}
-          title={`${sidebarOpen ? 'Hide' : 'Show'} ${digital ? 'frames' : 'spreads'} (${shortcutLabel('toggleSidebar')})`}
+          title={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads} (${shortcutLabel('toggleSidebar')})`}
         >
           {sidebarOpen ? <PanelRightClose /> : <PanelRightOpen />}
           <ShortcutHint label={shortcutLabel('toggleSidebar')} />

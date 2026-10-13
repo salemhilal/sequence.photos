@@ -4,7 +4,6 @@ import { startDrag } from '../drag';
 import {
   clampBorder,
   dropGuide,
-  edgeLabel,
   edgesOf,
   lineAt,
   lineOnPage,
@@ -21,7 +20,7 @@ import { newGuideId, toSpreadId, type GuideId } from '../ids';
 import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { BorderGuide, Edges, LayoutKind, LineGuide, PageSide, Sheet, Spread } from '../types';
-import { UNITS, type Units } from '../units';
+import { TERMS, UNITS, type Units } from '../units';
 import { closeModal } from '../ui';
 import { NumberField } from './NumberField';
 import { PageSizeFields } from './PageSizeFields';
@@ -63,6 +62,7 @@ export function LayoutEditor() {
   const { project } = useProject();
   const s = sheetOf(project);
   const units = UNITS[s.layout];
+  const terms = TERMS[s.layout];
   const sample = SAMPLES[s.layout];
   const sides = pageSides(sample.kind);
   const PAD = s.pageW * PAD_SHARE;
@@ -148,7 +148,7 @@ export function LayoutEditor() {
         const g = guideAt(axis, id, ev);
         projectStore.preview((d) => void (d.settings.lines = place(g)));
         const r = stageRef.current?.getBoundingClientRect();
-        const from = axis === 'horizontal' ? 'top' : edgeLabel('outside', s.layout).toLowerCase();
+        const from = axis === 'horizontal' ? 'top' : terms.edges.outside.toLowerCase();
         setDragLabel({
           text: g ? `${units.format(g.at)} ${units.suffix} from ${from}` : 'Remove',
           x: ev.clientX - (r?.left ?? 0),
@@ -236,8 +236,7 @@ export function LayoutEditor() {
           </div>
           <span className="spacer" />
           <span className="hint">
-            Drag from a ruler to add a guide · Shift: snap to {snapLabel(units)} · Drag off the{' '}
-            {s.layout === 'print' ? 'page' : 'frame'} to remove
+            Drag from a ruler to add a guide · Shift: snap to {snapLabel(units)} · Drag off the {terms.page} to remove
           </span>
           <button className="btn ghost icon" aria-label="Close" onClick={closeModal}>
             <X />
@@ -447,6 +446,7 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
   const fold = { collapsed, shown, onToggle: toggle };
   const drop = dropGuide(s);
   const units = UNITS[s.layout];
+  const terms = TERMS[s.layout];
   const num = { suffix: '', step: units.fieldStep, format: units.format };
   const addLine = (axis: Axis) => {
     const size = axis === 'vertical' ? s.pageW : s.pageH;
@@ -596,10 +596,7 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
       </PanelSection>
 
       <p className="help guides-note">
-        {s.layout === 'print'
-          ? 'Every spread, mirrored on facing pages. Inside is the edge at the gutter; vertical guides are measured from the outside edge.'
-          : 'Every frame. Vertical guides are measured from the left edge.'}{' '}
-        Distances in {s.layout === 'print' ? 'inches' : 'pixels'}. Shift snaps a dragged guide to {snapLabel(units)}.
+        {terms.guidesNote} Distances in {terms.unitName}. Shift snaps a dragged guide to {snapLabel(units)}.
       </p>
     </aside>
   );
@@ -618,7 +615,7 @@ interface BorderRowProps {
 function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProps) {
   const e = edgesOf(g);
   const units = UNITS[s.layout];
-  const place = s.layout === 'print' ? 'page' : 'frame';
+  const terms = TERMS[s.layout];
   const linked = g.kind === 'even';
   const update = (change: (b: BorderGuide) => BorderGuide, coalesce?: string) =>
     projectStore.apply(
@@ -646,7 +643,7 @@ function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProp
         {EDGES[s.layout].map((edge) => (
           <NumberField
             key={edge}
-            label={edgeLabel(edge, s.layout)}
+            label={terms.edges[edge]}
             value={e[edge]}
             min={0}
             step={units.fieldStep}
@@ -663,8 +660,8 @@ function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProp
           onClick={() => projectStore.apply((d) => void (d.settings.dropBorder = g.id))}
           data-tip={
             isDrop
-              ? `Photos dropped on a ${place} fit inside this guide.`
-              : `Fit photos dropped on a ${place} inside this guide instead.`
+              ? `Photos dropped on a ${terms.page} fit inside this guide.`
+              : `Fit photos dropped on a ${terms.page} inside this guide instead.`
           }
         >
           On drop

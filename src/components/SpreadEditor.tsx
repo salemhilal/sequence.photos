@@ -4,7 +4,6 @@ import { bump, dropPhotos, folioLabel, putInPile, putOnPage, raise } from '../ac
 import { clearGhost, startDrag, trackGhost } from '../drag';
 import {
   borderBox,
-  edgeLabel,
   edgesOf,
   fitCentered,
   pageRect,
@@ -21,7 +20,7 @@ import {
 import type { Draft } from 'immer';
 import type { PhotoId, SpreadId } from '../ids';
 import { allSpreads, findSpread, sheetOf } from '../spreads';
-import { UNITS, type Units } from '../units';
+import { TERMS, UNITS, type Units } from '../units';
 import { projectStore, useProject } from '../store';
 import type { BorderGuide, LayoutKind, Project, Placement } from '../types';
 import { isTyping } from '../input';
@@ -227,7 +226,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   );
 
   const label = folioLabel(index, book.length, sheet.layout);
-  const noun = sheet.layout === 'print' ? 'spread' : 'frame';
+  const noun = TERMS[sheet.layout].spread;
 
   return (
     <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
@@ -323,7 +322,7 @@ function guideLabel(g: BorderGuide, u: Units): string {
 /** A border guide's distances, for a tooltip: top, outside (left, in a frame), bottom, inside. */
 function guideSummary(g: BorderGuide, u: Units, layout: LayoutKind): string {
   const e = edgesOf(g);
-  const [outside, inside] = [edgeLabel('outside', layout), edgeLabel('inside', layout)];
+  const { outside, inside } = TERMS[layout].edges;
   const f = u.format;
   return `Top ${f(e.top)} · ${outside} ${f(e.outside)} · Bottom ${f(e.bottom)} · ${inside} ${f(e.inside)} ${u.suffix}`;
 }
@@ -498,7 +497,7 @@ function PileStrip({ spreadId }: { spreadId: SpreadId }) {
               style={{ width: (56 * p.w) / p.h }}
               onPointerDown={(e) => onDown(e, p)}
               onContextMenu={(e) => openPhotoMenu(e, p.photoId)}
-              title={`Drag onto the ${sheetOf(project).layout === 'print' ? 'page' : 'frame'}, or click to add`}
+              title={`Drag onto the ${TERMS[project.layout.kind].page}, or click to add`}
             >
               <PhotoImg id={p.photoId} />
             </div>

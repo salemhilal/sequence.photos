@@ -8,6 +8,7 @@ import { useProject } from '../store';
 import { closeModal, ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
 import { sheetExtent } from '../geometry';
+import { TERMS } from '../units';
 import { allSpreads, sheetOf } from '../spreads';
 
 /** How long the pointer rests before the controls fade, as a video player's do. */
@@ -103,7 +104,7 @@ export function Preview() {
   const across = sheetExtent(sheet).width;
   const scale = Math.min((stage.w - 40) / across, (stage.h - 40) / sheet.pageH);
   const label = folioLabel(index, spreads.length, sheet.layout);
-  const noun = sheet.layout === 'print' ? 'spread' : 'frame';
+  const terms = TERMS[sheet.layout];
 
   return (
     <div className={`preview${idle ? ' idle' : ''}`} data-modal ref={rootRef}>
@@ -113,22 +114,25 @@ export function Preview() {
           {index + 1} / {spreads.length}
         </span>
         <span className="spacer" />
-        <span className="hint">
-          ← → to {sheet.layout === 'print' ? 'turn pages' : 'go through frames'} · Esc to exit
-        </span>
+        <span className="hint">← → to {terms.turn} · Esc to exit</span>
         <button
           className="btn"
           onClick={() => void (sheet.layout === 'print' ? savePdf() : saveFrames())}
           disabled={busy !== null}
         >
-          {busy ?? (sheet.layout === 'print' ? 'Download PDF' : 'Save images')}
+          {busy ?? terms.save}
         </button>
         <button className="btn" onClick={close}>
           Exit preview
         </button>
       </header>
       <div className="preview-stage" ref={stageRef}>
-        <button className="turn prev" aria-label={`Previous ${noun}`} disabled={index === 0} onClick={() => go(-1)}>
+        <button
+          className="turn prev"
+          aria-label={`Previous ${terms.spread}`}
+          disabled={index === 0}
+          onClick={() => go(-1)}
+        >
           <ChevronLeft />
         </button>
         <div key={spread.id} className={`preview-spread turn-${dir}`}>
@@ -136,7 +140,7 @@ export function Preview() {
         </div>
         <button
           className="turn next"
-          aria-label={`Next ${noun}`}
+          aria-label={`Next ${terms.spread}`}
           disabled={index === spreads.length - 1}
           onClick={() => go(1)}
         >

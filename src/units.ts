@@ -1,4 +1,4 @@
-import type { LayoutKind, Size } from './types';
+import type { Edges, LayoutKind, Size } from './types';
 
 /**
  * What changes with the layout's units: print works in inches, digital in pixels. Sizes,
@@ -56,6 +56,77 @@ export const UNITS: Record<LayoutKind, Units> = {
     fieldStep: 1,
     round: Math.round,
     format: (n) => Math.round(n).toString(),
+  },
+};
+
+/**
+ * What the UI calls things in each layout: a book has spreads of pages, measured in
+ * inches; a digital sequence has frames, measured in pixels.
+ */
+export interface Terms {
+  /** One of the run the sidebar lists and the editor goes through. */
+  spread: 'spread' | 'frame';
+  spreads: 'spreads' | 'frames';
+  Spreads: 'Spreads' | 'Frames';
+  /** What photos are placed on. */
+  page: 'page' | 'frame';
+  pages: 'pages' | 'frames';
+  /** The units, in words. */
+  unitName: 'inches' | 'pixels';
+  /** The sidebar's count: a book's pages, or a sequence's frames. */
+  count: (spreads: number) => string;
+  /** The sidebar's button that adds one at the end. */
+  addAtEnd: string;
+  /** What the arrow keys do in the preview. */
+  turn: string;
+  /** The toolbar's preview button. */
+  preview: string;
+  /** The preview's save button. */
+  save: string;
+  /** Saved PDFs' title and file name. */
+  pdfTitle: string;
+  fileStem: string;
+  /** Each edge's name: a frame has a left and right where a book page has an outside and inside. */
+  edges: Record<keyof Edges, string>;
+  /** The Layout panel's note on how guides apply and are measured. */
+  guidesNote: string;
+}
+
+export const TERMS: Record<LayoutKind, Terms> = {
+  print: {
+    spread: 'spread',
+    spreads: 'spreads',
+    Spreads: 'Spreads',
+    page: 'page',
+    pages: 'pages',
+    unitName: 'inches',
+    count: (n) => `${n * 2 - 2} pages`,
+    addAtEnd: 'Add a spread before the back page',
+    turn: 'turn pages',
+    preview: 'Preview book',
+    save: 'Download PDF',
+    pdfTitle: 'Photo book',
+    fileStem: 'photo-book',
+    edges: { top: 'Top', bottom: 'Bottom', inside: 'Inside', outside: 'Outside' },
+    guidesNote:
+      'Every spread, mirrored on facing pages. Inside is the edge at the gutter; vertical guides are measured from the outside edge.',
+  },
+  digital: {
+    spread: 'frame',
+    spreads: 'frames',
+    Spreads: 'Frames',
+    page: 'frame',
+    pages: 'frames',
+    unitName: 'pixels',
+    count: (n) => `${n} ${n === 1 ? 'frame' : 'frames'}`,
+    addAtEnd: 'Add a frame at the end',
+    turn: 'go through frames',
+    preview: 'Preview',
+    save: 'Save images',
+    pdfTitle: 'Sequence',
+    fileStem: 'sequence',
+    edges: { top: 'Top', bottom: 'Bottom', inside: 'Right', outside: 'Left' },
+    guidesNote: 'Every frame. Vertical guides are measured from the left edge.',
   },
 };
 
