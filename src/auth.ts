@@ -1,7 +1,13 @@
 // Sign-in: /auth/callback, /auth/redeem, /auth/renew. See README "Sign-in".
 
 import * as v from 'valibot';
-import type { InstagramConnection, InstagramError, RenewResponse } from './api';
+import type {
+  InstagramConnection,
+  InstagramError,
+  RedeemRequest,
+  RenewRequest,
+  RenewResponse,
+} from './api';
 import { sha256Base64Url } from './encoding';
 import {
   Base64Url32,
@@ -10,6 +16,7 @@ import {
   isBase64Url32,
   isUsername,
   parseBearer,
+  schemaFor,
 } from './formats';
 import { HttpError, jsonResponse, MAX_JSON_BODY, readJson } from './http';
 import {
@@ -32,6 +39,8 @@ import { Tag, type Outcome } from './log';
 import type { Handler, RequestContext } from './router';
 
 interface OAuthState {
+  /** The state as received: safe to echo, having matched the strict format. */
+  raw: string;
   client: string;
   nonce: string;
   challenge: string;
@@ -52,7 +61,7 @@ export function parseState(value: string | null): OAuthState | null {
   }
   if (!CLIENT_NAME.test(client)) return null;
   if (!isBase64Url32(nonce) || !isBase64Url32(challenge)) return null;
-  return { client, nonce, challenge };
+  return { raw: value, client, nonce, challenge };
 }
 
 function redirect(location: string): Response {
@@ -71,7 +80,7 @@ function instagramFailure(failure: Failure): HttpError {
     : new HttpError(401, 'unauthorized');
 }
 
-export interface EnrolledUserOptions {
+interface EnrolledUserOptions {
   /** How long past its `exp` the enrollment is still accepted (renewal). */
   grace?: number;
   /** Runs with the enrollment's user id after it's read, before Instagram is called. */
@@ -106,17 +115,16 @@ export const callback: Handler = async (ctx) => {
   const params = ctx.url.searchParams;
 
   // Until the state is known good, there's nowhere safe to redirect: plain 400.
-  const rawState = params.get('state');
-  const state = parseState(rawState);
-  if (!state || rawState === null) throw new HttpError(400, 'bad_state');
+  const state = parseState(params.get('state'));
+  if (!state) throw new HttpError(400, 'bad_state');
   const returnUrl = ctx.config.returnUrls.get(state.client);
   if (returnUrl === undefined) throw new HttpError(400, 'unknown_client');
 
-  // From here on, every outcome goes back to the app. `rawState` matched the strict
+  // From here on, every outcome goes back to the app. The raw state matched the strict
   // state format, so it's safe in the fragment as is.
   const fail = (error: InstagramError, outcome: Outcome): Response => {
     ctx.log.outcome = outcome;
-    return redirect(`${returnUrl}#instagram_error=${error}&state=${rawState}`);
+    return redirect(`${returnUrl}#instagram_error=${error}&state=${state.raw}`);
   };
 
   if (params.has('error')) return fail('cancelled', 'cancelled');
@@ -155,13 +163,15 @@ export const callback: Handler = async (ctx) => {
     enrollment: await makeEnrollment(ctx.keys, userId, ctx.now),
   };
   const sealed = await seal(ctx.keys, { connection, challenge: state.challenge }, ctx.now);
-  return redirect(`${returnUrl}#instagram=${sealed}&state=${rawState}`);
+  return redirect(`${returnUrl}#instagram=${sealed}&state=${state.raw}`);
 };
 
-const RedeemBody = v.strictObject({
-  sealed: v.pipe(v.string(), v.maxLength(4096)),
-  verifier: Base64Url32,
-});
+const RedeemBody = schemaFor<RedeemRequest>()(
+  v.strictObject({
+    sealed: v.pipe(v.string(), v.maxLength(4096)),
+    verifier: Base64Url32,
+  }),
+);
 
 /** `POST /auth/redeem`: the sealed handoff + the app's verifier → the connection. */
 export const redeem: Handler = async (ctx) => {
@@ -179,9 +189,7 @@ export const redeem: Handler = async (ctx) => {
   return jsonResponse(handoff.connection);
 };
 
-const RenewBody = v.strictObject({
-  enrollment: Enrollment,
-});
+const RenewBody = schemaFor<RenewRequest>()(v.strictObject({ enrollment: Enrollment }));
 
 /** `POST /auth/renew`: a still-recent enrollment + a token for the same user → a new one. */
 export const renew: Handler = async (ctx) => {

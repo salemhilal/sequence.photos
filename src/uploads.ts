@@ -2,9 +2,16 @@
 // See README "Frames".
 
 import * as v from 'valibot';
-import type { UploadBatch } from './api';
+import type { UploadBatch, UploadsRequest } from './api';
 import { requireEnrolledUser } from './auth';
-import { Enrollment, isBatchId, parseBearer, parseExp, parseFrameIndex } from './formats';
+import {
+  Enrollment,
+  isBatchId,
+  parseBearer,
+  parseExp,
+  parseFrameIndex,
+  schemaFor,
+} from './formats';
 import { contentLength, HttpError, jsonResponse, MAX_JSON_BODY, readBody, readJson } from './http';
 import { checkJpeg, MAX_FRAME_BYTES } from './jpeg';
 import { randomBase64Url } from './encoding';
@@ -13,10 +20,12 @@ import { Tag } from './log';
 import type { Handler, RequestContext } from './router';
 import { batchPrefix, deleteWhere, frameKey } from './storage';
 
-const UploadsBody = v.strictObject({
-  enrollment: Enrollment,
-  count: v.pipe(v.number(), v.safeInteger(), v.minValue(1)),
-});
+const UploadsBody = schemaFor<UploadsRequest>()(
+  v.strictObject({
+    enrollment: Enrollment,
+    count: v.pipe(v.number(), v.safeInteger(), v.minValue(1)),
+  }),
+);
 
 /** `POST /uploads`: start a batch for an enrolled user with a matching token. */
 export const createBatch: Handler = async (ctx) => {

@@ -98,6 +98,7 @@ describe('parseState', () => {
 
   it('is <client>.<nonce>.<challenge>', () => {
     expect(parseState(`web.${NONCE}.${CHALLENGE}`)).toEqual({
+      raw: `web.${NONCE}.${CHALLENGE}`,
       client: 'web',
       nonce: NONCE,
       challenge: CHALLENGE,

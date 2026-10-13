@@ -15,9 +15,9 @@ export const USER_ID_SOURCE = '[0-9]{1,32}';
 /** Unix seconds: positive decimal, no leading zeros. */
 export const UNIX_SECONDS_SOURCE = '[1-9][0-9]{0,11}';
 /** Instagram tokens are at most this long. */
-export const MAX_TOKEN_LENGTH = 2048;
+const MAX_TOKEN_LENGTH = 2048;
 /** Enrollment credentials, as sent back by the app (they're about 120 characters). */
-export const MAX_ENROLLMENT_LENGTH = 512;
+const MAX_ENROLLMENT_LENGTH = 512;
 
 const BASE64URL_32 = new RegExp(`^${BASE64URL_32_SOURCE}$`);
 const USER_ID = new RegExp(`^${USER_ID_SOURCE}$`);
@@ -46,6 +46,32 @@ export const UserId = v.pipe(v.string(), v.regex(USER_ID));
 export const Token = v.pipe(v.string(), v.minLength(1), v.maxLength(MAX_TOKEN_LENGTH));
 export const Enrollment = v.pipe(v.string(), v.maxLength(MAX_ENROLLMENT_LENGTH));
 export const Username = v.pipe(v.string(), v.regex(USERNAME));
+
+/**
+ * Whether `A` and `B` are the same type, not just assignable to each other (which would
+ * let an optional field on one side through). The usual trick: two generic functions'
+ * types are only related when A and B are identical.
+ */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-parameters -- the trick needs them */
+type Equals<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
+/* eslint-enable @typescript-eslint/no-unnecessary-type-parameters */
+
+/**
+ * Returns `schema`, checked at compile time to parse exactly a `T`: for request bodies,
+ * so the app's types (api.ts) and the server's schemas can't drift apart. A mismatch is
+ * a type error at the call.
+ */
+export function schemaFor<T>() {
+  return <S extends v.GenericSchema>(
+    schema: S &
+      (Equals<v.InferInput<S>, T> extends true
+        ? Equals<v.InferOutput<S>, T> extends true
+          ? unknown
+          : never
+        : never),
+  ): S => schema;
+}
 
 // --- Parsers ----------------------------------------------------------------------------
 

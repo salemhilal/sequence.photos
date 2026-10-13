@@ -11,7 +11,7 @@ import { parseJsonWith } from './formats';
 import type { Handler } from './router';
 
 /** Form bodies from Meta are small. Larger → 413. */
-export const MAX_SIGNED_REQUEST_BODY = 8 * 1024;
+const MAX_SIGNED_REQUEST_BODY = 8 * 1024;
 
 /** How old a signed_request's `issued_at` may be, and how far ahead (clock skew). */
 export const ISSUED_AT_MAX_AGE = 24 * 60 * 60;

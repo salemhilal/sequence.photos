@@ -8,9 +8,9 @@
 export const MAX_FRAME_BYTES = 8 * 1024 * 1024;
 
 /** Frame bounds: the app always sends widths of 320–1440 px. */
-export const MIN_WIDTH = 320;
-export const MAX_WIDTH = 1440;
-export const MAX_HEIGHT = 2560;
+const MIN_WIDTH = 320;
+const MAX_WIDTH = 1440;
+const MAX_HEIGHT = 2560;
 
 export type JpegCheck =
   | { ok: true; width: number; height: number }

@@ -49,7 +49,7 @@ export interface Keys {
   log: CryptoKey;
 }
 
-export const LABELS = {
+const LABELS = {
   seal: 'sequence/v1/seal',
   enroll: 'sequence/v1/enroll',
   upload: 'sequence/v1/upload',

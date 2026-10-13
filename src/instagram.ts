@@ -84,7 +84,7 @@ const ErrorResponse = v.object({
  * number holds exactly (about 17 digits), so they're quoted before parsing to keep every
  * digit.
  */
-export function quoteIds(text: string): string {
+function quoteIds(text: string): string {
   return text.replace(/("(?:user_id|id)"\s*:\s*)(\d+)/g, '$1"$2"');
 }
 

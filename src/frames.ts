@@ -7,6 +7,9 @@ import { Tag } from './log';
 import type { Handler } from './router';
 import { FRAME_MAX_AGE, frameKey } from './storage';
 
+// `X-Content-Type-Options` and `Cache-Control` repeat the router's DEFAULT_HEADERS on
+// purpose: these are the headers Instagram's fetcher must see, so they're all listed here
+// rather than depending on what the router adds.
 const FRAME_HEADERS: Readonly<Record<string, string>> = {
   'Content-Type': 'image/jpeg',
   'X-Content-Type-Options': 'nosniff',
@@ -26,17 +29,13 @@ export const getFrame: Handler = async (ctx) => {
   ctx.log.i = index;
 
   const key = frameKey(id, index);
-  const head = ctx.request.method === 'HEAD';
-  let object: R2Object | null;
-  let body: ReadableStream | null = null;
-  if (head) {
-    object = await ctx.env.FRAMES.head(key);
-  } else {
-    const full = await ctx.env.FRAMES.get(key);
-    object = full;
-    body = full?.body ?? null;
-  }
-  if (!object) throw new HttpError(404, 'not_found');
+  // HEAD: the object's metadata only; GET: with its body.
+  const found =
+    ctx.request.method === 'HEAD'
+      ? await ctx.env.FRAMES.head(key).then((object) => object && { object, body: null })
+      : await ctx.env.FRAMES.get(key).then((object) => object && { object, body: object.body });
+  if (!found) throw new HttpError(404, 'not_found');
+  const { object, body } = found;
   const isFresh = object.uploaded.getTime() >= (ctx.now - FRAME_MAX_AGE) * 1000;
   // Older than an hour: gone, even if the sweep hasn't run yet.
   if (!isFresh) {

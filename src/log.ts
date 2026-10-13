@@ -56,7 +56,7 @@ export const ROUTES = [
 ] as const;
 export type Route = (typeof ROUTES)[number];
 
-export const OUTCOMES = [
+const OUTCOMES = [
   'ok',
   'bad_request',
   'forbidden_origin',
@@ -83,7 +83,7 @@ export const OUTCOMES = [
 export type Outcome = (typeof OUTCOMES)[number];
 
 /** Query parameter names worth seeing in logs. Any other name is logged as `other`. */
-export const QUERY_NAMES = [
+const QUERY_NAMES = [
   'code',
   'state',
   'error',
@@ -95,7 +95,7 @@ export const QUERY_NAMES = [
 ] as const;
 export type QueryName = (typeof QUERY_NAMES)[number];
 
-export const INSTAGRAM_ENDPOINTS = [
+const INSTAGRAM_ENDPOINTS = [
   'POST api.instagram.com/oauth/access_token',
   'GET graph.instagram.com/access_token',
   'GET graph.instagram.com/me',
