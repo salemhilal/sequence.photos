@@ -128,6 +128,17 @@ describe('switchLayout', () => {
     expect(projectStore.project).toBe(p);
   });
 
+  it('switches at a size of its own in the same step, remembering it', () => {
+    const p = book();
+    projectStore.reset(p);
+    switchLayout('digital', { w: 1080, h: 1080 });
+    const s = sheetOf(projectStore.project);
+    expect([s.layout, s.pageW, s.pageH]).toEqual(['digital', 1080, 1080]);
+    expect(projectStore.project.settings.sizes.digital).toEqual({ w: 1080, h: 1080 });
+    projectStore.undo();
+    expect(projectStore.project).toBe(p);
+  });
+
   it('converts afresh after any other change', () => {
     projectStore.reset(book(true));
     switchLayout('digital');
