@@ -128,6 +128,21 @@ button {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+/* A note under a control (after .data, so a .help.data note keeps this size). */
+.help {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.help.warn {
+  color: var(--warn);
+}
+/* Controls in a row. */
+.inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 /* Page numbers, set like a book's folios. */
 .folio {
   font-family: var(--mono);
@@ -732,17 +747,13 @@ button {
   pointer-events: auto;
 }
 .setup-card .inline {
-  display: flex;
-  align-items: center;
   gap: 14px;
 }
 .setup-card .num-field input {
   width: 64px;
 }
 .setup-card .help {
-  margin: 0;
   font: 12px/1.5 var(--font);
-  color: var(--muted);
 }
 /* A button that reads as an inline link. */
 .link {
@@ -1179,23 +1190,9 @@ body.col-resizing * {
   pointer-events: none;
   white-space: nowrap;
 }
-/* .inspector (below) sets these too. */
+/* The Layout view's panel (.inspector.sectioned, below). */
 .inspector.layout-panel {
   width: 270px;
-  gap: 0;
-  padding: 0;
-}
-.layout-panel section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  border-bottom: 1px solid var(--border);
-}
-.layout-panel h3 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 500;
 }
 .section-head {
   display: flex;
@@ -1243,18 +1240,8 @@ body.col-resizing * {
 .section-head .btn {
   color: var(--muted);
 }
-.layout-panel .help {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted);
-}
 .layout-note {
   padding: 14px;
-}
-.layout-panel .inline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 .layout-panel .num-field {
   min-width: 0;
@@ -1290,9 +1277,6 @@ body.col-resizing * {
 .border-guide .num-field {
   flex-direction: column;
   align-items: stretch;
-  gap: 2px;
-}
-.border-tools {
   gap: 2px;
 }
 /* Which border guide dropped photos fit: one is on; the others can be picked. */
@@ -1419,6 +1403,23 @@ body.col-resizing * {
   flex-direction: column;
   gap: 6px;
   margin-top: 6px;
+}
+/* A side panel in sections, each under a heading (the Layout and Instagram panels). */
+.inspector.sectioned {
+  gap: 0;
+  padding: 0;
+}
+.sectioned section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sectioned h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
 }
 .grid2 {
   display: grid;
@@ -1570,23 +1571,7 @@ body.col-resizing * {
   min-width: 0;
 }
 .setting .inline {
-  display: flex;
-  align-items: center;
   gap: 14px;
-}
-.setting .num-field input {
-  width: 64px;
-}
-.setting .help {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted);
-}
-.setting .help.warn {
-  color: var(--warn);
-}
-.setting .check {
-  gap: 8px;
 }
 /*
  * Tooltips: `data-tip` on an element shows its text on hover or keyboard focus.
@@ -1775,30 +1760,8 @@ body.col-resizing * {
 }
 
 /* Post to Instagram */
-.instagram-post .inspector {
+.inspector.instagram-panel {
   width: 300px;
-  gap: 0;
-  padding: 0;
-}
-.instagram-panel section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  border-bottom: 1px solid var(--border);
-}
-.instagram-panel h3 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 500;
-}
-.instagram-panel .help {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted);
-}
-.instagram-panel .help.warn {
-  color: var(--warn);
 }
 .instagram-panel .segmented {
   display: grid;

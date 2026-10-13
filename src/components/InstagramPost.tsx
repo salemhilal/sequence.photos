@@ -150,7 +150,7 @@ export function InstagramPost() {
             username={connection?.username ?? ''}
             caption={caption}
           />
-          <aside className="inspector instagram-panel">
+          <aside className="inspector sectioned instagram-panel">
             <section>
               <h3>Post as</h3>
               <Segmented halves label="Post as" options={KINDS} value={kind} onChange={setKind} disabled={posting} />

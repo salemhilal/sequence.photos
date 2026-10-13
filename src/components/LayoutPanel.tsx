@@ -113,7 +113,7 @@ export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
   };
 
   return (
-    <aside className="inspector layout-panel">
+    <aside className="inspector sectioned layout-panel">
       <PanelSection id="page" title="Spreads" {...fold}>
         <PageSizeFields />
         <label className="check">
