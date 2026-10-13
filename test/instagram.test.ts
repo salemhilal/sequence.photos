@@ -15,7 +15,7 @@ describe('response guards', () => {
     fakeInstagram({
       exchange: () =>
         json({
-          data: [{ access_token: SHORT_TOKEN, user_id: '1', permissions: 'a, b ,c' }],
+          data: [{ access_token: SHORT_TOKEN, permissions: 'a, b ,c' }],
         }),
     });
     expect(await exchangeCode(config(), 'secret', 'code')).toEqual({
@@ -29,16 +29,11 @@ describe('response guards', () => {
     const raw = (body: string) =>
       new Response(body, { headers: { 'Content-Type': 'application/json' } });
     fakeInstagram({
-      exchange: () =>
-        raw(
-          `{"data":[{"access_token":"${SHORT_TOKEN}","user_id":17841412345678901,"permissions":"a"}]}`,
-        ),
       me: () =>
         raw(
           '{"user_id": 17841412345678901, "username": "someone", "account_type": "BUSINESS", "id": 9007199254740993}',
         ),
     });
-    expect(await exchangeCode(config(), 'secret', 'code')).toMatchObject({ ok: true });
     expect(await getMe(config(), 'token', ['username', 'account_type'])).toMatchObject({
       ok: true,
       value: { userId: '17841412345678901' },
@@ -59,12 +54,37 @@ describe('response guards', () => {
     expect(JSON.stringify(line)).not.toContain(SHORT_TOKEN);
   });
 
+  it('caps responses at 64 KB while reading, and logs an oversize one as such', async () => {
+    const big = { user_id: USER_ID, padding: 'x'.repeat(64 * 1024) };
+    const streamed = () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          pull(controller) {
+            controller.enqueue(new Uint8Array(16 * 1024).fill(0x20));
+          },
+        }),
+      );
+    for (const me of [() => json(big), streamed]) {
+      vi.restoreAllMocks();
+      const logs = captureLogs();
+      fakeInstagram({ me });
+      expect(await getMe(config(), 'token')).toEqual({ ok: false, failure: 'rejected' });
+      expect(logs.records()).toEqual([
+        {
+          event: 'instagram',
+          endpoint: 'GET graph.instagram.com/me',
+          status: 200,
+          fields: '(too_large)',
+        },
+      ]);
+    }
+  });
+
   it('rejects malformed exchange responses', async () => {
     for (const body of [
       { data: [{ access_token: '' }] },
       { data: [{ access_token: 1 }] },
       { data: [{ access_token: SHORT_TOKEN, permissions: [1] }] },
-      { data: [{ access_token: SHORT_TOKEN, user_id: 'abc' }] },
       { data: 'x' },
       null,
       [],
@@ -86,7 +106,7 @@ describe('response guards', () => {
     }
   });
 
-  it('reads /me, with a string or exact numeric user id', async () => {
+  it('reads /me, with a string or numeric user id', async () => {
     fakeInstagram({ me: () => json({ user_id: 17841400000, username: 'u' }) });
     expect(await getMe(config(), 'token', ['username'])).toEqual({
       ok: true,
@@ -133,6 +153,7 @@ describe('isProfessional', () => {
   it('accepts Business and Creator accounts only', () => {
     expect(isProfessional('BUSINESS')).toBe(true);
     expect(isProfessional('MEDIA_CREATOR')).toBe(true);
+    expect(isProfessional('CREATOR')).toBe(true);
     expect(isProfessional('Business')).toBe(true);
     expect(isProfessional('PERSONAL')).toBe(false);
     expect(isProfessional('')).toBe(false);

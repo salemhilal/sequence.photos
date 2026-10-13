@@ -6,7 +6,8 @@
 
 import * as v from 'valibot';
 import type { Config } from './env';
-import { isUserId, parseJsonWith, Token } from './formats';
+import { parseJsonWith, Token, UserId } from './formats';
+import { HttpError, readBody } from './http';
 import { log, type InstagramEndpoint } from './log';
 
 const OAUTH_TOKEN_URL = 'https://api.instagram.com/oauth/access_token';
@@ -26,16 +27,6 @@ export type Result<T> = { ok: true; value: T } | { ok: false; failure: Failure }
 
 // --- Guards -----------------------------------------------------------------------------
 
-/** Ids arrive as strings, but accept a number that's still exact. */
-const UserIdField = v.union([
-  v.pipe(v.string(), v.check(isUserId)),
-  v.pipe(
-    v.number(),
-    v.safeInteger(),
-    v.minValue(0),
-    v.transform((n) => String(n)),
-  ),
-]);
 /** Granted permissions: documented as an array, seen as a comma-separated string. */
 const Permissions = v.union([
   v.array(v.string()),
@@ -50,14 +41,14 @@ const Permissions = v.union([
   ),
 ]);
 
+// The exchange also sends a `user_id`; it isn't read: /me's is the one used.
 const ShortLivedToken = v.object({
   access_token: Token,
-  user_id: v.optional(UserIdField),
   permissions: v.optional(Permissions),
 });
 /** Documented as `{ data: [ … ] }`; older docs show the object itself. Accept both. */
 const CodeExchangeResponse = v.union([
-  v.object({ data: v.pipe(v.array(ShortLivedToken), v.minLength(1)) }),
+  v.object({ data: v.tupleWithRest([ShortLivedToken], ShortLivedToken) }),
   ShortLivedToken,
 ]);
 
@@ -67,7 +58,7 @@ const LongLivedTokenResponse = v.object({
 });
 
 const MeResponse = v.object({
-  user_id: UserIdField,
+  user_id: UserId,
   username: v.optional(v.string()),
   account_type: v.optional(v.string()),
 });
@@ -97,7 +88,11 @@ export function quoteIds(text: string): string {
   return text.replace(/("(?:user_id|id)"\s*:\s*)(\d+)/g, '$1"$2"');
 }
 
-/** The schema fields a response failed on, by name (never values), for the log. */
+/**
+ * The schema fields a response failed on, by name (never values), for the log. Every key
+ * in an issue's path comes from the schema, not the response, only because the response
+ * schemas are non-strict `v.object`s: they ignore unknown keys rather than report them.
+ */
 function failedFields(issues: readonly v.BaseIssue<unknown>[]): string {
   const names = issues.map((i) => i.path?.map((p) => String(p.key)).join('.') ?? '(root)');
   return [...new Set(names)].join(',');
@@ -111,10 +106,14 @@ async function call<S extends v.GenericSchema>(
   schema: S,
 ): Promise<Result<v.InferOutput<S>>> {
   let response: Response;
-  let text: string;
+  // Null if unreadable (e.g. a malformed Content-Length); 'too_large' past the cap.
+  let body: Uint8Array | 'too_large' | null;
   try {
     response = await fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
-    text = await response.text();
+    body = await readBody(response, MAX_RESPONSE_BYTES).catch((error: unknown) => {
+      if (!(error instanceof HttpError)) throw error;
+      return error.outcome === 'too_large' ? 'too_large' : null;
+    });
   } catch {
     // Network error or timeout. Status 0: no response.
     log({ event: 'instagram', endpoint, status: 0 });
@@ -123,13 +122,16 @@ async function call<S extends v.GenericSchema>(
 
   // Null if not JSON: fails the schema below.
   const json =
-    text.length <= MAX_RESPONSE_BYTES ? parseJsonWith(v.unknown(), quoteIds(text)) : null;
+    body instanceof Uint8Array
+      ? parseJsonWith(v.unknown(), quoteIds(new TextDecoder().decode(body)))
+      : null;
 
   let fields: string | undefined;
   if (response.ok) {
     const parsed = v.safeParse(schema, json);
     if (parsed.success) return { ok: true, value: parsed.output };
-    fields = json === null ? '(not json)' : failedFields(parsed.issues);
+    if (body === 'too_large') fields = '(too_large)';
+    else fields = json === null ? '(not json)' : failedFields(parsed.issues);
   }
 
   const error = v.safeParse(ErrorResponse, json);
@@ -177,7 +179,6 @@ export async function exchangeCode(
   );
   if (!result.ok) return result;
   const first = 'data' in result.value ? result.value.data[0] : result.value;
-  if (!first) return { ok: false, failure: 'rejected' };
   return {
     ok: true,
     value: { token: first.access_token, permissions: first.permissions ?? [] },
@@ -241,9 +242,10 @@ export async function getMe(
 }
 
 /**
- * Whether an account type can publish: Business or Creator. Instagram spells these
- * `BUSINESS` and `MEDIA_CREATOR`; compared case-insensitively. Missing or anything
- * else (e.g. `PERSONAL`) counts as not professional.
+ * Whether an account type can publish: Business or Creator. Accepts `BUSINESS`,
+ * `MEDIA_CREATOR` (how Instagram spells Creator), and `CREATOR` (in case it's spelled
+ * that way too), compared case-insensitively. Missing or anything else (e.g. `PERSONAL`)
+ * counts as not professional.
  */
 export function isProfessional(accountType: string | undefined): boolean {
   const type = accountType?.toUpperCase();

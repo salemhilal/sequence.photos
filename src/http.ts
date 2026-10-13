@@ -28,23 +28,29 @@ export function jsonResponse(value: unknown, status = 200): Response {
 // --- Bodies ---------------------------------------------------------------------------
 
 /** `Content-Length` as a number; null if absent; throws 400 if malformed. */
-export function contentLength(request: Request): number | null {
-  const header = request.headers.get('Content-Length');
+export function contentLength(message: Request | Response): number | null {
+  const header = message.headers.get('Content-Length');
   if (header === null) return null;
   if (!/^(0|[1-9][0-9]{0,14})$/.test(header)) throw new HttpError(400, 'bad_request');
   return Number(header);
 }
 
 /**
- * Reads the body, at most `max` bytes: rejects early on a larger `Content-Length`, and
- * stops reading (413) if a body without one runs over.
+ * Reads a request's (or a fetched response's) body, at most `max` bytes: rejects early on
+ * a larger `Content-Length`, and stops reading (413) if a body without one runs over.
  */
-export async function readBody(request: Request, max: number): Promise<Uint8Array<ArrayBuffer>> {
-  const declared = contentLength(request);
-  if (declared !== null && declared > max) throw new HttpError(413, 'too_large');
-  if (!request.body) return new Uint8Array(0);
+export async function readBody(
+  message: Request | Response,
+  max: number,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const declared = contentLength(message);
+  if (declared !== null && declared > max) {
+    await message.body?.cancel();
+    throw new HttpError(413, 'too_large');
+  }
+  if (!message.body) return new Uint8Array(0);
 
-  const reader = request.body.getReader();
+  const reader = message.body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
   for (;;) {
