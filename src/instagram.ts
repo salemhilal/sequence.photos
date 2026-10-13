@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { INSTAGRAM, SERVER_URL } from './config';
+import { decodeBase64Url, encodeBase64Url } from './base64url';
+import { isRecord } from './guards';
 import { normalizeServerUrl, serverUrl } from './server';
 
 /**
@@ -42,10 +44,6 @@ const STORAGE_KEY = 'photobook-instagram';
 const PENDING_KEY = 'photobook-instagram-pending';
 
 // --- The stored connection ------------------------------------------------------------
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
 
 /**
  * The connection, if `value` is one: from storage, or from the server (which doesn't
@@ -151,18 +149,12 @@ export function disconnectInstagram(): void {
 
 // --- Signing in -------------------------------------------------------------------------
 
-function base64Url(bytes: Uint8Array): string {
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
 function randomToken(): string {
-  return base64Url(crypto.getRandomValues(new Uint8Array(32)));
+  return encodeBase64Url(crypto.getRandomValues(new Uint8Array(32)));
 }
 
 export async function challengeOf(verifier: string): Promise<string> {
-  return base64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
+  return encodeBase64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
 }
 
 /** The sign-in this tab started: kept until it comes back. */
@@ -321,7 +313,7 @@ const RECONNECT = 'Your Instagram connection needs renewing. Reconnect in Settin
 export function enrollmentExpiry(enrollment: string): number {
   try {
     const payload = enrollment.split('.')[0] ?? '';
-    const text = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const text = decodeBase64Url(payload);
     const exp = Number(/^v1\nENROLL\n[0-9]+\n([0-9]+)$/.exec(text)?.[1]);
     return Number.isSafeInteger(exp) ? exp : 0;
   } catch {

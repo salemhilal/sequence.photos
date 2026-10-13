@@ -1,5 +1,6 @@
 import { INSTAGRAM } from './config';
 import { renderFrame } from './frames';
+import { isRecord } from './guards';
 import { freshConnection, markNeedsReconnect, type InstagramConnection } from './instagram';
 import type { Frame, Size } from './types';
 
@@ -160,10 +161,6 @@ interface GraphError {
   code?: number;
   error_subcode?: number;
   error_user_msg?: string;
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
 /** What to tell the user about an Instagram error (by its code, from Meta's docs). */

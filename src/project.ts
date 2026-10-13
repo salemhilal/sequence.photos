@@ -4,6 +4,7 @@ import { allSpreads } from './spreads';
 import { setUrl, thumbFromBlob } from './images';
 import { migrateProject, NewerProjectError } from './schema';
 import { InvalidProjectError } from './validate';
+import { isRecord } from './guards';
 import { projectStore, emptyProject } from './store';
 import { MOD_LABEL } from './input';
 import { ask, modalLocked, ui } from './ui';
@@ -172,10 +173,6 @@ function parseManifest(text: string): Manifest {
   }
   // The project inside is checked, all of it, once it's upgraded (see migrateProject).
   return { format: FORMAT, version: m.version, exportedAt: String(m.exportedAt ?? ''), doc: m.doc, files };
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
 /** A filename not yet in `used` (case-insensitively), made safe for any file system. */
