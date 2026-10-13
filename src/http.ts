@@ -25,7 +25,7 @@ export function jsonResponse(value: unknown, status = 200): Response {
   });
 }
 
-// --- Bodies ---------------------------------------------------------------------------
+// --- Bodies -----------------------------------------------------------------------------
 
 /** `Content-Length` as a number; null if absent; throws 400 if malformed. */
 export function contentLength(message: Request | Response): number | null {
