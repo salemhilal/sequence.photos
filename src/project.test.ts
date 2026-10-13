@@ -15,7 +15,7 @@ import { putOnPage } from './actions';
 import { deleteImage, getImage, putImage } from './db';
 import { platform } from '#platform';
 import { importProject, isProjectFile, newProject, ProjectFileError } from './project';
-import { ui } from './ui';
+import { lockModal, ui } from './ui';
 import { projectStore, emptyProject } from './store';
 import { toPhotoId } from './ids';
 import type { Project } from './types';
@@ -169,5 +169,20 @@ describe('project files', () => {
     expect(Object.keys(projectStore.project.photos)).toHaveLength(0);
     projectStore.undo();
     expect(Object.keys(projectStore.project.photos)).toHaveLength(2);
+  });
+
+  it('starts no new project while a dialog is locked open', async () => {
+    projectStore.reset(sampleProject());
+    ui.set({ modal: 'instagram' });
+    lockModal(true);
+    try {
+      await newProject();
+      expect(ui.get().confirm).toBeNull();
+      expect(ui.get().modal).toBe('instagram');
+      expect(Object.keys(projectStore.project.photos)).toHaveLength(2);
+    } finally {
+      lockModal(false);
+      ui.set({ modal: null });
+    }
   });
 });

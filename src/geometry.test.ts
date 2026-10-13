@@ -191,6 +191,29 @@ describe('resizeRect', () => {
     expect(rect.w / rect.h).toBeCloseTo(2);
     expect(hit.xs).toEqual([9.5]);
   });
+
+  it('keeps each side at least 0.1 in by default', () => {
+    // Dragged to within 0.01 in of the opposite corner.
+    expect(resizeRect(start, 'se', -3.99, -1.99, false, null, 0).rect).toEqual({ x: 1, y: 1, w: 0.1, h: 0.1 });
+    const locked = resizeRect(start, 'se', -3.99, -1.99, true, null, 0).rect;
+    expect(locked.w).toBeCloseTo(0.2);
+    expect(locked.h).toBeCloseTo(0.1);
+  });
+
+  it('keeps each side at least the minimum given (10 px in a frame)', () => {
+    const px = { x: 100, y: 100, w: 400, h: 200 };
+    expect(resizeRect(px, 'se', -395, -195, false, null, 0, 10).rect).toEqual({ x: 100, y: 100, w: 10, h: 10 });
+    expect(resizeRect(px, 'se', -395, -195, true, null, 0, 10).rect).toEqual({ x: 100, y: 100, w: 20, h: 10 });
+    expect(resizeRect(px, 'nw', 395, 195, true, null, 0, 10).rect).toEqual({ x: 480, y: 290, w: 20, h: 10 });
+  });
+
+  // Bug: unlocked, the floor widens the rect past the anchored (south-east) corner, to
+  // { x: 495, y: 295, w: 10, h: 10 }, so the corner that should stay put moves by up to
+  // the minimum. (Locked, it's right: the dragged corner is recomputed from the anchor.)
+  it.fails('keeps the anchored corner put when a north-west handle is dragged below the minimum', () => {
+    const px = { x: 100, y: 100, w: 400, h: 200 };
+    expect(resizeRect(px, 'nw', 395, 195, false, null, 0, 10).rect).toEqual({ x: 490, y: 290, w: 10, h: 10 });
+  });
 });
 
 describe('relayoutRect', () => {

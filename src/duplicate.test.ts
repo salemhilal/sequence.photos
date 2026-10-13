@@ -15,6 +15,8 @@ vi.mock('./db', () => ({
 
 const { addPhotosToPile, copyName, duplicatePhotos, putOnPage } = await import('./actions');
 const { projectStore, emptyProject } = await import('./store');
+const { convertLayout } = await import('./convertLayout');
+const { sheetOf } = await import('./spreads');
 
 beforeEach(() => {
   images.clear();
@@ -47,6 +49,36 @@ describe('duplicatePhoto', () => {
     const items = allSpreads(projectStore.project)[1]!.items.map((i) => i.photoId);
     expect(items).toEqual([A, id]);
     expect(projectStore.project.pile).toHaveLength(0);
+  });
+
+  it('offsets a copy on a spread by the same inches as on the desk', async () => {
+    projectStore.apply((d) => putOnPage(d, [A], allSpreads(d)[1]!.id, 'right'));
+    const [id] = await duplicatePhotos([A]);
+    const [orig, copy] = [A, id!].map((pid) =>
+      allSpreads(projectStore.project)[1]!.items.find((p) => p.photoId === pid)!,
+    );
+    expect(copy!.x - orig!.x).toBeCloseTo(0.25);
+    expect(copy!.y - orig!.y).toBeCloseTo(0.25);
+  });
+
+  it('offsets a copy in a frame by the same share of its width as on a 10 in page', async () => {
+    projectStore.reset(convertLayout(projectStore.project, 'digital'));
+    expect(sheetOf(projectStore.project).pageW).toBe(1080);
+    projectStore.apply((d) => putOnPage(d, [A], allSpreads(d)[0]!.id, 'whole'));
+    const [id] = await duplicatePhotos([A]);
+    const [orig, copy] = [A, id!].map((pid) =>
+      allSpreads(projectStore.project)[0]!.items.find((p) => p.photoId === pid)!,
+    );
+    expect(copy!.x - orig!.x).toBeCloseTo(27);
+    expect(copy!.y - orig!.y).toBeCloseTo(27);
+  });
+
+  it('offsets a copy on the desk by inches, even in a sequence', async () => {
+    projectStore.reset(convertLayout(projectStore.project, 'digital'));
+    const [id] = await duplicatePhotos([A], 0.5);
+    const [orig, copy] = [A, id!].map((pid) => projectStore.project.pile.find((p) => p.photoId === pid)!);
+    expect(copy!.x - orig!.x).toBeCloseTo(0.5);
+    expect(copy!.y - orig!.y).toBeCloseTo(0.5);
   });
 
   it('duplicates several photos as one undo step, at a chosen offset', async () => {
