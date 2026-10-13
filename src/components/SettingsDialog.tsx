@@ -152,7 +152,10 @@ function ServerSetting() {
         <p className="help data">{choice === 'dev' ? DEV_SERVER_URL : SERVER_URL}</p>
       )}
       {choice === 'local' && !localUrl && <p className="help warn">Use an http://localhost address.</p>}
-      <p className="help">Posts to Instagram go through this server. Change it only for development.</p>
+      <p className="help">
+        Posts to Instagram go through this server. Change it only for development; it applies the next time you connect
+        Instagram.
+      </p>
     </div>
   );
 }
@@ -200,7 +203,13 @@ function InstagramSetting() {
   const [busy, setBusy] = useState(false);
   // When the dialog opened: enough to tell an expired connection.
   const [now] = useState(() => Date.now() / 1000);
-  const expired = connection !== null && connection.expiresAt <= now;
+  const expired = connection !== null && (connection.needsReconnect === true || connection.expiresAt <= now);
+  // Back from Instagram's page (restored from the back/forward cache): ready again.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => e.persisted && setBusy(false);
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
 
   if (connection && !expired) {
     return (
@@ -245,7 +254,9 @@ function InstagramSetting() {
       ) : (
         <p className="help">
           {expired
-            ? `The connection to @${connection.username} expired. Connect again to keep posting.`
+            ? connection.needsReconnect
+              ? `Instagram needs you to connect @${connection.username} again.`
+              : `The connection to @${connection.username} expired. Connect again to keep posting.`
             : 'Post digital sequences to Instagram. Needs a Business or Creator account.'}
         </p>
       )}

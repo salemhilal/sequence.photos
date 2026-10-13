@@ -1,15 +1,16 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
 import { useWindowEvent } from '../hooks';
 import { useInstagram } from '../instagram';
 import {
-  feedRatio,
-  fitsFeed,
+  CancelledError,
+  fits,
   hashtagCount,
   LIMITS,
   postImageLayout,
   postToInstagram,
   ratioLabel,
+  targetRatio,
   type Fit,
   type PostImageLayout,
   type PostKind,
@@ -18,7 +19,7 @@ import {
 import { allSpreads, sheetOf } from '../spreads';
 import { useProject } from '../store';
 import type { Frame, Sheet } from '../types';
-import { closeModal } from '../ui';
+import { closeModal, lockModal } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
 
 /**
@@ -66,10 +67,21 @@ export function InstagramPost() {
 
   const emptyCount = all.filter((f) => f.items.length === 0).length;
   const chosen = skipEmpty ? all.filter((f) => f.items.length > 0) : all;
-  const frames = kind === 'feed' ? chosen.slice(0, LIMITS.maxItems) : chosen;
+  // Instagram's API takes 10 at a time, for a carousel or a run of stories alike.
+  const frames = chosen.slice(0, LIMITS.maxItems);
   const layout = postImageLayout(size, kind, fit);
   const tags = hashtagCount(caption);
   const posting = status.kind === 'posting';
+  const ratio = targetRatio(size, kind);
+  const tall = size.w / size.h < ratio;
+
+  // Posting can't be hidden midway: nothing else can close or replace this pane meanwhile.
+  // Should it go anyway (the app closing), the post is cancelled.
+  useEffect(() => {
+    lockModal(posting);
+    return () => lockModal(false);
+  }, [posting]);
+  useEffect(() => () => abort.current?.abort(), []);
   // Cancelling stops before anything is published.
   const cancellable = posting && status.step.step !== 'publishing';
 
@@ -106,7 +118,12 @@ export function InstagramPost() {
       (error: unknown) =>
         setStatus({
           kind: 'failed',
-          message: error instanceof Error && error.message ? error.message : 'Couldn’t post to Instagram.',
+          message:
+            error instanceof CancelledError
+              ? 'Cancelled. Nothing was posted.'
+              : error instanceof Error && error.message
+                ? error.message
+                : 'Couldn’t post to Instagram.',
         }),
     );
   };
@@ -159,11 +176,13 @@ export function InstagramPost() {
               </p>
             </section>
 
-            {kind === 'feed' && !fitsFeed(size) && (
+            {!fits(size, kind) && (
               <section>
                 <h3>Size</h3>
                 <p className="help">
-                  These frames are {ratioLabel(size.w / size.h)}. Instagram’s feed takes 4:5 (tall) to 1.91:1 (wide).
+                  {kind === 'feed'
+                    ? `These frames are ${ratioLabel(size.w / size.h)}. Instagram’s feed takes 4:5 (tall) to 1.91:1 (wide).`
+                    : `These frames are too tall for stories.`}
                 </p>
                 <div className="segmented halves" role="radiogroup" aria-label="Fit">
                   {(['crop', 'expand'] as const).map((f) => (
@@ -175,19 +194,19 @@ export function InstagramPost() {
                         disabled={posting}
                         onChange={() => setFit(f)}
                       />
-                      {f === 'crop' ? 'Crop' : 'Expand'} to {ratioLabel(feedRatio(size))}
+                      {f === 'crop' ? 'Crop' : 'Expand'} to {ratioLabel(ratio)}
                     </label>
                   ))}
                 </div>
                 <p className="help">
                   {fit === 'crop'
-                    ? `Trims the ${size.w / size.h < feedRatio(size) ? 'top and bottom' : 'sides'} of each frame.`
-                    : `Adds white margins at the ${size.w / size.h < feedRatio(size) ? 'sides' : 'top and bottom'}.`}
+                    ? `Trims the ${tall ? 'top and bottom' : 'sides'} of each frame.`
+                    : `Adds white margins at the ${tall ? 'sides' : 'top and bottom'}.`}
                 </p>
               </section>
             )}
 
-            {(emptyCount > 0 || (kind === 'feed' && chosen.length > LIMITS.maxItems)) && (
+            {(emptyCount > 0 || chosen.length > LIMITS.maxItems) && (
               <section>
                 <h3>Frames</h3>
                 {emptyCount > 0 && (
@@ -201,10 +220,10 @@ export function InstagramPost() {
                     Skip {emptyCount} empty {emptyCount === 1 ? 'frame' : 'frames'}
                   </label>
                 )}
-                {kind === 'feed' && chosen.length > LIMITS.maxItems && (
+                {chosen.length > LIMITS.maxItems && (
                   <p className="help warn">
-                    Instagram posts up to {LIMITS.maxItems} frames at a time from apps, so only the first{' '}
-                    {LIMITS.maxItems} of {chosen.length} will be posted.
+                    Instagram takes up to {LIMITS.maxItems} {kind === 'feed' ? 'frames per post' : 'stories at a time'}{' '}
+                    from apps, so only the first {LIMITS.maxItems} of {chosen.length} will be posted.
                   </p>
                 )}
               </section>

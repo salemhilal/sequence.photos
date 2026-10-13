@@ -227,7 +227,8 @@ const DUPLICATE_OFFSET = 0.25;
 /**
  * Duplicate photos as new, independent photos (each with its own copy of the image
  * data), placed `offset` inches down and right of the originals: on the desk, or on
- * the same spread. One undo step. Returns the new photos' ids.
+ * the same spread. In a frame, that's the same share of its width as on a 10 in page
+ * (0.25 in → 27 px of 1,080). One undo step. Returns the new photos' ids.
  */
 export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OFFSET): Promise<PhotoId[]> {
   const sources: { from: PhotoId; id: PhotoId; img: StoredImage }[] = [];
@@ -241,6 +242,8 @@ export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OF
   // Reference the new photos before storing their images, so a background cleanup
   // of unreferenced images can't remove them in between.
   projectStore.apply((d) => {
+    const sheet = sheetOf(d);
+    const onSpread = sheet.layout === 'digital' ? (offset * sheet.pageW) / 10 : offset;
     for (const { from, id } of sources) {
       const meta = d.photos[from];
       if (!meta) continue;
@@ -251,7 +254,8 @@ export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OF
         continue;
       }
       const p = at.placement;
-      const copy = { ...p, photoId: id, x: p.x + offset, y: p.y + offset, z: d.nextZ++ };
+      const step = at.where === 'desk' ? offset : onSpread;
+      const copy = { ...p, photoId: id, x: p.x + step, y: p.y + step, z: d.nextZ++ };
       (at.where === 'desk' ? d.pile : at.spread.items).push(copy);
     }
   });

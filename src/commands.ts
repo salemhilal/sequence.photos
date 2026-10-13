@@ -151,7 +151,8 @@ export const commands = {
       projectStore.project.layout.kind === 'digital' && instagramConnection() ? openModal('instagram') : false,
   },
   preview: {
-    title: 'Preview book',
+    // The toolbar says "Preview book" for a book; menus just "Preview".
+    title: 'Preview',
     bindings: [{ key: 'p', mod: true }],
     scope: 'app',
     inFields: true,

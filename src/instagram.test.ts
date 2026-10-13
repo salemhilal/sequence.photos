@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEV_SERVER_URL, INSTAGRAM, SERVER_URL, SITE_URL } from './config';
-import { challengeOf, parseConnection, parseSignInReturn, planSignIn } from './instagram';
+import { challengeOf, enrollmentExpiry, parseConnection, parseSignInReturn, planSignIn } from './instagram';
 
 const connection = {
   token: 'IGAA-token',
@@ -13,7 +13,10 @@ const connection = {
 
 describe('parseConnection', () => {
   it('accepts a whole connection, and only its fields', () => {
-    expect(parseConnection({ ...connection, extra: 'ignored' })).toEqual(connection);
+    expect(parseConnection({ ...connection, extra: 'ignored' }, SERVER_URL)).toEqual({
+      ...connection,
+      server: SERVER_URL,
+    });
   });
 
   it('refuses anything missing or malformed', () => {
@@ -25,10 +28,16 @@ describe('parseConnection', () => {
       ['username', 'has space'],
       ['enrollment', ''],
     ] as const) {
-      expect(parseConnection({ ...connection, [key]: value }), key).toBeNull();
+      expect(parseConnection({ ...connection, [key]: value }, SERVER_URL), key).toBeNull();
     }
-    expect(parseConnection(null)).toBeNull();
-    expect(parseConnection([connection])).toBeNull();
+    expect(parseConnection(null, SERVER_URL)).toBeNull();
+    expect(parseConnection([connection], SERVER_URL)).toBeNull();
+  });
+
+  it('keeps the server it came from, and refuses servers the app can’t use', () => {
+    expect(parseConnection({ ...connection, server: DEV_SERVER_URL }, SERVER_URL)?.server).toBe(DEV_SERVER_URL);
+    expect(parseConnection(connection, 'https://example.com')).toBeNull();
+    expect(parseConnection({ ...connection, needsReconnect: true }, SERVER_URL)?.needsReconnect).toBe(true);
   });
 });
 
@@ -93,5 +102,20 @@ describe('planSignIn', () => {
 
   it('refuses app addresses the server doesn’t send people back to', async () => {
     expect(await planSignIn('https://elsewhere.example', SERVER_URL)).toHaveProperty('error');
+  });
+});
+
+describe('enrollmentExpiry', () => {
+  it('reads the expiry from an enrollment’s signed payload', () => {
+    const payload = btoa('v1\nENROLL\n17841400000000000\n1800000000')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    expect(enrollmentExpiry(`${payload}.signature`)).toBe(1_800_000_000);
+  });
+
+  it('is 0 (renew now) when unreadable', () => {
+    expect(enrollmentExpiry('abc.def')).toBe(0);
+    expect(enrollmentExpiry('')).toBe(0);
   });
 });

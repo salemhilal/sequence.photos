@@ -340,7 +340,7 @@ export function Desk() {
           <p>
             Add or drop photos or exported projects here.
             <br />
-            They land on this desk, where you can drag them onto pages.
+            They land on this desk, where you can drag them onto {project.layout.kind === 'print' ? 'pages' : 'frames'}.
           </p>
           <button className="btn primary" onPointerDown={(e) => e.stopPropagation()} onClick={addPhotos}>
             Add photos

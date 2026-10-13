@@ -1,29 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import {
-  feedRatio,
-  fitsFeed,
+  fits,
   graphErrorMessage,
   hashtagCount,
   LIMITS,
   postImageLayout,
   ratioLabel,
+  targetRatio,
 } from './instagramPost';
 
-describe('fitsFeed and feedRatio', () => {
+describe('fits and targetRatio', () => {
   it('accepts 4:5 to 1.91:1 as is', () => {
     for (const [w, h] of [
       [1080, 1350],
       [1080, 1080],
       [1080, 566],
     ] as const) {
-      expect(fitsFeed({ w, h }), `${w}x${h}`).toBe(true);
+      expect(fits({ w, h }, 'feed'), `${w}x${h}`).toBe(true);
     }
   });
 
   it('takes taller frames to 4:5 and wider ones to 1.91:1', () => {
-    expect(fitsFeed({ w: 1080, h: 1440 })).toBe(false);
-    expect(feedRatio({ w: 1080, h: 1440 })).toBe(0.8);
-    expect(feedRatio({ w: 3000, h: 1000 })).toBe(1.91);
+    expect(fits({ w: 1080, h: 1440 }, 'feed')).toBe(false);
+    expect(targetRatio({ w: 1080, h: 1440 }, 'feed')).toBe(0.8);
+    expect(targetRatio({ w: 3000, h: 1000 }, 'feed')).toBe(1.91);
+  });
+
+  it('takes any story shape but the very tallest', () => {
+    expect(fits({ w: 1080, h: 1440 }, 'story')).toBe(true);
+    expect(fits({ w: 4000, h: 300 }, 'story')).toBe(true);
+    expect(fits({ w: 300, h: 3000 }, 'story')).toBe(false);
+    expect(targetRatio({ w: 300, h: 3000 }, 'story')).toBe(LIMITS.minWidth / LIMITS.maxHeight);
   });
 });
 
@@ -73,6 +80,30 @@ describe('postImageLayout', () => {
     expect(small.width).toBe(LIMITS.minWidth);
     const tall = postImageLayout({ w: 1080, h: 4000 }, 'story', 'crop');
     expect(tall.height).toBeLessThanOrEqual(LIMITS.maxHeight);
+  });
+
+  it('crops or expands very tall stories to what the server takes', () => {
+    for (const fit of ['crop', 'expand'] as const) {
+      const l = postImageLayout({ w: 300, h: 3000 }, 'story', fit);
+      expect(l.width, fit).toBeGreaterThanOrEqual(LIMITS.minWidth);
+      expect(l.height, fit).toBeLessThanOrEqual(LIMITS.maxHeight);
+    }
+  });
+
+  it('never rounds a feed image past 4:5 or 1.91:1', () => {
+    for (let w = 900; w <= 1100; w++) {
+      for (const size of [
+        { w, h: Math.round(w * 1.25) + 1 },
+        { w: Math.round(w * 1.91) + 1, h: w },
+      ]) {
+        for (const fit of ['crop', 'expand'] as const) {
+          const l = postImageLayout(size, 'feed', fit);
+          const r = l.width / l.height;
+          expect(r, `${size.w}x${size.h} ${fit}`).toBeGreaterThanOrEqual(LIMITS.minRatio);
+          expect(r, `${size.w}x${size.h} ${fit}`).toBeLessThanOrEqual(LIMITS.maxRatio);
+        }
+      }
+    }
   });
 });
 

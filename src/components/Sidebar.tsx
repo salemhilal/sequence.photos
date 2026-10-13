@@ -4,6 +4,7 @@ import { deleteSpread, dropPhotos, folioLabel, insertSpread, moveSpread } from '
 import { clearGhost, sameTarget, startDrag, trackGhost } from '../drag';
 import { projectStore, useProject } from '../store';
 import type { LayoutKind, Placement, Sheet, Spread } from '../types';
+import { sideAt } from '../geometry';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH } from '../prefs';
 import { openPhotoMenu, setSidebarWidth, ui } from '../ui';
@@ -148,7 +149,9 @@ export function Sidebar() {
           <Plus />
         </button>
         <span className="spacer" />
-        <span className="caps muted">{print ? `${spreads.length * 2 - 2} pages` : `${spreads.length} frames`}</span>
+        <span className="caps muted">
+          {print ? `${spreads.length * 2 - 2} pages` : `${spreads.length} ${spreads.length === 1 ? 'frame' : 'frames'}`}
+        </span>
       </div>
       <div
         className={`sidebar-list${grid ? ' grid' : ''}`}
@@ -157,7 +160,15 @@ export function Sidebar() {
       >
         {spreads.map((spread, i) => (
           <div key={spread.id} className="spread-cell">
-            {i > 0 && <InsertGap index={i} active={reorder?.dropIndex === i} vertical={grid} />}
+            {/* A book's first and last spreads stay put; frames can go anywhere. */}
+            {(i > 0 || !print) && (
+              <InsertGap
+                index={i}
+                active={reorder?.dropIndex === i}
+                vertical={grid}
+                noun={print ? 'spread' : 'frame'}
+              />
+            )}
             <SpreadRow
               spread={spread}
               index={i}
@@ -169,6 +180,16 @@ export function Sidebar() {
             />
           </div>
         ))}
+        {!print && (
+          <div className="spread-cell">
+            <InsertGap
+              index={spreads.length}
+              active={reorder?.dropIndex === spreads.length}
+              vertical={grid}
+              noun="frame"
+            />
+          </div>
+        )}
       </div>
     </aside>
   );
@@ -178,7 +199,17 @@ export function Sidebar() {
  * The gap between two spreads: hover to add a spread there, or drop photos on it
  * to add a spread holding them.
  */
-function InsertGap({ index, active, vertical }: { index: number; active: boolean; vertical: boolean }) {
+function InsertGap({
+  index,
+  active,
+  vertical,
+  noun,
+}: {
+  index: number;
+  active: boolean;
+  vertical: boolean;
+  noun: 'spread' | 'frame';
+}) {
   const dropHover = ui.use((s) => sameTarget(s.hover, { kind: 'insert', index }));
   const photoDrag = ui.use((s) => s.ghost !== null);
   return (
@@ -189,14 +220,14 @@ function InsertGap({ index, active, vertical }: { index: number; active: boolean
     >
       {/* In the grid, gaps are narrow vertical gutters, so the button is just "+". */}
       {dropHover ? (
-        <span className="insert-btn">{vertical ? '+' : 'Drop to add a spread'}</span>
+        <span className="insert-btn">{vertical ? '+' : `Drop to add a ${noun}`}</span>
       ) : (
         <button
           className="insert-btn"
-          title={vertical ? 'Add a spread here' : undefined}
+          title={vertical ? `Add a ${noun} here` : undefined}
           onClick={() => insertSpread(index)}
         >
-          {vertical ? '+' : '+ Add spread'}
+          {vertical ? '+' : `+ Add ${noun}`}
         </button>
       )}
     </div>
@@ -234,7 +265,7 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
     const k = DESK_PPI * ui.get().view.zoom;
     const w = Math.min(GHOST_MAX, p.w * k);
     const ghost = { photoId: p.photoId, count: 1, w, h: (w * p.h) / p.w };
-    const fromSide = p.x + p.w / 2 < 0 ? 'left' : 'right';
+    const fromSide = sideAt(sheet, p.x + p.w / 2);
     startDrag(e, {
       onMove: ({ e: ev }) => trackGhost(ev, ghost),
       onEnd: ({ e: ev }, moved) => {

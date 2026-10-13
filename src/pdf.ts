@@ -20,7 +20,7 @@ export async function renderPdf(onProgress: (done: number, total: number) => voi
   const { pageW, pageH, layout } = sheetOf(project);
   const pt = PT[layout];
   const pdf = await PDFDocument.create();
-  pdf.setTitle('Photo book');
+  pdf.setTitle(layout === 'print' ? 'Photo book' : 'Sequence');
   pdf.setCreator('Sequence');
 
   const book = allSpreads(project);
@@ -58,7 +58,8 @@ export async function renderPdf(onProgress: (done: number, total: number) => voi
 export async function savePdf(): Promise<void> {
   if (ui.get().busy || ui.get().importing) return;
   try {
-    await platform.saveFile(`photo-book-${new Date().toISOString().slice(0, 10)}.pdf`, () => {
+    const name = projectStore.project.layout.kind === 'print' ? 'photo-book' : 'sequence';
+    await platform.saveFile(`${name}-${new Date().toISOString().slice(0, 10)}.pdf`, () => {
       ui.set({ busy: 'Rendering PDF…' });
       return renderPdf((done, total) => ui.set({ busy: `Rendering PDF ${done} of ${total}…` }));
     });

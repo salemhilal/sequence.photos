@@ -6,7 +6,7 @@ import { migrateProject, NewerProjectError } from './schema';
 import { InvalidProjectError } from './validate';
 import { projectStore, emptyProject } from './store';
 import { MOD_LABEL } from './input';
-import { ask, ui } from './ui';
+import { ask, modalLocked, ui } from './ui';
 import { createZip, readZip, type ZipInput } from './zip';
 import { platform } from '#platform';
 
@@ -232,6 +232,7 @@ export async function confirmReplace(title: string, what: string, confirmLabel: 
 }
 
 export async function openProjectFile(file: File): Promise<void> {
+  if (modalLocked()) return;
   const hasWork = Object.keys(projectStore.project.photos).length > 0;
   if (hasWork && !(await confirmReplace('Replace your current project?', `“${file.name}”`, 'Replace'))) return;
   try {
@@ -245,6 +246,8 @@ export async function openProjectFile(file: File): Promise<void> {
 
 /** Start over with an empty project, after confirming. Undoable on the website. */
 export async function newProject(): Promise<void> {
+  // Not while a dialog's work mustn't be interrupted (see lockModal).
+  if (modalLocked()) return;
   if (!(await confirmReplace('Start a new project?', 'A new, empty project', 'New project'))) return;
   projectStore.replace(emptyProject());
   ui.set({ selection: [], editingSpreadId: null, modal: null });

@@ -190,6 +190,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
           !ev.shiftKey,
           ev.altKey ? null : lines,
           threshold,
+          units.minSize / 10,
         );
         setSnapHit(hit);
         projectStore.preview((d) => {
@@ -224,13 +225,19 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
     </div>
   );
 
-  const label = folioLabel(index, book.length);
+  const label = folioLabel(index, book.length, sheet.layout);
+  const noun = sheet.layout === 'print' ? 'spread' : 'frame';
 
   return (
     <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
       <div className="modal editor" data-modal>
         <header className="modal-head">
-          <button className="btn ghost icon" aria-label="Previous spread" disabled={index === 0} onClick={() => go(-1)}>
+          <button
+            className="btn ghost icon"
+            aria-label={`Previous ${noun}`}
+            disabled={index === 0}
+            onClick={() => go(-1)}
+          >
             <ChevronLeft />
           </button>
           <div className="modal-title">
@@ -241,7 +248,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
           </div>
           <button
             className="btn ghost icon"
-            aria-label="Next spread"
+            aria-label={`Next ${noun}`}
             disabled={index === book.length - 1}
             onClick={() => go(1)}
           >
@@ -374,22 +381,26 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
           {...num}
           label="X"
           value={item.x - page.x}
-          onCommit={(n) => onChange({ x: page.x + n }, key('x'))}
+          onCommit={(n) => onChange({ x: page.x + units.round(n) }, key('x'))}
         />
-        <NumberField {...num} label="Y" value={item.y} onCommit={(n) => onChange({ y: n }, key('y'))} />
+        <NumberField {...num} label="Y" value={item.y} onCommit={(n) => onChange({ y: units.round(n) }, key('y'))} />
         <NumberField
           {...num}
           label="W"
           min={units.minSize / 10}
           value={item.w}
-          onCommit={(n) => onChange(lock ? { w: n, h: n / aspect } : { w: n }, key('w'))}
+          onCommit={(n) =>
+            onChange(lock ? { w: units.round(n), h: units.round(n / aspect) } : { w: units.round(n) }, key('w'))
+          }
         />
         <NumberField
           {...num}
           label="H"
           min={units.minSize / 10}
           value={item.h}
-          onCommit={(n) => onChange(lock ? { h: n, w: n * aspect } : { h: n }, key('h'))}
+          onCommit={(n) =>
+            onChange(lock ? { h: units.round(n), w: units.round(n * aspect) } : { h: units.round(n) }, key('h'))
+          }
         />
       </div>
       <label className="check">
@@ -486,7 +497,7 @@ function PileStrip({ spreadId }: { spreadId: SpreadId }) {
               style={{ width: (56 * p.w) / p.h }}
               onPointerDown={(e) => onDown(e, p)}
               onContextMenu={(e) => openPhotoMenu(e, p.photoId)}
-              title="Drag onto a page, or click to add"
+              title={`Drag onto the ${sheetOf(projectStore.project).layout === 'print' ? 'page' : 'frame'}, or click to add`}
             >
               <PhotoImg id={p.photoId} />
             </div>

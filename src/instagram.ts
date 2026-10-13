@@ -18,7 +18,7 @@ import { normalizeServerUrl, serverUrl } from './server';
  * this browser only.
  */
 
-/** As sequence-server's src/api.ts. */
+/** As sequence-server's src/api.ts, plus what the app keeps with it. */
 export interface InstagramConnection {
   token: string;
   /** Unix seconds. */
@@ -27,6 +27,13 @@ export interface InstagramConnection {
   userId: string;
   username: string;
   enrollment: string;
+  /**
+   * The server that signed the enrollment: uploads and renewals go there, whatever
+   * Settings → Advanced says now (each server's enrollments are its own).
+   */
+  server: string;
+  /** Instagram or the server refused it: the user has to connect again. */
+  needsReconnect?: true;
 }
 
 export type InstagramError = 'cancelled' | 'exchange_failed' | 'missing_permission' | 'not_professional';
@@ -40,10 +47,14 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-/** The connection, if `value` is one (from storage or the server). */
-export function parseConnection(value: unknown): InstagramConnection | null {
+/**
+ * The connection, if `value` is one: from storage, or from the server (which doesn't
+ * name itself: `server` is the one it came from).
+ */
+export function parseConnection(value: unknown, server: string): InstagramConnection | null {
   if (!isRecord(value)) return null;
   const { token, expiresAt, refreshedAt, userId, username, enrollment } = value;
+  const from = typeof value.server === 'string' ? normalizeServerUrl(value.server) : normalizeServerUrl(server);
   if (
     typeof token !== 'string' ||
     !token ||
@@ -56,17 +67,28 @@ export function parseConnection(value: unknown): InstagramConnection | null {
     typeof username !== 'string' ||
     !/^[A-Za-z0-9._]{1,64}$/.test(username) ||
     typeof enrollment !== 'string' ||
-    !enrollment
+    !enrollment ||
+    !from
   ) {
     return null;
   }
-  return { token, expiresAt, refreshedAt, userId, username, enrollment };
+  return {
+    token,
+    expiresAt,
+    refreshedAt,
+    userId,
+    username,
+    enrollment,
+    server: from,
+    ...(value.needsReconnect === true && { needsReconnect: true }),
+  };
 }
 
 function load(): InstagramConnection | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? parseConnection(JSON.parse(raw)) : null;
+    // Kept before connections named their server: the one in use then.
+    return raw ? parseConnection(JSON.parse(raw), serverUrl()) : null;
   } catch {
     return null;
   }
@@ -74,6 +96,10 @@ function load(): InstagramConnection | null {
 
 let current = load();
 const listeners = new Set<() => void>();
+
+function notify(): void {
+  for (const l of listeners) l();
+}
 
 function set(connection: InstagramConnection | null): void {
   current = connection;
@@ -83,7 +109,22 @@ function set(connection: InstagramConnection | null): void {
   } catch {
     // Not kept past this session.
   }
-  for (const l of listeners) l();
+  notify();
+}
+
+// Another tab connected, disconnected, or refreshed: follow it, so this one never writes
+// back a connection that's gone.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== STORAGE_KEY && e.key !== null) return;
+    current = load();
+    notify();
+  });
+}
+
+/** Instagram or the server refused the connection: Settings offers to reconnect. */
+export function markNeedsReconnect(): void {
+  if (current && !current.needsReconnect) set({ ...current, needsReconnect: true });
 }
 
 export function instagramConnection(): InstagramConnection | null {
@@ -209,6 +250,9 @@ function takePending(): Pending | null {
   }
 }
 
+const OTHER_TAB =
+  'That Instagram sign-in was started in another tab or window, so it was ignored. Connect again from here.';
+
 export const ERROR_MESSAGES: Record<InstagramError, string | null> = {
   // They chose not to; nothing to say.
   cancelled: null,
@@ -230,13 +274,10 @@ export async function finishSignIn(): Promise<string | null> {
   history.replaceState(history.state, '', location.pathname + location.search);
   const pending = takePending();
   // Why a return was ignored or failed, for debugging (nothing secret).
-  if (!pending) {
-    console.warn('Instagram sign-in: ignored a return, as this tab has no sign-in in progress.');
-    return null;
-  }
-  if (pending.state !== back.state) {
-    console.warn('Instagram sign-in: ignored a return that doesn’t match the sign-in this tab started.');
-    return null;
+  // Ignored, so a link can't connect someone to another account; but say so.
+  if (!pending || pending.state !== back.state) {
+    console.warn('Instagram sign-in: ignored a return this tab didn’t start.');
+    return OTHER_TAB;
   }
   if (back.kind === 'error') {
     console.warn(`Instagram sign-in: the server reported ${back.error}.`);
@@ -255,7 +296,7 @@ export async function finishSignIn(): Promise<string | null> {
     console.warn(`Instagram sign-in: couldn’t reach ${pending.server}/auth/redeem.`, error);
     return SERVER_ERROR;
   }
-  const connection = res.ok ? parseConnection(await res.json().catch(() => null)) : null;
+  const connection = res.ok ? parseConnection(await res.json().catch(() => null), pending.server) : null;
   if (!connection) {
     console.warn(`Instagram sign-in: /auth/redeem answered ${res.status}${res.ok ? ' with an unexpected body' : ''}.`);
     return ERROR_MESSAGES.exchange_failed;
@@ -267,58 +308,85 @@ export async function finishSignIn(): Promise<string | null> {
 // --- Keeping the connection fresh -------------------------------------------------------
 
 const DAY = 24 * 60 * 60;
-/** Refresh once the token is this old (it lasts ~60 days; Instagram refuses under a day). */
+/** Refresh the token once it's this old (it lasts ~60 days; Instagram refuses under a day). */
 const REFRESH_AFTER = 30 * DAY;
+/** Renew the enrollment this long before it expires (it lasts 60 days). */
+const RENEW_BEFORE = 15 * DAY;
 
 /** A connection problem the user has to fix by connecting again. */
 export class ReconnectError extends Error {}
 
-/**
- * The connection, refreshed first if it's getting old: a new Instagram token (no secret
- * needed), then a new enrollment from the server for it. Throws ReconnectError when
- * it's gone or expired, or Error with a message for anything else.
- */
-export async function freshConnection(now = Date.now() / 1000): Promise<InstagramConnection> {
-  const connection = current;
-  if (!connection || connection.expiresAt <= now) {
-    throw new ReconnectError('Your Instagram connection expired. Connect again in Settings.');
-  }
-  if (now - connection.refreshedAt < REFRESH_AFTER) return connection;
+const RECONNECT = 'Your Instagram connection needs renewing. Reconnect in Settings.';
 
-  let token = connection.token;
-  let expiresAt = connection.expiresAt;
+/** When an enrollment expires (unix seconds), from its signed payload; 0 if unreadable. */
+export function enrollmentExpiry(enrollment: string): number {
   try {
-    const url = new URL('https://graph.instagram.com/refresh_access_token');
-    url.searchParams.set('grant_type', 'ig_refresh_token');
-    url.searchParams.set('access_token', connection.token);
-    const res = await fetch(url);
-    const body: unknown = await res.json().catch(() => null);
-    if (res.ok && isRecord(body) && typeof body.access_token === 'string' && typeof body.expires_in === 'number') {
-      token = body.access_token;
-      expiresAt = Math.floor(now + body.expires_in);
-    } else if (res.status === 400 || res.status === 401) {
-      throw new ReconnectError('Your Instagram connection expired. Connect again in Settings.');
-    }
-  } catch (error) {
-    if (error instanceof ReconnectError) throw error;
-    // Instagram unreachable: carry on with the current token, which is still valid.
-    return connection;
+    const payload = enrollment.split('.')[0] ?? '';
+    const text = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const exp = Number(/^v1\nENROLL\n[0-9]+\n([0-9]+)$/.exec(text)?.[1]);
+    return Number.isSafeInteger(exp) ? exp : 0;
+  } catch {
+    return 0;
   }
+}
 
-  // The enrollment follows the token. If renewing it fails, keep the new token anyway.
-  let enrollment = connection.enrollment;
+/** A new token from Instagram (no secret needed), or the same connection if that fails. */
+async function refreshToken(c: InstagramConnection, now: number): Promise<InstagramConnection> {
+  const url = new URL('https://graph.instagram.com/refresh_access_token');
+  url.searchParams.set('grant_type', 'ig_refresh_token');
+  url.searchParams.set('access_token', c.token);
+  let res: Response;
+  let body: unknown;
   try {
-    const res = await fetch(`${serverUrl()}/auth/renew`, {
+    res = await fetch(url);
+    body = await res.json().catch(() => null);
+  } catch {
+    return c; // Instagram unreachable: try again next time.
+  }
+  if (res.ok && isRecord(body) && typeof body.access_token === 'string' && typeof body.expires_in === 'number') {
+    return {
+      ...c,
+      token: body.access_token,
+      expiresAt: Math.floor(now + body.expires_in),
+      refreshedAt: Math.floor(now),
+    };
+  }
+  // Only an invalid token means reconnecting; anything else (limits, too new) is retried.
+  if (isRecord(body) && isRecord(body.error) && body.error.code === 190) {
+    markNeedsReconnect();
+    throw new ReconnectError(RECONNECT);
+  }
+  return c;
+}
+
+/** A new enrollment from the server that issued it, or the same connection if that fails. */
+async function renewEnrollment(c: InstagramConnection): Promise<InstagramConnection> {
+  try {
+    const res = await fetch(`${c.server}/auth/renew`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ enrollment }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.token}` },
+      body: JSON.stringify({ enrollment: c.enrollment }),
     });
     const body: unknown = await res.json().catch(() => null);
-    if (res.ok && isRecord(body) && typeof body.enrollment === 'string') enrollment = body.enrollment;
+    if (res.ok && isRecord(body) && typeof body.enrollment === 'string') return { ...c, enrollment: body.enrollment };
   } catch {
-    // Retried at the next refresh.
+    // Server unreachable: try again next time.
   }
-  const next = { ...connection, token, expiresAt, refreshedAt: Math.floor(now), enrollment };
-  set(next);
+  return c;
+}
+
+/**
+ * The connection, kept fresh: the token is refreshed once it's a month old, and the
+ * enrollment renewed when it's within two weeks of expiring, each only marked done when it
+ * worked. Throws ReconnectError when the connection is gone, expired, or refused.
+ */
+export async function freshConnection(now = Date.now() / 1000): Promise<InstagramConnection> {
+  const c = current;
+  if (!c || c.needsReconnect || c.expiresAt <= now) throw new ReconnectError(RECONNECT);
+  let next = c;
+  if (now - c.refreshedAt >= REFRESH_AFTER) next = await refreshToken(next, now);
+  if (enrollmentExpiry(next.enrollment) - now < RENEW_BEFORE) next = await renewEnrollment(next);
+  // Unless this tab's connection was replaced meanwhile (e.g. disconnected elsewhere).
+  if (next !== c && current === c) set(next);
   return next;
 }

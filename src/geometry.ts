@@ -239,6 +239,8 @@ export function resizeRect(
   lockAspect: boolean,
   lines: GuideLines | null,
   threshold: number,
+  /** The smallest a side gets: 0.1 in, or 10 px in a frame (see UNITS). */
+  min = 0.1,
 ): { rect: Rect; hit: SnapFeedback } {
   const west = corner === 'nw' || corner === 'sw';
   const north = corner === 'nw' || corner === 'ne';
@@ -247,7 +249,6 @@ export function resizeRect(
   let mx = (west ? start.x : start.x + start.w) + dx;
   let my = (north ? start.y : start.y + start.h) + dy;
   const hit: SnapFeedback = { xs: [], ys: [] };
-  const min = 0.1;
   const aspect = start.w / start.h;
 
   const sx = lines ? snapPoints([mx], lines.xs, threshold) : { delta: 0, line: null };

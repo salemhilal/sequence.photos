@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +20,7 @@ function appSlash(req: IncomingMessage, res: ServerResponse, next: () => void): 
 
 /**
  * The web app's security headers, as a Netlify `_headers` file. The Content Security
- * Policy allows only the site's own scripts (plus the hashes of the app page's inline
+ * Policy allows only the site's own scripts (plus the hashes of the pages' inline
  * scripts, computed here, so they never go stale) and network requests only to the site,
  * Instagram's API, and Sequence's servers from .env, or a server on this computer for
  * development (Settings → Advanced). It guards the Instagram token the app keeps. The Mac
@@ -49,7 +49,8 @@ function securityHeaders(env: Record<string, string>, inlineScripts: string[]): 
     "frame-ancestors 'none'",
   ].join('; ');
   return [
-    '/app/*',
+    // Every page: they share the app's storage, where its Instagram token is kept.
+    '/*',
     `  Content-Security-Policy: ${csp}`,
     '  X-Content-Type-Options: nosniff',
     '  Referrer-Policy: strict-origin-when-cross-origin',
@@ -61,11 +62,15 @@ function securityHeaders(env: Record<string, string>, inlineScripts: string[]): 
 function webSecurityHeaders(mode: string): Plugin {
   return {
     name: 'web-security-headers',
-    // After the HTML pages are written, so the app page's final inline scripts are hashed.
+    // After the HTML pages are written, so their final inline scripts are hashed.
     writeBundle(options) {
       const dir = options.dir ?? 'dist';
-      const html = readFileSync(join(dir, 'app/index.html'), 'utf8');
-      const inline = [...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1] ?? '');
+      const pages = readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.html'));
+      const inline = pages.flatMap((page) =>
+        [...readFileSync(join(dir, page), 'utf8').matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(
+          (m) => m[1] ?? '',
+        ),
+      );
       const env = loadEnv(mode, process.cwd(), 'VITE_');
       writeFileSync(join(dir, '_headers'), securityHeaders(env, inline));
     },
@@ -76,8 +81,8 @@ function webSecurityHeaders(mode: string): Plugin {
         .split('\n')
         .filter((line) => line.startsWith('  '))
         .map((line) => line.trim().split(/:\s(.*)/s));
-      server.middlewares.use((req, res, next) => {
-        if (req.url?.startsWith('/app/')) for (const [k, v] of headers) if (k && v) res.setHeader(k, v);
+      server.middlewares.use((_req, res, next) => {
+        for (const [k, v] of headers) if (k && v) res.setHeader(k, v);
         next();
       });
     },

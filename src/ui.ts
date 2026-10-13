@@ -114,16 +114,30 @@ export const ui = createStore<UiState>({
   tour: null,
 });
 
+/**
+ * While set, the open dialog stays open: nothing (shortcuts, menus, a new project) can
+ * close or replace it. For work that mustn't be hidden midway, like posting to Instagram.
+ */
+let modalLock = false;
+
+export function lockModal(locked: boolean): void {
+  modalLock = locked;
+}
+
+export function modalLocked(): boolean {
+  return modalLock;
+}
+
 export function openModal(modal: Modal): void {
-  ui.set({ modal });
+  if (!modalLock) ui.set({ modal });
 }
 
 export function closeModal(): void {
-  ui.set({ modal: null });
+  if (!modalLock) ui.set({ modal: null });
 }
 
 export function toggleModal(modal: Modal): void {
-  ui.set((s) => ({ modal: s.modal === modal ? null : modal }));
+  if (!modalLock) ui.set((s) => ({ modal: s.modal === modal ? null : modal }));
 }
 
 /** Whether something covers the desk (a dialog, the spread editor, Quick Look, or the tour), pausing desk shortcuts. */

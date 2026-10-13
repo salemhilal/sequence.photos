@@ -1,7 +1,6 @@
 import { INSTAGRAM } from './config';
 import { renderFrame } from './frames';
-import { freshConnection, type InstagramConnection } from './instagram';
-import { serverUrl } from './server';
+import { freshConnection, markNeedsReconnect, type InstagramConnection } from './instagram';
 import type { Frame, Size } from './types';
 
 /**
@@ -49,15 +48,28 @@ export interface PostImageLayout {
   target: Rect;
 }
 
-/** Whether a frame of this size can be a feed image as it is. */
-export function fitsFeed(size: Size): boolean {
-  const r = size.w / size.h;
-  return r >= LIMITS.minRatio - 1e-9 && r <= LIMITS.maxRatio + 1e-9;
+/**
+ * The shapes Instagram takes, as width / height: feed images from 4:5 (tall) to 1.91:1
+ * (wide); stories any shape Sequence's server takes once scaled to Instagram's widths
+ * (no taller than 320 × 2560).
+ */
+export function ratioRange(kind: PostKind): { min: number; max: number } {
+  return kind === 'feed'
+    ? { min: LIMITS.minRatio, max: LIMITS.maxRatio }
+    : { min: LIMITS.minWidth / LIMITS.maxHeight, max: Infinity };
 }
 
-/** The nearest shape the feed takes, as width / height. */
-export function feedRatio(size: Size): number {
-  return Math.min(LIMITS.maxRatio, Math.max(LIMITS.minRatio, size.w / size.h));
+/** Whether a frame of this size can be posted as it is. */
+export function fits(size: Size, kind: PostKind): boolean {
+  const { min, max } = ratioRange(kind);
+  const r = size.w / size.h;
+  return r >= min - 1e-9 && r <= max + 1e-9;
+}
+
+/** The nearest shape Instagram takes, as width / height. */
+export function targetRatio(size: Size, kind: PostKind): number {
+  const { min, max } = ratioRange(kind);
+  return Math.min(max, Math.max(min, size.w / size.h));
 }
 
 /** A ratio as people say it: 4:5, 1.91:1, or 3:4. */
@@ -77,16 +89,16 @@ export function ratioLabel(r: number): string {
 }
 
 /**
- * How a frame becomes an image for Instagram. Feed posts outside 4:5 to 1.91:1 are cropped
- * (centered) or expanded with white margins to the nearest allowed shape; stories keep
- * their shape (Instagram fits them to the screen). Then the image is scaled to Instagram's
- * widths (320 to 1440 px) and the server's height limit.
+ * How a frame becomes an image for Instagram. A frame outside the shapes Instagram takes
+ * (see ratioRange) is cropped (centered) or expanded with white margins to the nearest
+ * one. Then the image is scaled to Instagram's widths (320 to 1440 px) and the server's
+ * height limit, rounding so it stays within the allowed shapes.
  */
 export function postImageLayout(size: Size, kind: PostKind, fit: Fit): PostImageLayout {
   let source: Rect = { x: 0, y: 0, w: size.w, h: size.h };
   let canvas = { w: size.w, h: size.h };
-  if (kind === 'feed' && !fitsFeed(size)) {
-    const r = feedRatio(size);
+  const r = targetRatio(size, kind);
+  if (!fits(size, kind)) {
     const tall = size.w / size.h < r;
     if (fit === 'crop') {
       source = tall
@@ -101,10 +113,15 @@ export function postImageLayout(size: Size, kind: PostKind, fit: Fit): PostImage
     LIMITS.minWidth / canvas.w,
     Math.min(1, LIMITS.maxWidth / canvas.w, LIMITS.maxHeight / canvas.h),
   );
-  const width = Math.round(canvas.w * scale);
-  const height = Math.round(canvas.h * scale);
-  const w = source.w * scale;
-  const h = source.h * scale;
+  let width = Math.round(canvas.w * scale);
+  let height = Math.round(canvas.h * scale);
+  // Rounding mustn't tip the image past an allowed shape (e.g. 1003 × 1254 is under 4:5).
+  const { min, max } = ratioRange(kind);
+  if (width / height < min) height = Math.floor(width / min);
+  if (width / height > max) width = Math.floor(height * max);
+  height = Math.min(height, LIMITS.maxHeight);
+  const w = Math.min(width, source.w * scale);
+  const h = Math.min(height, source.h * scale);
   return { width, height, source, target: { x: (width - w) / 2, y: (height - h) / 2, w, h } };
 }
 
@@ -163,27 +180,58 @@ export function graphErrorMessage(error: GraphError | null, status: number): str
   return `Instagram couldn’t post this (${code === undefined ? `HTTP ${status}` : `error ${code}`}).`;
 }
 
+/** Cancelled by the user (the pane says nothing more). */
+export class CancelledError extends PostError {
+  constructor() {
+    super('Cancelled.');
+  }
+}
+
+/** Throws if the user has cancelled. */
+function check(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new CancelledError();
+}
+
+/**
+ * Instagram may send ids as bare JSON numbers longer than a JavaScript number holds
+ * exactly; they're quoted before parsing to keep every digit.
+ */
+export function quoteIds(text: string): string {
+  return text.replace(/("(?:id|user_id)"\s*:\s*)(\d+)/g, '$1"$2"');
+}
+
 /**
  * A call to Instagram's API with the token as a parameter (not a header), so requests stay
- * "simple" CORS requests: `graph.instagram.com` refuses preflights.
+ * "simple" CORS requests: `graph.instagram.com` refuses preflights. Cancelling aborts it.
  */
 async function graph(
   token: string,
   method: 'GET' | 'POST',
   path: string,
-  params: Record<string, string> = {},
+  params: Record<string, string>,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
+  check(signal);
   const body = new URLSearchParams({ ...params, access_token: token });
   const url = method === 'GET' ? `${INSTAGRAM.graphUrl}/${path}?${body}` : `${INSTAGRAM.graphUrl}/${path}`;
   let res: Response;
+  let text: string;
   try {
-    res = method === 'GET' ? await fetch(url) : await fetch(url, { method, body });
+    res = method === 'GET' ? await fetch(url, { signal }) : await fetch(url, { method, body, signal });
+    text = await res.text();
   } catch {
+    check(signal);
     throw new PostError('Couldn’t reach Instagram. Check your connection and try again.');
   }
-  const json: unknown = await res.json().catch(() => null);
+  let json: unknown = null;
+  try {
+    json = JSON.parse(quoteIds(text));
+  } catch {
+    // Not JSON: an error below.
+  }
   if (res.ok && isRecord(json)) return json;
   const error = isRecord(json) && isRecord(json.error) ? json.error : null;
+  if (error?.code === 190) markNeedsReconnect();
   throw new PostError(
     graphErrorMessage(
       error && {
@@ -198,18 +246,25 @@ async function graph(
 
 function idOf(json: Record<string, unknown>): string {
   const id = json.id;
-  if (typeof id !== 'string' && typeof id !== 'number') throw new PostError('Instagram sent an unexpected answer.');
-  return String(id);
+  if (typeof id !== 'string' || !id) throw new PostError('Instagram sent an unexpected answer.');
+  return id;
 }
 
-const sleep = (ms: number, signal?: AbortSignal) =>
-  new Promise<void>((resolve, reject) => {
-    const t = setTimeout(resolve, ms);
-    signal?.addEventListener('abort', () => {
-      clearTimeout(t);
-      reject(new PostError('Cancelled.'));
-    });
+/** Waits, or rejects as soon as the user cancels (including if they already have). */
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(new CancelledError());
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new CancelledError());
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
   });
+}
 
 /**
  * Waits until Instagram has fetched and processed a container: checking soon, then less
@@ -218,7 +273,7 @@ const sleep = (ms: number, signal?: AbortSignal) =>
 async function waitUntilReady(token: string, container: string, signal?: AbortSignal): Promise<void> {
   const started = Date.now();
   for (const delay of [1000, 2000, 3000, 5000, 8000, 13000, 21000, 30000, 60000, 60000, 60000, 60000]) {
-    const json = await graph(token, 'GET', container, { fields: 'status_code' });
+    const json = await graph(token, 'GET', container, { fields: 'status_code' }, signal);
     const status = json.status_code;
     if (status === 'FINISHED' || status === 'PUBLISHED') return;
     if (status === 'ERROR' || status === 'EXPIRED') {
@@ -250,29 +305,35 @@ function parseBatch(v: unknown, count: number): UploadBatch | null {
 
 const SERVER_UNREACHABLE = 'Couldn’t connect to the Sequence server. Check the server in Settings → Advanced.';
 
-async function startUpload(connection: InstagramConnection, count: number): Promise<UploadBatch> {
+async function startUpload(connection: InstagramConnection, count: number, signal?: AbortSignal): Promise<UploadBatch> {
   let res: Response;
   try {
-    res = await fetch(`${serverUrl()}/uploads`, {
+    res = await fetch(`${connection.server}/uploads`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${connection.token}` },
       body: JSON.stringify({ enrollment: connection.enrollment, count }),
+      signal,
     });
   } catch {
+    check(signal);
     throw new PostError(SERVER_UNREACHABLE);
   }
-  if (res.status === 401) throw new PostError('Your Instagram connection needs renewing. Connect again in Settings.');
+  if (res.status === 401) {
+    markNeedsReconnect();
+    throw new PostError('Your Instagram connection needs renewing. Reconnect in Settings.');
+  }
   if (res.status === 429) throw new PostError('Too many posts in a row. Wait a minute and try again.');
   const batch = res.ok ? parseBatch(await res.json().catch(() => null), count) : null;
   if (!batch) throw new PostError(`The Sequence server couldn’t take the images (HTTP ${res.status}).`);
   return batch;
 }
 
-async function uploadFrame(put: string, image: Blob): Promise<void> {
+async function uploadFrame(put: string, image: Blob, signal?: AbortSignal): Promise<void> {
   let res: Response;
   try {
-    res = await fetch(put, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: image });
+    res = await fetch(put, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: image, signal });
   } catch {
+    check(signal);
     throw new PostError(SERVER_UNREACHABLE);
   }
   if (!res.ok) throw new PostError(`The Sequence server refused a frame (HTTP ${res.status}).`);
@@ -298,94 +359,100 @@ export interface PostOptions {
 
 /**
  * Posts frames to Instagram: renders them, hands them to Sequence's server for Instagram
- * to fetch, creates the post (one image, a carousel, or one story per frame), waits for
- * Instagram to process it, and publishes. The server's copies are deleted afterwards
- * however it went. Resolves to the post's link (the first story's, for stories).
+ * to fetch, creates the post (one image, a carousel, or one story per frame), waits until
+ * Instagram has processed all of it, and publishes. Cancelling works until publishing
+ * starts: everything before it is checked for a cancel, and nothing is published until
+ * every part is ready. The server's copies are deleted afterwards however it went.
+ * Resolves to the post's link (the first story's, for stories).
  */
 export async function postToInstagram(options: PostOptions): Promise<string | null> {
   const { frames, size, kind, fit, caption, onStep, signal } = options;
   if (frames.length === 0) throw new PostError('There are no frames to post.');
-  if (kind === 'feed' && frames.length > LIMITS.maxItems) {
+  if (frames.length > LIMITS.maxItems) {
     throw new PostError(`Instagram posts up to ${LIMITS.maxItems} frames at a time.`);
   }
-  const check = () => {
-    if (signal?.aborted) throw new PostError('Cancelled.');
-  };
 
   const connection = await freshConnection();
   const token = connection.token;
+  const user = connection.userId;
 
   // Within the daily limit? (If this check fails, publishing reports it anyway.)
+  const needed = kind === 'story' ? frames.length : 1;
+  let quota: { used: number; total: number } | null = null;
   try {
-    const limit = await graph(token, 'GET', `${connection.userId}/content_publishing_limit`, {
-      fields: 'quota_usage,config',
-    });
+    const limit = await graph(
+      token,
+      'GET',
+      `${user}/content_publishing_limit`,
+      { fields: 'quota_usage,config' },
+      signal,
+    );
     const data: unknown = Array.isArray(limit.data) ? limit.data[0] : null;
     if (isRecord(data) && isRecord(data.config)) {
       const used = data.quota_usage;
       const total = data.config.quota_total;
-      if (
-        typeof used === 'number' &&
-        typeof total === 'number' &&
-        used + (kind === 'story' ? frames.length : 1) > total
-      ) {
-        throw new PostError(
-          `Instagram allows ${total} posts a day through apps, and that’s been reached. Try again later.`,
-        );
-      }
+      if (typeof used === 'number' && typeof total === 'number') quota = { used, total };
     }
   } catch (error) {
-    if (error instanceof PostError && error.message.startsWith('Instagram allows')) throw error;
+    if (error instanceof CancelledError) throw error;
+  }
+  if (quota && quota.used + needed > quota.total) {
+    throw new PostError(
+      `Instagram allows ${quota.total} posts a day through apps, and that’s been reached. Try again later.`,
+    );
   }
 
   const layout = postImageLayout(size, kind, fit);
   const images: Blob[] = [];
   for (const [i, frame] of frames.entries()) {
-    check();
+    check(signal);
     onStep({ step: 'preparing', done: i, total: frames.length });
     images.push(await renderPostImage(frame, size, layout));
   }
 
-  const batch = await startUpload(connection, images.length);
+  check(signal);
+  const batch = await startUpload(connection, images.length, signal);
   try {
     for (const [i, image] of images.entries()) {
-      check();
+      check(signal);
       onStep({ step: 'uploading', done: i, total: images.length });
       const frame = batch.frames[i];
-      if (frame) await uploadFrame(frame.put, image);
+      if (frame) await uploadFrame(frame.put, image, signal);
     }
-    check();
     onStep({ step: 'processing' });
 
+    // Every container is created and processed before anything is published.
     const urls = batch.frames.map((f) => f.url);
-    const user = connection.userId;
-    // What to publish: one container (an image or a carousel), or one per story.
+    const create = (params: Record<string, string>) => graph(token, 'POST', `${user}/media`, params, signal).then(idOf);
     let toPublish: string[];
     if (kind === 'story') {
       toPublish = [];
-      for (const image_url of urls) {
-        toPublish.push(idOf(await graph(token, 'POST', `${user}/media`, { image_url, media_type: 'STORIES' })));
-      }
+      for (const image_url of urls) toPublish.push(await create({ image_url, media_type: 'STORIES' }));
     } else if (urls.length === 1 && urls[0]) {
-      toPublish = [idOf(await graph(token, 'POST', `${user}/media`, { image_url: urls[0], caption }))];
+      toPublish = [await create({ image_url: urls[0], caption })];
     } else {
       const children: string[] = [];
-      for (const image_url of urls) {
-        children.push(idOf(await graph(token, 'POST', `${user}/media`, { image_url, is_carousel_item: 'true' })));
-      }
+      for (const image_url of urls) children.push(await create({ image_url, is_carousel_item: 'true' }));
       for (const child of children) await waitUntilReady(token, child, signal);
-      const carousel = { media_type: 'CAROUSEL', children: children.join(','), caption };
-      toPublish = [idOf(await graph(token, 'POST', `${user}/media`, carousel))];
+      toPublish = [await create({ media_type: 'CAROUSEL', children: children.join(','), caption })];
     }
+    for (const container of toPublish) await waitUntilReady(token, container, signal);
+    check(signal);
 
-    let first: string | null = null;
+    // Publishing: no cancelling from here (the pane hides Cancel), and a failure partway
+    // says what's already up.
+    const published: string[] = [];
     for (const [i, container] of toPublish.entries()) {
-      await waitUntilReady(token, container, signal);
-      // Past this point a post goes up; no cancelling.
       onStep({ step: 'publishing', done: i, total: toPublish.length });
-      const media = idOf(await graph(token, 'POST', `${user}/media_publish`, { creation_id: container }));
-      first ??= media;
+      try {
+        published.push(idOf(await graph(token, 'POST', `${user}/media_publish`, { creation_id: container })));
+      } catch (error) {
+        if (published.length === 0) throw error;
+        const why = error instanceof Error ? ` ${error.message}` : '';
+        throw new PostError(`${published.length} of ${toPublish.length} stories were posted, then it stopped.${why}`);
+      }
     }
+    const first = published[0];
     if (!first) return null;
     try {
       const link = await graph(token, 'GET', first, { fields: 'permalink' });

@@ -578,7 +578,7 @@ function GuidesPanel({ s, selected, onSelect, onRemove }: PanelProps) {
                   (d) => {
                     const line = d.settings.lines.find((x) => x.id === l.id);
                     const size = l.axis === 'vertical' ? s.pageW : s.pageH;
-                    if (line) line.at = Math.min(n, size - units.nudge);
+                    if (line) line.at = Math.min(units.round(n), size - units.nudge);
                   },
                   { coalesce: `line:${l.id}` },
                 )
@@ -618,6 +618,7 @@ interface BorderRowProps {
 function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProps) {
   const e = edgesOf(g);
   const units = UNITS[s.layout];
+  const place = s.layout === 'print' ? 'page' : 'frame';
   const linked = g.kind === 'even';
   const update = (change: (b: BorderGuide) => BorderGuide, coalesce?: string) =>
     projectStore.apply(
@@ -651,7 +652,7 @@ function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProp
             step={units.fieldStep}
             format={units.format}
             suffix=""
-            onCommit={(n) => set(edge, n)}
+            onCommit={(n) => set(edge, units.round(n))}
           />
         ))}
       </div>
@@ -662,8 +663,8 @@ function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProp
           onClick={() => projectStore.apply((d) => void (d.settings.dropBorder = g.id))}
           data-tip={
             isDrop
-              ? 'Photos dropped on a page fit inside this guide.'
-              : 'Fit photos dropped on a page inside this guide instead.'
+              ? `Photos dropped on a ${place} fit inside this guide.`
+              : `Fit photos dropped on a ${place} inside this guide instead.`
           }
         >
           On drop

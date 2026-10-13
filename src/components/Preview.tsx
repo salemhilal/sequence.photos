@@ -102,6 +102,7 @@ export function Preview() {
   const across = sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW;
   const scale = Math.min((stage.w - 40) / across, (stage.h - 40) / sheet.pageH);
   const label = folioLabel(index, spreads.length, sheet.layout);
+  const noun = sheet.layout === 'print' ? 'spread' : 'frame';
 
   return (
     <div className={`preview${idle ? ' idle' : ''}`} data-modal ref={rootRef}>
@@ -111,7 +112,9 @@ export function Preview() {
           {index + 1} / {spreads.length}
         </span>
         <span className="spacer" />
-        <span className="hint">← → to turn pages · Esc to exit</span>
+        <span className="hint">
+          ← → to {sheet.layout === 'print' ? 'turn pages' : 'go through frames'} · Esc to exit
+        </span>
         <button
           className="btn"
           onClick={() => void (sheet.layout === 'print' ? savePdf() : saveFrames())}
@@ -124,7 +127,7 @@ export function Preview() {
         </button>
       </header>
       <div className="preview-stage" ref={stageRef}>
-        <button className="turn prev" aria-label="Previous spread" disabled={index === 0} onClick={() => go(-1)}>
+        <button className="turn prev" aria-label={`Previous ${noun}`} disabled={index === 0} onClick={() => go(-1)}>
           <ChevronLeft />
         </button>
         <div key={spread.id} className={`preview-spread turn-${dir}`}>
@@ -132,7 +135,7 @@ export function Preview() {
         </div>
         <button
           className="turn next"
-          aria-label="Next spread"
+          aria-label={`Next ${noun}`}
           disabled={index === spreads.length - 1}
           onClick={() => go(1)}
         >
