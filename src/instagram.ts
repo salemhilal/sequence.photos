@@ -169,8 +169,8 @@ export interface SignInPlan {
   pending: Pending;
 }
 
-/** When the chosen server can't be used from here. */
-export const SERVER_ERROR = 'Couldn’t connect to the Sequence server. Check the server in the Advanced tab.';
+/** When the chosen server can't be reached, or used from here. */
+export const SERVER_ERROR = 'Couldn’t connect to the Sequence server. Check the server in Settings → Advanced.';
 
 /**
  * Instagram's sign-in URL for this app address and server, or why it can't sign in from
@@ -307,7 +307,7 @@ const RENEW_BEFORE = 15 * DAY;
 /** A connection problem the user has to fix by connecting again. */
 export class ReconnectError extends Error {}
 
-const RECONNECT = 'Your Instagram connection needs renewing. Reconnect in Settings.';
+export const RECONNECT = 'Your Instagram connection needs renewing. Reconnect in Settings.';
 
 /** When an enrollment expires (unix seconds), from its signed payload; 0 if unreadable. */
 export function enrollmentExpiry(enrollment: string): number {

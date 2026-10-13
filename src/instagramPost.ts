@@ -1,7 +1,7 @@
 import { INSTAGRAM } from './config';
 import { renderFrame } from './frames';
 import { isRecord } from './guards';
-import { freshConnection, markNeedsReconnect, type InstagramConnection } from './instagram';
+import { freshConnection, markNeedsReconnect, RECONNECT, SERVER_ERROR, type InstagramConnection } from './instagram';
 import type { Frame, Size } from './types';
 
 /**
@@ -300,8 +300,6 @@ function parseBatch(v: unknown, count: number): UploadBatch | null {
   return frames.length === count ? { id: v.id, frames, delete: v.delete } : null;
 }
 
-const SERVER_UNREACHABLE = 'Couldn’t connect to the Sequence server. Check the server in Settings → Advanced.';
-
 async function startUpload(connection: InstagramConnection, count: number, signal?: AbortSignal): Promise<UploadBatch> {
   let res: Response;
   try {
@@ -313,11 +311,11 @@ async function startUpload(connection: InstagramConnection, count: number, signa
     });
   } catch {
     check(signal);
-    throw new PostError(SERVER_UNREACHABLE);
+    throw new PostError(SERVER_ERROR);
   }
   if (res.status === 401) {
     markNeedsReconnect();
-    throw new PostError('Your Instagram connection needs renewing. Reconnect in Settings.');
+    throw new PostError(RECONNECT);
   }
   if (res.status === 429) throw new PostError('Too many posts in a row. Wait a minute and try again.');
   const batch = res.ok ? parseBatch(await res.json().catch(() => null), count) : null;
@@ -331,7 +329,7 @@ async function uploadFrame(put: string, image: Blob, signal?: AbortSignal): Prom
     res = await fetch(put, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: image, signal });
   } catch {
     check(signal);
-    throw new PostError(SERVER_UNREACHABLE);
+    throw new PostError(SERVER_ERROR);
   }
   if (!res.ok) throw new PostError(`The Sequence server refused a frame (HTTP ${res.status}).`);
 }

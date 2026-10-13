@@ -27,7 +27,9 @@ const connection: InstagramConnection = {
   server: SERVER_URL,
 };
 const markNeedsReconnect = vi.fn();
-vi.mock('./instagram', () => ({
+vi.mock('./instagram', async (importOriginal) => ({
+  // Its messages, as they are.
+  ...(await importOriginal<typeof import('./instagram')>()),
   freshConnection: async () => connection,
   markNeedsReconnect: () => markNeedsReconnect(),
 }));
