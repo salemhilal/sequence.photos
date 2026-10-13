@@ -1,7 +1,8 @@
 import { env } from 'cloudflare:workers';
 import * as v from 'valibot';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FRAME_MAX_AGE, getKeys, LIFETIME, makeEnrollment, sign } from '../src/keys';
+import { getKeys, LIFETIME, makeEnrollment, sign } from '../src/keys';
+import { FRAME_MAX_AGE } from '../src/storage';
 import { call, captureLogs, fakeInstagram, graphError, json, LONG_TOKEN, USER_ID } from './helpers';
 import { concat, makeJpeg, PNG } from './jpegs';
 

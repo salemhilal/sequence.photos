@@ -3,10 +3,9 @@
 
 import { isBatchId, parseFrameIndex } from './formats';
 import { HttpError } from './http';
-import { FRAME_MAX_AGE } from './keys';
 import { Tag } from './log';
 import type { Handler } from './router';
-import { frameKey } from './uploads';
+import { FRAME_MAX_AGE, frameKey } from './storage';
 
 const FRAME_HEADERS: Readonly<Record<string, string>> = {
   'Content-Type': 'image/jpeg',

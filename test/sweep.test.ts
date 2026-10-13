@@ -8,7 +8,7 @@ import { env } from 'cloudflare:workers';
 import * as v from 'valibot';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index';
-import { FRAME_MAX_AGE } from '../src/keys';
+import { FRAME_MAX_AGE } from '../src/storage';
 import { sweep } from '../src/sweep';
 import { captureLogs } from './helpers';
 

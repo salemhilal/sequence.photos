@@ -11,16 +11,7 @@ import { randomBase64Url } from './encoding';
 import { LIFETIME, readEnrollment, sign, verify, type Signed } from './keys';
 import { Tag } from './log';
 import type { Handler, RequestContext } from './router';
-
-/** The R2 key for a frame, built only from validated parts. */
-export function frameKey(id: string, index: number): string {
-  return `frames/${id}/${index}.jpg`;
-}
-
-/** The prefix for a batch's frames. The strict id format keeps it from matching others. */
-export function batchPrefix(id: string): string {
-  return `frames/${id}/`;
-}
+import { batchPrefix, deleteWhere, frameKey } from './storage';
 
 const UploadsBody = v.strictObject({
   enrollment: Enrollment,
@@ -125,26 +116,12 @@ export const putFrame: Handler = async (ctx) => {
   return new Response(null, { status: 204 });
 };
 
-/** Deletes every frame under `prefix`. Returns how many were deleted. */
-export async function deletePrefix(bucket: R2Bucket, prefix: string): Promise<number> {
-  let deleted = 0;
-  let cursor: string | undefined;
-  do {
-    const page = await bucket.list({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
-    const keys = page.objects.map((o) => o.key);
-    if (keys.length > 0) await bucket.delete(keys);
-    deleted += keys.length;
-    cursor = page.truncated ? page.cursor : undefined;
-  } while (cursor);
-  return deleted;
-}
-
 /** `DELETE /uploads/:id?exp&sig`: delete a batch's frames (204 even if already gone). */
 export const deleteBatch: Handler = async (ctx) => {
   const id = ctx.params.id;
   if (!isBatchId(id)) throw new HttpError(400, 'bad_request');
   ctx.log.batch = await Tag.batch(id);
   await requireSignature(ctx, (exp) => ({ kind: 'DELETE', id, exp }));
-  await deletePrefix(ctx.env.FRAMES, batchPrefix(id));
+  await deleteWhere(ctx.env.FRAMES, batchPrefix(id));
   return new Response(null, { status: 204 });
 };
