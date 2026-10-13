@@ -3,7 +3,8 @@
 import * as v from 'valibot';
 import type { InstagramConnection, InstagramError, RenewResponse } from './api';
 import { sha256Base64Url } from './encoding';
-import { HttpError, jsonResponse, parseBearer, parseState, readJson, type Handler } from './http';
+import { isBase64Url32, parseBearer } from './formats';
+import { HttpError, jsonResponse, readJson } from './http';
 import {
   exchangeCode,
   exchangeLongLived,
@@ -22,9 +23,34 @@ import {
   unseal,
 } from './keys';
 import { Tag, type Outcome } from './log';
+import type { Handler } from './router';
 
 /** Instagram usernames: letters, digits, periods, underscores (30 max; some slack). */
 const USERNAME = /^[A-Za-z0-9._]{1,64}$/;
+
+interface OAuthState {
+  client: string;
+  nonce: string;
+  challenge: string;
+}
+
+/** `<client>.<nonce>.<challenge>`. Null if malformed (the client isn't checked here). */
+export function parseState(value: string | null): OAuthState | null {
+  if (value === null || value.length > 200) return null;
+  const parts = value.split('.');
+  const [client, nonce, challenge] = parts;
+  if (
+    parts.length !== 3 ||
+    client === undefined ||
+    nonce === undefined ||
+    challenge === undefined
+  ) {
+    return null;
+  }
+  if (!/^[a-z][a-z0-9-]{0,31}$/.test(client)) return null;
+  if (!isBase64Url32(nonce) || !isBase64Url32(challenge)) return null;
+  return { client, nonce, challenge };
+}
 
 function redirect(location: string): Response {
   return new Response(null, { status: 303, headers: { Location: location } });

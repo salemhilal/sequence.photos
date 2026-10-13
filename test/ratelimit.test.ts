@@ -1,10 +1,9 @@
-import { createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { handleRequest } from '../src/http';
 import { ROUTE_TABLE } from '../src/index';
 import { getKeys, makeEnrollment } from '../src/keys';
 import { Tag } from '../src/log';
+import { handleRequest } from '../src/router';
 import { captureLogs, fakeInstagram, json, LONG_TOKEN, USER_ID } from './helpers';
 
 afterEach(() => {
@@ -39,11 +38,8 @@ function withoutBinding(name: 'IP_RATE_LIMIT' | 'UPLOAD_RATE_LIMIT'): Env {
   });
 }
 
-async function run(request: Request, testEnv: Env): Promise<Response> {
-  const ctx = createExecutionContext();
-  const response = await handleRequest(request, testEnv, ctx, ROUTE_TABLE);
-  await waitOnExecutionContext(ctx);
-  return response;
+function run(request: Request, testEnv: Env): Promise<Response> {
+  return handleRequest(request, testEnv, ROUTE_TABLE);
 }
 
 function redeemFrom(ip: string | null): Request {

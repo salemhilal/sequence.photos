@@ -3,24 +3,14 @@
 
 import * as v from 'valibot';
 import type { UploadBatch } from './api';
-import {
-  contentLength,
-  HttpError,
-  isBatchId,
-  jsonResponse,
-  parseBearer,
-  parseExp,
-  parseFrameIndex,
-  readBody,
-  readJson,
-  type Handler,
-  type RequestContext,
-} from './http';
+import { isBatchId, parseBearer, parseExp, parseFrameIndex } from './formats';
+import { contentLength, HttpError, jsonResponse, readBody, readJson } from './http';
 import { getMe } from './instagram';
 import { checkJpeg, MAX_FRAME_BYTES } from './jpeg';
 import { randomBase64Url } from './encoding';
 import { LIFETIME, readEnrollment, sign, verify, type Signed } from './keys';
 import { Tag } from './log';
+import type { Handler, RequestContext } from './router';
 
 /** The R2 key for a frame, built only from validated parts. */
 export function frameKey(id: string, index: number): string {

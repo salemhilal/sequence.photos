@@ -59,6 +59,7 @@ export type Route = (typeof ROUTES)[number];
 export const OUTCOMES = [
   'ok',
   'bad_request',
+  'forbidden_origin',
   'bad_state',
   'unknown_client',
   'bad_signature',

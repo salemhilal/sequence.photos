@@ -10,6 +10,7 @@ import {
   readEnrollment,
   seal,
 } from '../src/keys';
+import { parseState } from '../src/auth';
 import {
   call,
   captureLogs,
@@ -90,6 +91,33 @@ function requestRecord(records: unknown[]): unknown {
     (r) => typeof r === 'object' && r !== null && 'event' in r && r.event === 'request',
   );
 }
+
+describe('parseState', () => {
+  const NONCE = 'n'.repeat(43);
+  const CHALLENGE = 'c'.repeat(43);
+
+  it('is <client>.<nonce>.<challenge>', () => {
+    expect(parseState(`web.${NONCE}.${CHALLENGE}`)).toEqual({
+      client: 'web',
+      nonce: NONCE,
+      challenge: CHALLENGE,
+    });
+    for (const bad of [
+      null,
+      '',
+      `web.${NONCE}`,
+      `web.${NONCE}.${CHALLENGE}.x`,
+      `Web.${NONCE}.${CHALLENGE}`,
+      `.${NONCE}.${CHALLENGE}`,
+      `web.${NONCE.slice(1)}.${CHALLENGE}`,
+      `web.${NONCE}.${CHALLENGE}x`,
+      `web.${NONCE}.${'c'.repeat(42)}=`,
+      `w/b.${NONCE}.${CHALLENGE}`,
+    ]) {
+      expect(parseState(bad)).toBeNull();
+    }
+  });
+});
 
 describe('GET /auth/callback', () => {
   it('signs in: exchanges, seals, and redirects with the handoff', async () => {

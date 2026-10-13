@@ -1,9 +1,11 @@
 // GET (and HEAD) /frames/:id/:i.jpg: serve a frame to Instagram's fetcher.
 // Public, no auth: the unguessable batch id is the secret. See README "GET /frames".
 
-import { HttpError, isBatchId, parseFrameIndex, type Handler } from './http';
+import { isBatchId, parseFrameIndex } from './formats';
+import { HttpError } from './http';
 import { FRAME_MAX_AGE } from './keys';
 import { Tag } from './log';
+import type { Handler } from './router';
 import { frameKey } from './uploads';
 
 const FRAME_HEADERS: Readonly<Record<string, string>> = {
