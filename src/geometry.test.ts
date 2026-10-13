@@ -11,6 +11,7 @@ import {
   pageRect,
   relayoutRect,
   resizeRect,
+  sheetExtent,
   snapLines,
   snapMove,
   spreadGuides,
@@ -44,6 +45,11 @@ describe('pages', () => {
   it('places the left page before the gutter and the right page after it', () => {
     expect(pageRect('left', settings)).toEqual({ x: -10, y: 0, w: 10, h: 8 });
     expect(pageRect('right', settings)).toEqual({ x: 0, y: 0, w: 10, h: 8 });
+  });
+
+  it('draws a book two pages wide around the gutter, and a frame one wide from its left', () => {
+    expect(sheetExtent(settings)).toEqual({ left: -10, width: 20 });
+    expect(sheetExtent({ ...settings, layout: 'digital' })).toEqual({ left: 0, width: 10 });
   });
 
   it('fits dropped photos inside the border guide with the largest box', () => {

@@ -117,12 +117,12 @@ describe('putInPile', () => {
 
 describe('spreads', () => {
   it('labels pages with single first and last pages', () => {
-    expect([0, 1, 2, 3].map((i) => spreadLabel(i, 4))).toEqual(['1', '2–3', '4–5', '6']);
+    expect([0, 1, 2, 3].map((i) => spreadLabel(i, 4, 'print'))).toEqual(['1', '2–3', '4–5', '6']);
   });
 
   it('pads folio labels like page numbers in a book', () => {
-    expect([0, 1, 3].map((i) => folioLabel(i, 4))).toEqual(['01', '02–03', '06']);
-    expect(folioLabel(1, 60)).toBe('002–003');
+    expect([0, 1, 3].map((i) => folioLabel(i, 4, 'print'))).toEqual(['01', '02–03', '06']);
+    expect(folioLabel(1, 60, 'print')).toBe('002–003');
   });
 
   it('inserts spreads between the fixed first and last pages', () => {

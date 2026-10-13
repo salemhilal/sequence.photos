@@ -50,6 +50,11 @@ export function middleIndex(spreads: readonly unknown[], index: number): number 
   return Math.min(Math.max(0, index - 1), spreads.length);
 }
 
+/** Where a frame inserted before position `index` goes: within the sequence. */
+export function frameIndex(frames: readonly unknown[], index: number): number {
+  return Math.min(Math.max(0, index), frames.length);
+}
+
 /** Whether a list of frames has at least one, as a digital layout needs. */
 export function hasFrames(frames: Frame[]): frames is [Frame, ...Frame[]] {
   return frames.length > 0;

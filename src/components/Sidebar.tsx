@@ -4,7 +4,7 @@ import { deleteSpread, dropPhotos, folioLabel, insertSpread, moveSpread } from '
 import { clearGhost, sameTarget, startDrag, trackGhost } from '../drag';
 import { projectStore, useProject } from '../store';
 import type { LayoutKind, Placement, Sheet, Spread } from '../types';
-import { sideAt } from '../geometry';
+import { sheetExtent, sideAt } from '../geometry';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH } from '../prefs';
 import { openPhotoMenu, setSidebarWidth, ui } from '../ui';
@@ -247,7 +247,7 @@ interface RowProps {
 function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown }: RowProps) {
   const editing = ui.use((s) => s.editingSpreadId === spread.id);
   // Thumbnails are as wide as a book's two pages, or a frame.
-  const scale = thumbW / (sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW);
+  const scale = thumbW / sheetExtent(sheet).width;
   // A book's middle spreads move and delete; so does any frame but a sequence's only one.
   const movable = spread.kind === 'middle' || (spread.kind === 'frame' && total > 1);
   const label = folioLabel(index, total, sheet.layout);

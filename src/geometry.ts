@@ -49,6 +49,14 @@ export function spreadLeft(kind: SpreadKind, s: Sheet): number {
   return pageSides(kind)[0] === 'left' ? -s.pageW : 0;
 }
 
+/**
+ * What a sheet's spreads are drawn on, around the canvas origin: a book's two pages (its
+ * single first and last pages sit on their side), or a frame.
+ */
+export function sheetExtent(s: Pick<Sheet, 'layout' | 'pageW'>): { left: number; width: number } {
+  return s.layout === 'print' ? { left: -s.pageW, width: 2 * s.pageW } : { left: 0, width: s.pageW };
+}
+
 /** Whether a page is laid out like a left page: outside at its left edge (a book's left pages, and frames). */
 function outsideLeft(side: PageSide): boolean {
   return side !== 'right';

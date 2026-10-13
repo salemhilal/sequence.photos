@@ -1,4 +1,4 @@
-import { clampBorder, relayoutRect, sideAt, spreadLeft } from './geometry';
+import { clampBorder, pageRect, pageSides, relayoutRect, sideAt } from './geometry';
 import { newSpreadId } from './ids';
 import { allSpreads, hasFrames, sheetOf } from './spreads';
 import type {
@@ -8,7 +8,6 @@ import type {
   LayoutKind,
   LineGuide,
   MiddleSpread,
-  PageSide,
   Placement,
   Project,
   Sheet,
@@ -73,15 +72,14 @@ export function convertLayout(project: Project, kind: LayoutKind): Project {
   if (kind === 'digital') {
     const pages: { id: Frame['id']; items: Placement[] }[] = [];
     for (const spread of allSpreads(project)) {
-      const sides: PageSide[] =
-        spread.kind === 'middle' ? ['left', 'right'] : [spread.kind === 'first' ? 'right' : 'left'];
+      const sides = pageSides(spread.kind);
       for (const [i, side] of sides.entries()) {
         const mine = spread.items.filter((p) => {
           const at = sideAt(from, p.x + p.w / 2);
           // A single page takes all of its spread's photos.
           return sides.length === 1 || at === side;
         });
-        const shift = side === 'left' ? spreadLeft('last', from) : 0;
+        const shift = side === 'left' ? pageRect('left', from).x : 0;
         pages.push({ id: i === 0 ? spread.id : newSpreadId(), items: fit(mine, shift, false) });
       }
     }

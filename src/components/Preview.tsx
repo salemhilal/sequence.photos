@@ -7,6 +7,7 @@ import { savePdf } from '../pdf';
 import { useProject } from '../store';
 import { closeModal, ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
+import { sheetExtent } from '../geometry';
 import { allSpreads, sheetOf } from '../spreads';
 
 /** How long the pointer rests before the controls fade, as a video player's do. */
@@ -99,7 +100,7 @@ export function Preview() {
 
   if (!spread) return null;
   // A book shows both pages' width (single pages on their side); a frame, its own.
-  const across = sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW;
+  const across = sheetExtent(sheet).width;
   const scale = Math.min((stage.w - 40) / across, (stage.h - 40) / sheet.pageH);
   const label = folioLabel(index, spreads.length, sheet.layout);
   const noun = sheet.layout === 'print' ? 'spread' : 'frame';

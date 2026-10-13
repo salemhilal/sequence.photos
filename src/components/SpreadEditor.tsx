@@ -8,7 +8,9 @@ import {
   edgesOf,
   fitCentered,
   pageRect,
+  pageSides,
   resizeRect,
+  sheetExtent,
   sideAt,
   snapLines,
   snapMove,
@@ -21,7 +23,7 @@ import type { PhotoId, SpreadId } from '../ids';
 import { allSpreads, findSpread, sheetOf } from '../spreads';
 import { UNITS, type Units } from '../units';
 import { projectStore, useProject } from '../store';
-import type { BorderGuide, LayoutKind, PageSide, Project, Placement } from '../types';
+import type { BorderGuide, LayoutKind, Project, Placement } from '../types';
 import { isTyping } from '../input';
 import { openPhotoMenu, toggleGuides, ui } from '../ui';
 import { shortcutLabel } from '../commands';
@@ -44,8 +46,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const units = UNITS[sheet.layout];
   const PAD = sheet.pageW * PAD_SHARE;
   // A book's two pages (single ones on their side), or a frame.
-  const extentLeft = sheet.layout === 'print' ? -sheet.pageW : 0;
-  const across = sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW;
+  const { left: extentLeft, width: across } = sheetExtent(sheet);
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 800, h: 500 });
   const [selected, setSelected] = useState<PhotoId | null>(null);
@@ -471,7 +472,7 @@ function PileStrip({ spreadId }: { spreadId: SpreadId }) {
           const spread = findSpread(projectStore.project, spreadId);
           if (!spread) return;
           const sheet = sheetOf(projectStore.project);
-          const side: PageSide = spread.kind === 'frame' ? 'whole' : spread.kind === 'first' ? 'right' : 'left';
+          const side = pageSides(spread.kind)[0]!;
           const taken = spread.items.some((i) => sideAt(sheet, i.x + i.w / 2) === side);
           const pick = spread.kind === 'middle' && taken ? 'right' : side;
           projectStore.apply((d) => putOnPage(d, [p.photoId], spreadId, pick));

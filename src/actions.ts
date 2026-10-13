@@ -2,7 +2,7 @@ import type { Draft } from 'immer';
 import { getImage, putImage, type StoredImage } from './db';
 import { importFiles, setUrl } from './images';
 import { newPhotoId, newSpreadId, type PhotoId, type SpreadId } from './ids';
-import { allSpreads, findSpread, middleIndex, sheetOf } from './spreads';
+import { allSpreads, findSpread, frameIndex, middleIndex, sheetOf } from './spreads';
 import { projectStore } from './store';
 import { dropBox, fitCentered, pageRect, pileSize, PILE_PHOTO_SIZE } from './geometry';
 import type { DropTarget } from './drag';
@@ -135,7 +135,7 @@ function addSpread(d: Draft<Project>, index: number): SpreadId {
   const l = d.layout;
   const id = newSpreadId();
   if (l.kind === 'print') l.spreads.splice(middleIndex(l.spreads, index), 0, { kind: 'middle', id, items: [] });
-  else l.frames.splice(Math.min(Math.max(0, index), l.frames.length), 0, { kind: 'frame', id, items: [] });
+  else l.frames.splice(frameIndex(l.frames, index), 0, { kind: 'frame', id, items: [] });
   return id;
 }
 
@@ -317,7 +317,7 @@ export function moveSpread(spreadId: SpreadId, toIndex: number): void {
     } else {
       const from = l.frames.findIndex((s) => s.id === spreadId);
       const [frame] = from >= 0 ? l.frames.splice(from, 1) : [];
-      if (frame) l.frames.splice(Math.min(Math.max(0, toIndex), l.frames.length), 0, frame);
+      if (frame) l.frames.splice(frameIndex(l.frames, toIndex), 0, frame);
     }
   });
 }
@@ -326,7 +326,7 @@ export function moveSpread(spreadId: SpreadId, toIndex: number): void {
  * Folio-style labels, zero-padded like a book's page numbers: "01", "02–03", "08" for a
  * book's spreads, or "01", "02", … for a sequence's frames.
  */
-export function folioLabel(index: number, total: number, layout: LayoutKind = 'print'): string {
+export function folioLabel(index: number, total: number, layout: LayoutKind): string {
   const width = Math.max(2, String(layout === 'print' ? total * 2 : total).length);
   return spreadLabel(index, total, layout)
     .split('–')
@@ -335,7 +335,7 @@ export function folioLabel(index: number, total: number, layout: LayoutKind = 'p
 }
 
 /** Page labels, e.g. "1", "2–3", counting a book's single first and last pages; a frame's number. */
-export function spreadLabel(index: number, total: number, layout: LayoutKind = 'print'): string {
+export function spreadLabel(index: number, total: number, layout: LayoutKind): string {
   if (layout === 'digital' || index === 0) return String(index + 1);
   const left = index * 2;
   if (index === total - 1) return String(left);
