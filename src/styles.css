@@ -1825,6 +1825,12 @@ body.col-resizing * {
   justify-content: center;
   gap: 12px;
 }
+/* Above the page's photos, which are positioned. */
+.page-preview-controls,
+.page-preview-footer {
+  position: relative;
+  z-index: 1;
+}
 .page-preview-controls {
   display: flex;
   align-items: center;
@@ -1838,7 +1844,12 @@ body.col-resizing * {
   flex: 0 0 90px;
 }
 .page-preview-footer {
+  margin: 0;
+  padding: 4px 10px;
   font-size: 12px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
 }
 
 /* A photo with less detail than the page asks for: on the photo, and on its spread's row. */
