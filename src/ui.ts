@@ -47,6 +47,9 @@ export interface ConfirmRequest {
 
 export type Modal = 'settings' | 'about' | 'preview' | 'layout' | 'instagram';
 
+/** The Layout view's tabs: the page's settings (applied together), or the guides (applied at once). */
+export type LayoutTab = 'page' | 'guides';
+
 export interface UiState {
   selection: PhotoId[];
   editingSpreadId: SpreadId | null;
@@ -86,6 +89,8 @@ export interface UiState {
   windowTitle: { name: string; edited: boolean } | null;
   /** The product tour's current step, while it's running (see tour.ts). */
   tour: number | null;
+  /** The Layout view's open tab. */
+  layoutTab: LayoutTab;
 }
 
 export const ui = createStore<UiState>({
@@ -112,6 +117,7 @@ export const ui = createStore<UiState>({
   quickLook: null,
   windowTitle: null,
   tour: null,
+  layoutTab: 'page',
 });
 
 /**

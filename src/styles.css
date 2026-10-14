@@ -1786,6 +1786,57 @@ body.col-resizing * {
   border-color: var(--accent);
 }
 
+/* The Layout view's tabs, and the Page tab's form and preview. */
+.layout-tabs {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.layout-tabs .segmented {
+  display: grid;
+}
+.size-form .inline select,
+.layout-panel .size-form .inline select {
+  width: auto;
+  flex: none;
+}
+.page-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.page-content legend {
+  padding: 0;
+  margin-bottom: 4px;
+}
+.page-content:disabled .check {
+  opacity: 0.5;
+}
+.page-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.page-preview-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.layout-panel .size-form .dpi .num-field {
+  flex: 0 0 90px;
+}
+.page-preview-footer {
+  font-size: 12px;
+}
+
 /* Post to Instagram */
 .inspector.instagram-panel {
   width: 300px;

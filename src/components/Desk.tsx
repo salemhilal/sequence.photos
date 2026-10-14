@@ -11,7 +11,7 @@ import { TERMS } from '../units';
 import { DESK_PPI, deskGeometry, MAX_ZOOM, MIN_ZOOM } from '../deskGeometry';
 import { isTyping } from '../input';
 import { deskCovered, openPhotoMenu, openModal, openQuickLook, ui } from '../ui';
-import { PageSizeFields } from './PageSizeFields';
+import { OwnPageSettings } from './PageSettings';
 import { PhotoImg } from './PhotoImg';
 
 const CORNERS: Corner[] = ['nw', 'ne', 'sw', 'se'];
@@ -355,8 +355,8 @@ export function Desk() {
               onPointerDown={(e) => e.stopPropagation()}
               onContextMenu={(e) => e.stopPropagation()}
             >
-              <span className="caps muted">Layout</span>
-              <PageSizeFields />
+              <span className="caps muted">Page</span>
+              <OwnPageSettings showContent={false} />
               <p className="help">
                 You can change this anytime in{' '}
                 <button className="link" onClick={() => openModal('layout')}>

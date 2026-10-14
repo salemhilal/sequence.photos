@@ -6,7 +6,8 @@ import { putOnPage } from '../../actions';
 import { renderFrames } from '../../frames';
 import { toPhotoId } from '../../ids';
 import { newProject } from '../../project';
-import { setLayoutSize, switchLayout } from '../../pageSize';
+import { applyPageSetup, draftOf, setLayoutSize } from '../../pageSetup';
+import { DEFAULT_PAGE } from '../../units';
 import { sheetOf } from '../../spreads';
 import { projectStore } from '../../store';
 import { endTour } from '../../tour';
@@ -122,7 +123,11 @@ async function scenarios(dir: string): Promise<void> {
 
   // A sequence of frames: switched to, saved and reopened as one, and rendered as images
   // in the app's WebKit (OffscreenCanvas, createImageBitmap).
-  switchLayout('frames');
+  applyPageSetup({
+    ...draftOf(projectStore.project),
+    arrangement: 'frames',
+    page: { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 },
+  });
   const { layout, page } = projectStore.project;
   const frame = layout.kind === 'frames' ? layout.frames[0] : undefined;
   check('switches to frames', layout.kind === 'frames' && !!frame);
@@ -149,6 +154,14 @@ async function scenarios(dir: string): Promise<void> {
     check(
       'reopens a sequence of frames',
       title()?.name === 'Frames' && projectStore.project.layout.kind === 'frames' && !title()?.edited,
+    );
+    // Back to a book in inches, through the same Apply.
+    applyPageSetup({ ...draftOf(projectStore.project), arrangement: 'spreads', page: { ...DEFAULT_PAGE } });
+    const book = projectStore.project;
+    check(
+      'switches back to spreads in inches',
+      book.layout.kind === 'spreads' && book.page.unit === 'in' && book.page.w === 10,
+      `${book.layout.kind} ${book.page.w} ${book.page.unit}`,
     );
   }
 

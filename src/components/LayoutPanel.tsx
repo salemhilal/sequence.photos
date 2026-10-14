@@ -7,13 +7,23 @@ import { projectStore } from '../store';
 import type { Arrangement, BorderGuide, Edges, Sheet } from '../types';
 import { TERMS, UNITS } from '../units';
 import { NumberField } from './NumberField';
-import { PageSizeFields } from './PageSizeFields';
+import type { PageDraft } from '../pageSetup';
+import { ui, type LayoutTab } from '../ui';
+import { PageSettings } from './PageSettings';
+import { Segmented } from './Segmented';
 import { same, type Axis, type Selection } from './layoutSelection';
 
 /**
- * The Layout view's settings: the size, center lines, border guides, and guides from the
- * rulers. Selecting a guide here or on the page highlights it in both.
+ * The Layout view's settings, in two tabs: the page (spreads or frames, size, unit,
+ * resolution), which waits for Apply, and the guides (center lines, border guides, guides
+ * from the rulers), which apply at once. Selecting a guide here or on the page highlights
+ * it in both.
  */
+
+const TABS: { value: LayoutTab; label: string }[] = [
+  { value: 'page', label: 'Page' },
+  { value: 'guides', label: 'Guides' },
+];
 
 /** A border guide's fields, in pairs: a frame's left before its right. */
 const EDGES: Record<Arrangement, (keyof Edges)[]> = {
@@ -23,12 +33,15 @@ const EDGES: Record<Arrangement, (keyof Edges)[]> = {
 
 interface PanelProps {
   s: Sheet;
+  tab: LayoutTab;
+  draft: PageDraft;
+  onDraft: (d: PageDraft) => void;
   selected: Selection | null;
   onSelect: (sel: Selection | null) => void;
   onRemove: (sel: Selection) => void;
 }
 
-type SectionId = 'page' | 'center' | 'borders' | 'lines';
+type SectionId = 'center' | 'borders' | 'lines';
 
 /** The section showing each kind of selection's settings. */
 const SECTION_OF: Record<Selection['kind'], SectionId> = { center: 'center', border: 'borders', line: 'lines' };
@@ -62,7 +75,7 @@ function PanelSection({ id, title, actions, collapsed, shown, onToggle, children
   );
 }
 
-export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
+export function LayoutPanel({ s, tab, draft, onDraft, selected, onSelect, onRemove }: PanelProps) {
   const [collapsed, setCollapsed] = useState(() => new Set(collapsedPref.load()));
   // A guide selected on the page shows its settings, even in a folded section.
   const shown = selected ? SECTION_OF[selected.kind] : null;
@@ -112,24 +125,39 @@ export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
     );
   };
 
+  const tabs = (
+    <div className="layout-tabs">
+      <Segmented
+        halves
+        label="Layout"
+        options={TABS}
+        value={tab}
+        onChange={(t) => {
+          onSelect(null);
+          ui.set({ layoutTab: t });
+        }}
+      />
+    </div>
+  );
+
+  if (tab === 'page') {
+    return (
+      <aside className="inspector sectioned layout-panel">
+        {tabs}
+        <section>
+          <PageSettings draft={draft} onChange={onDraft} showContent />
+        </section>
+        <p className="help layout-note">
+          These wait for Apply, which makes them one undo step. Until then, the preview shows how every{' '}
+          {TERMS[draft.arrangement].spread} will look.
+        </p>
+      </aside>
+    );
+  }
+
   return (
     <aside className="inspector sectioned layout-panel">
-      <PanelSection id="page" title="Spreads" {...fold}>
-        <PageSizeFields />
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={s.keepRelative}
-            onChange={(e) => projectStore.apply((d) => void (d.settings.keepRelative = e.target.checked))}
-          />
-          Keep photos relative to guides
-        </label>
-        <p className="help">
-          {s.keepRelative
-            ? 'When the size changes, photos move and scale with the guides.'
-            : 'When the size changes, photos keep their exact position.'}
-        </p>
-      </PanelSection>
+      {tabs}
 
       <PanelSection id="center" title="Center lines" {...fold}>
         <div className="inline">

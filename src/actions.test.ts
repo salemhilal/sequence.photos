@@ -17,7 +17,7 @@ import {
   tidyPile,
 } from './actions';
 import { toPhotoId } from './ids';
-import { convertLayout } from './convertLayout';
+import { applyPageSetup, draftOf } from './pageSetup';
 import { DESK_PPI, deskGeometry } from './deskGeometry';
 import { DESK_PHOTO_PX } from './geometry';
 import { allSpreads } from './spreads';
@@ -324,7 +324,12 @@ function sampleProjectForRaise() {
 
 describe('frames', () => {
   beforeEach(() => {
-    projectStore.reset(convertLayout(emptyProject(), 'frames'));
+    projectStore.reset(emptyProject());
+    applyPageSetup({
+      ...draftOf(projectStore.project),
+      arrangement: 'frames',
+      page: { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 },
+    });
     addPhotosToPile(photos);
   });
 

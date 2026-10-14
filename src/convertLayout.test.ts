@@ -1,19 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { convertLayout } from './convertLayout';
+import { convertUnits, rearrange, resizePage, scaleProject } from './convertLayout';
 import { borderBox, lineAt, linePosition, pageRect, sideAt } from './geometry';
 import { toGuideId, toPhotoId } from './ids';
 import { allSpreads, sheetOf } from './spreads';
-import { switchLayout } from './pageSize';
-import { emptyProject, projectStore } from './store';
+import { emptyProject } from './store';
 import type { Placement, Project } from './types';
 
 const A = toPhotoId('a');
 const B = toPhotoId('b');
 
 /** A book (four spreads) with a photo on a middle spread's left page and one across its gutter. */
-function book(keepRelative = false): Project {
+function book(): Project {
   const p = emptyProject();
-  p.settings.keepRelative = keepRelative;
   p.settings.lines = [{ id: toGuideId('v'), axis: 'vertical', at: 2 }];
   p.photos[A] = { id: A, name: 'a.jpg', pxW: 3000, pxH: 2000 };
   p.photos[B] = { id: B, name: 'b.jpg', pxW: 3000, pxH: 2000 };
@@ -34,10 +32,10 @@ const round = (r: Placement) => ({
   h: +r.h.toFixed(6),
 });
 
-describe('spreads to frames', () => {
+describe('rearrange: spreads to frames', () => {
   it('makes each page a frame, in book order, keeping the first page’s spread id', () => {
     const p = book();
-    const d = convertLayout(p, 'frames');
+    const d = rearrange(p, 'frames');
     expect(d.layout.kind).toBe('frames');
     const frames = allSpreads(d);
     // A first page, two spreads of two pages, a last page.
@@ -50,55 +48,36 @@ describe('spreads to frames', () => {
     expect(new Set(frames.map((f) => f.id)).size).toBe(6);
   });
 
-  it('gives each photo to the page holding its center, in pixels from that page’s left edge', () => {
-    const d = convertLayout(book(), 'frames');
-    const frames = allSpreads(d);
-    // 1080 px across a 10 in page: 108 px to the inch.
-    expect(frames[1]!.items.map(round)).toEqual([{ photoId: A, x: 108, y: 108, w: 648, h: 432, z: 1 }]);
+  it('keeps the page size, unit, and guides', () => {
+    const p = book();
+    const d = rearrange(p, 'frames');
+    expect(d.page).toEqual(p.page);
+    expect(d.settings).toBe(p.settings);
+  });
+
+  it('gives each photo to the page holding its center, measured from that page’s left edge', () => {
+    const frames = allSpreads(rearrange(book(), 'frames'));
+    expect(frames[1]!.items.map(round)).toEqual([{ photoId: A, x: 1, y: 1, w: 6, h: 4, z: 1 }]);
     // Hanging off the frame's left edge, as it hung across the gutter.
-    expect(frames[2]!.items.map(round)).toEqual([{ photoId: B, x: -216, y: 108, w: 648, h: 432, z: 2 }]);
-  });
-
-  it('converts guides in proportion to the page width, and takes the frame size', () => {
-    const d = convertLayout(book(), 'frames');
-    const s = sheetOf(d);
-    expect([s.pageW, s.pageH]).toEqual([1080, 1350]);
-    expect(s.borders.map((b) => b.kind === 'even' && b.inset)).toEqual([54, 135]);
-    expect(s.lines.map((l) => l.at)).toEqual([216]);
-    expect(d.page).toEqual({ w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 });
-  });
-
-  it('moves photos with the guides to the frame’s shape, when they’re kept relative', () => {
-    const d = convertLayout(book(true), 'frames');
-    const a = allSpreads(d)[1]!.items[0]!;
-    // Still 54 px in from the left edge's 0.5 in guide, give or take; now on a taller frame.
-    expect(a.x).toBeCloseTo(108);
-    expect(a.y).toBeGreaterThan(108);
+    expect(frames[2]!.items.map(round)).toEqual([{ photoId: B, x: -2, y: 1, w: 6, h: 4, z: 2 }]);
   });
 });
 
-describe('frames to spreads', () => {
+describe('rearrange: frames to spreads', () => {
   it('comes back as the same book', () => {
-    for (const keep of [false, true]) {
-      const p = book(keep);
-      const back = convertLayout(convertLayout(p, 'frames'), 'spreads');
-      expect(back.layout.kind).toBe('spreads');
-      expect(allSpreads(back).map((s) => [s.kind, s.id])).toEqual(allSpreads(p).map((s) => [s.kind, s.id]));
-      expect(back.settings).toEqual(p.settings);
-      // Photos moved with the guides to the frame's shape are refit there, so only those
-      // left where they were come back exactly (switchLayout covers going straight back).
-      if (!keep) {
-        expect(allSpreads(back).flatMap((s) => s.items.map(round))).toEqual(allSpreads(p).flatMap((s) => s.items));
-      }
-    }
+    const p = book();
+    const back = rearrange(rearrange(p, 'frames'), 'spreads');
+    expect(back.layout.kind).toBe('spreads');
+    expect(allSpreads(back).map((s) => [s.kind, s.id])).toEqual(allSpreads(p).map((s) => [s.kind, s.id]));
+    expect(allSpreads(back).flatMap((s) => s.items.map(round))).toEqual(allSpreads(p).flatMap((s) => s.items));
   });
 
   it('makes frame 1 the first page, pairs the rest, and gives a book an empty last page if none is left over', () => {
-    const d = convertLayout(book(), 'frames');
+    const d = rearrange(book(), 'frames');
     if (d.layout.kind !== 'frames') throw new Error('not frames');
     const [one, two, three] = d.layout.frames;
     d.layout.frames = [one, two!, three!];
-    const p = convertLayout(d, 'spreads');
+    const p = rearrange(d, 'spreads');
     const spreads = allSpreads(p);
     expect(spreads.map((s) => s.kind)).toEqual(['first', 'middle', 'last']);
     expect(spreads[1]!.id).toBe(two!.id);
@@ -108,57 +87,78 @@ describe('frames to spreads', () => {
     expect(new Set(spreads.map((s) => s.id)).size).toBe(3);
   });
 
-  it('leaves a project already of that kind alone', () => {
+  it('leaves a project already arranged that way alone', () => {
     const p = book();
-    expect(convertLayout(p, 'spreads')).toBe(p);
+    expect(rearrange(p, 'spreads')).toBe(p);
   });
 });
 
-describe('switchLayout', () => {
-  it('is one undo step, and switching straight back restores the project exactly', () => {
-    const p = book(true);
-    projectStore.reset(p);
-    switchLayout('frames');
-    expect(projectStore.project.layout.kind).toBe('frames');
-    switchLayout('spreads');
-    expect(projectStore.project).toBe(p);
-    projectStore.undo();
-    projectStore.undo();
-    expect(projectStore.project).toBe(p);
+describe('convertUnits', () => {
+  it('multiplies by the dpi going to pixels', () => {
+    const d = convertUnits(book(), 'px', 300);
+    expect(d.page).toEqual({ w: 3000, h: 2400, unit: 'px', pxPerUnit: 1 });
+    const s = sheetOf(d);
+    expect(s.borders.map((b) => b.kind === 'even' && b.inset)).toEqual([150, 375]);
+    expect(s.lines.map((l) => l.at)).toEqual([600]);
+    expect(allSpreads(d)[1]!.items[0]).toEqual({ photoId: A, x: -2700, y: 300, w: 1800, h: 1200, z: 1 });
   });
 
-  it('switches at a size of its own in the same step', () => {
+  it('divides by the dpi going to inches, which becomes the page’s', () => {
+    const px: Project = { ...emptyProject(), page: { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 } };
+    expect(convertUnits(px, 'in', 300).page).toEqual({ w: 3.6, h: 4.5, unit: 'in', pxPerUnit: 300 });
+  });
+
+  it('comes back from a round trip', () => {
     const p = book();
-    projectStore.reset(p);
-    switchLayout('frames', { w: 1080, h: 1080 });
-    const s = sheetOf(projectStore.project);
-    expect([s.arrangement, s.unit, s.pageW, s.pageH]).toEqual(['frames', 'px', 1080, 1080]);
-    projectStore.undo();
-    expect(projectStore.project).toBe(p);
+    const back = convertUnits(convertUnits(p, 'px', 300), 'in', 300);
+    expect(back.page).toEqual(p.page);
+    allSpreads(back).forEach((s, i) =>
+      s.items.forEach((item, j) => {
+        const was = allSpreads(p)[i]!.items[j]!;
+        for (const k of ['x', 'y', 'w', 'h'] as const) expect(item[k]).toBeCloseTo(was[k], 9);
+      }),
+    );
   });
 
-  it('converts afresh after any other change', () => {
-    projectStore.reset(book(true));
-    switchLayout('frames');
-    projectStore.apply((d) => void (d.settings.centerH = false));
-    switchLayout('spreads');
-    expect(projectStore.project.settings.centerH).toBe(false);
+  it('leaves the desk in inches', () => {
+    const p = book();
+    p.pile.push({ photoId: toPhotoId('c'), x: 1, y: 1, w: 2, h: 2, z: 5 });
+    expect(convertUnits(p, 'px', 300).pile).toBe(p.pile);
+  });
+});
+
+describe('scaleProject', () => {
+  it('scales the page, photos, and guides by one factor', () => {
+    const d = scaleProject(book(), 108, 'px', 1);
+    expect(d.page).toEqual({ w: 1080, h: 864, unit: 'px', pxPerUnit: 1 });
+    expect(sheetOf(d).borders.map((b) => b.kind === 'even' && b.inset)).toEqual([54, 135]);
+  });
+});
+
+describe('resizePage', () => {
+  it('moves photos with the guides, or keeps them', () => {
+    const p = book();
+    const kept = resizePage(p, { w: 8, h: 8 }, false);
+    expect(allSpreads(kept)[1]!.items).toEqual(allSpreads(p)[1]!.items);
+    const moved = resizePage(p, { w: 8, h: 8 }, true);
+    expect(allSpreads(moved)[1]!.items[0]!.x).not.toBe(-9);
+    expect(moved.page).toEqual({ ...p.page, w: 8 });
   });
 });
 
 describe('frames', () => {
-  const s = sheetOf(convertLayout(book(), 'frames'));
+  const s = sheetOf(convertUnits(rearrange(book(), 'frames'), 'px', 108));
 
   it('are one page, measured from the left', () => {
     expect(sideAt(s, -50)).toBe('whole');
     expect(sideAt(s, 900)).toBe('whole');
-    expect(pageRect('whole', s)).toEqual({ x: 0, y: 0, w: 1080, h: 1350 });
+    expect(pageRect('whole', s)).toEqual({ x: 0, y: 0, w: 1080, h: 864 });
     expect(linePosition('whole', s, s.lines[0]!)).toBe(216);
     expect(lineAt('whole', s, 'vertical', 216)).toBe(216);
   });
 
   it('put a border guide’s outside distance on the left', () => {
     const g = { id: toGuideId('g'), kind: 'edges', top: 10, bottom: 20, outside: 30, inside: 40 } as const;
-    expect(borderBox('whole', s, g)).toEqual({ x: 30, y: 10, w: 1080 - 70, h: 1350 - 30 });
+    expect(borderBox('whole', s, g)).toEqual({ x: 30, y: 10, w: 1080 - 70, h: 864 - 30 });
   });
 });

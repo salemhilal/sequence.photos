@@ -1,6 +1,6 @@
 import type { Draft } from 'immer';
 import type { SpreadId } from './ids';
-import type { Frame, Project, Sheet, Spread } from './types';
+import type { Frame, Layout, Placement, Project, Sheet, Spread } from './types';
 
 /**
  * Reading a project's layout. A book keeps its first, middle, and last spreads apart (so
@@ -58,4 +58,22 @@ export function frameIndex(frames: readonly unknown[], index: number): number {
 /** Whether a list of frames has at least one, as a frames layout needs. */
 export function hasFrames(frames: Frame[]): frames is [Frame, ...Frame[]] {
   return frames.length > 0;
+}
+
+/** The layout with each spread's (or frame's) photos replaced by `fn` of them. */
+export function mapItems<L extends Layout>(l: L, fn: (items: Placement[]) => Placement[]): L;
+export function mapItems(l: Layout, fn: (items: Placement[]) => Placement[]): Layout {
+  if (l.kind === 'spreads') {
+    return {
+      ...l,
+      firstSpread: { ...l.firstSpread, items: fn(l.firstSpread.items) },
+      spreads: l.spreads.map((s) => ({ ...s, items: fn(s.items) })),
+      lastSpread: { ...l.lastSpread, items: fn(l.lastSpread.items) },
+    };
+  }
+  const [first, ...rest] = l.frames;
+  return {
+    ...l,
+    frames: [{ ...first, items: fn(first.items) }, ...rest.map((f) => ({ ...f, items: fn(f.items) }))],
+  };
 }

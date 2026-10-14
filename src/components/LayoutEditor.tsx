@@ -19,7 +19,10 @@ import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { Arrangement, LineGuide, PageSide, Spread } from '../types';
 import { TERMS, UNITS } from '../units';
-import { closeModal } from '../ui';
+import { closeModal, ui } from '../ui';
+import { draftOf, sameDraft } from '../pageSetup';
+import { usePageDraft } from './pageDraft';
+import { PagePreview } from './PagePreview';
 import { LayoutPanel } from './LayoutPanel';
 import { same, type Axis, type Selection } from './layoutSelection';
 import { Ruler, RULER } from './Ruler';
@@ -27,7 +30,8 @@ import { SpreadCanvas } from './SpreadCanvas';
 
 /**
  * The Layout view: a facing pair of empty pages (or one empty frame) with rulers along the
- * top and left, and the layout's settings (its size and guides) beside them. Guides apply
+ * top and left, and the layout's settings beside them, in two tabs. The Page tab's settings
+ * wait for Apply; while they differ, the stage previews the project with them. Guides apply
  * to every spread, mirrored on facing pages. Drag from a ruler to add a guide parallel to
  * it; drag a guide off the page to remove it. Clicking any guide selects it and
  * highlights its settings.
@@ -55,6 +59,10 @@ export function LayoutEditor() {
   const [stage, setStage] = useState({ w: 800, h: 500 });
   const [selected, setSelected] = useState<Selection | null>(null);
   const [dragLabel, setDragLabel] = useState<{ text: string; x: number; y: number } | null>(null);
+  // The Page tab's draft, kept across tabs until Apply or Revert.
+  const [draft, setDraft] = usePageDraft();
+  const tab = ui.use((u) => u.layoutTab);
+  const previewing = tab === 'page' && !sameDraft(draft, draftOf(project));
 
   useLayoutEffect(() => {
     const el = stageRef.current;
@@ -225,7 +233,8 @@ export function LayoutEditor() {
           </button>
         </header>
         <div className="editor-body">
-          <div className="editor-stage" ref={stageRef}>
+          {previewing && <PagePreview draft={draft} />}
+          <div className="editor-stage" ref={stageRef} hidden={previewing}>
             <Ruler
               axis="horizontal"
               length={stage.w}
@@ -262,7 +271,15 @@ export function LayoutEditor() {
               </div>
             )}
           </div>
-          <LayoutPanel s={s} selected={selected} onSelect={setSelected} onRemove={remove} />
+          <LayoutPanel
+            s={s}
+            tab={tab}
+            draft={draft}
+            onDraft={setDraft}
+            selected={selected}
+            onSelect={setSelected}
+            onRemove={remove}
+          />
         </div>
       </div>
     </div>

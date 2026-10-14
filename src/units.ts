@@ -1,4 +1,4 @@
-import type { Arrangement, Edges, PageSetup, Size, Unit } from './types';
+import type { Arrangement, Edges, PageSetup, Unit } from './types';
 
 /**
  * What changes with the page's unit, inches or pixels. Sizes, guides, and placements are
@@ -148,12 +148,27 @@ export const DEFAULT_PAGE: PageSetup = { w: 10, h: 8, unit: 'in', pxPerUnit: DEF
  */
 export const DEFAULT_FRAME: PageSetup = { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 };
 
-/** Instagram's feed and story sizes, offered as presets for frames in pixels. */
-export const FRAME_PRESETS: { label: string; size: Size }[] = [
-  { label: 'Instagram 4:5', size: { w: 1080, h: 1350 } },
+/** A page setting people often want, set all at once. */
+export interface Preset {
+  label: string;
+  arrangement: Arrangement;
+  /** The resolution comes from the draft for inches (else 300 dpi), and is 1× for pixels. */
+  page: Omit<PageSetup, 'pxPerUnit'>;
+}
+
+/**
+ * Books, zines, slides, and Instagram's feed and story sizes. None is pixel spreads, but any
+ * combination can be set by hand.
+ */
+export const PRESETS: Preset[] = [
+  { label: 'Book', arrangement: 'spreads', page: { w: 10, h: 8, unit: 'in' } },
+  { label: 'Zine', arrangement: 'spreads', page: { w: 5.5, h: 8.5, unit: 'in' } },
+  { label: 'Square book', arrangement: 'spreads', page: { w: 8, h: 8, unit: 'in' } },
+  { label: 'Slides', arrangement: 'frames', page: { w: 13.33, h: 7.5, unit: 'in' } },
+  { label: 'Instagram 4:5', arrangement: 'frames', page: { w: 1080, h: 1350, unit: 'px' } },
   // The Instagram app takes 3:4; its upload API doesn't (posting crops or expands it).
-  { label: 'Instagram 3:4 (app uploads)', size: { w: 1080, h: 1440 } },
-  { label: 'Instagram square', size: { w: 1080, h: 1080 } },
-  { label: 'Instagram landscape', size: { w: 1080, h: 566 } },
-  { label: 'Instagram story', size: { w: 1080, h: 1920 } },
+  { label: 'Instagram 3:4 (app uploads)', arrangement: 'frames', page: { w: 1080, h: 1440, unit: 'px' } },
+  { label: 'Instagram square', arrangement: 'frames', page: { w: 1080, h: 1080, unit: 'px' } },
+  { label: 'Instagram landscape', arrangement: 'frames', page: { w: 1080, h: 566, unit: 'px' } },
+  { label: 'Instagram story', arrangement: 'frames', page: { w: 1080, h: 1920, unit: 'px' } },
 ];

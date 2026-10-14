@@ -251,9 +251,9 @@ const DUPLICATE_OFFSET = 0.25;
 
 /**
  * Duplicate photos as new, independent photos (each with its own copy of the image
- * data), placed `offset` inches down and right of the originals: on the desk, or on
- * the same spread. In a frame, that's the same share of its width as on a 10 in page
- * (0.25 in → 27 px of 1,080). One undo step. Returns the new photos' ids.
+ * data), placed down and right of the originals: on the desk, or on the same spread. On
+ * a page, the step is the share of its width `offset` inches is of a 10 in page, in any
+ * unit (0.25 in on 10 in; 27 px of 1,080). One undo step. Returns the new photos' ids.
  */
 export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OFFSET): Promise<PhotoId[]> {
   const sources: { from: PhotoId; id: PhotoId; img: StoredImage }[] = [];
@@ -268,7 +268,7 @@ export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OF
   // of unreferenced images can't remove them in between.
   projectStore.apply((d) => {
     const sheet = sheetOf(d);
-    const onSpread = sheet.unit === 'px' ? (offset * sheet.pageW) / 10 : offset;
+    const onSpread = (offset * sheet.pageW) / 10;
     for (const { from, id } of sources) {
       const meta = d.photos[from];
       if (!meta) continue;
