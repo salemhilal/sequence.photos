@@ -278,11 +278,14 @@ Each step is its own PR, and the app works after each one:
    - No visible change: the arrangement and unit still move together.
 2. **Separate the axes.**
    - Switching arrangement no longer changes the unit.
-   - Add switching units, presets, and the new Layout panel: a draft with a live preview you can flip through.
+   - Add switching units (with Rescale or Keep fixed), the dpi field, and presets.
+   - Split the Layout view into Page and Guides tabs. The Page tab is a draft with a live preview you can flip through.
+   - The new project's setup card uses the same Page settings.
 3. **Exports for both arrangements.**
    - Add the render plan.
-   - PDF and Images for both arrangements.
+   - PDF and Images for both arrangements, with one image per spread or per page.
    - PDF at real resolution.
+   - Instagram from spreads (torn into pages) and from inches, with a picker for the slides to post.
 4. **Resolution.**
    - The coverage metric, badges, and the summary before export.
 5. **Large exports.**
