@@ -51,7 +51,7 @@
     "copyright": "\u00a9 2026 Salem Hilal",
     "shortDescription": "A tool for playing with photo sequences",
     "macOS": {
-      "minimumSystemVersion": "13.0",
+      "minimumSystemVersion": "14.0",
       "entitlements": "Entitlements.plist",
       "signingIdentity": "-"
     },

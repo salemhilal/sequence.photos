@@ -75,8 +75,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     ...(platform.kind === 'macos'
       ? {
-          title: 'Save your book',
-          body: 'File → Save keeps your book, photos and all, in one file. Double-click it to pick up where you left off. Hold ⌘ to see every shortcut.',
+          title: 'Save your project',
+          body: 'File → Save keeps your project, photos and all, in one file. Double-click it to pick up where you left off. Hold ⌘ to see every shortcut.',
         }
       : {
           title: 'Keep a copy',

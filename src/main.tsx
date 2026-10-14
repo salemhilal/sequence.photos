@@ -14,7 +14,8 @@ import { platform } from '#platform';
 applyDeskColor(ui.get().deskColor);
 platform.start();
 // Coming back from connecting Instagram (Settings): finish it, and say how it went.
-void finishSignIn().then((notice) => notice && ui.set({ notice }));
+// (Web only: the Mac app doesn't connect Instagram.)
+if (platform.kind === 'browser') void finishSignIn().then((notice) => notice && ui.set({ notice }));
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root');
