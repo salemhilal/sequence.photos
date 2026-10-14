@@ -297,7 +297,9 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
     <div className={`spread-row${editing ? ' editing' : ''}${dragging ? ' dragging' : ''}`} data-row-index={index}>
       <div
         className={`spread-row-head${movable ? ' draggable' : ''}`}
-        data-tip={movable ? 'Drag to reorder' : spread.kind === 'frame' ? undefined : 'The first and last pages stay in place'}
+        data-tip={
+          movable ? 'Drag to reorder' : spread.kind === 'frame' ? undefined : 'The first and last pages stay in place'
+        }
         onPointerDown={movable ? (e) => onHeaderDown(e, spread) : undefined}
       >
         <span className={`grip${movable ? '' : ' locked'}`} aria-hidden="true">
