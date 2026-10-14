@@ -22,6 +22,12 @@ Status: proposal, for discussion. Nothing here is implemented yet.
 6. **Instagram takes spreads too,** torn into their pages as slides, with a warning. Inches documents post by rendering at the dpi, then scaling down.
 7. **Exporting spreads as images** offers one image per spread or one per page.
 8. **mm and cm come later.**
+9. **The Layout view has two tabs.**
+   - **Page** holds everything that waits for Apply: spreads or frames, size and unit, dpi, and whether content rescales or stays fixed. It has a live preview.
+   - **Guides** holds everything that applies right away, as today.
+10. **The dpi is set alongside the page settings,** wherever those appear. Lowering it is how someone says lower detail is fine: warnings only fire below the dpi they chose.
+11. **New projects get every page setting.** The setup card on a new project's empty desk shows the same Page settings as the Layout view's Page tab, using the same component.
+12. **Instagram: pick which slides to post.** The API takes 10 at most, so the post pane lets people choose up to 10, for example leaving out a book's first or last page.
 
 ## Summary
 
@@ -170,20 +176,38 @@ The Preview's save button becomes "Export…", with the same choices as the File
 
 **Spreads on Instagram** are torn into their pages: each page becomes a slide, in book order (the first and last single pages are one slide each, a spread two). A photo across the gutter continues from one slide to the next, which suits sequences meant to cross pages. The post pane warns before posting, for example: "Spreads are posted as their pages: 8 slides. Photos across the gutter continue onto the next slide." The 10-slide limit counts pages, not spreads, and each page's shape must be within Instagram's 4:5 to 1.91:1.
 
-### Layout panel
+**Choosing slides.** Instagram's API takes 10 at most, for a carousel or a run of stories. Today the post pane posts the first 10 and has a "Skip empty frames" checkbox. Instead, it shows every page or frame as a thumbnail with a checkbox:
+
+- By default, the first 10 that aren't empty are selected.
+- Selecting an 11th isn't possible, and the pane says why.
+- Order follows the document.
+
+This replaces both "Skip empty frames" and the "only the first 10 will be posted" warning, and lets people leave out a book's first or last page, or post a run from the middle.
+
+### Layout view: Page and Guides tabs
+
+Settings that wait for Apply and settings that apply right away live in separate tabs, so it's always clear which is which:
 
 ```
-Pages        [ Spreads | Frames ]
-Size         [ 10 ] × [ 8 ]  [ in ▾ ]      Presets ▾
-Resolution   [ 300 ] dpi                    (inches only; for pixels → inches, "Print at")
-             [ Revert ]  [ Apply ]
+[ Page | Guides ]
+
+Page tab                                        Guides tab
+  Pages        [ Spreads | Frames ]               Border guides, line guides,
+  Size         [ 10 ] × [ 8 ]  [ in ▾ ]  Presets ▾  centering, drop guide: as today.
+  Resolution   [ 300 ] dpi                        Every change applies right away
+  Content      (•) Rescale with layout             and is its own undo step.
+               ( ) Keep fixed
+               [ Revert ]  [ Apply ]
 ```
 
-**The form is a draft, with a live preview.** Changing any of these leaves the document alone and shows, beside the form, the document's real spreads or frames as they'd look after Apply: photos re-paginated, converted, and moved with the guides. ‹ › (and the arrow keys) flip through them, as spreads or frames, whichever is selected. Apply makes the whole change one undo step; Revert drops the draft.
+- **Resolution is always next to the size.** In inches it's the dpi: what exports produce and what warnings check against. Someone who's fine with 150 dpi sets 150 and gets no warnings above it. In pixels it's the pixel density, fixed at 1× until there's a reason to offer more. When switching pixels → inches, the dpi field is how the conversion asks "Print at ___ dpi" (300 by default).
+- **A new project's empty desk** shows the same Page settings in its setup card, using the same component. There's no preview there, since nothing is placed yet.
+
+**The Page tab is a draft, with a live preview.** Changing any of these leaves the document alone and shows, beside the form, the document's real spreads or frames as they'd look after Apply: photos re-paginated, converted, and moved with the guides. ‹ › (and the arrow keys) flip through them, as spreads or frames, whichever is selected. Apply makes the whole change one undo step; Revert drops the draft.
 
 - **Convert with or without resizing.** Switching the unit fills the size fields with the converted size (3000 × 2400). Apply as is converts. Edit the size or pick a preset first, and it converts and resizes in one step. A choice beside the size picks what the content does: **Rescale with the layout** (photos move and scale with the guides, today's "keep relative") or **Keep fixed** (photos keep their converted size and position, so their resolution doesn't change). The preview shows whichever is chosen.
 - **It's cheap.** The preview is the same pure functions Apply runs (re-paginate, convert units, `relayoutRect`), on a copy of the project, drawn with `SpreadCanvas` read-only. Nothing is decoded beyond the previews already shown.
-- **With no draft**, the stage shows guides on an empty page as today, so editing guides is unchanged. Whether guide edits wait for Apply too is an open question.
+- **With no draft**, the stage shows guides on an empty page as today. Guide edits on the Guides tab always apply right away. When a Page draft is pending, the preview shows the guides too.
 - The preview also shows resolution warnings for the draft, so going from 8 × 10 in to 16 × 20 in shows which photos would go soft before applying.
 
 Presets set all three at once, which covers most people:
@@ -266,4 +290,4 @@ Each step is its own PR, and the app works after each one:
 
 ## Open questions
 
-- **Guides in the Layout form:** while a size or format change is waiting for Apply, should guide edits apply to the document right away (as today, each its own undo step), or wait for Apply with everything else? See the Layout panel section.
+None for now.
