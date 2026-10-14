@@ -133,9 +133,11 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 ### Page tab
 
 - [ ] Nothing changes until Apply: Pages, size, unit, preset, dpi, and Content are a draft.
-      While it differs, the stage shows the project as it'd be after Apply, with ‹ › and ←/→
-      through every spread or frame; Revert drops the draft. The draft survives switching to
-      Guides and back.
+      The stage always shows the real spreads or frames, with ‹ › and ←/→ through them: as
+      they are, or as they'd be after Apply once something changes, without the view
+      switching. Revert drops the draft. The draft survives switching to Guides and back.
+- [ ] With changes waiting, the Guides tab says to apply or revert them first (Apply and
+      Revert there work), and its stage shows the preview.
 - [ ] **[S→F]** Frames, Apply: each page becomes a frame in book order (a photo across the
       gutter goes with the page holding its center), same size and unit. One ⌘Z undoes it.
 - [ ] **[F→S]** Switching straight back restores the book exactly. After editing: frame 1 is
@@ -150,8 +152,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Presets (Book, Zine, Square book, Slides, the Instagram sizes) set Pages, unit, and size
       at once; a custom size shows "Custom". Apply is one undo step.
 - [ ] **[in]** Changing only the dpi moves nothing.
-- [ ] The preview marks photos that would be below the resolution after Apply, with "N photos
-      would be below 300 dpi." (8 × 10 in → 16 × 20 in shows which go soft).
+- [ ] The preview marks photos below the resolution: "N photos are below 300 dpi." as they
+      are, "would be" with changes waiting (8 × 10 in → 16 × 20 in shows which go soft).
 - [ ] Size: Apply resizes in one undo step; Enter applies. 10 → 8 → 10 puts photos and guides
       back exactly. Smallest size 1 in **[in]** or 100 px **[px]**.
 

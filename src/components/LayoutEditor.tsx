@@ -62,8 +62,11 @@ export function LayoutEditor() {
   // The Page tab's draft, kept across tabs until Apply or Revert.
   const [draft, setDraft] = usePageDraft();
   const tab = ui.use((u) => u.layoutTab);
-  // While the Page tab has changes waiting, the stage previews them, on either tab.
-  const previewing = !sameDraft(draft, draftOf(project));
+  const pending = !sameDraft(draft, draftOf(project));
+  // The Page tab always shows the pages as Apply would leave them (as they are, with no
+  // changes), so nudging a setting doesn't swap the view. The Guides tab shows them too
+  // while changes wait, since guides can't be edited then.
+  const previewing = tab === 'page' || pending;
 
   useLayoutEffect(() => {
     const el = stageRef.current;
@@ -74,6 +77,14 @@ export function LayoutEditor() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // Hidden behind the preview, the stage measures nothing: measure it as it shows, before
+  // it's painted, so the page doesn't flash at the wrong size.
+  useLayoutEffect(() => {
+    const el = stageRef.current;
+    if (previewing || !el) return;
+    const r = el.getBoundingClientRect();
+    setStage({ w: r.width, h: r.height });
+  }, [previewing]);
 
   const remove = (sel: Selection) => {
     if (sel.kind === 'center') return;
@@ -228,7 +239,7 @@ export function LayoutEditor() {
           <span className="spacer" />
           <span className="hint">
             {previewing
-              ? 'Preview of the changes · ← → to flip through'
+              ? `${pending ? 'Preview of the changes · ' : ''}← → to flip through`
               : `Drag from a ruler to add a guide · Shift: snap to ${units.snapLabel} · Drag off the ${terms.page} to remove`}
           </span>
           <button className="btn ghost icon" aria-label="Close" onClick={closeModal}>
@@ -279,7 +290,7 @@ export function LayoutEditor() {
             tab={tab}
             draft={draft}
             onDraft={setDraft}
-            pending={previewing}
+            pending={pending}
             selected={selected}
             onSelect={setSelected}
             onRemove={remove}

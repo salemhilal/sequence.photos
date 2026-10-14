@@ -4,7 +4,7 @@ import { folioLabel } from '../actions';
 import { sheetExtent } from '../geometry';
 import { useWindowEvent } from '../hooks';
 import { isTyping } from '../input';
-import { previewPageSetup, type PageDraft } from '../pageSetup';
+import { draftOf, previewPageSetup, sameDraft, type PageDraft } from '../pageSetup';
 import { allSpreads, sheetOf } from '../spreads';
 import { useProject } from '../store';
 import { TERMS, UNITS } from '../units';
@@ -22,7 +22,7 @@ interface Props {
 
 /**
  * The Page tab's live preview: the project's real spreads or frames as they'd be after
- * Apply (re-paginated, converted, and moved with the guides), read-only. ‹ › and the arrow
+ * Apply (as they are, with no changes waiting) (re-paginated, converted, and moved with the guides), read-only. ‹ › and the arrow
  * keys go through them. It's the same project Apply makes, so what's shown is what you get,
  * including which photos would have less detail than the page asks for.
  */
@@ -64,6 +64,8 @@ export function PagePreview({ draft }: Props) {
   const terms = TERMS[sheet.arrangement];
   const units = UNITS[sheet.unit];
   const soft = softPhotos(preview).length;
+  // With no changes waiting, this is the project as it is: photos are soft, not would be.
+  const changed = !sameDraft(draft, draftOf(project));
 
   return (
     <div className="editor-stage page-preview" ref={stageRef}>
@@ -111,7 +113,7 @@ export function PagePreview({ draft }: Props) {
           <ChevronRight />
         </button>
       </div>
-      {soft > 0 && <p className="page-preview-footer warn">{softSentence(soft, sheet, true)}</p>}
+      {soft > 0 && <p className="page-preview-footer warn">{softSentence(soft, sheet, changed)}</p>}
     </div>
   );
 }
