@@ -264,7 +264,6 @@ Each step is its own PR, and the app works after each one:
 - **Guides in the Layout form:** stay immediate, or become part of the draft?
 - **Warning thresholds:** a notice below the target and a warning below ⅔ of it? Or one warning level?
 - **mm/cm:** add now as display units over inches, or later?
-
 - **Spreads as images:** one image per spread, per page, or a choice?
 - **Instagram from inches documents:** allow it, as long as they're frames (render at dpi, then scale)? It's free with the render plan.
 - **Flagging too much detail:** confirm that "too big" only needs handling at export time, and doesn't need a warning in the UI.
