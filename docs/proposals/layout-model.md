@@ -15,6 +15,14 @@ Status: proposal, for discussion. Nothing here is implemented yet.
    - **Rescale it to match the layout:** photos move and scale with the guides, as "keep relative" does today.
    - **Keep it fixed:** photos keep their converted size and position, so how each photo is scaled, and its resolution, stays the same.
 
+   Pixels → inches asks which dpi to print at, 300 by default.
+
+4. **One warning,** when a photo has less detail than the document's resolution asks for. Too much detail is handled only at export, by downsampling.
+5. **Every combination is allowed,** pixel spreads included. Presets just don't offer pixel spreads.
+6. **Instagram takes spreads too,** torn into their pages as slides, with a warning. Inches documents post by rendering at the dpi, then scaling down.
+7. **Exporting spreads as images** offers one image per spread or one per page.
+8. **mm and cm come later.**
+
 ## Summary
 
 Keep **one geometry**. Store sizes and positions in the document's own unit, as today. Add **one bridge number**, `pxPerUnit`: the dpi for inches, and 1 for pixels. That number maps any document onto a shared **output-pixel space**. Resolution warnings and every exporter work in that space, so they don't need to know which unit the document uses.
@@ -104,17 +112,17 @@ InDesign stores everything in points (1/72 in), and "pixels" there is only a rul
 
 ### Physical units beyond inches
 
-mm or cm later would be display units over inches (store inches, show mm). `Unit` stays "physical or pixel". This doesn't need a decision now.
+Later. mm and cm would be display units over inches (store inches, show mm), so `Unit` stays "physical or pixel".
 
 ## Switching
 
-| Change                             | What happens to stored data                                                                                   | Notes                                                                                                                                                                   |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Arrangement** (spreads ↔ frames) | Re-paginate only: each page becomes a frame, or frames pair into spreads. **Same page size, same unit.**      | Today's `convertLayout` minus the `k` scale. `lastSwitch` still restores exactly when switching straight back.                                                          |
-| **Unit** (in ↔ px)                 | Multiply (in → px) or divide (px → in) every stored size, position, and guide by the dpi. Same physical size. | 10 × 8 in at 300 dpi becomes 3000 × 2400 px. Pixels → inches asks "Print at ___ dpi" (1080 px at 300 is 3.6 in). Don't round when converting, so a round trip is exact. |
-| **Resolution** (dpi)               | Nothing.                                                                                                      | Warnings and export sizes change.                                                                                                                                       |
-| **Page size**                      | As today (`setPageSize`, `relayoutRect`).                                                                     | Unchanged.                                                                                                                                                              |
-| **Preset**                         | Sets the arrangement, unit, and size at once, as one undo step.                                               | See UI below.                                                                                                                                                           |
+| Change                             | What happens to stored data                                                                                   | Notes                                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Arrangement** (spreads ↔ frames) | Re-paginate only: each page becomes a frame, or frames pair into spreads. **Same page size, same unit.**      | Today's `convertLayout` minus the `k` scale. `lastSwitch` still restores exactly when switching straight back.                                                                          |
+| **Unit** (in ↔ px)                 | Multiply (in → px) or divide (px → in) every stored size, position, and guide by the dpi. Same physical size. | 10 × 8 in at 300 dpi becomes 3000 × 2400 px. Pixels → inches asks "Print at ___ dpi", 300 by default (1080 px at 300 is 3.6 in). Don't round when converting, so a round trip is exact. |
+| **Resolution** (dpi)               | Nothing.                                                                                                      | Warnings and export sizes change.                                                                                                                                                       |
+| **Page size**                      | As today (`setPageSize`, `relayoutRect`).                                                                     | Unchanged.                                                                                                                                                                              |
+| **Preset**                         | Sets the arrangement, unit, and size at once, as one undo step.                                               | See UI below.                                                                                                                                                                           |
 
 `settings.sizes` (each kind's remembered size) goes away, because arrangements share the page size. A 5.5 × 8.5 in zine is still 5.5 × 8.5 in after switching to frames.
 
@@ -130,14 +138,12 @@ coverage = photo.pxW / (item.w * pxPerUnit(page)); // ≥ 1: enough detail
 
 The wording depends on the unit, but the math doesn't:
 
-|         | Inches (dpi 300)                    | Pixels                      |
-| ------- | ----------------------------------- | --------------------------- |
-| Shows   | Effective ppi: `photo.pxW / item.w` | Enlargement: `1 / coverage` |
-| Fine    | ≥ 300 ppi (coverage ≥ 1)            | ≤ 100%                      |
-| Notice  | 200–299 ppi: "Below 300 dpi"        | 101–150%: "Enlarged 120%"   |
-| Warning | < 200 ppi: "May print soft"         | > 150%: "May look soft"     |
+|         | Inches (dpi 300)                         | Pixels                      |
+| ------- | ---------------------------------------- | --------------------------- |
+| Shows   | Effective ppi: `photo.pxW / item.w`      | Enlargement: `1 / coverage` |
+| Warning | Below the dpi: "240 ppi · below 300 dpi" | Over 100%: "Enlarged 120%"  |
 
-The thresholds are relative to the target (notice below 1, warning below ⅔). They match today's 200 ppi print warning at 300 dpi, and they quiet today's digital warning, which fires at any enlargement over 100%.
+There is a single warning, whenever coverage is below 1: the photo has less detail than the document's resolution asks for. In pixels this is today's behavior. In inches it's stricter than today's 200 ppi threshold, which is the point: the dpi says what "enough" means.
 
 **Where warnings show up:**
 
@@ -145,7 +151,7 @@ The thresholds are relative to the target (notice below 1, warning below ⅔). T
 - As a small badge on the photo in the editor and on its spread's thumbnail in the sidebar.
 - As a one-line summary before export: "2 photos are below 300 dpi. Export anyway / Show me."
 
-**Too much detail** is not worth warning about, because exports downsample. The only case where it matters is file size: Instagram's 8 MB limit, and memory for very large books. Exports handle both on their own, so the proposal is not to flag it in the UI.
+**Too much detail** is handled only at export: exports downsample to the target, which also covers Instagram's 8 MB limit and memory for very large books. Nothing is flagged while editing.
 
 ## One editing flow
 
@@ -153,14 +159,16 @@ The thresholds are relative to the target (notice below 1, warning below ⅔). T
 - **Unit-specific constants derived from the page where they're relative.** For example, the duplicate offset already uses `pageW / 10` for pixels. Use it for both units, so one rule works at 1080 px and at 3000 px.
 - **Exports offered by what they need, not by kind:**
 
-| Export                 | Spreads | Frames | Notes                                                                                                                               |
-| ---------------------- | ------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| PDF                    | ✓       | ✓      | Already works for both. Points per unit: 72 for inches, 1 for pixels (InDesign's convention).                                       |
-| Images (JPEG per page) | ✓       | ✓      | Renders at `w × pxPerUnit`. For spreads: one image per spread, or per page (a choice in the dialog). Covers slides and zine proofs. |
-| InDesign               | ✓       | Later  | IDML supports non-facing pages. It's a small addition once the units are handled.                                                   |
-| Instagram              | Open    | ✓      | Any unit, because `postImageLayout` already scales to Instagram's sizes. Spreads: see open questions.                               |
+| Export                 | Spreads | Frames | Notes                                                                                                                                  |
+| ---------------------- | ------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| PDF                    | ✓       | ✓      | Already works for both. Points per unit: 72 for inches, 1 for pixels (InDesign's convention).                                          |
+| Images (JPEG per page) | ✓       | ✓      | Renders at `w × pxPerUnit`. For spreads, the export dialog offers one image per spread or one per page. Covers slides and zine proofs. |
+| InDesign               | ✓       | Later  | IDML supports non-facing pages. It's a small addition once the units are handled.                                                      |
+| Instagram              | ✓       | ✓      | Any unit: inches render at the dpi, then `postImageLayout` scales to Instagram's sizes. Spreads are torn into their pages (below).     |
 
 The Preview's save button becomes "Export…", with the same choices as the File menu.
+
+**Spreads on Instagram** are torn into their pages: each page becomes a slide, in book order (the first and last single pages are one slide each, a spread two). A photo across the gutter continues from one slide to the next, which suits sequences meant to cross pages. The post pane warns before posting, for example: "Spreads are posted as their pages: 8 slides. Photos across the gutter continue onto the next slide." The 10-slide limit counts pages, not spreads, and each page's shape must be within Instagram's 4:5 to 1.91:1.
 
 ### Layout panel
 
@@ -175,7 +183,7 @@ Resolution   [ 300 ] dpi                    (inches only; for pixels → inches,
 
 - **Convert with or without resizing.** Switching the unit fills the size fields with the converted size (3000 × 2400). Apply as is converts. Edit the size or pick a preset first, and it converts and resizes in one step. A choice beside the size picks what the content does: **Rescale with the layout** (photos move and scale with the guides, today's "keep relative") or **Keep fixed** (photos keep their converted size and position, so their resolution doesn't change). The preview shows whichever is chosen.
 - **It's cheap.** The preview is the same pure functions Apply runs (re-paginate, convert units, `relayoutRect`), on a copy of the project, drawn with `SpreadCanvas` read-only. Nothing is decoded beyond the previews already shown.
-- **With no draft**, the stage shows guides on an empty page as today, so editing guides is unchanged. (Guide edits stay immediate, not drafted.)
+- **With no draft**, the stage shows guides on an empty page as today, so editing guides is unchanged. Whether guide edits wait for Apply too is an open question.
 - The preview also shows resolution warnings for the draft, so going from 8 × 10 in to 16 × 20 in shows which photos would go soft before applying.
 
 Presets set all three at once, which covers most people:
@@ -187,7 +195,7 @@ Presets set all three at once, which covers most people:
 - **Instagram 4:5:** 1080 × 1350 px frames
 - The other Instagram sizes, as today
 
-Pixel spreads are allowed, because blocking them would cost code, but no preset offers them.
+Spreads or frames, and inches or pixels, are just two layout settings, so every combination works, including pixel spreads. Presets only cover the common ones, and none of them is pixel spreads.
 
 ## High-quality export
 
@@ -258,12 +266,4 @@ Each step is its own PR, and the app works after each one:
 
 ## Open questions
 
-- **Spreads on Instagram:** post each spread as one wide image, which the feed caps at 1.91:1, so most spreads would be cropped or padded? Or split each spread into its pages, as a "seamless" carousel where a photo crossing the gutter carries across two slides? Or leave Instagram as frames only?
-- **A pixel document's dpi when converting to inches:** ask at that moment ("Print at ___ dpi"), or keep a hidden default of 300?
-- **Pixel spreads:** allowed but not offered by any preset? Or hidden?
-- **Guides in the Layout form:** stay immediate, or become part of the draft?
-- **Warning thresholds:** a notice below the target and a warning below ⅔ of it? Or one warning level?
-- **mm/cm:** add now as display units over inches, or later?
-- **Spreads as images:** one image per spread, per page, or a choice?
-- **Instagram from inches documents:** allow it, as long as they're frames (render at dpi, then scale)? It's free with the render plan.
-- **Flagging too much detail:** confirm that "too big" only needs handling at export time, and doesn't need a warning in the UI.
+- **Guides in the Layout form:** while a size or format change is waiting for Apply, should guide edits apply to the document right away (as today, each its own undo step), or wait for Apply with everything else? See the Layout panel section.
