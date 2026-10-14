@@ -1,6 +1,6 @@
 # Proposal: spreads or frames, inches or pixels
 
-Status: proposal, for discussion. Nothing here is implemented yet.
+Status: agreed. Steps 1–4 are implemented (see [layout-model-plan.md](layout-model-plan.md)); step 5 isn't.
 
 ## Decisions
 

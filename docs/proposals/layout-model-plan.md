@@ -1,7 +1,8 @@
 # Plan: spreads or frames, inches or pixels
 
-Status: implementation plan for [layout-model.md](layout-model.md), steps 1–4. Step 5 (tiled
-web export, native rendering on the Mac) is out of scope. Nothing here is implemented yet.
+Status: implemented. This is the plan for [layout-model.md](layout-model.md), steps 1–4, and
+steps 1–4 are done (see "As built" at the end for where the code differs). Step 5 (tiled web
+export, native rendering on the Mac) is out of scope.
 
 Each step below is one PR, made of one or a few commits. After every commit the app works and
 `npm test`, `npm run build`, `npm run lint`, and `npm run format:check` pass.
@@ -992,3 +993,30 @@ warnings, and the summary before export.
 17. A dropdown of the File menu's export items.
 18. 13.33 is fine.
 19. `02-03.jpg` for spreads.
+
+## As built
+
+Where the implementation differs from the plan above:
+
+- **Commits.** Step 2 is one commit (the model and the UI together), and step 4 is one commit.
+  Step 3 is two (images and Instagram, then PDF and IDML), plus one that adds a PDF check to
+  the Mac e2e.
+- **`setLayoutSize` stays**, in `pageSetup.ts`, as a plain recipe that sets the page size.
+  Tests and the e2e use it.
+- **The unit change follows Answer 5.** With Rescale, `withPageSetup` scales guides and photos
+  by the page's width (`scaleProject`), then resizes. With Keep fixed, it converts at the dpi
+  (`convertUnits`), then resizes without moving photos. `resizePage` is the old `setPageSize`
+  as a pure function.
+- **`previewPageSetup(draft)`** goes alongside `pageSetupBase()`. It returns the run's base
+  unchanged when the draft matches it, so the preview and Apply match exactly.
+- **The Page preview clamps its index** when the number of spreads or frames changes. It
+  doesn't map to the matching page when the arrangement switches.
+- **`firstNonEmpty` takes the sheet.** A page counts as having photos if any part of one shows
+  on it (`itemsOn`), so the first and last pages of a book work.
+- **Shared export items.** `components/exportItems.tsx` builds the export items for both the
+  File menu and Preview's Export… list. `FileMenu` takes a label, a button style, and
+  right alignment.
+- **"Export images…"** has an ellipsis everywhere. Frames export without asking anything,
+  spreads ask one per spread or per page.
+- **The Mac e2e** also renders a page in inches (3000 × 2400) and a PDF from the originals in
+  WebKit. `scripts/e2e-app.mjs` reads `page.w`.
