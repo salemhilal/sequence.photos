@@ -62,7 +62,8 @@ export function LayoutEditor() {
   // The Page tab's draft, kept across tabs until Apply or Revert.
   const [draft, setDraft] = usePageDraft();
   const tab = ui.use((u) => u.layoutTab);
-  const previewing = tab === 'page' && !sameDraft(draft, draftOf(project));
+  // While the Page tab has changes waiting, the stage previews them, on either tab.
+  const previewing = !sameDraft(draft, draftOf(project));
 
   useLayoutEffect(() => {
     const el = stageRef.current;
@@ -278,6 +279,7 @@ export function LayoutEditor() {
             tab={tab}
             draft={draft}
             onDraft={setDraft}
+            pending={previewing}
             selected={selected}
             onSelect={setSelected}
             onRemove={remove}

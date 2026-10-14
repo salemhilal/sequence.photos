@@ -92,6 +92,8 @@ export function PageSettings({ draft, onChange, showContent }: Props) {
   return (
     <form
       className="layout-fields page-settings"
+      // Values are checked here: the browser's own check would hold sizes to the arrow keys' step.
+      noValidate
       onSubmit={(e) => {
         e.preventDefault();
         applyPageSetup(draft);

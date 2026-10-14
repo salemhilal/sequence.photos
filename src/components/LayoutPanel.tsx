@@ -7,7 +7,7 @@ import { projectStore } from '../store';
 import type { Arrangement, BorderGuide, Edges, Sheet } from '../types';
 import { TERMS, UNITS } from '../units';
 import { NumberField } from './NumberField';
-import type { PageDraft } from '../pageSetup';
+import { applyPageSetup, draftOf, type PageDraft } from '../pageSetup';
 import { ui, type LayoutTab } from '../ui';
 import { PageSettings } from './PageSettings';
 import { Segmented } from './Segmented';
@@ -36,6 +36,8 @@ interface PanelProps {
   tab: LayoutTab;
   draft: PageDraft;
   onDraft: (d: PageDraft) => void;
+  /** The draft has changes not yet applied: guides wait until they're applied or reverted. */
+  pending: boolean;
   selected: Selection | null;
   onSelect: (sel: Selection | null) => void;
   onRemove: (sel: Selection) => void;
@@ -75,7 +77,7 @@ function PanelSection({ id, title, actions, collapsed, shown, onToggle, children
   );
 }
 
-export function LayoutPanel({ s, tab, draft, onDraft, selected, onSelect, onRemove }: PanelProps) {
+export function LayoutPanel({ s, tab, draft, onDraft, pending, selected, onSelect, onRemove }: PanelProps) {
   const [collapsed, setCollapsed] = useState(() => new Set(collapsedPref.load()));
   // A guide selected on the page shows its settings, even in a folded section.
   const shown = selected ? SECTION_OF[selected.kind] : null;
@@ -146,6 +148,26 @@ export function LayoutPanel({ s, tab, draft, onDraft, selected, onSelect, onRemo
         {tabs}
         <section>
           <PageSettings draft={draft} onChange={onDraft} showContent />
+        </section>
+      </aside>
+    );
+  }
+
+  // Guides are edited on the page as it is, so not while the Page tab has changes waiting.
+  if (pending) {
+    return (
+      <aside className="inspector sectioned layout-panel">
+        {tabs}
+        <section>
+          <p className="help">Apply or revert the page changes first.</p>
+          <div className="inline">
+            <button className="btn primary" onClick={() => applyPageSetup(draft)}>
+              Apply
+            </button>
+            <button className="btn ghost" onClick={() => onDraft(draftOf(projectStore.project))}>
+              Revert
+            </button>
+          </div>
         </section>
       </aside>
     );
