@@ -3,6 +3,7 @@ import { getImage } from '../../db';
 import { projectLoaded } from '../../persistence';
 import { tourSeenPref } from '../../prefs';
 import { putOnPage } from '../../actions';
+import { renderPdf } from '../../pdf';
 import { renderImages } from '../../rasterExport';
 import { outputPages } from '../../renderPlan';
 import { toPhotoId } from '../../ids';
@@ -172,6 +173,13 @@ async function scenarios(dir: string): Promise<void> {
       'renders a page in inches at its dpi',
       out.files.length === 2 && image?.width === 3000 && image.height === 2400,
       `${out.files.length} files, ${image?.width}×${image?.height}`,
+    );
+    // The PDF, from the photos' originals, in the app's WebKit.
+    const pdf = await renderPdf(() => undefined).catch(() => null);
+    check(
+      'renders a PDF from the originals',
+      !!pdf && pdf.missing === 0 && pdf.previews === 0 && pdf.blob.size > 0,
+      pdf ? `${pdf.missing} missing, ${pdf.previews} previews` : 'failed',
     );
     // Leave the file as saved, so New Project doesn't ask.
     projectStore.undo();
