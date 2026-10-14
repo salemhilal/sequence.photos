@@ -45,8 +45,12 @@ interface PageSetup {
   w: number;
   h: number;
   unit: Unit;
-  /** Output pixels per inch: the export resolution for inches, and the print size for pixels. */
-  dpi: number;
+  /**
+   * Output pixels per unit: the export target, saved with the document so warnings can
+   * check against it while editing. The dpi for inches (300 by default). 1 for pixels
+   * (not shown yet; a 2× option would set 2).
+   */
+  pxPerUnit: number;
 }
 
 interface SpreadsLayout {
@@ -66,10 +70,11 @@ interface Project {
   layout: SpreadsLayout | FramesLayout;
   // photos, pile, settings (minus sizes), nextZ: unchanged
 }
-
-/** The one conversion: document units to output pixels. */
-const pxPerUnit = (p: PageSetup) => (p.unit === 'px' ? 1 : p.dpi);
 ```
+
+`page.pxPerUnit` is the one conversion: document units to output pixels. Exports use it to decide how many pixels to make, and warnings use it to decide how many each photo needs. An export can still override it (a quick 72 dpi proof), but the editor checks against the saved one.
+
+The dpi never changes the layout: changing it moves and resizes nothing. It decides geometry only at the moment of switching units (see Switching).
 
 `Sheet` gains `arrangement`, `unit`, and `pxPerUnit`, and loses `layout`. Placements, guides, and the desk don't change at all.
 
@@ -77,7 +82,7 @@ const pxPerUnit = (p: PageSetup) => (p.unit === 'px' ? 1 : p.dpi);
 
 The alternative is to store everything in one unit (inches, points, or output pixels) and convert only for display. That makes unit switches free. It also has costs:
 
-- **What's "true" depends on the unit.** In an inches project, the physical size is the truth, and the dpi decides how many pixels you get. In a pixels project, 1080 × 1350 is the truth, and the dpi barely matters (it only sets the PDF's physical size). With canonical storage, changing a pixel project's dpi must either rescale everything stored, or change its pixel size, which is the one number its user cares about. Storing in the document's unit means a dpi change never touches stored data, in either unit.
+- **What's "true" depends on the unit.** In an inches project, the physical size is the truth, and the dpi decides how many pixels you get. In a pixels project, 1080 × 1350 is the truth, and it has no physical size at all. With canonical storage, a pixel project would need a dpi just to be stored, and changing it would either rescale everything or change its pixel size, which is the one number its user cares about. Storing in the document's unit means a dpi change never touches stored data.
 - **Exactness.** A pixel project wants whole pixels, and an inches project wants eighths. As inches, 1080 px is 3.6 at 300 dpi but 11.25 at 96. Snapping, nudging, and rounding (`units.round`) would all convert on every edit, and drift would show up as 1079.9999 in fields.
 - **Not much simpler.** Geometry would still need unit-aware constants (a 1 px nudge is 1/300 in), so `UNITS` wouldn't go away.
 
@@ -85,19 +90,23 @@ The alternative is to store everything in one unit (inches, points, or output pi
 
 That's today's design, and it's where feature parity drifts: each kind has its own constants, terms, exports, and warnings. With `pxPerUnit`, everything that cares about pixels, meaning warnings and exports, gets one number, and everything else ignores the unit.
 
+### How InDesign does it
+
+InDesign stores everything in points (1/72 in), and "pixels" there is only a ruler unit fixed at 1 px = 1 pt. Its layout has no resolution: placed images keep their own pixels, and output resolution is chosen at export (PDF downsampling, or a ppi for JPEG/PNG export), with preflight warning about images below a minimum effective resolution. Ours works the same way, except the target is saved with the document so warnings show while editing. When we write points (PDF, IDML), pixel documents use InDesign's 1 px = 1 pt, so they open in InDesign at the same pixel size.
+
 ### Physical units beyond inches
 
 mm or cm later would be display units over inches (store inches, show mm). `Unit` stays "physical or pixel". This doesn't need a decision now.
 
 ## Switching
 
-| Change                             | What happens to stored data                                                                                   | Notes                                                                                                          |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **Arrangement** (spreads ↔ frames) | Re-paginate only: each page becomes a frame, or frames pair into spreads. **Same page size, same unit.**      | Today's `convertLayout` minus the `k` scale. `lastSwitch` still restores exactly when switching straight back. |
-| **Unit** (in ↔ px)                 | Multiply (in → px) or divide (px → in) every stored size, position, and guide by the dpi. Same physical size. | 10 × 8 in at 300 dpi becomes 3000 × 2400 px. Don't round when converting, so a round trip is exact.            |
-| **Resolution** (dpi)               | Nothing.                                                                                                      | Warnings and export sizes change. For pixels, the PDF's physical size changes.                                 |
-| **Page size**                      | As today (`setPageSize`, `relayoutRect`).                                                                     | Unchanged.                                                                                                     |
-| **Preset**                         | Sets the arrangement, unit, and size at once, as one undo step.                                               | See UI below.                                                                                                  |
+| Change                             | What happens to stored data                                                                                   | Notes                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Arrangement** (spreads ↔ frames) | Re-paginate only: each page becomes a frame, or frames pair into spreads. **Same page size, same unit.**      | Today's `convertLayout` minus the `k` scale. `lastSwitch` still restores exactly when switching straight back.                                                          |
+| **Unit** (in ↔ px)                 | Multiply (in → px) or divide (px → in) every stored size, position, and guide by the dpi. Same physical size. | 10 × 8 in at 300 dpi becomes 3000 × 2400 px. Pixels → inches asks "Print at ___ dpi" (1080 px at 300 is 3.6 in). Don't round when converting, so a round trip is exact. |
+| **Resolution** (dpi)               | Nothing.                                                                                                      | Warnings and export sizes change.                                                                                                                                       |
+| **Page size**                      | As today (`setPageSize`, `relayoutRect`).                                                                     | Unchanged.                                                                                                                                                              |
+| **Preset**                         | Sets the arrangement, unit, and size at once, as one undo step.                                               | See UI below.                                                                                                                                                           |
 
 `settings.sizes` (each kind's remembered size) goes away, because arrangements share the page size. A 5.5 × 8.5 in zine is still 5.5 × 8.5 in after switching to frames.
 
@@ -138,7 +147,7 @@ The thresholds are relative to the target (notice below 1, warning below ⅔). T
 
 | Export                 | Spreads | Frames | Notes                                                                                                                               |
 | ---------------------- | ------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| PDF                    | ✓       | ✓      | Already works for both. Points per unit: 72 for inches, 72 / dpi for pixels.                                                        |
+| PDF                    | ✓       | ✓      | Already works for both. Points per unit: 72 for inches, 1 for pixels (InDesign's convention).                                       |
 | Images (JPEG per page) | ✓       | ✓      | Renders at `w × pxPerUnit`. For spreads: one image per spread, or per page (a choice in the dialog). Covers slides and zine proofs. |
 | InDesign               | ✓       | Later  | IDML supports non-facing pages. It's a small addition once the units are handled.                                                   |
 | Instagram              | —       | ✓      | Any unit, because `postImageLayout` already scales to Instagram's sizes.                                                            |
@@ -150,9 +159,16 @@ The Preview's save button becomes "Export…", with the same choices as the File
 ```
 Pages        [ Spreads | Frames ]
 Size         [ 10 ] × [ 8 ]  [ in ▾ ]      Presets ▾
-Resolution   [ 300 ] dpi                    (inches only; Advanced for pixels)
+Resolution   [ 300 ] dpi                    (inches only; for pixels → inches, "Print at")
              [ Revert ]  [ Apply ]
 ```
+
+**The form is a draft, with a live preview.** Changing any of these leaves the document alone and shows, beside the form, the document's real spreads or frames as they'd look after Apply: photos re-paginated, converted, and moved with the guides. ‹ › (and the arrow keys) flip through them, as spreads or frames, whichever is selected. Apply makes the whole change one undo step; Revert drops the draft.
+
+- **Convert with or without resizing needs no separate option.** Switching the unit fills the size fields with the converted size (3000 × 2400). Apply as is converts; edit the size or pick a preset first and it converts and resizes in one step.
+- **It's cheap.** The preview is the same pure functions Apply runs (re-paginate, convert units, `relayoutRect`), on a copy of the project, drawn with `SpreadCanvas` read-only. Nothing is decoded beyond the previews already shown.
+- **With no draft**, the stage shows guides on an empty page as today, so editing guides is unchanged. (Guide edits stay immediate, not drafted.)
+- The preview also shows resolution warnings for the draft, so going from 8 × 10 in to 16 × 20 in shows which photos would go soft before applying.
 
 Presets set all three at once, which covers most people:
 
@@ -204,11 +220,11 @@ Steps 1 and 2 are worth doing even if the rest of this proposal waits.
 
 ## Migration (schema 3 → 4)
 
-| v3                                       | v4                                                                         |
-| ---------------------------------------- | -------------------------------------------------------------------------- |
-| `layout.kind: 'print'`, `layout.page`    | `layout.kind: 'spreads'`, `page: { ...layout.page, unit: 'in', dpi: 300 }` |
-| `layout.kind: 'digital'`, `layout.frame` | `layout.kind: 'frames'`, `page: { ...layout.frame, unit: 'px', dpi: 300 }` |
-| `settings.sizes`                         | Dropped                                                                    |
+| v3                                       | v4                                                                               |
+| ---------------------------------------- | -------------------------------------------------------------------------------- |
+| `layout.kind: 'print'`, `layout.page`    | `layout.kind: 'spreads'`, `page: { ...layout.page, unit: 'in', pxPerUnit: 300 }` |
+| `layout.kind: 'digital'`, `layout.frame` | `layout.kind: 'frames'`, `page: { ...layout.frame, unit: 'px', pxPerUnit: 1 }`   |
+| `settings.sizes`                         | Dropped                                                                          |
 
 Placements and guides are already stored in the document's unit, so they don't change. Projects open looking exactly as they did. Older versions of the app see v4 as "made by a newer version", as they do today.
 
@@ -222,7 +238,7 @@ Each step is its own PR, and the app works after each one:
    - No visible change: the arrangement and unit still move together.
 2. **Separate the axes.**
    - Switching arrangement no longer changes the unit.
-   - Add switching units, the new Layout panel, and presets.
+   - Add switching units, presets, and the new Layout panel: a draft with a live preview you can flip through.
 3. **Exports for both arrangements.**
    - Add the render plan.
    - PDF and Images for both arrangements.
@@ -236,5 +252,4 @@ Each step is its own PR, and the app works after each one:
 
 - **Spreads as images:** one image per spread, per page, or a choice?
 - **Instagram from inches documents:** allow it, as long as they're frames (render at dpi, then scale)? It's free with the render plan.
-- **Pixels and dpi:** default 300 (so a 1080 px frame prints at 3.6 in), or 72, to keep today's PDF sizes for pixel documents?
 - **Flagging too much detail:** confirm that "too big" only needs handling at export time, and doesn't need a warning in the UI.
