@@ -34,7 +34,7 @@ export async function renderPage(
   let missing = 0;
   for (const d of plan.draws) {
     const photo = photos[d.photoId];
-    const bitmap = photo && (await decode(d.photoId, photo, d.placed.w, d.placed.h));
+    const bitmap = photo && (await decodePhoto(d.photoId, photo, d.placed.w, d.placed.h))?.bitmap;
     if (!photo || !bitmap) {
       missing++;
       continue;
@@ -52,9 +52,14 @@ export async function renderPage(
 /**
  * A photo upright and at its placed size (w × h output pixels). Resizing while decoding
  * looks better than the canvas shrinking a large photo, and keeps only the small copy in
- * memory.
+ * memory. `preview` says the original couldn't be decoded, so its display copy was used.
  */
-async function decode(id: PhotoId, meta: PhotoMeta, w: number, h: number): Promise<ImageBitmap | null> {
+export async function decodePhoto(
+  id: PhotoId,
+  meta: PhotoMeta,
+  w: number,
+  h: number,
+): Promise<{ bitmap: ImageBitmap; preview: boolean } | null> {
   const img = await getImage(id);
   if (!img) return null;
   // Decoded at its placed size, but never past the photo's own resolution (an enlarged
@@ -66,7 +71,12 @@ async function decode(id: PhotoId, meta: PhotoMeta, w: number, h: number): Promi
   const size = { resizeWidth: Math.max(1, Math.round(w * k)), resizeHeight: Math.max(1, Math.round(h * k)) };
   for (const source of [img.full, img.thumb]) {
     try {
-      return await createImageBitmap(source, { imageOrientation: 'from-image', resizeQuality: 'high', ...size });
+      const bitmap = await createImageBitmap(source, {
+        imageOrientation: 'from-image',
+        resizeQuality: 'high',
+        ...size,
+      });
+      return { bitmap, preview: source === img.thumb };
     } catch {
       // Not decodable here (e.g. HEIC outside Safari): try the display copy.
     }

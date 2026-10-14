@@ -6,14 +6,20 @@ import { allSpreads, sheetOf } from './spreads';
 /**
  * Build an IDML file (InDesign Markup Language: a ZIP of XML that InDesign opens
  * as a new document). The book becomes a facing-pages document with the same
- * page size and spreads, the drop border guide as margins, the other guides as
+ * page size and spreads (in inches, or pixels at a point each), the drop border guide as margins, the other guides as
  * ruler guides, and each photo as a frame with its image linked from `Links/`.
  *
  * Coordinates: an IDML spread's origin is at its binding (our gutter) and vertical
  * center, in points; y grows downward, as in the app.
  */
 
-const PT = 72;
+/** Points to the inch: images are sized by their own resolution in it. */
+const PT_PER_INCH = 72;
+
+/** Points per page unit: 72 to the inch, and a point to the pixel (InDesign's pixels). */
+function ptPerUnit(s: Pick<Sheet, 'unit'>): number {
+  return s.unit === 'in' ? PT_PER_INCH : 1;
+}
 const PKG = 'http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging';
 const DOM = '8.0';
 const HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
@@ -73,13 +79,15 @@ ${spreadFiles.map((f) => `<idPkg:Spread src="${f.name}"/>`).join('\n')}
  * a blank document with that many pages, and only its first spread is replaced by ours.
  */
 function preferencesXml(s: Sheet): string {
-  const w = s.pageW * PT;
-  const h = s.pageH * PT;
+  const pt = ptPerUnit(s);
+  const rulers = s.unit === 'in' ? 'Inches' : 'Pixels';
+  const w = s.pageW * pt;
+  const h = s.pageH * pt;
   return `${HEAD}
 <idPkg:Preferences xmlns:idPkg="${PKG}" DOMVersion="${DOM}">
 <DocumentPreference PageHeight="${n(h)}" PageWidth="${n(w)}" PageOrientation="${w > h ? 'Landscape' : 'Portrait'}" PagesPerDocument="1" FacingPages="true" StartPageNumber="1" PageBinding="LeftToRight" AllowPageShuffle="true" DocumentBleedUniformSize="true" DocumentBleedTopOffset="0" DocumentBleedBottomOffset="0" DocumentBleedInsideOrLeftOffset="0" DocumentBleedOutsideOrRightOffset="0" Intent="PrintIntent"/>
 ${marginXml(s)}
-<ViewPreference HorizontalMeasurementUnits="Inches" VerticalMeasurementUnits="Inches"/>
+<ViewPreference HorizontalMeasurementUnits="${rulers}" VerticalMeasurementUnits="${rulers}"/>
 </idPkg:Preferences>`;
 }
 
@@ -91,7 +99,8 @@ function marginXml(s: Sheet, side?: PageSide): string {
   const drop = dropGuide(s);
   const g = drop ? edgesOf(drop) : { top: 0, bottom: 0, inside: 0, outside: 0 };
   const [left, right] = side === 'left' ? [g.outside, g.inside] : [g.inside, g.outside];
-  const m = (v: number) => n(v * PT);
+  const pt = ptPerUnit(s);
+  const m = (v: number) => n(v * pt);
   return `<MarginPreference ColumnCount="1" ColumnGutter="12" Top="${m(g.top)}" Bottom="${m(g.bottom)}" Left="${m(left)}" Right="${m(right)}" ColumnDirection="Horizontal" ColumnsPositions="0 ${m(s.pageW - left - right)}"/>`;
 }
 
@@ -104,15 +113,16 @@ function spreadXml(
   links: Map<string, LinkedImage>,
 ): string {
   const s = sheetOf(project);
+  const pt = ptPerUnit(s);
   const sides = pageSides(spread.kind);
   const first = allSpreads(project)
     .slice(0, index)
     .reduce((n, sp) => n + pageSides(sp.kind).length, 0);
-  const top = (-s.pageH * PT) / 2;
+  const top = (-s.pageH * pt) / 2;
 
   const pages = sides.map((side, i) => {
-    const x = pageRect(side, s).x * PT;
-    return `<Page Self="${id()}" Name="${first + i + 1}" AppliedMaster="n" GeometricBounds="0 0 ${n(s.pageH * PT)} ${n(s.pageW * PT)}" ItemTransform="1 0 0 1 ${n(x)} ${n(top)}" MasterPageTransform="1 0 0 1 0 0">
+    const x = pageRect(side, s).x * pt;
+    return `<Page Self="${id()}" Name="${first + i + 1}" AppliedMaster="n" GeometricBounds="0 0 ${n(s.pageH * pt)} ${n(s.pageW * pt)}" ItemTransform="1 0 0 1 ${n(x)} ${n(top)}" MasterPageTransform="1 0 0 1 0 0">
 ${marginXml(s, side)}
 ${guidesXml(s, side, i, id)}
 </Page>`;
@@ -121,10 +131,10 @@ ${guidesXml(s, side, i, id)}
   const frames = [...spread.items]
     .sort((a, b) => a.z - b.z)
     .map((p) => {
-      const x1 = p.x * PT;
-      const y1 = p.y * PT + top;
-      const x2 = x1 + p.w * PT;
-      const y2 = y1 + p.h * PT;
+      const x1 = p.x * pt;
+      const y1 = p.y * pt + top;
+      const x2 = x1 + p.w * pt;
+      const y2 = y1 + p.h * pt;
       const points = [
         [x1, y1],
         [x1, y2],
@@ -145,7 +155,7 @@ ${image}
 </Rectangle>`;
     });
 
-  const offset = index * (s.pageH * PT + SPREAD_SPACING);
+  const offset = index * (s.pageH * pt + SPREAD_SPACING);
   return `${HEAD}
 <idPkg:Spread xmlns:idPkg="${PKG}" DOMVersion="${DOM}">
 <Spread Self="${spreadId}" PageCount="${sides.length}" BindingLocation="${sides[0] === 'left' ? 1 : 0}" ShowMasterItems="true" AllowPageShuffle="true" ItemTransform="1 0 0 1 0 ${n(offset)}">
@@ -157,8 +167,9 @@ ${frames.join('\n')}
 
 /** Ruler guides: the center lines, line guides, and every border guide but the margins' one. */
 function guidesXml(s: Sheet, side: PageSide, pageIndex: number, id: () => string): string {
-  const w = s.pageW * PT;
-  const h = s.pageH * PT;
+  const pt = ptPerUnit(s);
+  const w = s.pageW * pt;
+  const h = s.pageH * pt;
   const margin = dropGuide(s);
   const vertical: number[] = [];
   const horizontal: number[] = [];
@@ -168,14 +179,14 @@ function guidesXml(s: Sheet, side: PageSide, pageIndex: number, id: () => string
     if (b.id === margin?.id) continue;
     const g = edgesOf(b);
     const [left, right] = side === 'left' ? [g.outside, g.inside] : [g.inside, g.outside];
-    vertical.push(left * PT, w - right * PT);
-    horizontal.push(g.top * PT, h - g.bottom * PT);
+    vertical.push(left * pt, w - right * pt);
+    horizontal.push(g.top * pt, h - g.bottom * pt);
   }
   // Line guides' positions from the page's left edge.
   const page = pageRect(side, s);
   for (const l of s.lines.filter((l) => lineOnPage(s, l))) {
-    if (l.axis === 'vertical') vertical.push((linePosition(side, s, l) - page.x) * PT);
-    else horizontal.push(l.at * PT);
+    if (l.axis === 'vertical') vertical.push((linePosition(side, s, l) - page.x) * pt);
+    else horizontal.push(l.at * pt);
   }
   // Vertical guides are placed from the spread's left edge, not the page's.
   const left = pageIndex * w;
@@ -190,8 +201,8 @@ function guidesXml(s: Sheet, side: PageSide, pageIndex: number, id: () => string
 
 /** A linked image filling its frame: scaled from its size at its stored resolution. */
 function imageXml(id: () => string, link: LinkedImage, frame: { x: number; y: number; w: number; h: number }): string {
-  const gw = (link.pxW * PT) / link.ppi;
-  const gh = (link.pxH * PT) / link.ppi;
+  const gw = (link.pxW * PT_PER_INCH) / link.ppi;
+  const gh = (link.pxH * PT_PER_INCH) / link.ppi;
   const sx = frame.w / gw;
   const sy = frame.h / gh;
   const format = link.format === 'png' ? '$ID/Portable Network Graphics (PNG)' : '$ID/JPEG';

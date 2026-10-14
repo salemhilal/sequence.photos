@@ -174,20 +174,32 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Folio and "n / total" are right.
 - [ ] Controls fade after the pointer rests about a second; moving or Tab brings them back;
       they stay while hovered and while saving.
-- [ ] **[S≠F]** The header button: Download PDF [S] or Export frames as images [F], with progress.
+- [ ] The header's Export… menu (Save PDF, Export images, InDesign [S], Instagram on the web),
+      with progress in its place while exporting.
 - [ ] Escape, Exit preview, or ⌘P closes.
 
 ## Exports and project files
 
-- [ ] **[S]** PDF (⌘⇧P): a page per spread at true size, single first and last pages, photos
-      cropped at the edges, no guides; `photo-book-DATE.pdf`.
-- [ ] **[F]** PDF: a page per frame, 1 pt per px; titled "Sequence", `sequence-DATE.pdf`.
+- [ ] PDF (⌘⇧P): a page per spread at true size, single first and last pages, photos
+      cropped at the edges, no guides; `photo-book-DATE.pdf` **[S]** or `sequence-DATE.pdf`
+      **[F]**. **[px]** 1 pt per px.
+- [ ] PDF at full resolution: a book of full-size phone photos at 300 dpi shows each photo
+      at its own ppi, or 300 when it has more (Preview.app's inspector, or
+      `pdfimages -list`). Photos taken on their side (EXIF orientation) come out upright,
+      mirrored ones too. A PNG and a HEIC (Safari or the Mac app) embed. An unreadable original:
+      "Some photos couldn't be read at full size…".
 - [ ] **[S]** Export for InDesign: a ZIP with an `.idml` and `Links/`; opens in InDesign with
-      facing pages, margins from the On drop guide, ruler guides, linked photos.
-- [ ] **[F]** Export for InDesign is absent (web) or disabled (Mac). **[S]** Export frames as images is
-      absent or disabled.
-- [ ] **[F]** Export frames as images (⌘⇧E): `sequence-DATE.zip` with 01.jpg, 02.jpg… at the frame's size,
-      on white.
+      facing pages, margins from the On drop guide, ruler guides, linked photos. **[px]** The
+      document is in pixels at the same size.
+- [ ] **[F]** Export for InDesign is absent (web) or disabled (Mac).
+- [ ] Export images (⌘⇧E): **[F]** `sequence-DATE.zip` with 01.jpg, 02.jpg… at the page's
+      size times its resolution (1080 × 1350 for Instagram 4:5; 3000 × 2400 for 10 × 8 in at
+      300 dpi), on white. **[S]** It asks One per spread (01.jpg, 02-03.jpg, … the last page)
+      or One per page (01.jpg… in book order).
+- [ ] A page too large for one image (11 × 17 in at 300 dpi): it's exported at the most that
+      fits, and a notice says the dpi.
+- [ ] Preview's Export… lists Save PDF, Export images, Export for InDesign **[S]**, and Post to
+      Instagram (web), as the File menu does.
 - [ ] Export project (⌘S) and import it into a fresh project (⌘O): "Opened … · N photos. Undo
       to go back."; ⌘Z restores. Frames come back as frames, and pixels as pixels.
 - [ ] A project from an older version opens as a book with its guides.
@@ -229,28 +241,31 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 ### Posting
 
-- [ ] File → Post to Instagram… is always listed. It's disabled, with the reason under it, unless
-      the project is digital and Instagram is connected ("Needs a digital project…", "Connect
-      Instagram in Settings first.", "Reconnect Instagram in Settings first.").
-- [ ] The pane: @user in the header; Feed post or Stories; "A carousel of N frames" / "N
-      stories, one per frame".
+- [ ] File → Post to Instagram… is always listed, for any project. It's disabled, with the
+      reason under it, until Instagram is connected ("Connect Instagram in Settings first.",
+      "Reconnect Instagram in Settings first.").
+- [ ] The pane: @user in the header; Feed post or Stories; "A carousel of N slides" / "N
+      stories, one per slide".
+- [ ] Slides: every page or frame as a thumbnail with a checkbox; the first 10 with photos are
+      chosen; an 11th can't be, and it says Instagram takes up to 10; "N of 10 chosen". Order
+      follows the document. None chosen: "Choose at least one slide to post."
+- [ ] **[S]** Spreads are torn into pages, with "Spreads are posted as their pages: N slides.
+      Photos across the gutter continue onto the next slide."; a photo across the gutter
+      continues from one slide to the next on Instagram.
+- [ ] **[in]** A book in inches posts at Instagram's sizes (rendered at its dpi, then scaled).
 - [ ] Preview: arrows and ←/→; feed shows dots and "n/N", a white card, and the caption with
       blue hashtags and mentions; stories show progress bars on a 9:16 screen.
-- [ ] Frames outside 4:5 to 1.91:1 (feed), or too tall for stories: Size offers Crop or Expand
+- [ ] Pages outside 4:5 to 1.91:1 (feed), or too tall for stories: Size offers Crop or Expand
       to the nearest shape; the preview and help follow.
 - [ ] Caption: "n / 2,200" and "n / 30 hashtags"; over either turns red and disables Post.
       Stories say they have no captions.
-- [ ] Empty frames: "Skip N empty frames", on by default. Nothing to post: "There are no frames
-      with photos to post."
-- [ ] More than 10 frames: only the first 10 will be posted (feed and stories), and the
-      preview shows 10.
-- [ ] Post: Preparing and Uploading frame n of N, Instagram processing, Publishing. Cancel
+- [ ] Post: Preparing and Uploading slide n of N, Instagram processing, Publishing. Cancel
       until publishing: "Cancelled. Nothing was posted." and nothing appears on Instagram.
 - [ ] While posting, Escape, ×, the backdrop, ⌘P, ⌘, and New project don't close or replace
       the pane.
 - [ ] Done: "Posted to Instagram.", View on Instagram opens the post, Done closes. A failure
       shows its message and Post can be tried again.
-- [ ] On Instagram: a carousel's frames are in order and cropped or expanded as chosen;
+- [ ] On Instagram: a carousel's slides are in order and cropped or expanded as chosen;
       stories in order.
 
 ## Undo and redo
@@ -268,7 +283,7 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 - [ ] Hold ⌘ (Ctrl) for a moment: badges on Undo, Redo, Preview, the sidebar toggle,
       Settings; releasing hides them.
-- [ ] ⌘I add, ⌘O open, ⌘S export/save, ⌘⇧P PDF, ⌘⇧E images [F], ⌘P preview, ⌘; guides, ⌘,
+- [ ] ⌘I add, ⌘O open, ⌘S export/save, ⌘⇧P PDF, ⌘⇧E images, ⌘P preview, ⌘; guides, ⌘,
       settings, ⌘B sidebar.
 - [ ] Desk shortcuts (⌘A, ⌘C, ⌘D, Delete, arrows, Escape) do nothing while a dialog or the
       editor is open.
@@ -314,7 +329,7 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
 - [ ] No web File menu or Undo/Redo buttons; the toolbar is the title bar (file name, "—
       Edited", drag to move the window).
 - [ ] Menus in title case with shortcuts. File: New Project, Open…, Add Photos…, Close, Save,
-      Save As… (⌘⇧S), Save PDF…, Export for InDesign… [S], Export Frames as Images… [F].
+      Save As… (⌘⇧S), Save PDF…, Export Images… (always), Export for InDesign… (enabled for spreads).
 - [ ] View: Preview, Layout…, Hide/Show Guides, Hide/Show Spreads [S] or Frames [F], following
       their state.
 - [ ] Edit: Cut, Copy, Paste in text fields; Copy with photos selected copies them; Undo
@@ -323,7 +338,7 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
       a `.photo-sequence` open it; after a relaunch, Save still writes the same file.
 - [ ] Quitting or closing with unsaved changes asks to save; unsaved changes survive a quit
       and relaunch.
-- [ ] Save PDF…, Export Frames as Images…, and Export for InDesign… suggest the document's name ("Trip.pdf",
+- [ ] Save PDF…, Export Images…, and Export for InDesign… suggest the document's name ("Trip.pdf",
       "Trip (images).zip", "Trip (InDesign).zip"); an untitled project gets a dated name.
 - [ ] Settings is one page (Appearance, Desk), with no tabs; no Instagram and no Storage section.
 - [ ] Opening a project from a newer version says to update from the App Store (no Reload).

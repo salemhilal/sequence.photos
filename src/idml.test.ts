@@ -2,6 +2,7 @@
 import { toGuideId, toPhotoId } from './ids';
 import { describe, expect, it } from 'vitest';
 import { buildIdml } from './idml';
+import { convertUnits } from './convertLayout';
 import { emptyProject } from './store';
 import type { Project } from './types';
 import { allSpreads } from './spreads';
@@ -125,5 +126,14 @@ describe('buildIdml', () => {
     const spread = [...files.entries()].filter(([name]) => name.startsWith('Spreads/'))[1]![1];
     expect(spread.querySelector('Rectangle')).not.toBeNull();
     expect(spread.querySelector('Image')).toBeNull();
+  });
+
+  it('writes pixel spreads a point to the pixel, with rulers in pixels', async () => {
+    const { files } = await build(convertUnits(sample(), 'px', 300));
+    const prefs = files.get('Resources/Preferences.xml')!;
+    const documentPrefs = prefs.querySelector('DocumentPreference')!;
+    expect(documentPrefs.getAttribute('PageWidth')).toBe('3000');
+    expect(documentPrefs.getAttribute('PageHeight')).toBe('2400');
+    expect(prefs.querySelector('ViewPreference')!.getAttribute('HorizontalMeasurementUnits')).toBe('Pixels');
   });
 });
