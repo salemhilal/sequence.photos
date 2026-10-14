@@ -147,10 +147,6 @@ export function LayoutPanel({ s, tab, draft, onDraft, selected, onSelect, onRemo
         <section>
           <PageSettings draft={draft} onChange={onDraft} showContent />
         </section>
-        <p className="help layout-note">
-          These wait for Apply, which makes them one undo step. Until then, the preview shows how every{' '}
-          {TERMS[draft.arrangement].spread} will look.
-        </p>
       </aside>
     );
   }
