@@ -34,11 +34,11 @@ const round = (r: Placement) => ({
   h: +r.h.toFixed(6),
 });
 
-describe('print to digital', () => {
+describe('spreads to frames', () => {
   it('makes each page a frame, in book order, keeping the first page’s spread id', () => {
     const p = book();
-    const d = convertLayout(p, 'digital');
-    expect(d.layout.kind).toBe('digital');
+    const d = convertLayout(p, 'frames');
+    expect(d.layout.kind).toBe('frames');
     const frames = allSpreads(d);
     // A first page, two spreads of two pages, a last page.
     expect(frames.map((f) => f.kind)).toEqual(Array(6).fill('frame'));
@@ -51,7 +51,7 @@ describe('print to digital', () => {
   });
 
   it('gives each photo to the page holding its center, in pixels from that page’s left edge', () => {
-    const d = convertLayout(book(), 'digital');
+    const d = convertLayout(book(), 'frames');
     const frames = allSpreads(d);
     // 1080 px across a 10 in page: 108 px to the inch.
     expect(frames[1]!.items.map(round)).toEqual([{ photoId: A, x: 108, y: 108, w: 648, h: 432, z: 1 }]);
@@ -60,17 +60,16 @@ describe('print to digital', () => {
   });
 
   it('converts guides in proportion to the page width, and takes the frame size', () => {
-    const d = convertLayout(book(), 'digital');
+    const d = convertLayout(book(), 'frames');
     const s = sheetOf(d);
     expect([s.pageW, s.pageH]).toEqual([1080, 1350]);
     expect(s.borders.map((b) => b.kind === 'even' && b.inset)).toEqual([54, 135]);
     expect(s.lines.map((l) => l.at)).toEqual([216]);
-    // The book's size is remembered for coming back.
-    expect(d.settings.sizes.print).toEqual({ w: 10, h: 8 });
+    expect(d.page).toEqual({ w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 });
   });
 
   it('moves photos with the guides to the frame’s shape, when they’re kept relative', () => {
-    const d = convertLayout(book(true), 'digital');
+    const d = convertLayout(book(true), 'frames');
     const a = allSpreads(d)[1]!.items[0]!;
     // Still 54 px in from the left edge's 0.5 in guide, give or take; now on a taller frame.
     expect(a.x).toBeCloseTo(108);
@@ -78,12 +77,12 @@ describe('print to digital', () => {
   });
 });
 
-describe('digital to print', () => {
+describe('frames to spreads', () => {
   it('comes back as the same book', () => {
     for (const keep of [false, true]) {
       const p = book(keep);
-      const back = convertLayout(convertLayout(p, 'digital'), 'print');
-      expect(back.layout.kind).toBe('print');
+      const back = convertLayout(convertLayout(p, 'frames'), 'spreads');
+      expect(back.layout.kind).toBe('spreads');
       expect(allSpreads(back).map((s) => [s.kind, s.id])).toEqual(allSpreads(p).map((s) => [s.kind, s.id]));
       expect(back.settings).toEqual(p.settings);
       // Photos moved with the guides to the frame's shape are refit there, so only those
@@ -95,11 +94,11 @@ describe('digital to print', () => {
   });
 
   it('makes frame 1 the first page, pairs the rest, and gives a book an empty last page if none is left over', () => {
-    const d = convertLayout(book(), 'digital');
-    if (d.layout.kind !== 'digital') throw new Error('not digital');
+    const d = convertLayout(book(), 'frames');
+    if (d.layout.kind !== 'frames') throw new Error('not frames');
     const [one, two, three] = d.layout.frames;
     d.layout.frames = [one, two!, three!];
-    const p = convertLayout(d, 'print');
+    const p = convertLayout(d, 'spreads');
     const spreads = allSpreads(p);
     expect(spreads.map((s) => s.kind)).toEqual(['first', 'middle', 'last']);
     expect(spreads[1]!.id).toBe(two!.id);
@@ -111,7 +110,7 @@ describe('digital to print', () => {
 
   it('leaves a project already of that kind alone', () => {
     const p = book();
-    expect(convertLayout(p, 'print')).toBe(p);
+    expect(convertLayout(p, 'spreads')).toBe(p);
   });
 });
 
@@ -119,37 +118,36 @@ describe('switchLayout', () => {
   it('is one undo step, and switching straight back restores the project exactly', () => {
     const p = book(true);
     projectStore.reset(p);
-    switchLayout('digital');
-    expect(projectStore.project.layout.kind).toBe('digital');
-    switchLayout('print');
+    switchLayout('frames');
+    expect(projectStore.project.layout.kind).toBe('frames');
+    switchLayout('spreads');
     expect(projectStore.project).toBe(p);
     projectStore.undo();
     projectStore.undo();
     expect(projectStore.project).toBe(p);
   });
 
-  it('switches at a size of its own in the same step, remembering it', () => {
+  it('switches at a size of its own in the same step', () => {
     const p = book();
     projectStore.reset(p);
-    switchLayout('digital', { w: 1080, h: 1080 });
+    switchLayout('frames', { w: 1080, h: 1080 });
     const s = sheetOf(projectStore.project);
-    expect([s.layout, s.pageW, s.pageH]).toEqual(['digital', 1080, 1080]);
-    expect(projectStore.project.settings.sizes.digital).toEqual({ w: 1080, h: 1080 });
+    expect([s.arrangement, s.unit, s.pageW, s.pageH]).toEqual(['frames', 'px', 1080, 1080]);
     projectStore.undo();
     expect(projectStore.project).toBe(p);
   });
 
   it('converts afresh after any other change', () => {
     projectStore.reset(book(true));
-    switchLayout('digital');
+    switchLayout('frames');
     projectStore.apply((d) => void (d.settings.centerH = false));
-    switchLayout('print');
+    switchLayout('spreads');
     expect(projectStore.project.settings.centerH).toBe(false);
   });
 });
 
 describe('frames', () => {
-  const s = sheetOf(convertLayout(book(), 'digital'));
+  const s = sheetOf(convertLayout(book(), 'frames'));
 
   it('are one page, measured from the left', () => {
     expect(sideAt(s, -50)).toBe('whole');

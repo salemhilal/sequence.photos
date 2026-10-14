@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { LayoutKind } from '../types';
+import type { Unit } from '../types';
 
 /** Ruler thickness, in pixels. */
 export const RULER = 20;
@@ -15,9 +15,9 @@ interface RulerSteps {
   room: number;
 }
 
-const RULER_STEPS: Record<LayoutKind, RulerSteps> = {
-  print: { ticks: [1 / 8, 1 / 4, 1 / 2, 1], numbers: [1, 2, 5], room: 16 },
-  digital: { ticks: [10, 25, 50, 100, 250], numbers: [50, 100, 250, 500, 1000], room: 36 },
+const RULER_STEPS: Record<Unit, RulerSteps> = {
+  in: { ticks: [1 / 8, 1 / 4, 1 / 2, 1], numbers: [1, 2, 5], room: 16 },
+  px: { ticks: [10, 25, 50, 100, 250], numbers: [50, 100, 250, 500, 1000], room: 36 },
 };
 
 interface RulerProps {
@@ -29,15 +29,15 @@ interface RulerProps {
   scale: number;
   /** The page's size along the ruler, in inches or pixels. */
   size: number;
-  layout: LayoutKind;
+  unit: Unit;
   /** Measure each page from its outside edge, meeting at the gutter. */
   mirrored?: boolean;
   onPointerDown: (e: React.PointerEvent) => void;
 }
 
 /** A ruler in inches (⅛ in ticks, numbered every inch) or pixels, coarser when zoomed out. */
-export function Ruler({ axis, length, origin, scale, size, layout, mirrored = false, onPointerDown }: RulerProps) {
-  const steps = RULER_STEPS[layout];
+export function Ruler({ axis, length, origin, scale, size, unit, mirrored = false, onPointerDown }: RulerProps) {
+  const steps = RULER_STEPS[unit];
   const every = steps.numbers.find((n) => n * scale >= steps.room) ?? steps.numbers.at(-1)!;
   const minor = steps.ticks.find((t) => t * scale >= 6 && every % t < 1e-9) ?? every;
   /** Whether a distance is a whole number of `step`s. */

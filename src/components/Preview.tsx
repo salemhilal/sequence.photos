@@ -105,8 +105,8 @@ export function Preview() {
   // A book shows both pages' width (single pages on their side); a frame, its own.
   const across = sheetExtent(sheet).width;
   const scale = Math.min((stage.w - 40) / across, (stage.h - 40) / sheet.pageH);
-  const label = folioLabel(index, spreads.length, sheet.layout);
-  const terms = TERMS[sheet.layout];
+  const label = folioLabel(index, spreads.length, sheet.arrangement);
+  const terms = TERMS[sheet.arrangement];
 
   return (
     <div className={`preview${idle ? ' idle' : ''}`} data-modal ref={rootRef}>
@@ -119,13 +119,13 @@ export function Preview() {
         <span className="hint">← → to {terms.turn} · Esc to exit</span>
         <button
           className="btn"
-          onClick={() => void (sheet.layout === 'print' ? savePdf() : exportFrames())}
+          onClick={() => void (sheet.arrangement === 'spreads' ? savePdf() : exportFrames())}
           disabled={busy !== null}
         >
           {/* The Mac app names it as its menu does (Save PDF…, Export Frames as Images…). */}
           {busy ??
             (platform.kind === 'macos'
-              ? commandTitle(sheet.layout === 'print' ? 'savePdf' : 'exportFrames')
+              ? commandTitle(sheet.arrangement === 'spreads' ? 'savePdf' : 'exportFrames')
               : terms.save)}
         </button>
         <button className="btn" onClick={close}>

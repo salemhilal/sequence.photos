@@ -17,7 +17,7 @@ import { isTyping } from '../input';
 import { newGuideId, toSpreadId, type GuideId } from '../ids';
 import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
-import type { LayoutKind, LineGuide, PageSide, Spread } from '../types';
+import type { Arrangement, LineGuide, PageSide, Spread } from '../types';
 import { TERMS, UNITS } from '../units';
 import { closeModal } from '../ui';
 import { LayoutPanel } from './LayoutPanel';
@@ -35,17 +35,17 @@ import { SpreadCanvas } from './SpreadCanvas';
 
 /** Room around the pages, as a share of a page's width (0.5 in on a 10 in page). */
 const PAD_SHARE = 0.05;
-const SAMPLES: Record<LayoutKind, Spread> = {
-  print: { id: toSpreadId('layout'), kind: 'middle', items: [] },
-  digital: { id: toSpreadId('layout'), kind: 'frame', items: [] },
+const SAMPLES: Record<Arrangement, Spread> = {
+  spreads: { id: toSpreadId('layout'), kind: 'middle', items: [] },
+  frames: { id: toSpreadId('layout'), kind: 'frame', items: [] },
 };
 
 export function LayoutEditor() {
   const { project } = useProject();
   const s = sheetOf(project);
-  const units = UNITS[s.layout];
-  const terms = TERMS[s.layout];
-  const sample = SAMPLES[s.layout];
+  const units = UNITS[s.unit];
+  const terms = TERMS[s.arrangement];
+  const sample = SAMPLES[s.arrangement];
   const sides = pageSides(sample.kind);
   const PAD = s.pageW * PAD_SHARE;
   /** The pages' (or frame's) left edge and width, around the canvas origin. */
@@ -232,8 +232,8 @@ export function LayoutEditor() {
               origin={gutterX}
               scale={scale}
               size={s.pageW}
-              layout={s.layout}
-              mirrored={s.layout === 'print'}
+              unit={s.unit}
+              mirrored={s.arrangement === 'spreads'}
               onPointerDown={(e) => dragGuide(e, 'horizontal', null)}
             />
             <Ruler
@@ -242,7 +242,7 @@ export function LayoutEditor() {
               origin={pageTop}
               scale={scale}
               size={s.pageH}
-              layout={s.layout}
+              unit={s.unit}
               onPointerDown={(e) => dragGuide(e, 'vertical', null)}
             />
             <div className="ruler-corner" />

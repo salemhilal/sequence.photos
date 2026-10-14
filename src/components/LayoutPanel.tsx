@@ -4,7 +4,7 @@ import { clampBorder, dropGuide, edgesOf } from '../geometry';
 import { newGuideId } from '../ids';
 import { collapsedPref } from '../prefs';
 import { projectStore } from '../store';
-import type { BorderGuide, Edges, LayoutKind, Sheet } from '../types';
+import type { Arrangement, BorderGuide, Edges, Sheet } from '../types';
 import { TERMS, UNITS } from '../units';
 import { NumberField } from './NumberField';
 import { PageSizeFields } from './PageSizeFields';
@@ -16,9 +16,9 @@ import { same, type Axis, type Selection } from './layoutSelection';
  */
 
 /** A border guide's fields, in pairs: a frame's left before its right. */
-const EDGES: Record<LayoutKind, (keyof Edges)[]> = {
-  print: ['top', 'bottom', 'inside', 'outside'],
-  digital: ['top', 'bottom', 'outside', 'inside'],
+const EDGES: Record<Arrangement, (keyof Edges)[]> = {
+  spreads: ['top', 'bottom', 'inside', 'outside'],
+  frames: ['top', 'bottom', 'outside', 'inside'],
 };
 
 interface PanelProps {
@@ -77,8 +77,8 @@ export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
   };
   const fold = { collapsed, shown, onToggle: toggle };
   const drop = dropGuide(s);
-  const units = UNITS[s.layout];
-  const terms = TERMS[s.layout];
+  const units = UNITS[s.unit];
+  const terms = TERMS[s.arrangement];
   const addLine = (axis: Axis) => {
     const size = axis === 'vertical' ? s.pageW : s.pageH;
     const id = newGuideId();
@@ -228,7 +228,7 @@ export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
       </PanelSection>
 
       <p className="help layout-note">
-        {terms.guidesNote} Distances in {terms.unitName}. Shift snaps a dragged guide to {units.snapLabel}.
+        {terms.guidesNote} Distances in {units.name}. Shift snaps a dragged guide to {units.snapLabel}.
       </p>
     </aside>
   );
@@ -246,8 +246,8 @@ interface BorderRowProps {
 /** A border guide's settings. A linked (even) guide edits all four distances at once. */
 function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProps) {
   const e = edgesOf(g);
-  const units = UNITS[s.layout];
-  const terms = TERMS[s.layout];
+  const units = UNITS[s.unit];
+  const terms = TERMS[s.arrangement];
   const linked = g.kind === 'even';
   const update = (change: (b: BorderGuide) => BorderGuide, coalesce?: string) =>
     projectStore.apply(
@@ -272,7 +272,7 @@ function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProp
   return (
     <div className={`border-guide pick${selected ? ' selected' : ''}`} onPointerDown={onSelect}>
       <div className="grid2">
-        {EDGES[s.layout].map((edge) => (
+        {EDGES[s.arrangement].map((edge) => (
           <NumberField
             key={edge}
             label={terms.edges[edge]}

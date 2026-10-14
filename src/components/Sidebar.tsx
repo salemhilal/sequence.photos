@@ -3,7 +3,7 @@ import { GripVertical, Plus, X } from 'lucide-react';
 import { deleteSpread, dropPhotos, folioLabel, insertSpread, moveSpread } from '../actions';
 import { clearGhost, sameTarget, startDrag, trackGhost } from '../drag';
 import { projectStore, useProject } from '../store';
-import type { LayoutKind, Placement, Sheet, Spread } from '../types';
+import type { Arrangement, Placement, Sheet, Spread } from '../types';
 import { sheetExtent, sideAt } from '../geometry';
 import { TERMS } from '../units';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
@@ -18,8 +18,8 @@ const GHOST_MAX = 140;
  * Narrowest a spread (or a frame, half as wide: a book's page) can be before the list
  * falls back to fewer columns, and the narrowest its picture gets.
  */
-const GRID_MIN_CELL: Record<LayoutKind, number> = { print: 280, digital: 96 };
-const MIN_THUMB: Record<LayoutKind, number> = { print: 120, digital: 60 };
+const GRID_MIN_CELL: Record<Arrangement, number> = { spreads: 280, frames: 96 };
+const MIN_THUMB: Record<Arrangement, number> = { spreads: 120, frames: 60 };
 /** Space between grid columns; the vertical insert gaps live here. */
 const GRID_GAP_X = 20;
 /** Horizontal padding inside each spread row. */
@@ -36,13 +36,13 @@ const GRID_PAD_X = 24;
  * from the list's whole width, not its content's: the grid's padding differs, and
  * measuring inside it would flip between one column and two at some widths.
  */
-function listLayout(listWidth: number, layout: LayoutKind): { cols: number; thumbW: number } {
-  const min = GRID_MIN_CELL[layout];
+function listLayout(listWidth: number, arrangement: Arrangement): { cols: number; thumbW: number } {
+  const min = GRID_MIN_CELL[arrangement];
   const inGrid = listWidth - 2 * GRID_PAD_X;
   const cols = Math.max(1, Math.floor((inGrid + GRID_GAP_X) / (min + GRID_GAP_X)));
   const contentWidth = cols > 1 ? inGrid : listWidth - 2 * LIST_PAD_X;
   const cellW = (contentWidth - GRID_GAP_X * (cols - 1)) / cols;
-  return { cols, thumbW: Math.max(MIN_THUMB[layout], cellW - ROW_PAD_X) };
+  return { cols, thumbW: Math.max(MIN_THUMB[arrangement], cellW - ROW_PAD_X) };
 }
 
 export function Sidebar() {
@@ -50,14 +50,14 @@ export function Sidebar() {
   const listRef = useRef<HTMLDivElement>(null);
   const [reorder, setReorder] = useState<{ id: string; dropIndex: number } | null>(null);
   const sheet = sheetOf(project);
-  const print = sheet.layout === 'print';
-  const terms = TERMS[sheet.layout];
+  const book = sheet.arrangement === 'spreads';
+  const terms = TERMS[sheet.arrangement];
   // The whole book (or sequence), in order; indexes below count through it.
   const spreads = allSpreads(project);
   const preferredWidth = ui.use((s) => s.sidebarWidth);
   const width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(preferredWidth, window.innerWidth - MIN_DESK_WIDTH));
   const [listWidth, setListWidth] = useState(width);
-  const { cols, thumbW } = listLayout(listWidth, sheet.layout);
+  const { cols, thumbW } = listLayout(listWidth, sheet.arrangement);
   const grid = cols > 1;
 
   useLayoutEffect(() => {
@@ -119,7 +119,7 @@ export function Sidebar() {
         const before = grid ? ev.clientX < best.r.left + best.r.width / 2 : ev.clientY < best.r.top + best.r.height / 2;
         const at = before ? best.idx : best.idx + 1;
         // A book's first and last spreads stay put; frames can go anywhere.
-        dropIndex = print ? Math.min(Math.max(1, at), spreads.length - 1) : at;
+        dropIndex = book ? Math.min(Math.max(1, at), spreads.length - 1) : at;
         setReorder({ id: spread.id, dropIndex });
       },
       onEnd: (_, moved) => {
@@ -146,7 +146,7 @@ export function Sidebar() {
           className="btn ghost icon small"
           aria-label={`Add ${terms.spread} at the end`}
           title={terms.addAtEnd}
-          onClick={() => insertSpread(print ? spreads.length - 1 : spreads.length)}
+          onClick={() => insertSpread(book ? spreads.length - 1 : spreads.length)}
         >
           <Plus />
         </button>
@@ -161,7 +161,7 @@ export function Sidebar() {
         {spreads.map((spread, i) => (
           <div key={spread.id} className="spread-cell">
             {/* A book's first and last spreads stay put; frames can go anywhere. */}
-            {(i > 0 || !print) && (
+            {(i > 0 || !book) && (
               <InsertGap index={i} active={reorder?.dropIndex === i} vertical={grid} noun={terms.spread} />
             )}
             <SpreadRow
@@ -175,7 +175,7 @@ export function Sidebar() {
             />
           </div>
         ))}
-        {!print && (
+        {!book && (
           <div className="spread-cell">
             <InsertGap
               index={spreads.length}
@@ -245,7 +245,7 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
   const scale = thumbW / sheetExtent(sheet).width;
   // A book's middle spreads move and delete; so does any frame but a sequence's only one.
   const movable = spread.kind === 'middle' || (spread.kind === 'frame' && total > 1);
-  const label = folioLabel(index, total, sheet.layout);
+  const label = folioLabel(index, total, sheet.arrangement);
 
   const open = () => ui.set({ editingSpreadId: spread.id });
 

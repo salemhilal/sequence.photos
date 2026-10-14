@@ -63,7 +63,7 @@ describe('duplicatePhoto', () => {
   });
 
   it('offsets a copy in a frame by the same share of its width as on a 10 in page', async () => {
-    projectStore.reset(convertLayout(projectStore.project, 'digital'));
+    projectStore.reset(convertLayout(projectStore.project, 'frames'));
     expect(sheetOf(projectStore.project).pageW).toBe(1080);
     projectStore.apply((d) => putOnPage(d, [A], allSpreads(d)[0]!.id, 'whole'));
     const [id] = await duplicatePhotos([A]);
@@ -75,7 +75,7 @@ describe('duplicatePhoto', () => {
   });
 
   it('offsets a copy on the desk in proportion to the photo, even in a sequence', async () => {
-    projectStore.reset(convertLayout(projectStore.project, 'digital'));
+    projectStore.reset(convertLayout(projectStore.project, 'frames'));
     const [id] = await duplicatePhotos([A], 0.5);
     const [orig, copy] = [A, id!].map((pid) => projectStore.project.pile.find((p) => p.photoId === pid)!);
     const step = (0.5 * Math.max(orig!.w, orig!.h)) / 2;

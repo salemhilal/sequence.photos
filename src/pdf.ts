@@ -4,11 +4,11 @@ import { platform } from '#platform';
 import { projectStore } from './store';
 import { ui } from './ui';
 import { allSpreads, sheetOf } from './spreads';
-import type { LayoutKind } from './types';
+import type { Unit } from './types';
 import { TERMS } from './units';
 
 /** PDF points per unit: 72 to the inch, and a pixel to a point (as image editors do). */
-const PT: Record<LayoutKind, number> = { print: 72, digital: 1 };
+const PT: Record<Unit, number> = { in: 72, px: 1 };
 
 /**
  * Render the book as a PDF: one PDF page per spread, at true size, with the first
@@ -19,10 +19,10 @@ export async function renderPdf(onProgress: (done: number, total: number) => voi
   const { PDFDocument } = await import('pdf-lib');
   const project = projectStore.project;
   const sheet = sheetOf(project);
-  const { pageH, layout } = sheet;
-  const pt = PT[layout];
+  const { pageH } = sheet;
+  const pt = PT[sheet.unit];
   const pdf = await PDFDocument.create();
-  pdf.setTitle(TERMS[layout].pdfTitle);
+  pdf.setTitle(TERMS[sheet.arrangement].pdfTitle);
   pdf.setCreator('Sequence');
 
   const book = allSpreads(project);

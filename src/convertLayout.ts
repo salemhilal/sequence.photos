@@ -2,40 +2,43 @@ import { clampBorder, pageRect, pageSides, relayoutRect, sideAt } from './geomet
 import { newSpreadId } from './ids';
 import { allSpreads, hasFrames, sheetOf } from './spreads';
 import type {
+  Arrangement,
   BorderGuide,
   Frame,
   LastSpread,
-  LayoutKind,
   LineGuide,
   MiddleSpread,
   Placement,
   Project,
   Sheet,
+  Size,
 } from './types';
-import { UNITS } from './units';
+import { DEFAULT_FRAME, DEFAULT_PAGE, UNITS } from './units';
 
 /**
- * Turning a print book into a digital sequence, and back.
+ * Turning a book (spreads in inches) into a sequence (frames in pixels), and back.
  *
- * Print → digital: each page becomes a frame, in book order (a book's single first and last
+ * Spreads → frames: each page becomes a frame, in book order (a book's single first and last
  * pages become one frame each, a spread two). Each photo goes to the page holding its
  * center, and may hang off that frame's edge.
  *
- * Digital → print: the first frame becomes the first (right-hand) page, the rest pair up
+ * Frames → spreads: the first frame becomes the first (right-hand) page, the rest pair up
  * into spreads, and one left over becomes the last (left-hand) page. A book turned into a
  * sequence and back comes back with the same spreads.
  *
  * Sizes change units (inches ↔ pixels) in proportion to the page's width: a 0.5 in margin
- * on a 10 in page becomes 54 px on a 1080 px frame. Then the pages take the other kind's
- * remembered size, with photos moving as they do when the page size changes.
+ * on a 10 in page becomes 54 px on a 1080 px frame. Then the pages take `size` (by
+ * default, the other arrangement's default size), with photos moving as they do when the
+ * page size changes.
  */
-export function convertLayout(project: Project, kind: LayoutKind): Project {
+export function convertLayout(project: Project, kind: Arrangement, size?: Size): Project {
   if (project.layout.kind === kind) return project;
   const from = sheetOf(project);
-  const size = project.settings.sizes[kind];
-  const units = UNITS[kind];
+  const setup = kind === 'frames' ? DEFAULT_FRAME : DEFAULT_PAGE;
+  const page = { ...setup, ...(size && { w: size.w, h: size.h }) };
+  const units = UNITS[setup.unit];
   // Inches to pixels or back, measured against the page's width.
-  const k = size.w / from.pageW;
+  const k = page.w / from.pageW;
   const scaled = (n: number) => units.round(n * k);
 
   const borders: BorderGuide[] = from.borders.map((g) =>
@@ -45,8 +48,17 @@ export function convertLayout(project: Project, kind: LayoutKind): Project {
   );
   const lines: LineGuide[] = from.lines.map((l) => ({ ...l, at: scaled(l.at) }));
   // The pages as they are, in the new units, before they take the new size.
-  const converted: Sheet = { ...from, layout: kind, pageW: from.pageW * k, pageH: from.pageH * k, borders, lines };
-  const target: Sheet = { ...converted, pageW: size.w, pageH: size.h };
+  const converted: Sheet = {
+    ...from,
+    arrangement: kind,
+    unit: setup.unit,
+    pxPerUnit: setup.pxPerUnit,
+    pageW: from.pageW * k,
+    pageH: from.pageH * k,
+    borders,
+    lines,
+  };
+  const target: Sheet = { ...converted, pageW: page.w, pageH: page.h };
   /**
    * A page's photos onto their new page: measured from the old page's left edge (`shift`
    * is where that edge is), in the new units, placed on the new layout's page (a book's left
@@ -66,10 +78,9 @@ export function convertLayout(project: Project, kind: LayoutKind): Project {
       return b;
     }),
     lines,
-    sizes: { ...project.settings.sizes, [from.layout]: { w: from.pageW, h: from.pageH } },
   };
 
-  if (kind === 'digital') {
+  if (kind === 'frames') {
     const pages: { id: Frame['id']; items: Placement[] }[] = [];
     for (const spread of allSpreads(project)) {
       const sides = pageSides(spread.kind);
@@ -86,11 +97,11 @@ export function convertLayout(project: Project, kind: LayoutKind): Project {
     const frames = pages.map((p): Frame => ({ kind: 'frame', id: p.id, items: p.items }));
     // A book always has at least its first and last pages.
     if (!hasFrames(frames)) return project;
-    return { ...project, layout: { kind: 'digital', frame: { ...size }, frames }, settings };
+    return { ...project, page, layout: { kind: 'frames', frames }, settings };
   }
 
-  // Digital → print: frame 1 is the first page; the rest pair up; one left over is the last page.
-  if (project.layout.kind !== 'digital') return project;
+  // Frames → spreads: frame 1 is the first page; the rest pair up; one left over is the last page.
+  if (project.layout.kind !== 'frames') return project;
   const [firstFrame, ...others] = project.layout.frames;
   const spreads: MiddleSpread[] = [];
   let lastSpread: LastSpread = { kind: 'last', id: newSpreadId(), items: [] };
@@ -105,9 +116,9 @@ export function convertLayout(project: Project, kind: LayoutKind): Project {
   }
   return {
     ...project,
+    page,
     layout: {
-      kind: 'print',
-      page: { ...size },
+      kind: 'spreads',
       firstSpread: { kind: 'first', id: firstFrame.id, items: fit(firstFrame.items, 0, false) },
       spreads,
       lastSpread,

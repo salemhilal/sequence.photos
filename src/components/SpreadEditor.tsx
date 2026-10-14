@@ -22,7 +22,7 @@ import type { PhotoId, SpreadId } from '../ids';
 import { allSpreads, findSpread, sheetOf } from '../spreads';
 import { TERMS, UNITS, type Units } from '../units';
 import { projectStore, useProject } from '../store';
-import type { BorderGuide, LayoutKind, Project, Placement } from '../types';
+import type { Arrangement, BorderGuide, Project, Placement } from '../types';
 import { isTyping } from '../input';
 import { openPhotoMenu, toggleGuides, ui } from '../ui';
 import { shortcutLabel } from '../commands';
@@ -42,7 +42,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const index = book.findIndex((s) => s.id === spreadId);
   const spread = book[index];
   const sheet = sheetOf(project);
-  const units = UNITS[sheet.layout];
+  const units = UNITS[sheet.unit];
   const PAD = sheet.pageW * PAD_SHARE;
   // A book's two pages (single ones on their side), or a frame.
   const { left: extentLeft, width: across } = sheetExtent(sheet);
@@ -225,8 +225,8 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
     </div>
   );
 
-  const label = folioLabel(index, book.length, sheet.layout);
-  const noun = TERMS[sheet.layout].spread;
+  const label = folioLabel(index, book.length, sheet.arrangement);
+  const noun = TERMS[sheet.arrangement].spread;
 
   return (
     <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
@@ -320,9 +320,9 @@ function guideLabel(g: BorderGuide, u: Units): string {
 }
 
 /** A border guide's distances, for a tooltip: top, outside (left, in a frame), bottom, inside. */
-function guideSummary(g: BorderGuide, u: Units, layout: LayoutKind): string {
+function guideSummary(g: BorderGuide, u: Units, arrangement: Arrangement): string {
   const e = edgesOf(g);
-  const { outside, inside } = TERMS[layout].edges;
+  const { outside, inside } = TERMS[arrangement].edges;
   const f = u.format;
   return `Top ${f(e.top)} · ${outside} ${f(e.outside)} · Bottom ${f(e.bottom)} · ${inside} ${f(e.inside)} ${u.suffix}`;
 }
@@ -343,7 +343,7 @@ interface InspectorProps {
 function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorProps) {
   const [lock, setLock] = useState(true);
   const sheet = sheetOf(project);
-  const units = UNITS[sheet.layout];
+  const units = UNITS[sheet.unit];
   if (!item) {
     return (
       <aside className="inspector">
@@ -362,10 +362,10 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
   const boxes = sheet.borders
     .map((g) => ({ g, box: borderBox(side, sheet, g) }))
     .sort((a, b) => b.box.w * b.box.h - a.box.w * a.box.h);
-  // Print: the photo's pixels per inch. Digital: how much it's enlarged, if it is.
+  // Inches: the photo's pixels per inch. Pixels: how much it's enlarged, if it is.
   const where = side === 'whole' ? 'frame' : 'page';
-  const ppi = photo && sheet.layout === 'print' ? Math.round(photo.pxW / item.w) : null;
-  const enlarged = photo && sheet.layout === 'digital' ? item.w / photo.pxW : null;
+  const ppi = photo && sheet.unit === 'in' ? Math.round(photo.pxW / item.w) : null;
+  const enlarged = photo && sheet.unit === 'px' ? item.w / photo.pxW : null;
 
   return (
     <aside className="inspector">
@@ -443,7 +443,7 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
             onClick={() => fit(box)}
             onPointerEnter={() => onHoverBox(box)}
             onPointerLeave={() => onHoverBox(null)}
-            title={g.kind === 'edges' ? guideSummary(g, units, sheet.layout) : undefined}
+            title={g.kind === 'edges' ? guideSummary(g, units, sheet.arrangement) : undefined}
           >
             {guideLabel(g, units)}
           </button>

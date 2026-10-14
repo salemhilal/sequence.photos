@@ -61,16 +61,16 @@ function onTouchDevice(): boolean {
 
 export default function App() {
   const { project, canUndo, canRedo } = useProject();
-  const digital = project.layout.kind === 'digital';
+  const frames = project.layout.kind === 'frames';
   const terms = TERMS[project.layout.kind];
   const instagram = useInstagram();
   // Why File → Post to Instagram is disabled, if it is.
   // (An expired token is caught when posting, which says to reconnect.)
   const instagramReady = instagram !== null && !instagram.needsReconnect;
   const instagramBlocked =
-    !digital && !instagramReady
+    !frames && !instagramReady
       ? 'Needs a digital project (Layout) and Instagram connected (Settings).'
-      : !digital
+      : !frames
         ? 'Needs a digital project: switch in Layout.'
         : instagram === null
           ? 'Connect Instagram in Settings first.'
@@ -152,7 +152,7 @@ export default function App() {
                 fileItem('importProject', <FolderOpen />),
                 fileItem('exportProject', <Download />),
                 fileItem('savePdf', <FileText />),
-                digital ? fileItem('exportFrames', <Images />) : fileItem('exportIndesign', <Package />),
+                frames ? fileItem('exportFrames', <Images />) : fileItem('exportIndesign', <Package />),
                 {
                   ...fileItem('postToInstagram', <Send />, working || instagramBlocked !== null),
                   note: instagramBlocked ?? undefined,

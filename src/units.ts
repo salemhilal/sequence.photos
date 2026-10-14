@@ -1,13 +1,14 @@
-import type { Edges, LayoutKind, Size } from './types';
+import type { Arrangement, Edges, PageSetup, Size, Unit } from './types';
 
 /**
- * What changes with the layout's units: print works in inches, digital in pixels. Sizes,
- * guides, and placements are stored in these units; this is what the UI and geometry need
- * to know about them.
+ * What changes with the page's unit, inches or pixels. Sizes, guides, and placements are
+ * stored in it; this is what the UI and geometry need to know about it.
  */
 export interface Units {
   /** Shown after numbers. */
-  suffix: 'in' | 'px';
+  suffix: Unit;
+  /** The unit, in words. */
+  name: 'inches' | 'pixels';
   /** An arrow-key nudge, and with Shift. */
   nudge: number;
   nudgeBig: number;
@@ -35,9 +36,10 @@ const roundInches = (n: number) => {
   return eighths ? Math.round(n * 1000) / 1000 : Math.round(n * 100) / 100;
 };
 
-export const UNITS: Record<LayoutKind, Units> = {
-  print: {
+export const UNITS: Record<Unit, Units> = {
+  in: {
     suffix: 'in',
+    name: 'inches',
     nudge: 1 / 16,
     nudgeBig: 1 / 2,
     snap: 1 / 8,
@@ -50,8 +52,9 @@ export const UNITS: Record<LayoutKind, Units> = {
     round: roundInches,
     format: (n) => roundInches(n).toString(),
   },
-  digital: {
+  px: {
     suffix: 'px',
+    name: 'pixels',
     nudge: 1,
     nudgeBig: 10,
     snap: 10,
@@ -67,8 +70,8 @@ export const UNITS: Record<LayoutKind, Units> = {
 };
 
 /**
- * What the UI calls things in each layout: a book has spreads of pages, measured in
- * inches; a digital sequence has frames, measured in pixels.
+ * What the UI calls things in each arrangement: a book has spreads of pages; a sequence
+ * has frames.
  */
 export interface Terms {
   /** One of the run the sidebar lists and the editor goes through. */
@@ -78,8 +81,6 @@ export interface Terms {
   /** What photos are placed on. */
   page: 'page' | 'frame';
   pages: 'pages' | 'frames';
-  /** The units, in words. */
-  unitName: 'inches' | 'pixels';
   /** The sidebar's count: a book's pages, or a sequence's frames. */
   count: (spreads: number) => string;
   /** The sidebar's button that adds one at the end. */
@@ -99,14 +100,13 @@ export interface Terms {
   guidesNote: string;
 }
 
-export const TERMS: Record<LayoutKind, Terms> = {
-  print: {
+export const TERMS: Record<Arrangement, Terms> = {
+  spreads: {
     spread: 'spread',
     spreads: 'spreads',
     Spreads: 'Spreads',
     page: 'page',
     pages: 'pages',
-    unitName: 'inches',
     count: (n) => `${n * 2 - 2} pages`,
     addAtEnd: 'Add a spread before the back page',
     turn: 'turn pages',
@@ -118,13 +118,12 @@ export const TERMS: Record<LayoutKind, Terms> = {
     guidesNote:
       'Every spread, mirrored on facing pages. Inside is the edge at the gutter; vertical guides are measured from the outside edge.',
   },
-  digital: {
+  frames: {
     spread: 'frame',
     spreads: 'frames',
     Spreads: 'Frames',
     page: 'frame',
     pages: 'frames',
-    unitName: 'pixels',
     count: (n) => `${n} ${n === 1 ? 'frame' : 'frames'}`,
     addAtEnd: 'Add a frame at the end',
     turn: 'go through frames',
@@ -137,16 +136,19 @@ export const TERMS: Record<LayoutKind, Terms> = {
   },
 };
 
-/** A new project's book: 10 × 8 in pages. */
-export const DEFAULT_PAGE: Size = { w: 10, h: 8 };
+/** The resolution inches are exported at unless the document says otherwise. */
+export const DEFAULT_DPI = 300;
+
+/** A new project's book: 10 × 8 in pages, at 300 dpi. */
+export const DEFAULT_PAGE: PageSetup = { w: 10, h: 8, unit: 'in', pxPerUnit: DEFAULT_DPI };
 
 /**
- * A new digital sequence's frames: 4:5, the tallest shape Instagram's API posts as is, at
- * the 1080 px width Instagram shows posts at (larger uploads are scaled down to it).
+ * A new sequence's frames: 4:5, the tallest shape Instagram's API posts as is, at the
+ * 1080 px width Instagram shows posts at (larger uploads are scaled down to it).
  */
-export const DEFAULT_FRAME: Size = { w: 1080, h: 1350 };
+export const DEFAULT_FRAME: PageSetup = { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 };
 
-/** Instagram's feed and story sizes, offered as presets for digital frames. */
+/** Instagram's feed and story sizes, offered as presets for frames in pixels. */
 export const FRAME_PRESETS: { label: string; size: Size }[] = [
   { label: 'Instagram 4:5', size: { w: 1080, h: 1350 } },
   // The Instagram app takes 3:4; its upload API doesn't (posting crops or expands it).

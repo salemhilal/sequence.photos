@@ -123,13 +123,12 @@ switch it to digital in Layout (and back).
 - [ ] Opens from the toolbar's Layout button (Mac: View → Layout…). Escape, ×, or the
       backdrop close it, including right after clicking the format toggle or a checkbox.
 - [ ] Picking For print or For digital changes nothing until Apply: the form shows that
-      format's units and last size, with a note; Revert puts it back.
+      format's units and default size, with a note; Revert puts it back.
 - [ ] **[P→D]** For digital, Apply: each page becomes a frame in book order (a photo across the
       gutter goes with the page holding its center), at the size in the form; guides in px.
       One ⌘Z undoes it.
 - [ ] **[D→P]** Switching straight back restores the book exactly. After editing: frame 1 is
       the first page, the rest pair into spreads, a leftover becomes the last page.
-- [ ] Each format remembers its own last size.
 - [ ] Size: editing W or H shows Apply (primary) and Revert; Revert restores; Apply resizes in
       one undo step; Enter applies. 10 → 8 → 10 puts photos and guides back exactly.
 - [ ] **[D]** A new sequence is 1080 × 1350 (4:5). Presets: Instagram 4:5, 3:4 (app uploads),

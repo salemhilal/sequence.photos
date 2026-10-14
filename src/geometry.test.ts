@@ -24,7 +24,9 @@ function even(id: string, inset: number): BorderGuide {
 }
 
 const settings: Sheet = {
-  layout: 'print',
+  arrangement: 'spreads',
+  unit: 'in',
+  pxPerUnit: 300,
   pageW: 10,
   pageH: 8,
   centerV: true,
@@ -48,7 +50,7 @@ describe('pages', () => {
 
   it('draws a book two pages wide around the gutter, and a frame one wide from its left', () => {
     expect(sheetExtent(settings)).toEqual({ left: -10, width: 20 });
-    expect(sheetExtent({ ...settings, layout: 'digital' })).toEqual({ left: 0, width: 10 });
+    expect(sheetExtent({ ...settings, arrangement: 'frames' })).toEqual({ left: 0, width: 10 });
   });
 
   it('fits dropped photos inside the border guide with the largest box', () => {

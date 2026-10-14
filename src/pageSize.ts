@@ -3,7 +3,8 @@ import { clampBorder, relayoutRect } from './geometry';
 import { allSpreads, findSpread, sheetOf } from './spreads';
 import { projectStore } from './store';
 import { convertLayout } from './convertLayout';
-import type { LayoutKind, Project, Sheet, Size } from './types';
+import type { Arrangement, Project, Sheet, Size } from './types';
+import { DEFAULT_FRAME, DEFAULT_PAGE } from './units';
 
 /**
  * The project a run of size changes is computed from. Relaying out from this fixed
@@ -13,24 +14,22 @@ import type { LayoutKind, Project, Sheet, Size } from './types';
  */
 let resizeRun: { base: Project; out: Project } | null = null;
 
-/** The last switch between print and digital, so switching straight back restores what was there. */
+/** The last switch between spreads and frames, so switching straight back restores what was there. */
 let lastSwitch: { from: Project; to: Project } | null = null;
 
 /**
- * Turn the project into a print book or a digital sequence (see convertLayout), at `size`
- * (default: that format's last size): one undo step. Photos moved with the guides to a new shape don't come back exactly when moved
- * back, so switching straight back, with nothing changed between, restores the project
- * as it was.
+ * Turn the project into a book or a sequence (see convertLayout), at `size` (default: that
+ * arrangement's default size): one undo step. Photos moved with the guides to a new shape
+ * don't come back exactly when moved back, so switching straight back, with nothing changed
+ * between, restores the project as it was.
  */
-export function switchLayout(kind: LayoutKind, size?: Size): void {
+export function switchLayout(kind: Arrangement, size?: Size): void {
   const now = projectStore.project;
   if (now.layout.kind === kind) return;
-  // At a size other than the format's last one: converted straight to it, in the same step.
-  const target = size ?? now.settings.sizes[kind];
+  const target = size ?? (kind === 'frames' ? DEFAULT_FRAME : DEFAULT_PAGE);
   const from = lastSwitch?.from;
   const back = lastSwitch?.to === now && from?.layout.kind === kind && sameSize(sheetOf(from), target);
-  const base = { ...now, settings: { ...now.settings, sizes: { ...now.settings.sizes, [kind]: { ...target } } } };
-  projectStore.replace(back && from ? from : convertLayout(base, kind));
+  projectStore.replace(back && from ? from : convertLayout(now, kind, target));
   lastSwitch = { from: now, to: projectStore.project };
 }
 
@@ -38,14 +37,11 @@ function sameSize(sheet: Sheet, size: Size): boolean {
   return sheet.pageW === size.w && sheet.pageH === size.h;
 }
 
-/** Set the page's (print) or frames' (digital) size, and remember it for its layout kind. */
+/** Set the page size. */
 export function setLayoutSize(d: Draft<Project>, size: Size): void {
-  const l = d.layout;
   // Field by field, so setting the size it already is changes nothing.
-  for (const s of [l.kind === 'print' ? l.page : l.frame, d.settings.sizes[l.kind]]) {
-    s.w = size.w;
-    s.h = size.h;
-  }
+  d.page.w = size.w;
+  d.page.h = size.h;
 }
 
 /**

@@ -147,12 +147,12 @@ describe('putInPile', () => {
 
 describe('spreads', () => {
   it('labels pages with single first and last pages', () => {
-    expect([0, 1, 2, 3].map((i) => spreadLabel(i, 4, 'print'))).toEqual(['1', '2–3', '4–5', '6']);
+    expect([0, 1, 2, 3].map((i) => spreadLabel(i, 4, 'spreads'))).toEqual(['1', '2–3', '4–5', '6']);
   });
 
   it('pads folio labels like page numbers in a book', () => {
-    expect([0, 1, 3].map((i) => folioLabel(i, 4, 'print'))).toEqual(['01', '02–03', '06']);
-    expect(folioLabel(1, 60, 'print')).toBe('002–003');
+    expect([0, 1, 3].map((i) => folioLabel(i, 4, 'spreads'))).toEqual(['01', '02–03', '06']);
+    expect(folioLabel(1, 60, 'spreads')).toBe('002–003');
   });
 
   it('inserts spreads between the fixed first and last pages', () => {
@@ -324,7 +324,7 @@ function sampleProjectForRaise() {
 
 describe('frames', () => {
   beforeEach(() => {
-    projectStore.reset(convertLayout(emptyProject(), 'digital'));
+    projectStore.reset(convertLayout(emptyProject(), 'frames'));
     addPhotosToPile(photos);
   });
 
@@ -354,7 +354,7 @@ describe('frames', () => {
   });
 
   it('numbers frames one by one', () => {
-    expect(spreadLabel(4, 6, 'digital')).toBe('5');
-    expect(folioLabel(4, 6, 'digital')).toBe('05');
+    expect(spreadLabel(4, 6, 'frames')).toBe('5');
+    expect(folioLabel(4, 6, 'frames')).toBe('05');
   });
 });

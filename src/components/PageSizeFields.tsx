@@ -2,14 +2,14 @@ import { useId, useState } from 'react';
 import { setPageSize, switchLayout } from '../pageSize';
 import { sheetOf } from '../spreads';
 import { useProject } from '../store';
-import type { LayoutKind, Size } from '../types';
-import { FRAME_PRESETS, UNITS } from '../units';
+import type { Arrangement, Size } from '../types';
+import { DEFAULT_FRAME, DEFAULT_PAGE, FRAME_PRESETS, UNITS } from '../units';
 import { NumberField } from './NumberField';
 import { Segmented } from './Segmented';
 
-const KINDS: { value: LayoutKind; label: string }[] = [
-  { value: 'print', label: 'For print' },
-  { value: 'digital', label: 'For digital' },
+const KINDS: { value: Arrangement; label: string }[] = [
+  { value: 'spreads', label: 'For print' },
+  { value: 'frames', label: 'For digital' },
 ];
 
 /**
@@ -24,28 +24,27 @@ export function PageSizeFields() {
   const current: Size = { w: sheet.pageW, h: sheet.pageH };
   // A new form whenever the project changes some other way (undo, another copy's Apply).
   return (
-    <LayoutForm
-      key={`${sheet.layout}:${current.w}x${current.h}`}
-      kind={sheet.layout}
-      current={current}
-      remembered={project.settings.sizes}
-    />
+    <LayoutForm key={`${sheet.arrangement}:${current.w}x${current.h}`} kind={sheet.arrangement} current={current} />
   );
 }
 
 interface FormProps {
-  kind: LayoutKind;
+  kind: Arrangement;
   current: Size;
-  /** Each format's last size, for when the toggle picks the other one. */
-  remembered: Record<LayoutKind, Size>;
 }
 
-function LayoutForm({ kind: currentKind, current, remembered }: FormProps) {
+/** Each format's default size, for when the toggle picks the other one. */
+const DEFAULTS: Record<Arrangement, Size> = {
+  spreads: { w: DEFAULT_PAGE.w, h: DEFAULT_PAGE.h },
+  frames: { w: DEFAULT_FRAME.w, h: DEFAULT_FRAME.h },
+};
+
+function LayoutForm({ kind: currentKind, current }: FormProps) {
   // Unique per copy: the new-project card and the Layout view can both be open.
   const id = useId();
-  const [kind, setKind] = useState<LayoutKind>(currentKind);
+  const [kind, setKind] = useState<Arrangement>(currentKind);
   const [draft, setDraft] = useState<Size>(current);
-  const units = UNITS[kind];
+  const units = UNITS[kind === 'spreads' ? 'in' : 'px'];
   const switching = kind !== currentKind;
   const changed = switching || draft.w !== current.w || draft.h !== current.h;
   const preset = FRAME_PRESETS.find((p) => p.size.w === draft.w && p.size.h === draft.h);
@@ -53,9 +52,9 @@ function LayoutForm({ kind: currentKind, current, remembered }: FormProps) {
     if (switching) switchLayout(kind, draft);
     else if (changed) setPageSize(draft);
   };
-  const pick = (k: LayoutKind) => {
+  const pick = (k: Arrangement) => {
     setKind(k);
-    setDraft(k === currentKind ? current : { ...remembered[k] });
+    setDraft(k === currentKind ? current : { ...DEFAULTS[k] });
   };
   const revert = () => {
     setKind(currentKind);
@@ -85,7 +84,7 @@ function LayoutForm({ kind: currentKind, current, remembered }: FormProps) {
       </span>
       <Segmented halves labelledBy={`${id}-label`} options={KINDS} value={kind} onChange={pick} />
       <div className="size-form">
-        {kind === 'digital' && (
+        {kind === 'frames' && (
           <select
             aria-label="Size preset"
             value={preset?.label ?? ''}
@@ -109,7 +108,7 @@ function LayoutForm({ kind: currentKind, current, remembered }: FormProps) {
         </div>
         {switching && (
           <p className="help">
-            {kind === 'digital'
+            {kind === 'frames'
               ? 'Apply to make this a digital sequence: each page becomes a frame.'
               : 'Apply to make this a print book: frames pair up into spreads.'}
           </p>
@@ -122,7 +121,7 @@ function LayoutForm({ kind: currentKind, current, remembered }: FormProps) {
             <button
               type="button"
               className="btn ghost"
-              title={`Back to ${current.w} × ${current.h} ${UNITS[currentKind].suffix}`}
+              title={`Back to ${current.w} × ${current.h} ${UNITS[currentKind === 'spreads' ? 'in' : 'px'].suffix}`}
               onClick={revert}
             >
               Revert

@@ -133,14 +133,14 @@ export const commands = {
     title: { browser: 'Export for InDesign', macos: 'Export for InDesign…' },
     bindings: [],
     scope: 'app',
-    run: () => (projectStore.project.layout.kind === 'print' ? void exportIndesign() : false),
+    run: () => (projectStore.project.layout.kind === 'spreads' ? void exportIndesign() : false),
   },
   exportFrames: {
     title: { browser: 'Export frames as images', macos: 'Export Frames as Images…' },
     bindings: [{ key: 'e', mod: true, shift: true }],
     scope: 'app',
     inFields: true,
-    run: () => (projectStore.project.layout.kind === 'digital' ? void exportFrames() : false),
+    run: () => (projectStore.project.layout.kind === 'frames' ? void exportFrames() : false),
   },
   // Digital sequences, with an Instagram account connected (Settings), on the web.
   postToInstagram: {
@@ -149,7 +149,7 @@ export const commands = {
     scope: 'app',
     run: () => {
       const connection = instagramConnection();
-      const ready = projectStore.project.layout.kind === 'digital' && connection && !connection.needsReconnect;
+      const ready = projectStore.project.layout.kind === 'frames' && connection && !connection.needsReconnect;
       return ready ? openModal('instagram') : false;
     },
   },

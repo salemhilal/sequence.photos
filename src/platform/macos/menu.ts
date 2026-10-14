@@ -44,7 +44,7 @@ export async function setUpMenu(): Promise<void> {
   // Its wording follows the sidebar (see sync below).
   const sidebar = await command('toggleSidebar', undefined, 'Hide Spreads');
   const guides = await command('toggleGuides', undefined, 'Hide Guides');
-  // For print books and digital sequences respectively (see sync below).
+  // For spreads and frames respectively (see sync below).
   const indesign = await command('exportIndesign');
   const images = await command('exportFrames');
 
@@ -149,8 +149,8 @@ export async function setUpMenu(): Promise<void> {
     void redo.setEnabled(state.redo);
     void sidebar.setText(`${state.sidebar ? 'Hide' : 'Show'} ${TERMS[state.layout].Spreads}`);
     void guides.setText(state.guides ? 'Hide Guides' : 'Show Guides');
-    void indesign.setEnabled(state.layout === 'print');
-    void images.setEnabled(state.layout === 'digital');
+    void indesign.setEnabled(state.layout === 'spreads');
+    void images.setEnabled(state.layout === 'frames');
   };
   sync();
   projectStore.subscribe(sync);

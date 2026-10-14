@@ -114,7 +114,7 @@ async function sandboxed(dir) {
     let ok = openApp('sandbox-open', file);
     console.log('\nRelaunching sandboxed…\n');
     ok = openApp('sandbox-relaunch') && ok;
-    const saved = (await savedDoc(file)).layout.page.w === 14;
+    const saved = (await savedDoc(file)).page.w === 14;
     console.log(`${saved ? 'ok  ' : 'FAIL'} the sandboxed app's saves are in the file (read outside the app)`);
     return ok && saved;
   } finally {
@@ -177,11 +177,11 @@ try {
   const outside = [
     [
       'saved file has the change (read outside the app)',
-      (await savedDoc(join(dir, 'Fixture A.photo-sequence'))).layout.page.w === 11,
+      (await savedDoc(join(dir, 'Fixture A.photo-sequence'))).page.w === 11,
     ],
     [
       'saved-as file has the change (read outside the app)',
-      (await savedDoc(join(dir, 'Saved As.photo-sequence'))).layout.page.w === 12,
+      (await savedDoc(join(dir, 'Saved As.photo-sequence'))).page.w === 12,
     ],
   ];
   for (const [name, ok] of outside) {

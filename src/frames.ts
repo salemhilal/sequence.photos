@@ -11,7 +11,7 @@ const QUALITY = 0.92;
 const MAX_DECODE_PIXELS = 16_000_000;
 
 /**
- * Render a digital sequence's frames as images: one JPEG per frame, at its pixel size, on
+ * Render a sequence's frames as images: one JPEG per frame, at its pixel size, on
  * white, numbered in order (01.jpg, 02.jpg, …) so they upload in sequence. Each photo is
  * drawn from its original, resized once to its placed size, and cropped at the frame's edges.
  */
@@ -95,13 +95,13 @@ async function decode(p: Placement): Promise<ImageBitmap | null> {
 /** Save the frames as a ZIP of JPEGs, reporting progress and errors in the UI. */
 export async function exportFrames(): Promise<void> {
   if (ui.get().busy || ui.get().importing) return;
-  const { layout } = projectStore.project;
-  if (layout.kind !== 'digital') return;
-  const { frames, frame } = layout;
+  const { layout, page: frame } = projectStore.project;
+  if (layout.kind !== 'frames') return;
+  const { frames } = layout;
   let missing = 0;
   try {
     const saved = await platform.saveFile(
-      `${TERMS.digital.fileStem}-${new Date().toISOString().slice(0, 10)}.zip`,
+      `${TERMS.frames.fileStem}-${new Date().toISOString().slice(0, 10)}.zip`,
       async () => {
         ui.set({ busy: 'Rendering frames…' });
         const out = await renderFrames(frames, frame.w, frame.h, (done) =>
