@@ -226,7 +226,9 @@ export function LayoutEditor() {
           </div>
           <span className="spacer" />
           <span className="hint">
-            Drag from a ruler to add a guide · Shift: snap to {units.snapLabel} · Drag off the {terms.page} to remove
+            {previewing
+              ? 'Preview of the changes · ← → to flip through'
+              : `Drag from a ruler to add a guide · Shift: snap to ${units.snapLabel} · Drag off the ${terms.page} to remove`}
           </span>
           <button className="btn ghost icon" aria-label="Close" onClick={closeModal}>
             <X />
