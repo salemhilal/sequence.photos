@@ -1873,6 +1873,16 @@ body.col-resizing * {
   top: 4px;
   left: 4px;
   pointer-events: auto;
+  cursor: help;
+}
+/* Near a left edge (a photo's corner, a sidebar row's label): its tip opens rightward. */
+.soft-badge[data-tip]::after {
+  right: auto;
+  left: 0;
+}
+/* Above neighboring photos while its tip shows. */
+.item:has(.soft-badge:hover) {
+  z-index: 1;
 }
 
 /* One page of a spread, clipped to it (Instagram's slides). */
