@@ -3,7 +3,8 @@ import { getImage } from '../../db';
 import { projectLoaded } from '../../persistence';
 import { tourSeenPref } from '../../prefs';
 import { putOnPage } from '../../actions';
-import { renderFrames } from '../../frames';
+import { renderImages } from '../../rasterExport';
+import { outputPages } from '../../renderPlan';
 import { toPhotoId } from '../../ids';
 import { newProject } from '../../project';
 import { applyPageSetup, draftOf, setLayoutSize } from '../../pageSetup';
@@ -141,8 +142,8 @@ async function scenarios(dir: string): Promise<void> {
       saved.layout.kind === 'frames' && saved.page.unit === 'px' && sheetOf(saved).pageW === page.w,
       saved.layout.kind,
     );
-    const placed = projectStore.project.layout.kind === 'frames' ? projectStore.project.layout.frames : [];
-    const { files, missing } = await renderFrames(placed, page.w, page.h, () => undefined);
+    const placed = outputPages(projectStore.project, 'page');
+    const { files, missing } = await renderImages(placed, projectStore.project, () => undefined);
     const first = files[0] && (await createImageBitmap(files[0].data).catch(() => null));
     check(
       'renders frames as JPEGs at the frame size',
@@ -163,6 +164,17 @@ async function scenarios(dir: string): Promise<void> {
       book.layout.kind === 'spreads' && book.page.unit === 'in' && book.page.w === 10,
       `${book.layout.kind} ${book.page.w} ${book.page.unit}`,
     );
+    // A page in inches renders at its dpi: 10 × 8 in at 300 is 3000 × 2400.
+    const pages = outputPages(book, 'page').slice(0, 2);
+    const out = await renderImages(pages, book, () => undefined);
+    const image = out.files[0] && (await createImageBitmap(out.files[0].data).catch(() => null));
+    check(
+      'renders a page in inches at its dpi',
+      out.files.length === 2 && image?.width === 3000 && image.height === 2400,
+      `${out.files.length} files, ${image?.width}×${image?.height}`,
+    );
+    // Leave the file as saved, so New Project doesn't ask.
+    projectStore.undo();
   }
 
   // New Project starts fresh history, so undo can't bring back a project without its file.

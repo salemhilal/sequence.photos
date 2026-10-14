@@ -89,8 +89,6 @@ export interface Terms {
   turn: string;
   /** The toolbar's preview button. */
   preview: string;
-  /** The preview's save button. */
-  save: string;
   /** Saved PDFs' title and file name. */
   pdfTitle: string;
   fileStem: string;
@@ -111,7 +109,6 @@ export const TERMS: Record<Arrangement, Terms> = {
     addAtEnd: 'Add a spread before the back page',
     turn: 'turn pages',
     preview: 'Preview book',
-    save: 'Download PDF',
     pdfTitle: 'Photo book',
     fileStem: 'photo-book',
     edges: { top: 'Top', bottom: 'Bottom', inside: 'Inside', outside: 'Outside' },
@@ -128,7 +125,6 @@ export const TERMS: Record<Arrangement, Terms> = {
     addAtEnd: 'Add a frame at the end',
     turn: 'go through frames',
     preview: 'Preview',
-    save: 'Export frames as images',
     pdfTitle: 'Sequence',
     fileStem: 'sequence',
     edges: { top: 'Top', bottom: 'Bottom', inside: 'Right', outside: 'Left' },

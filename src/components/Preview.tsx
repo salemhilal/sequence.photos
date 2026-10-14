@@ -2,10 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { folioLabel } from '../actions';
 import { useWindowEvent } from '../hooks';
-import { exportFrames } from '../frames';
-import { savePdf } from '../pdf';
-import { platform } from '#platform';
-import { commandTitle } from '../commands';
+import { FileMenu } from './FileMenu';
+import { useExportItems } from './exportItems';
 import { useProject } from '../store';
 import { closeModal, ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
@@ -66,6 +64,7 @@ export function Preview() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 900, h: 600 });
   const busy = ui.use((s) => s.busy);
+  const exportItems = useExportItems();
   const sheet = sheetOf(project);
   // Saving (a PDF or images) shows its progress in the header: keep it up until that's done.
   const idle = useIdle(rootRef, busy !== null);
@@ -117,17 +116,11 @@ export function Preview() {
         </span>
         <span className="spacer" />
         <span className="hint">← → to {terms.turn} · Esc to exit</span>
-        <button
-          className="btn"
-          onClick={() => void (sheet.arrangement === 'spreads' ? savePdf() : exportFrames())}
-          disabled={busy !== null}
-        >
-          {/* The Mac app names it as its menu does (Save PDF…, Export Frames as Images…). */}
-          {busy ??
-            (platform.kind === 'macos'
-              ? commandTitle(sheet.arrangement === 'spreads' ? 'savePdf' : 'exportFrames')
-              : terms.save)}
-        </button>
+        {busy !== null ? (
+          <span className="muted">{busy}</span>
+        ) : (
+          <FileMenu items={exportItems} label="Export…" buttonClass="btn" alignRight />
+        )}
         <button className="btn" onClick={close}>
           Exit preview
         </button>

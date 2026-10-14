@@ -2,8 +2,6 @@ import { useEffect, useState, lazy, Suspense } from 'react';
 import {
   Download,
   FilePlus,
-  FileText,
-  Package,
   FolderOpen,
   ImagePlus,
   Info,
@@ -15,19 +13,17 @@ import {
   Undo2,
   X,
   Ruler,
-  Images,
-  Send,
 } from 'lucide-react';
 import { usePasteHandler } from './clipboard';
 import { platform } from '#platform';
-import { commandTitle, runCommand, shortcutLabel, useCommandShortcuts, type CommandId } from './commands';
+import { runCommand, shortcutLabel, useCommandShortcuts } from './commands';
 import { AboutDialog } from './components/AboutDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ContextMenus } from './components/ContextMenu';
 import { Desk } from './components/Desk';
 import { FileMenu } from './components/FileMenu';
+import { useCommandItem, useExportItems } from './components/exportItems';
 import { LayoutEditor } from './components/LayoutEditor';
-import { useInstagram } from './instagram';
 import { PhotoImg } from './components/PhotoImg';
 import { Preview } from './components/Preview';
 import { QuickLook } from './components/QuickLook';
@@ -61,22 +57,9 @@ function onTouchDevice(): boolean {
 
 export default function App() {
   const { project, canUndo, canRedo } = useProject();
-  const frames = project.layout.kind === 'frames';
   const terms = TERMS[project.layout.kind];
-  const instagram = useInstagram();
-  // Why File → Post to Instagram is disabled, if it is.
-  // (An expired token is caught when posting, which says to reconnect.)
-  const instagramReady = instagram !== null && !instagram.needsReconnect;
-  const instagramBlocked =
-    !frames && !instagramReady
-      ? 'Needs a digital project (Layout) and Instagram connected (Settings).'
-      : !frames
-        ? 'Needs a digital project: switch in Layout.'
-        : instagram === null
-          ? 'Connect Instagram in Settings first.'
-          : !instagramReady
-            ? 'Reconnect Instagram in Settings first.'
-            : null;
+  const exportItems = useExportItems();
+  const fileItem = useCommandItem();
   // Dismissed for this visit only: a reload shows it again.
   const [mobileNotice, setMobileNotice] = useState(onTouchDevice);
   const editing = ui.use((s) => s.editingSpreadId);
@@ -117,19 +100,10 @@ export default function App() {
   if (mobileNotice) return <MobileNotice onContinue={() => setMobileNotice(false)} />;
   if (!loaded) return <div className="loading">Opening your project…</div>;
 
-  const working = importing !== null || busy !== null;
   const placed = allSpreads(project).reduce((n, s) => n + s.items.length, 0);
   const status = importing?.total
     ? `Importing ${importing.done} of ${importing.total}…`
     : (busy ?? (importing ? 'Importing…' : `${project.pile.length} on desk · ${placed} placed`));
-
-  const fileItem = (id: CommandId, icon: React.ReactNode, disabled = working) => ({
-    label: commandTitle(id),
-    icon,
-    shortcut: shortcutLabel(id),
-    disabled,
-    onSelect: () => runCommand(id),
-  });
 
   return (
     <div className="app">
@@ -151,12 +125,7 @@ export default function App() {
                 { ...fileItem('addPhotos', <ImagePlus />, importing !== null), separatorBefore: true },
                 fileItem('importProject', <FolderOpen />),
                 fileItem('exportProject', <Download />),
-                fileItem('savePdf', <FileText />),
-                frames ? fileItem('exportFrames', <Images />) : fileItem('exportIndesign', <Package />),
-                {
-                  ...fileItem('postToInstagram', <Send />, working || instagramBlocked !== null),
-                  note: instagramBlocked ?? undefined,
-                },
+                ...exportItems,
                 { ...fileItem('tour', <Compass />), separatorBefore: true },
                 fileItem('about', <Info />, false),
               ]}

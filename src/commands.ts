@@ -5,7 +5,7 @@ import { deleteFromProject, importPhotos } from './actions';
 import { exportIndesign } from './indesign';
 import { copyPhotos, duplicateAndSelect } from './clipboard';
 import { savePdf } from './pdf';
-import { exportFrames } from './frames';
+import { exportImages } from './rasterExport';
 import { instagramConnection } from './instagram';
 import { hasMod, isMac, isTextField, isTyping, MOD_LABEL } from './input';
 import { platform } from '#platform';
@@ -128,28 +128,28 @@ export const commands = {
     inFields: true,
     run: () => void savePdf(),
   },
-  // InDesign for print books; images for digital sequences.
+  // InDesign for spreads; images and Instagram for either.
   exportIndesign: {
     title: { browser: 'Export for InDesign', macos: 'Export for InDesign…' },
     bindings: [],
     scope: 'app',
     run: () => (projectStore.project.layout.kind === 'spreads' ? void exportIndesign() : false),
   },
-  exportFrames: {
-    title: { browser: 'Export frames as images', macos: 'Export Frames as Images…' },
+  exportImages: {
+    title: { browser: 'Export images…', macos: 'Export Images…' },
     bindings: [{ key: 'e', mod: true, shift: true }],
     scope: 'app',
     inFields: true,
-    run: () => (projectStore.project.layout.kind === 'frames' ? void exportFrames() : false),
+    run: () => void exportImages(),
   },
-  // Digital sequences, with an Instagram account connected (Settings), on the web.
+  // With an Instagram account connected (Settings), on the web.
   postToInstagram: {
     title: 'Post to Instagram…',
     bindings: [],
     scope: 'app',
     run: () => {
       const connection = instagramConnection();
-      const ready = projectStore.project.layout.kind === 'frames' && connection && !connection.needsReconnect;
+      const ready = connection && !connection.needsReconnect;
       return ready ? openModal('instagram') : false;
     },
   },

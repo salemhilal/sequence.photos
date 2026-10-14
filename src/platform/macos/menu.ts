@@ -44,9 +44,9 @@ export async function setUpMenu(): Promise<void> {
   // Its wording follows the sidebar (see sync below).
   const sidebar = await command('toggleSidebar', undefined, 'Hide Spreads');
   const guides = await command('toggleGuides', undefined, 'Hide Guides');
-  // For spreads and frames respectively (see sync below).
+  // InDesign is for spreads (see sync below).
   const indesign = await command('exportIndesign');
-  const images = await command('exportFrames');
+  const images = await command('exportImages');
 
   const menu = await Menu.new({
     items: [
@@ -150,7 +150,6 @@ export async function setUpMenu(): Promise<void> {
     void sidebar.setText(`${state.sidebar ? 'Hide' : 'Show'} ${TERMS[state.layout].Spreads}`);
     void guides.setText(state.guides ? 'Hide Guides' : 'Show Guides');
     void indesign.setEnabled(state.layout === 'spreads');
-    void images.setEnabled(state.layout === 'frames');
   };
   sync();
   projectStore.subscribe(sync);

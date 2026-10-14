@@ -2,13 +2,21 @@ import type { UploadBatch, UploadsRequest } from '../server/src/api';
 import { INSTAGRAM } from './config';
 import { isRecord } from './guards';
 import { freshConnection, markNeedsReconnect, RECONNECT, SERVER_ERROR, type InstagramConnection } from './instagram';
-import { LIMITS, postImageLayout, renderPostImage, type Fit, type PostKind } from './instagramImage';
-import type { Frame, Size } from './types';
+import {
+  LIMITS,
+  postImageLayout,
+  renderPostImage,
+  slideSize,
+  type Fit,
+  type PostKind,
+  type Slide,
+} from './instagramImage';
+import type { Project, Sheet } from './types';
 
 /**
- * Posting a digital sequence to Instagram: a feed post (one image, or a carousel) or
- * stories. The app talks to Instagram's API directly; Sequence's server only holds the
- * frames briefly at public URLs, because Instagram fetches images by URL. See
+ * Posting to Instagram: a feed post (one image, or a carousel) or stories, from a
+ * project's frames or pages. The app talks to Instagram's API directly; Sequence's server
+ * only holds the images briefly at public URLs, because Instagram fetches images by URL. See
  * sequence-server's README, "The app's side". The images are made in instagramImage.ts.
  */
 
@@ -31,7 +39,7 @@ export function graphErrorMessage(error: GraphError | null, status: number): str
   }
   if (code === 10 || code === 200) return 'Sequence doesn’t have permission to post. Connect again in Settings.';
   if (code === 9004) return 'Instagram couldn’t fetch the images. Try again in a moment.';
-  if (code === 36003) return 'Instagram doesn’t accept this image shape. Try cropping or expanding the frames.';
+  if (code === 36003) return 'Instagram doesn’t accept this image shape. Try cropping or expanding the slides.';
   if (error?.error_user_msg) return error.error_user_msg;
   return `Instagram couldn’t post this (${code === undefined ? `HTTP ${status}` : `error ${code}`}).`;
 }
@@ -183,7 +191,7 @@ async function uploadFrame(put: string, image: Blob, signal?: AbortSignal): Prom
     check(signal);
     throw new PostError(SERVER_ERROR);
   }
-  if (!res.ok) throw new PostError(`The Sequence server refused a frame (HTTP ${res.status}).`);
+  if (!res.ok) throw new PostError(`The Sequence server refused an image (HTTP ${res.status}).`);
 }
 
 // --- Posting ----------------------------------------------------------------------------
@@ -195,8 +203,9 @@ export type PostStep =
   | { step: 'publishing'; done: number; total: number };
 
 interface PostOptions {
-  frames: readonly Frame[];
-  size: Size;
+  slides: readonly Slide[];
+  sheet: Sheet;
+  photos: Readonly<Project['photos']>;
   kind: PostKind;
   fit: Fit;
   caption: string;
@@ -205,18 +214,18 @@ interface PostOptions {
 }
 
 /**
- * Posts frames to Instagram: renders them, hands them to Sequence's server for Instagram
- * to fetch, creates the post (one image, a carousel, or one story per frame), waits until
+ * Posts slides to Instagram: renders them, hands them to Sequence's server for Instagram
+ * to fetch, creates the post (one image, a carousel, or one story per slide), waits until
  * Instagram has processed all of it, and publishes. Cancelling works until publishing
  * starts: everything before it is checked for a cancel, and nothing is published until
  * every part is ready. The server's copies are deleted afterwards however it went.
  * Resolves to the post's link (the first story's, for stories).
  */
 export async function postToInstagram(options: PostOptions): Promise<string | null> {
-  const { frames, size, kind, fit, caption, onStep, signal } = options;
-  if (frames.length === 0) throw new PostError('There are no frames to post.');
-  if (frames.length > LIMITS.maxItems) {
-    throw new PostError(`Instagram posts up to ${LIMITS.maxItems} frames at a time.`);
+  const { slides, sheet, photos, kind, fit, caption, onStep, signal } = options;
+  if (slides.length === 0) throw new PostError('There are no slides to post.');
+  if (slides.length > LIMITS.maxItems) {
+    throw new PostError(`Instagram posts up to ${LIMITS.maxItems} slides at a time.`);
   }
 
   const connection = await freshConnection();
@@ -224,7 +233,7 @@ export async function postToInstagram(options: PostOptions): Promise<string | nu
   const user = connection.userId;
 
   // Within the daily limit? (If this check fails, publishing reports it anyway.)
-  const needed = kind === 'story' ? frames.length : 1;
+  const needed = kind === 'story' ? slides.length : 1;
   let quota: { used: number; total: number } | null = null;
   try {
     const limit = await graph(
@@ -249,13 +258,13 @@ export async function postToInstagram(options: PostOptions): Promise<string | nu
     );
   }
 
-  const layout = postImageLayout(size, kind, fit);
+  const layout = postImageLayout(slideSize(sheet), kind, fit);
   const images: Blob[] = [];
-  for (const [i, frame] of frames.entries()) {
+  for (const [i, slide] of slides.entries()) {
     check(signal);
-    onStep({ step: 'preparing', done: i, total: frames.length });
-    const image = await renderPostImage(frame, size, layout);
-    if (!image) throw new PostError('A frame is too detailed to fit Instagram’s 8 MB limit.');
+    onStep({ step: 'preparing', done: i, total: slides.length });
+    const image = await renderPostImage(slide, sheet, photos, layout);
+    if (!image) throw new PostError('A slide is too detailed to fit Instagram’s 8 MB limit.');
     images.push(image);
   }
 

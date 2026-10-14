@@ -266,6 +266,10 @@ button {
 .btn.active {
   background: var(--accent-soft);
 }
+.menu-list.right {
+  left: auto;
+  right: 0;
+}
 .menu-list {
   position: absolute;
   top: calc(100% + 4px);
@@ -1837,7 +1841,38 @@ body.col-resizing * {
   font-size: 12px;
 }
 
+/* One page of a spread, clipped to it (Instagram's slides). */
+.page-canvas {
+  position: relative;
+  overflow: hidden;
+}
+
 /* Post to Instagram */
+.slide-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.slide-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.slide-pick .page-canvas {
+  outline: 1px solid var(--border);
+  opacity: 0.5;
+}
+.slide-pick.on .page-canvas {
+  outline: 2px solid var(--accent);
+  opacity: 1;
+}
+.slide-pick-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .inspector.instagram-panel {
   width: 300px;
 }
