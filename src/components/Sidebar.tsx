@@ -9,7 +9,9 @@ import { TERMS } from '../units';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH } from '../prefs';
 import { openPhotoMenu, setSidebarWidth, ui } from '../ui';
+import { placedSoft, softLabel } from '../resolution';
 import { PhotoImg } from './PhotoImg';
+import { SoftBadge } from './SoftBadge';
 import { SpreadCanvas } from './SpreadCanvas';
 import { allSpreads, sheetOf } from '../spreads';
 
@@ -240,7 +242,10 @@ interface RowProps {
 }
 
 function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown }: RowProps) {
+  const { project } = useProject();
   const editing = ui.use((s) => s.editingSpreadId === spread.id);
+  // Photos here with less detail than the page asks for.
+  const soft = spread.items.filter((i) => placedSoft(project.photos[i.photoId], i, sheet)).length;
   // Thumbnails are as wide as a book's two pages, or a frame.
   const scale = thumbW / sheetExtent(sheet).width;
   // A book's middle spreads move and delete; so does any frame but a sequence's only one.
@@ -299,6 +304,7 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
           <GripVertical />
         </span>
         <span className="spread-label">{label}</span>
+        {soft > 0 && <SoftBadge note={softLabel(soft, sheet)} />}
         <span className="spacer" />
         {movable && (
           <button

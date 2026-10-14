@@ -27,7 +27,9 @@ import { isTyping } from '../input';
 import { openPhotoMenu, toggleGuides, ui } from '../ui';
 import { shortcutLabel } from '../commands';
 import { useWindowEvent } from '../hooks';
+import { placedSoft, resolutionNote } from '../resolution';
 import { NumberField } from './NumberField';
+import { SoftBadge } from './SoftBadge';
 import { PhotoImg } from './PhotoImg';
 import { SpreadCanvas } from './SpreadCanvas';
 
@@ -48,7 +50,12 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const { left: extentLeft, width: across } = sheetExtent(sheet);
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 800, h: 500 });
-  const [selected, setSelected] = useState<PhotoId | null>(null);
+  // A photo asked for ("Show me" before an export), if any; taken once.
+  const [selected, setSelected] = useState<PhotoId | null>(() => {
+    const asked = ui.get().editorSelect;
+    if (asked) ui.set({ editorSelect: null });
+    return asked;
+  });
   const [snapHit, setSnapHit] = useState<SnapFeedback | null>(null);
   /**
    * A guide box to glow while a Fit button is hovered, for the photo it was for: the
@@ -218,6 +225,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
       onContextMenu={(e) => openPhotoMenu(e, p.photoId)}
     >
       <PhotoImg id={p.photoId} />
+      {placedSoft(project.photos[p.photoId], p, sheet) && <SoftBadge note={softNote(p)} />}
       {p.photoId === selected &&
         CORNERS.map((c) => (
           <div key={c} className={`handle handle-${c}`} onPointerDown={(e) => onHandleDown(e, p, c)} />
@@ -225,6 +233,10 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
     </div>
   );
 
+  const softNote = (p: Placement) => {
+    const photo = project.photos[p.photoId];
+    return (photo && resolutionNote(photo, p, sheet)?.text) ?? '';
+  };
   const label = folioLabel(index, book.length, sheet.arrangement);
   const noun = TERMS[sheet.arrangement].spread;
 
@@ -362,10 +374,9 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
   const boxes = sheet.borders
     .map((g) => ({ g, box: borderBox(side, sheet, g) }))
     .sort((a, b) => b.box.w * b.box.h - a.box.w * a.box.h);
-  // Inches: the photo's pixels per inch. Pixels: how much it's enlarged, if it is.
   const where = side === 'whole' ? 'frame' : 'page';
-  const ppi = photo && sheet.unit === 'in' ? Math.round(photo.pxW / item.w) : null;
-  const enlarged = photo && sheet.unit === 'px' ? item.w / photo.pxW : null;
+  // Inches: the photo's pixels per inch. Pixels: how much it's enlarged, if it is.
+  const quality = photo ? resolutionNote(photo, item, sheet) : null;
 
   return (
     <aside className="inspector">
@@ -410,15 +421,10 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
       <label className="check">
         <input type="checkbox" checked={lock} onChange={(e) => setLock(e.target.checked)} /> Keep proportions
       </label>
-      {ppi !== null && (
-        <div className={`small ${ppi < 200 ? 'warn' : 'muted'}`}>
-          <span className="data">{ppi} ppi</span>
-          {ppi < 200 ? ' · may print soft' : ''}
-        </div>
-      )}
-      {enlarged !== null && enlarged > 1 && (
-        <div className="small warn">
-          <span className="data">Enlarged {Math.round(enlarged * 100)}%</span> · may look soft
+      {quality && (
+        <div className={`small ${quality.soft ? 'warn' : 'muted'}`}>
+          <span className="data">{quality.text}</span>
+          {quality.soft && ' · may look soft'}
         </div>
       )}
       <div className="inspector-actions">

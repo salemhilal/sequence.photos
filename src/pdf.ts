@@ -1,6 +1,7 @@
 import type { PDFDocument, PDFImage, PDFPage } from 'pdf-lib';
 import { getImage } from './db';
 import { readImageInfo } from './imageInfo';
+import { checkResolution } from './resolution';
 import { orientationMatrix, passThrough, type Matrix } from './pdfImage';
 import { platform } from '#platform';
 import { decodePhoto } from './rasterExport';
@@ -122,6 +123,7 @@ async function embed(
 /** Render and save the PDF, reporting progress and problems in the UI. */
 export async function savePdf(): Promise<void> {
   if (ui.get().busy || ui.get().importing) return;
+  if (!(await checkResolution())) return;
   // What rendering ran into, for the notice after saving.
   const result = { previews: 0, missing: 0 };
   try {

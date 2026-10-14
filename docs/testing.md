@@ -112,8 +112,12 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Keep proportions on: changing W changes H and back; off: independent.
 - [ ] After clicking Keep proportions (or any checkbox), Escape, Delete, and the arrows still
       work.
-- [ ] Quality: "N ppi", warning under 200 ("may print soft") **[in]**; "Enlarged N% · may look
-      soft" only when enlarged **[px]**.
+- [ ] Quality: "N ppi" **[in]**, and "N ppi · below 300 dpi · may look soft" in orange when
+      the photo has fewer pixels than the page's dpi asks for (lowering the dpi in Layout clears
+      it); "Enlarged N% · may look soft" only when enlarged **[px]**. A photo stretched with
+      Shift counts its thinner side.
+- [ ] A photo below the page's resolution has a warning mark on it in the editor, and its
+      spread's row in the sidebar has one, titled "N photos below 300 dpi" (or "enlarged").
 - [ ] Center on page/frame and Fit page/frame work. "Fit … guide" buttons, largest first;
       hovering one makes its box glow; per-edge guides show a range and a tooltip.
 - [ ] Right-click a placed photo → Duplicate: the copy is offset by a fortieth of the page's
@@ -146,6 +150,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Presets (Book, Zine, Square book, Slides, the Instagram sizes) set Pages, unit, and size
       at once; a custom size shows "Custom". Apply is one undo step.
 - [ ] **[in]** Changing only the dpi moves nothing.
+- [ ] The preview marks photos that would be below the resolution after Apply, with "N photos
+      would be below 300 dpi." (8 × 10 in → 16 × 20 in shows which go soft).
 - [ ] Size: Apply resizes in one undo step; Enter applies. 10 → 8 → 10 puts photos and guides
       back exactly. Smallest size 1 in **[in]** or 100 px **[px]**.
 
@@ -198,6 +204,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       or One per page (01.jpg… in book order).
 - [ ] A page too large for one image (11 × 17 in at 300 dpi): it's exported at the most that
       fits, and a notice says the dpi.
+- [ ] With photos below the page's resolution, PDF, images, and InDesign first ask: "N photos
+      are below 300 dpi." (or "are enlarged"). Export anyway goes on; Show me opens the first
+      one's spread in the editor with it selected. Instagram doesn't ask.
 - [ ] Preview's Export… lists Save PDF, Export images, Export for InDesign **[S]**, and Post to
       Instagram (web), as the File menu does.
 - [ ] Export project (⌘S) and import it into a fresh project (⌘O): "Opened … · N photos. Undo

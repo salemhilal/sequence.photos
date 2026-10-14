@@ -2,6 +2,7 @@ import { folioLabel } from './actions';
 import { getImage } from './db';
 import type { PhotoId } from './ids';
 import { platform } from '#platform';
+import { checkResolution } from './resolution';
 import { fitPixels, outputPages, planPage, type OutputPage, type PagePlan } from './renderPlan';
 import { allSpreads, sheetOf } from './spreads';
 import { projectStore } from './store';
@@ -131,6 +132,7 @@ export async function renderImages(
  */
 export async function exportImages(): Promise<void> {
   if (ui.get().busy || ui.get().importing) return;
+  if (!(await checkResolution())) return;
   const project = projectStore.project;
   let per: 'spread' | 'page' = 'page';
   if (project.layout.kind === 'spreads') {

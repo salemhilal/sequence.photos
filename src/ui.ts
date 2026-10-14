@@ -91,6 +91,8 @@ export interface UiState {
   tour: number | null;
   /** The Layout view's open tab. */
   layoutTab: LayoutTab;
+  /** A photo for the spread editor to select when it opens ("Show me"), then cleared. */
+  editorSelect: PhotoId | null;
 }
 
 export const ui = createStore<UiState>({
@@ -118,6 +120,7 @@ export const ui = createStore<UiState>({
   windowTitle: null,
   tour: null,
   layoutTab: 'page',
+  editorSelect: null,
 });
 
 /**

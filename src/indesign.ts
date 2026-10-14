@@ -3,6 +3,7 @@ import { platform } from '#platform';
 import { buildIdml, type LinkedImage } from './idml';
 import { readImageInfo } from './imageInfo';
 import { uniqueName } from './project';
+import { checkResolution } from './resolution';
 import { projectStore } from './store';
 import { ui } from './ui';
 import { createZip, type ZipInput } from './zip';
@@ -19,6 +20,7 @@ const REENCODE_QUALITY = 0.95;
  */
 export async function exportIndesign(): Promise<void> {
   if (ui.get().busy || ui.get().importing) return;
+  if (!(await checkResolution())) return;
   const project = projectStore.project;
   const placed = [...new Set(allSpreads(project).flatMap((s) => s.items.map((i) => i.photoId)))];
   const setBusy = (busy: string | null) => ui.set({ busy });
