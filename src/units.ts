@@ -129,7 +129,7 @@ export const TERMS: Record<LayoutKind, Terms> = {
     addAtEnd: 'Add a frame at the end',
     turn: 'go through frames',
     preview: 'Preview',
-    save: 'Save images',
+    save: 'Export frames as images',
     pdfTitle: 'Sequence',
     fileStem: 'sequence',
     edges: { top: 'Top', bottom: 'Bottom', inside: 'Right', outside: 'Left' },

@@ -2,8 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { folioLabel } from '../actions';
 import { useWindowEvent } from '../hooks';
-import { saveFrames } from '../frames';
+import { exportFrames } from '../frames';
 import { savePdf } from '../pdf';
+import { platform } from '#platform';
+import { commandTitle } from '../commands';
 import { useProject } from '../store';
 import { closeModal, ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
@@ -117,10 +119,14 @@ export function Preview() {
         <span className="hint">← → to {terms.turn} · Esc to exit</span>
         <button
           className="btn"
-          onClick={() => void (sheet.layout === 'print' ? savePdf() : saveFrames())}
+          onClick={() => void (sheet.layout === 'print' ? savePdf() : exportFrames())}
           disabled={busy !== null}
         >
-          {busy ?? terms.save}
+          {/* The Mac app names it as its menu does (Save PDF…, Export Frames as Images…). */}
+          {busy ??
+            (platform.kind === 'macos'
+              ? commandTitle(sheet.layout === 'print' ? 'savePdf' : 'exportFrames')
+              : terms.save)}
         </button>
         <button className="btn" onClick={close}>
           Exit preview

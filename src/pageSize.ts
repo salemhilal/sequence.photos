@@ -49,7 +49,7 @@ export function setLayoutSize(d: Draft<Project>, size: Size): void {
 }
 
 /**
- * Change the page or frame size (Settings' Apply): one undo step. Photos keep their place
+ * Change the page or frame size (Layout's Apply): one undo step. Photos keep their place
  * relative to the guides (if chosen), and border guides stay on the page.
  */
 export function setPageSize(size: Size): void {

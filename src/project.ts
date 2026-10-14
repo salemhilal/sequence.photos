@@ -91,7 +91,9 @@ export async function importProject(file: File): Promise<void> {
     if (!manifestEntry) throw new ProjectFileError(`“${file.name}” isn't a Sequence project.`);
     const manifest = parseManifest(await (await manifestEntry.blob()).text());
     const newer = new ProjectFileError(
-      'This project was made by a newer version of Sequence. Reload to update, then try again.',
+      platform.kind === 'macos'
+        ? 'This project was made by a newer version of Sequence. Update Sequence from the App Store, then try again.'
+        : 'This project was made by a newer version of Sequence. Reload to update, then try again.',
     );
     // `version` is the file's layout; the project inside has its own schema version.
     if (manifest.version > VERSION) throw newer;

@@ -23,7 +23,8 @@ function ThemePicker({ labelledBy }: { labelledBy: string }) {
 type Tab = 'general' | 'advanced';
 const TABS: { value: Tab; label: string }[] = [
   { value: 'general', label: 'General' },
-  { value: 'advanced', label: 'Advanced' },
+  // Its only setting is the server for posting to Instagram, which the Mac app doesn't do.
+  ...(platform.kind === 'browser' ? [{ value: 'advanced' as const, label: 'Advanced' }] : []),
 ];
 
 /** The app's own preferences; the project's page setup is in Layout. */
@@ -31,22 +32,29 @@ export function SettingsDialog() {
   const [tab, setTab] = useState<Tab>('general');
   return (
     <Dialog title="Settings" onClose={closeModal} className="settings">
-      <div className="settings-tabs" role="tablist" aria-label="Settings">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            role="tab"
-            id={`settings-tab-${t.value}`}
-            aria-selected={tab === t.value}
-            aria-controls="settings-panel"
-            className={tab === t.value ? 'on' : ''}
-            onClick={() => setTab(t.value)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="settings-body" role="tabpanel" id="settings-panel" aria-labelledby={`settings-tab-${tab}`}>
+      {/* One page needs no tabs (the Mac app). */}
+      {TABS.length > 1 && (
+        <div className="settings-tabs" role="tablist" aria-label="Settings">
+          {TABS.map((t) => (
+            <button
+              key={t.value}
+              role="tab"
+              id={`settings-tab-${t.value}`}
+              aria-selected={tab === t.value}
+              aria-controls="settings-panel"
+              className={tab === t.value ? 'on' : ''}
+              onClick={() => setTab(t.value)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div
+        className="settings-body"
+        id="settings-panel"
+        {...(TABS.length > 1 && { role: 'tabpanel', 'aria-labelledby': `settings-tab-${tab}` })}
+      >
         {tab === 'general' ? <GeneralSettings /> : <AdvancedSettings />}
       </div>
     </Dialog>
