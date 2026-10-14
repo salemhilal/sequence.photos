@@ -10,9 +10,11 @@ import { applyDeskColor } from './deskColor';
 import { finishSignIn } from './instagram';
 import { ui } from './ui';
 import { platform } from '#platform';
+import { installTooltips } from './tooltip';
 
 applyDeskColor(ui.get().deskColor);
 platform.start();
+installTooltips();
 // Coming back from connecting Instagram (Settings): finish it, and say how it went.
 // (Web only: the Mac app doesn't connect Instagram.)
 if (platform.kind === 'browser') void finishSignIn().then((notice) => notice && ui.set({ notice }));

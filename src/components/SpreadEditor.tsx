@@ -272,7 +272,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
             className={`btn ghost icon${guidesHidden ? ' active' : ''}`}
             aria-label={guidesHidden ? 'Show guides' : 'Hide guides'}
             aria-pressed={guidesHidden}
-            title={`${guidesHidden ? 'Show' : 'Hide'} guides (${shortcutLabel('toggleGuides')})`}
+            data-tip={`${guidesHidden ? 'Show' : 'Hide'} guides (${shortcutLabel('toggleGuides')})`}
             onClick={toggleGuides}
           >
             {guidesHidden ? <EyeOff /> : <Eye />}
@@ -449,7 +449,7 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
             onClick={() => fit(box)}
             onPointerEnter={() => onHoverBox(box)}
             onPointerLeave={() => onHoverBox(null)}
-            title={g.kind === 'edges' ? guideSummary(g, units, sheet.arrangement) : undefined}
+            data-tip={g.kind === 'edges' ? guideSummary(g, units, sheet.arrangement) : undefined}
           >
             {guideLabel(g, units)}
           </button>
@@ -507,7 +507,7 @@ function PileStrip({ spreadId }: { spreadId: SpreadId }) {
               style={{ width: (56 * p.w) / p.h }}
               onPointerDown={(e) => onDown(e, p)}
               onContextMenu={(e) => openPhotoMenu(e, p.photoId)}
-              title={`Drag onto the ${TERMS[project.layout.kind].page}, or click to add`}
+              data-tip={`Drag onto the ${TERMS[project.layout.kind].page}, or click to add`}
             >
               <PhotoImg id={p.photoId} />
             </div>

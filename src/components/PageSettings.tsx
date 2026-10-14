@@ -152,7 +152,7 @@ export function PageSettings({ draft, onChange, showContent }: Props) {
             <span className="muted data">dpi</span>
           </div>
         ) : (
-          <span className="muted data" title="Pixel density">
+          <span className="muted data" data-tip="Pixel density">
             1×
           </span>
         )}

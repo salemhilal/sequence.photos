@@ -134,7 +134,7 @@ export default function App() {
               <button
                 className="btn ghost icon"
                 aria-label="Undo"
-                title={`Undo (${shortcutLabel('undo')})`}
+                data-tip={`Undo (${shortcutLabel('undo')})`}
                 disabled={!canUndo}
                 onClick={() => projectStore.undo()}
               >
@@ -143,7 +143,7 @@ export default function App() {
               <button
                 className="btn ghost icon"
                 aria-label="Redo"
-                title={`Redo (${shortcutLabel('redo')})`}
+                data-tip={`Redo (${shortcutLabel('redo')})`}
                 disabled={!canRedo}
                 onClick={() => projectStore.redo()}
               >
@@ -161,7 +161,7 @@ export default function App() {
           className="btn ghost"
           data-tour="layout"
           onClick={() => openModal('layout')}
-          title="Layout: size and guides"
+          data-tip="Layout: size and guides"
         >
           <Ruler />
           Layout
@@ -170,7 +170,7 @@ export default function App() {
           className="btn accent has-hint"
           data-tour="preview"
           onClick={() => openModal('preview')}
-          title={`Preview (${shortcutLabel('preview')})`}
+          data-tip={`Preview (${shortcutLabel('preview')})`}
         >
           {terms.preview}
           <ShortcutHint label={shortcutLabel('preview')} />
@@ -180,7 +180,7 @@ export default function App() {
           aria-label={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads}`}
           aria-pressed={!sidebarOpen}
           onClick={toggleSidebar}
-          title={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads} (${shortcutLabel('toggleSidebar')})`}
+          data-tip={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads} (${shortcutLabel('toggleSidebar')})`}
         >
           {sidebarOpen ? <PanelRightClose /> : <PanelRightOpen />}
           <ShortcutHint label={shortcutLabel('toggleSidebar')} />
@@ -189,7 +189,7 @@ export default function App() {
           className="btn ghost icon has-hint"
           aria-label="Settings"
           onClick={() => openModal('settings')}
-          title={`Settings (${shortcutLabel('settings')})`}
+          data-tip={`Settings (${shortcutLabel('settings')})`}
         >
           <Settings />
           <ShortcutHint label={shortcutLabel('settings')} />

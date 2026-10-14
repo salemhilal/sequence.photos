@@ -138,7 +138,7 @@ export function Sidebar() {
     <aside className="sidebar" style={{ width }}>
       <div
         className="sidebar-resize"
-        title="Drag to resize · double-click to reset"
+        data-tip="Drag to resize · double-click to reset"
         onPointerDown={onResizeDown}
         onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH, true)}
       />
@@ -147,7 +147,7 @@ export function Sidebar() {
         <button
           className="btn ghost icon small"
           aria-label={`Add ${terms.spread} at the end`}
-          title={terms.addAtEnd}
+          data-tip={terms.addAtEnd}
           onClick={() => insertSpread(book ? spreads.length - 1 : spreads.length)}
         >
           <Plus />
@@ -221,7 +221,7 @@ function InsertGap({
       ) : (
         <button
           className="insert-btn"
-          title={vertical ? `Add a ${noun} here` : undefined}
+          data-tip={vertical ? `Add a ${noun} here` : undefined}
           onClick={() => insertSpread(index)}
         >
           {vertical ? '+' : `+ Add ${noun}`}
@@ -297,7 +297,7 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
     <div className={`spread-row${editing ? ' editing' : ''}${dragging ? ' dragging' : ''}`} data-row-index={index}>
       <div
         className={`spread-row-head${movable ? ' draggable' : ''}`}
-        title={movable ? 'Drag to reorder' : spread.kind === 'frame' ? '' : 'The first and last pages stay in place'}
+        data-tip={movable ? 'Drag to reorder' : spread.kind === 'frame' ? undefined : 'The first and last pages stay in place'}
         onPointerDown={movable ? (e) => onHeaderDown(e, spread) : undefined}
       >
         <span className={`grip${movable ? '' : ' locked'}`} aria-hidden="true">
@@ -310,7 +310,7 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
           <button
             className="row-delete"
             aria-label={spread.kind === 'frame' ? `Delete frame ${label}` : `Delete pages ${label}`}
-            title={`Delete ${spread.kind === 'frame' ? 'frame' : 'spread'} (photos return to the desk)`}
+            data-tip={`Delete ${spread.kind === 'frame' ? 'frame' : 'spread'} (photos return to the desk)`}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => deleteSpread(spread.id)}
           >

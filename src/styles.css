@@ -651,7 +651,7 @@ button {
 .photo-loading {
   background: var(--border);
 }
-/* A photo whose image can't be found: a grey stand-in with an alert icon (and a tooltip). */
+/* A photo whose image can't be found: a grey stand-in with an alert icon (and a tip). */
 .photo-missing {
   display: flex;
   align-items: center;
@@ -665,18 +665,8 @@ button {
   opacity: 0.7;
   pointer-events: auto;
   cursor: help;
-  /* On the desk, counter its zoom so the icon and tooltip stay one size. */
+  /* On the desk, counter its zoom so the icon stays one size. */
   transform: scale(var(--inv, 1));
-}
-/* Above neighboring photos while its tip shows. */
-.item:has(.photo-missing-icon:hover) {
-  z-index: 1;
-}
-/* Centered under the icon, which can sit anywhere, rather than right-aligned like other tips. */
-.photo-missing-icon[data-tip]::after {
-  right: auto;
-  left: 50%;
-  transform: translateX(-50%);
 }
 .photo-missing-icon .lucide {
   width: 18px;
@@ -1323,11 +1313,6 @@ body.col-resizing * {
   cursor: pointer;
   white-space: nowrap;
 }
-/* The panel scrolls, so it clips: open the tooltip rightward, inside it. */
-.drop-toggle[data-tip]::after {
-  right: auto;
-  left: 0;
-}
 .drop-toggle:hover {
   color: var(--text);
 }
@@ -1604,20 +1589,10 @@ body.col-resizing * {
 .setting .inline {
   gap: 14px;
 }
-/*
- * Tooltips: `data-tip` on an element shows its text on hover or keyboard focus.
- * They open below and toward the left, so they stay inside dialogs.
- */
-[data-tip] {
-  position: relative;
-}
-[data-tip]:hover::after,
-[data-tip]:focus-visible::after {
-  content: attr(data-tip);
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 5;
+/* Tooltips: `data-tip` on an element shows its text (see tooltip.ts). */
+.tooltip {
+  position: fixed;
+  z-index: 100;
   width: max-content;
   max-width: 240px;
   padding: 6px 9px;
@@ -1630,6 +1605,9 @@ body.col-resizing * {
   text-transform: none;
   white-space: normal;
   pointer-events: none;
+}
+.tooltip[hidden] {
+  display: none;
 }
 
 /* Confirmation */
@@ -1874,15 +1852,6 @@ body.col-resizing * {
   left: 4px;
   pointer-events: auto;
   cursor: help;
-}
-/* Near a left edge (a photo's corner, a sidebar row's label): its tip opens rightward. */
-.soft-badge[data-tip]::after {
-  right: auto;
-  left: 0;
-}
-/* Above neighboring photos while its tip shows. */
-.item:has(.soft-badge:hover) {
-  z-index: 1;
 }
 
 /* One page of a spread, clipped to it (Instagram's slides). */

@@ -192,7 +192,7 @@ export function LayoutPanel({ s, tab, draft, onDraft, pending, selected, onSelec
           <button
             className="btn ghost icon small"
             aria-label="Add border guide"
-            title="Add border guide"
+            data-tip="Add border guide"
             onClick={addBorder}
           >
             <Plus />
@@ -222,7 +222,7 @@ export function LayoutPanel({ s, tab, draft, onDraft, pending, selected, onSelec
             <button
               className="btn ghost icon small"
               aria-label="Add horizontal guide"
-              title="Add horizontal guide"
+              data-tip="Add horizontal guide"
               onClick={() => addLine('horizontal')}
             >
               <SeparatorHorizontal />
@@ -230,7 +230,7 @@ export function LayoutPanel({ s, tab, draft, onDraft, pending, selected, onSelec
             <button
               className="btn ghost icon small"
               aria-label="Add vertical guide"
-              title="Add vertical guide"
+              data-tip="Add vertical guide"
               onClick={() => addLine('vertical')}
             >
               <SeparatorVertical />
@@ -348,7 +348,7 @@ function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProp
           className={`btn ghost icon small${linked ? ' active' : ''}`}
           aria-label={linked ? 'Unlink edges' : 'Link edges'}
           aria-pressed={linked}
-          title={linked ? 'Edges linked: editing one sets all four' : 'Link edges (all four take the top distance)'}
+          data-tip={linked ? 'Edges linked: editing one sets all four' : 'Link edges (all four take the top distance)'}
           onClick={toggleLinked}
         >
           {linked ? <Link2 /> : <Link2Off />}
