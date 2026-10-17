@@ -98,10 +98,8 @@ export default function App() {
   if (mobileNotice) return <MobileNotice onContinue={() => setMobileNotice(false)} />;
   if (!loaded) return <div className="loading">Opening your project…</div>;
 
-  // Only while something's under way.
-  const status = importing?.total
-    ? `Importing ${importing.done} of ${importing.total}…`
-    : (busy ?? (importing ? 'Importing…' : null));
+  // Only while something's under way; adding photos shows on the desk instead (ImportToast).
+  const status = importing ? null : busy;
 
   return (
     <div className="app">

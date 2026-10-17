@@ -374,6 +374,23 @@ export function Desk() {
         </div>
       )}
       <ZoomControls />
+      <ImportToast />
+    </div>
+  );
+}
+
+/** Progress while photos are added, in the desk's bottom-right corner (it follows the sidebar). */
+function ImportToast() {
+  const importing = ui.use((s) => s.importing);
+  if (!importing) return null;
+  const { done, total, label = 'Adding photos' } = importing;
+  return (
+    <div className="import-toast" role="status" onPointerDown={(e) => e.stopPropagation()}>
+      <span>
+        {label}
+        {total ? ` · ${done} of ${total}` : '…'}
+      </span>
+      <progress max={total || undefined} value={total ? done : undefined} aria-label={label} />
     </div>
   );
 }

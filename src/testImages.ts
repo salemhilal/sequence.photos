@@ -62,6 +62,19 @@ function grainTile(): OffscreenCanvas {
   return tile;
 }
 
+/**
+ * Stops for a fade of `rgb` up to `alpha`, eased (smoothstep) so it starts and ends with
+ * no edge; `shape` maps the position (0–1) to how far along the fade it is.
+ */
+function easedStops(g: CanvasGradient, rgb: readonly number[], alpha: number, shape: (t: number) => number): void {
+  const steps = 16;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const s = shape(t);
+    g.addColorStop(t, `rgba(${rgb.join(', ')}, ${(alpha * s * s * (3 - 2 * s)).toFixed(4)})`);
+  }
+}
+
 /** One gradient as a JPEG file named `name`. */
 async function gradientFile(name: string, grain: OffscreenCanvas): Promise<File> {
   const { w, h } = pick(SIZES);
@@ -77,15 +90,16 @@ async function gradientFile(name: string, grain: OffscreenCanvas): Promise<File>
   colors.forEach((c, i) => linear.addColorStop(i / (colors.length - 1), c));
   ctx.fillStyle = linear;
   ctx.fillRect(0, 0, w, h);
-  // A soft glow somewhere, like light leaking in, then a gentle vignette.
-  const glow = ctx.createRadialGradient(Math.random() * w, Math.random() * h, 0, w / 2, h / 2, r * 1.2);
-  glow.addColorStop(0, 'rgba(255, 236, 200, 0.2)');
-  glow.addColorStop(1, 'rgba(255, 236, 200, 0)');
+  // A soft glow somewhere, like light leaking in, then a gentle vignette. Both fade along
+  // an eased curve: a straight fade that starts partway out leaves a visible ring.
+  const gx = Math.random() * w;
+  const gy = Math.random() * h;
+  const glow = ctx.createRadialGradient(gx, gy, 0, gx, gy, r * 1.2);
+  easedStops(glow, [255, 236, 200], 0.2, (t) => 1 - t);
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, w, h);
-  const vignette = ctx.createRadialGradient(w / 2, h / 2, r * 0.5, w / 2, h / 2, r);
-  vignette.addColorStop(0, 'rgba(20, 16, 24, 0)');
-  vignette.addColorStop(1, 'rgba(20, 16, 24, 0.22)');
+  const vignette = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, r);
+  easedStops(vignette, [20, 16, 24], 0.22, (t) => t);
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, w, h);
   const pattern = ctx.createPattern(grain, 'repeat');
@@ -99,13 +113,14 @@ async function gradientFile(name: string, grain: OffscreenCanvas): Promise<File>
   return new File([blob], name, { type: 'image/jpeg' });
 }
 
-/** `count` gradient photos, named "Gradient 01.jpg" and so on. */
-export async function makeTestImages(count: number): Promise<File[]> {
+/** `count` gradient photos, named "Gradient 01.jpg" and so on; `onProgress` hears after each. */
+export async function makeTestImages(count: number, onProgress: (done: number) => void = () => {}): Promise<File[]> {
   const grain = grainTile();
   const digits = Math.max(2, String(count).length);
   const files: File[] = [];
   for (let i = 1; i <= count; i++) {
     files.push(await gradientFile(`Gradient ${String(i).padStart(digits, '0')}.jpg`, grain));
+    onProgress(i);
   }
   return files;
 }

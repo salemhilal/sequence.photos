@@ -82,7 +82,7 @@ export async function buildProjectFile(verb = 'Exporting'): Promise<Blob> {
 /** Replace the current project with one from a file. Undoable. */
 export async function importProject(file: File): Promise<void> {
   if (ui.get().importing) return;
-  ui.set({ busy: 'Opening project…', importing: { done: 0, total: 0 } });
+  ui.set({ busy: 'Opening project…', importing: { done: 0, total: 0, label: 'Opening project' } });
   try {
     const zip = await readZip(file).catch(() => {
       throw new ProjectFileError(`“${file.name}” isn't a Sequence project.`);
@@ -108,7 +108,7 @@ export async function importProject(file: File): Promise<void> {
     const ids = Object.keys(project.photos).map(toPhotoId);
     const missing = new Set<PhotoId>();
     let done = 0;
-    ui.set({ importing: { done, total: ids.length } });
+    ui.set({ importing: { done, total: ids.length, label: 'Opening project' } });
 
     for (const id of ids) {
       const paths = manifest.files[id];
@@ -122,7 +122,7 @@ export async function importProject(file: File): Promise<void> {
       const thumb = thumbEntry ? await thumbEntry.blob('image/jpeg') : await thumbFromBlob(full);
       await putImage(id, { full, thumb });
       setUrl(id, thumb);
-      ui.set({ importing: { done: ++done, total: ids.length } });
+      ui.set({ importing: { done: ++done, total: ids.length, label: 'Opening project' } });
     }
 
     for (const id of missing) {

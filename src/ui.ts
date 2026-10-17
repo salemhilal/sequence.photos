@@ -60,7 +60,8 @@ export interface UiState {
   ghost: Ghost | null;
   /** The drop target under the pointer during a drag, for highlighting (compare with `sameTarget`). */
   hover: DropTarget;
-  importing: { done: number; total: number } | null;
+  /** Photos being added (or made, or a project opening), for the desk's progress toast; `label` says which. */
+  importing: { done: number; total: number; label?: string } | null;
   /** Status text for long-running work like exporting. */
   busy: string | null;
   notice: string | null;

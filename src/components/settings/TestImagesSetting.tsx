@@ -16,14 +16,15 @@ export function TestImagesSetting({ labelledBy }: { labelledBy: string }) {
 
   const add = async () => {
     if (!valid || working) return;
-    // Back to the desk, where the photos land and the toolbar shows the progress.
+    // Back to the desk, where the photos land and its toast shows the progress.
     closeModal();
-    ui.set({ busy: 'Making test images…' });
+    const label = 'Making test images';
+    ui.set({ importing: { done: 0, total: count, label } });
     let files: File[];
     try {
-      files = await makeTestImages(count);
+      files = await makeTestImages(count, (done) => ui.set({ importing: { done, total: count, label } }));
     } finally {
-      ui.set({ busy: null });
+      ui.set({ importing: null });
     }
     await importPhotos(files);
   };

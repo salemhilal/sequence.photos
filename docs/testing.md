@@ -63,7 +63,10 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Right-click a photo: Quick Look, Copy image, Duplicate, Return to desk (placed photos),
       Delete ("Deleted … Undo to bring it back").
 - [ ] With every photo placed: "Every photo is placed". The toolbar shows no counts, only
-      progress while importing or exporting.
+      progress while exporting.
+- [ ] Adding photos (or opening a project) shows a toast with "Adding photos · 3 of 12" and a
+      bar in the desk's bottom-right corner, beside the sidebar; with the sidebar hidden, at
+      the window's corner. It goes when they're in.
 
 ## Sidebar (spreads and frames)
 
@@ -255,9 +258,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Tooltips show after a second's hover; moving straight to another shows its tip at once.
 - [ ] ⌘, opens on General; Advanced shows Server and Test images; tabs switch.
 - [ ] Advanced → Test images: a count (1–50, 6 to start) and Add test images. It closes
-      Settings, says "Making test images…", then imports like Add photos: "Gradient 01.jpg"…
+      Settings, the desk's toast counts "Making test images", then "Adding photos", then it imports like Add photos: "Gradient 01.jpg"…
       on the desk, in film colors that blend cleanly (no gray middles), about 3000 × 2000 px
-      (portrait, landscape, or square). One undo removes them.
+      (portrait, landscape, or square), with no ring in the glow or vignette. One undo removes them.
 - [ ] Appearance: System, Light, Dark apply at once and survive a reload.
 - [ ] Desk color: the swatches match the desk's menu and survive a reload.
 - [ ] Storage (web): usage and Protected or not; Protect storage asks the browser.
