@@ -8,6 +8,8 @@ interface Props {
   units: Units;
   min?: number;
   label?: string;
+  /** Its accessible name, where no label is shown beside it (e.g. "Resolution in dpi"). */
+  ariaLabel?: string;
   /** Show the units after the number (default); false where they're shown once for a group. */
   suffix?: boolean;
   /** Called when editing starts and ends (focus and blur). */
@@ -24,6 +26,7 @@ export function NumberField({
   units,
   min,
   label,
+  ariaLabel,
   suffix = true,
   onBegin,
   onEnd,
@@ -45,6 +48,7 @@ export function NumberField({
       {label && <span className="num-label">{label}</span>}
       <input
         type="number"
+        aria-label={ariaLabel}
         inputMode="decimal"
         step={units.fieldStep}
         min={min}

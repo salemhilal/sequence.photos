@@ -1,5 +1,5 @@
 import { folioLabel } from './actions';
-import { getImage } from './db';
+import { getImage, type StoredImage } from './db';
 import type { PhotoId } from './ids';
 import { platform } from '#platform';
 import { exportPxPerUnit, perOf, type ExportOptions } from './exportOptions';
@@ -65,14 +65,16 @@ export function releaseCanvas(canvas: OffscreenCanvas): void {
  * A photo upright and at its placed size (w × h output pixels). Resizing while decoding
  * looks better than the canvas shrinking a large photo, and keeps only the small copy in
  * memory. `preview` says the original couldn't be decoded, so its display copy was used.
+ * `stored` is the photo's stored image, when the caller has already read it.
  */
 export async function decodePhoto(
   id: PhotoId,
   meta: PhotoMeta,
   w: number,
   h: number,
+  stored?: StoredImage,
 ): Promise<{ bitmap: ImageBitmap; preview: boolean } | null> {
-  const img = await getImage(id);
+  const img = stored ?? (await getImage(id));
   if (!img) return null;
   // Decoded at its placed size, but never past the photo's own resolution (an enlarged
   // photo has no more detail to give, so drawing it larger loses nothing), nor past about

@@ -454,7 +454,12 @@ function ZoomControls() {
       <button className="btn icon" aria-label="Zoom out" onClick={() => step(1 / 1.25)}>
         <Minus />
       </button>
-      <button className="btn zoom-level" onClick={() => zoomAround(1, 0, 0)} data-tip="Reset zoom">
+      <button
+        className="btn zoom-level"
+        onClick={() => zoomAround(1, 0, 0)}
+        data-tip="Reset zoom"
+        aria-label={`Reset zoom (now ${Math.round(zoom * 100)}%)`}
+      >
         {Math.round(zoom * 100)}%
       </button>
       <button className="btn icon" aria-label="Zoom in" onClick={() => step(1.25)}>

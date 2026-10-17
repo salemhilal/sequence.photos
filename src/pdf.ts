@@ -9,6 +9,7 @@ import { outputPages, pageRegion, planPage, type Draw } from './renderPlan';
 import { projectStore } from './store';
 import { ui } from './ui';
 import { sheetOf } from './spreads';
+import type { PhotoId } from './ids';
 import type { PhotoMeta, Unit } from './types';
 import { TERMS } from './units';
 
@@ -49,6 +50,8 @@ export async function renderPdf(
   };
 
   const toPt = ptPerUnit(sheet.unit, options.printAt);
+  // Each original embedded as it is goes in once, however many pages draw it.
+  const originals = new Map<PhotoId, Promise<PDFImage | null>>();
   const pages = outputPages(project, perOf(project, options));
   for (const [i, out] of pages.entries()) {
     const plan = planPage(out, sheet, project.photos, exportPxPerUnit('pdf', sheet, options));
@@ -67,7 +70,7 @@ export async function renderPdf(
       const photo = project.photos[d.photoId];
       if (!photo) continue;
       // An unreadable photo is left out rather than failing the whole PDF.
-      const placed = await embed(pdf, d, photo).catch(() => null);
+      const placed = await embed(pdf, d, photo, originals).catch(() => null);
       if (!placed) {
         missing++;
         continue;
@@ -94,16 +97,22 @@ async function embed(
   pdf: PDFDocument,
   d: Draw,
   photo: PhotoMeta,
+  originals: Map<PhotoId, Promise<PDFImage | null>>,
 ): Promise<{ image: PDFImage; whole: boolean; orientation: number; preview: boolean } | null> {
   const img = await getImage(d.photoId);
   if (!img) return null;
   const info = readImageInfo(new Uint8Array(await img.full.slice(0, HEADER_BYTES).arrayBuffer()));
   if (passThrough(info, photo, d.placed.w)) {
-    // Some JPEGs (unusual color spaces, say) won't embed: those are re-encoded below.
-    const image = await pdf.embedJpg(await img.full.arrayBuffer()).catch(() => null);
+    let original = originals.get(d.photoId);
+    if (!original) {
+      // Some JPEGs (unusual color spaces, say) won't embed: those are re-encoded below.
+      original = img.full.arrayBuffer().then((bytes) => pdf.embedJpg(bytes).catch(() => null));
+      originals.set(d.photoId, original);
+    }
+    const image = await original;
     if (image) return { image, whole: true, orientation: info.orientation, preview: false };
   }
-  const decoded = await decodePhoto(d.photoId, photo, d.placed.w, d.placed.h);
+  const decoded = await decodePhoto(d.photoId, photo, d.placed.w, d.placed.h, img);
   if (!decoded) return null;
   const { bitmap, preview } = decoded;
   // The part that shows, at the decoded size (the placed size, or the photo's own if less).

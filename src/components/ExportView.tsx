@@ -195,7 +195,14 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
   const dpiField = (label: string, value: number, onCommit: (n: number) => void) => (
     <div className="inline dpi">
       <span>{label}</span>
-      <NumberField units={UNITS.px} min={1} suffix={false} value={value} onCommit={onCommit} />
+      <NumberField
+        units={UNITS.px}
+        min={1}
+        suffix={false}
+        ariaLabel={`${label}, in dpi`}
+        value={value}
+        onCommit={onCommit}
+      />
       <span className="muted data">dpi</span>
     </div>
   );

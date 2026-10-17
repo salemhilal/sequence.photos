@@ -172,6 +172,7 @@ export function Sidebar() {
               total={spreads.length}
               sheet={sheet}
               thumbW={thumbW}
+              soft={spread.items.filter((it) => placedSoft(project.photos[it.photoId], it, sheet)).length}
               dragging={reorder?.id === spread.id}
               onHeaderDown={onHeaderDown}
             />
@@ -222,6 +223,7 @@ function InsertGap({
         <button
           className="insert-btn"
           data-tip={vertical ? `Add a ${noun} here` : undefined}
+          aria-label={vertical ? `Add a ${noun} here` : undefined}
           onClick={() => insertSpread(index)}
         >
           {vertical ? '+' : `+ Add ${noun}`}
@@ -237,15 +239,14 @@ interface RowProps {
   total: number;
   sheet: Sheet;
   thumbW: number;
+  /** How many of its photos have less detail than the page asks for. */
+  soft: number;
   dragging: boolean;
   onHeaderDown: (e: React.PointerEvent, s: Spread) => void;
 }
 
-function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown }: RowProps) {
-  const { project } = useProject();
+function SpreadRow({ spread, index, total, sheet, thumbW, soft, dragging, onHeaderDown }: RowProps) {
   const editing = ui.use((s) => s.editingSpreadId === spread.id);
-  // Photos here with less detail than the page asks for.
-  const soft = spread.items.filter((i) => placedSoft(project.photos[i.photoId], i, sheet)).length;
   // Thumbnails are as wide as a book's two pages, or a frame.
   const scale = thumbW / sheetExtent(sheet).width;
   // A book's middle spreads move and delete; so does any frame but a sequence's only one.

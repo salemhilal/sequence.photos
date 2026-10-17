@@ -142,13 +142,14 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
               min={1}
               suffix={false}
               value={draft.page.pxPerUnit}
+              ariaLabel={printAt ? 'Print at, in dpi' : 'Resolution, in dpi'}
               commitOnBlur={immediate}
               onCommit={(n) => setDpi(Math.max(1, Math.round(n)))}
             />
             <span className="muted data">dpi</span>
           </div>
         ) : (
-          <span className="muted data" data-tip="Pixel density">
+          <span className="muted data" data-tip="Pixel density" role="img" aria-label="Pixel density 1×">
             1×
           </span>
         )}

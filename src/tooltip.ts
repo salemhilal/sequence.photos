@@ -36,9 +36,26 @@ export function installTooltips(): void {
   document.body.append(tip);
   let shown: Element | null = null;
 
+  /**
+   * While a tip shows, its element is watched: a change to its text (a toggle) shows the
+   * new text, and its removal hides the tip, without measuring anything unless the text
+   * changed. Nothing is watched while no tip shows.
+   */
+  const watch = new MutationObserver(() => {
+    if (!shown) return;
+    if (!shown.isConnected) hide();
+    else if (shown.getAttribute('data-tip') !== tip.textContent) show(shown);
+  });
+
   const show = (el: Element) => {
     const text = el.getAttribute('data-tip');
     if (!text) return hide();
+    if (shown !== el) {
+      watch.disconnect();
+      watch.observe(el, { attributes: true, attributeFilter: ['data-tip'] });
+      // It can go with any ancestor (a dialog closing): checking costs no layout.
+      watch.observe(document.body, { childList: true, subtree: true });
+    }
     shown = el;
     tip.textContent = text;
     tip.hidden = false;
@@ -50,8 +67,10 @@ export function installTooltips(): void {
     tip.style.top = `${top}px`;
   };
   const hide = () => {
+    if (!shown) return;
     shown = null;
     tip.hidden = true;
+    watch.disconnect();
   };
   const tipped = (t: EventTarget | null) => (t instanceof Element ? t.closest('[data-tip]') : null);
 
@@ -62,11 +81,14 @@ export function installTooltips(): void {
       else hide();
     }
   });
-  document.addEventListener('pointerleave', hide);
+  // Leaving the window: pointerout with nowhere it went to.
+  document.addEventListener('pointerout', (e) => {
+    if (!e.relatedTarget) hide();
+  });
   document.addEventListener('focusin', (e) => {
     const el = tipped(e.target);
     // Only for keyboard focus, as :focus-visible: a click shouldn't leave a tip behind.
-    if (el && el instanceof HTMLElement && el.matches(':focus-visible')) show(el);
+    if (el && e.target instanceof HTMLElement && e.target.matches(':focus-visible')) show(el);
   });
   document.addEventListener('focusout', hide);
   // Pressing, scrolling, or typing moves things on; the tip would be in the way, or stale.
@@ -74,11 +96,4 @@ export function installTooltips(): void {
     document.addEventListener(type, hide, { capture: true, passive: true });
   }
   window.addEventListener('blur', hide);
-  // A tip whose element changes its text (a toggle) or goes away follows it.
-  new MutationObserver((records) => {
-    // Not the tip's own text changing.
-    if (!shown || records.every((r) => tip.contains(r.target))) return;
-    if (!shown.isConnected) hide();
-    else show(shown);
-  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-tip'], childList: true });
 }
