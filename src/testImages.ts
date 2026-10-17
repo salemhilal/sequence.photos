@@ -1,24 +1,26 @@
 /**
- * Stand-in photos for testing (Settings → Advanced): soft gradients in colors like film's
+ * Stand-in photos for testing (Settings → Advanced): soft gradients in colors like Kodachrome's
  * (saturated, warm and cool, never pure black or white), with a little grain. They're made
  * as JPEG files and added like any others (see importPhotos).
  */
 
 /**
- * Colors from slide and negative film: rich, but with headroom at both ends. In order
- * around the color wheel, so neighbors blend cleanly (opposites would meet in gray).
+ * Colors like Kodachrome's: deep reds, cobalt and sky blues, golden yellows, with a few
+ * pastels, and headroom at both ends. In order around the color wheel, so neighbors blend
+ * cleanly (opposites would meet in gray).
  */
 export const FILM_COLORS = [
-  '#c2452d', // red, like Ektachrome
-  '#e07a3f', // orange
-  '#f2b544', // warm yellow
-  '#3f7d4e', // green
-  '#2a9d8f', // teal
-  '#1f4e5a', // dark cyan
-  '#2f5d8a', // deep blue
-  '#7a4c9a', // violet
-  '#b8336a', // magenta
-  '#e8a398', // Portra skin, back toward red
+  '#c8161d', // Kodachrome red
+  '#e4572e', // red-orange
+  '#f5c518', // golden yellow
+  '#3d8b3d', // grass green
+  '#2f7f6f', // deep teal
+  '#9cc3e0', // pale sky (a pastel)
+  '#3a8fd6', // clear sky blue
+  '#1f4fa0', // cobalt
+  '#1c2a4a', // navy
+  '#b02a4a', // deep rose
+  '#e8a398', // Portra skin (a pastel), back toward red
 ] as const;
 
 /** The sizes made, in pixels: about 6 megapixels, 10 in at 300 dpi along the long side (or 8 in square). */
@@ -95,11 +97,11 @@ async function gradientFile(name: string, grain: OffscreenCanvas): Promise<File>
   const gx = Math.random() * w;
   const gy = Math.random() * h;
   const glow = ctx.createRadialGradient(gx, gy, 0, gx, gy, r * 1.2);
-  easedStops(glow, [255, 236, 200], 0.2, (t) => 1 - t);
+  easedStops(glow, [255, 236, 200], 0.12, (t) => 1 - t);
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, w, h);
   const vignette = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, r);
-  easedStops(vignette, [20, 16, 24], 0.22, (t) => t);
+  easedStops(vignette, [20, 16, 24], 0.18, (t) => t);
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, w, h);
   const pattern = ctx.createPattern(grain, 'repeat');
