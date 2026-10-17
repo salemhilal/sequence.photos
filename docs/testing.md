@@ -31,7 +31,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       editing there and blocks the other.
 - [ ] Reload after editing: everything comes back (desk, spreads or frames, guides, layout,
       size).
-- [ ] File → New project… with photos: Cancel / Export current first / New project. New
+- [ ] File → New project… with photos: Cancel / Save first / New project. New
       project empties everything; ⌘Z brings the old one back.
 - [ ] A new project's empty desk: "Start by adding photos", Add photos, and a Page card with
       the same settings as Layout's Page tab (no Content). **[F]** It says to drag photos onto
@@ -221,7 +221,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       **[in]** At the chosen dpi (3000 × 2400 for 10 × 8 in at 300).
 - [ ] A page too large for one image (11 × 17 in at 300 dpi): it's exported at the most that
       fits, and a notice says the dpi.
-- [ ] Export project (⌘S) and import it into a fresh project (⌘O): "Opened … · N photos. Undo
+- [ ] Save project (⌘S) and open it into a fresh project (⌘O): "Opened … · N photos. Undo
       to go back."; ⌘Z restores. Frames come back as frames, and pixels as pixels.
 - [ ] A project from an older version opens as a book with its guides.
 - [ ] A damaged file: "The project file is damaged." A ZIP that isn't a project: "This file
@@ -348,8 +348,9 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
 
 - [ ] No web File menu or Undo/Redo buttons; the toolbar is the title bar (file name, "—
       Edited", drag to move the window).
-- [ ] Menus in title case with shortcuts. File: New Project, Open…, Add Photos…, Close, Save,
-      Save As… (⌘⇧S), Export… (⌘⇧E).
+- [ ] Menus in title case with shortcuts. File: New Project, Open…, Save, Save As… (⌘⇧S),
+      Close; Add Photos…; Export… (⌘⇧E). The web File menu matches: New project…, Open
+      project…, Save project; Add photos…; Export…; the tour and About.
 - [ ] View: Preview, Layout…, Hide/Show Guides, Hide/Show Spreads [S] or Frames [F], following
       their state.
 - [ ] Edit: Cut, Copy, Paste in text fields; Copy with photos selected copies them; Undo

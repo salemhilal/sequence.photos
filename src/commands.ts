@@ -95,14 +95,14 @@ export const commands = {
     run: addPhotos,
   },
   importProject: {
-    title: { browser: 'Import project…', macos: 'Open…' },
+    title: { browser: 'Open project…', macos: 'Open…' },
     bindings: [{ key: 'o', mod: true }],
     scope: 'app',
     inFields: true,
     run: () => platform.openProject(),
   },
   exportProject: {
-    title: { browser: 'Export project', macos: 'Save' },
+    title: { browser: 'Save project', macos: 'Save' },
     bindings: [{ key: 's', mod: true }],
     scope: 'app',
     inFields: true,

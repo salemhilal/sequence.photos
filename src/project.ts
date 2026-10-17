@@ -219,10 +219,10 @@ export async function confirmReplace(title: string, what: string, confirmLabel: 
       (app
         ? 'Changes that aren’t saved to its file will be lost. To keep them, save first.'
         : `You can bring it back with ${MOD_LABEL}Z, but not after you reload or close the page. ` +
-          'To keep a copy, export it first.'),
+          'To keep a copy, save it first.'),
     actions: [
       { label: 'Cancel', value: 'cancel' },
-      ...(photoCount ? [{ label: app ? 'Save first' : 'Export current first', value: 'export' as const }] : []),
+      ...(photoCount ? [{ label: 'Save first', value: 'export' as const }] : []),
       { label: confirmLabel, value: 'replace', primary: true },
     ],
   });

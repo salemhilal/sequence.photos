@@ -35,8 +35,8 @@ describe('commands', () => {
   });
 
   it('names commands for the platform, in sentence case', () => {
-    expect(commandTitle('exportProject')).toBe('Export project');
-    expect(commandTitle('importProject')).toBe('Import project…');
+    expect(commandTitle('exportProject')).toBe('Save project');
+    expect(commandTitle('importProject')).toBe('Open project…');
     expect(commandTitle('addPhotos')).toBe('Add photos…');
   });
 

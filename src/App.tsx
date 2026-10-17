@@ -122,10 +122,10 @@ export default function App() {
             <FileMenu
               items={[
                 fileItem('newProject', <FilePlus />),
-                { ...fileItem('addPhotos', <ImagePlus />, importing !== null), separatorBefore: true },
                 fileItem('importProject', <FolderOpen />),
                 fileItem('exportProject', <Download />),
-                ...exportItems,
+                { ...fileItem('addPhotos', <ImagePlus />, importing !== null), separatorBefore: true },
+                ...exportItems.map((item, i) => (i === 0 ? { ...item, separatorBefore: true } : item)),
                 { ...fileItem('tour', <Compass />), separatorBefore: true },
                 fileItem('about', <Info />, false),
               ]}

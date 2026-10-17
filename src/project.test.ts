@@ -163,7 +163,7 @@ describe('project files', () => {
     expect(Object.keys(projectStore.project.photos)).toHaveLength(2);
 
     const confirmed = newProject();
-    expect(ui.get().confirm!.actions.map((a) => a.label)).toEqual(['Cancel', 'Export current first', 'New project']);
+    expect(ui.get().confirm!.actions.map((a) => a.label)).toEqual(['Cancel', 'Save first', 'New project']);
     pick('New project');
     await confirmed;
     expect(Object.keys(projectStore.project.photos)).toHaveLength(0);

@@ -341,7 +341,7 @@ export function Desk() {
             {Object.keys(project.photos).length ? 'Every photo is placed' : 'Start by adding photos'}
           </p>
           <p>
-            Add or drop photos or exported projects here.
+            Add or drop photos or saved projects here.
             <br />
             They land on this desk, where you can drag them onto {TERMS[project.layout.kind].pages}.
           </p>
