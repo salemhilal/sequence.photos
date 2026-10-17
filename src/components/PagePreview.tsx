@@ -1,9 +1,8 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { folioLabel } from '../actions';
 import { sheetExtent } from '../geometry';
-import { useWindowEvent } from '../hooks';
-import { isTyping } from '../input';
+import { useElementSize, usePager } from '../hooks';
 import { draftOf, previewPageSetup, sameDraft, type PageDraft } from '../pageSetup';
 import { allSpreads, sheetOf } from '../spreads';
 import { useProject } from '../store';
@@ -32,30 +31,9 @@ export function PagePreview({ draft }: Props) {
   const preview = useMemo(() => previewPageSetup(draft), [project, draft]); // eslint-disable-line react-hooks/exhaustive-deps
   const sheet = sheetOf(preview);
   const spreads = allSpreads(preview);
-  const [index, setIndex] = useState(0);
-  const at = Math.min(index, spreads.length - 1);
+  const { at, go } = usePager(spreads.length);
   const spread = spreads[at];
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [stage, setStage] = useState({ w: 800, h: 500 });
-
-  useLayoutEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      if (entry) setStage({ w: entry.contentRect.width, h: entry.contentRect.height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const go = (d: number) => setIndex(Math.min(spreads.length - 1, Math.max(0, at + d)));
-  useWindowEvent('keydown', (e) => {
-    if (isTyping(e) || e.metaKey || e.ctrlKey) return;
-    if (e.key === 'ArrowLeft') go(-1);
-    else if (e.key === 'ArrowRight') go(1);
-    else return;
-    e.preventDefault();
-  });
+  const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 800, h: 500 });
 
   const pad = sheet.pageW * PAD_SHARE;
   const across = sheetExtent(sheet).width;

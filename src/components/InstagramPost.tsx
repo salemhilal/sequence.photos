@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
-import { useWindowEvent } from '../hooks';
+import { useElementSize, usePager } from '../hooks';
 import { connectInstagram, returnToExportAfterSignIn, useInstagram } from '../instagram';
 import {
   fits,
@@ -346,26 +346,8 @@ interface PreviewProps {
 
 /** How the post will look on Instagram: a feed post's carousel, or stories. */
 function PostPreview({ slides, sheet, layout, kind, username, caption }: PreviewProps) {
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [stage, setStage] = useState({ w: 700, h: 600 });
-  const [index, setIndex] = useState(0);
-  const at = Math.min(index, Math.max(0, slides.length - 1));
-
-  useLayoutEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      if (entry) setStage({ w: entry.contentRect.width, h: entry.contentRect.height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  useWindowEvent('keydown', (e) => {
-    if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
-    if (e.key === 'ArrowLeft') setIndex(Math.max(0, at - 1));
-    if (e.key === 'ArrowRight') setIndex(Math.min(slides.length - 1, at + 1));
-  });
+  const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 700, h: 600 });
+  const { at, go } = usePager(slides.length);
 
   // The media box: the image's shape in the feed; a phone screen (9:16) for stories.
   const aspect = kind === 'story' ? 9 / 16 : layout.width / layout.height;
@@ -398,12 +380,12 @@ function PostPreview({ slides, sheet, layout, kind, username, caption }: Preview
   const nav = slides.length > 1 && (
     <>
       {at > 0 && (
-        <button className="ig-arrow prev" aria-label="Previous slide" onClick={() => setIndex(at - 1)}>
+        <button className="ig-arrow prev" aria-label="Previous slide" onClick={() => go(-1)}>
           <ChevronLeft />
         </button>
       )}
       {at < slides.length - 1 && (
-        <button className="ig-arrow next" aria-label="Next slide" onClick={() => setIndex(at + 1)}>
+        <button className="ig-arrow next" aria-label="Next slide" onClick={() => go(1)}>
           <ChevronRight />
         </button>
       )}

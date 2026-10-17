@@ -2,10 +2,11 @@ import { useId } from 'react';
 import { usePageDraft } from './pageDraft';
 import {
   applyPageSetup,
-  convertedSize,
-  draftConvertedSize,
   draftOf,
+  draftWithDpi,
+  draftWithUnit,
   pageSetupBase,
+  printsAt,
   presetOf,
   resizes,
   sameDraft,
@@ -15,7 +16,7 @@ import {
 } from '../pageSetup';
 import { useProject } from '../store';
 import type { Arrangement, Unit } from '../types';
-import { DEFAULT_DPI, PRESETS, UNITS } from '../units';
+import { PRESETS, UNITS } from '../units';
 import { NumberField } from './NumberField';
 import { Segmented } from './Segmented';
 
@@ -56,32 +57,20 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
   const changed = !sameDraft(draft, draftOf(project));
   const onChange = immediate ? applyPageSetup : change;
   const preset = presetOf(draft);
-  // Going from pixels to inches, the dpi is the one to print at, which sets the size.
-  const printAt = base.page.unit === 'px' && draft.page.unit === 'in';
-  // Against what Apply starts from, and only while there's something to apply.
+  // What's shown follows the project; only conversions start from `base` (see pageSetup.ts).
+  const printAt = printsAt(project, draft);
   const contentMatters = changed && resizes(base, draft);
   const note =
-    changed && draft.arrangement !== base.layout.kind
+    draft.arrangement !== project.layout.kind
       ? draft.arrangement === 'frames'
         ? 'Each page becomes a frame.'
         : 'Frames pair up into spreads.'
       : null;
 
   const setUnit = (unit: Unit) => {
-    if (unit === draft.page.unit) return;
-    const pxPerUnit = unit === 'px' ? 1 : base.page.unit === 'in' ? base.page.pxPerUnit : DEFAULT_DPI;
-    const next: PageDraft = { ...draft, page: { ...draft.page, unit, pxPerUnit } };
-    // Converted from the current page at its dpi (or the dpi to print at).
-    const size = unit === base.page.unit ? base.page : draftConvertedSize(base, next);
-    onChange({ ...next, page: { ...next.page, w: size.w, h: size.h } });
+    if (unit !== draft.page.unit) onChange(draftWithUnit(base, draft, unit));
   };
-  const setDpi = (dpi: number) => {
-    let { w, h } = draft.page;
-    // While converting from pixels, the size follows the dpi, unless it's been edited.
-    const was = convertedSize(base.page, 'in', draft.page.pxPerUnit);
-    if (printAt && was.w === w && was.h === h) ({ w, h } = convertedSize(base.page, 'in', dpi));
-    onChange({ ...draft, page: { ...draft.page, w, h, pxPerUnit: dpi } });
-  };
+  const setDpi = (dpi: number) => onChange(draftWithDpi(base, project, draft, dpi));
   const field = (dim: 'w' | 'h', label: string) => (
     <NumberField
       label={label}

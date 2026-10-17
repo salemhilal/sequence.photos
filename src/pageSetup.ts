@@ -96,30 +96,80 @@ export function withPageSetup(project: Project, draft: PageDraft): Project {
  * fixed start (not from the previous result) keeps a run order-independent and exactly
  * reversible: 10 → 8 → 10 puts every photo and guide back, and switching straight back to
  * spreads restores the book. The run ends when anything else changes the project.
+ *
+ * A unit conversion applied in the run ends its use as a start for anything but going
+ * straight back: after inches → pixels (or back), later changes start from the converted
+ * project, so a dpi changed afterwards is the page's resolution, not a new conversion.
  */
 let run: { base: Project; out: Project } | null = null;
 
-/** The project the next Apply starts from (the Page tab's preview shows it with the draft). */
+/** The run, if the project is still the one it last made. */
+function liveRun(): { base: Project; out: Project } | null {
+  return run?.out === projectStore.project ? run : null;
+}
+
+/** The project the next Apply converts and resizes from (see `run`). */
 export function pageSetupBase(): Project {
   const now = projectStore.project;
-  return run?.out === now ? run.base : now;
+  const r = liveRun();
+  return r && r.base.page.unit === now.page.unit ? r.base : now;
+}
+
+/** The project a draft makes: the run's start, exactly, when the draft goes straight back to it. */
+function projectFor(draft: PageDraft): Project {
+  const r = liveRun();
+  if (r && sameDraft(draftOf(r.base), draft)) return r.base;
+  const base = pageSetupBase();
+  return sameDraft(draftOf(base), draft) ? base : withPageSetup(base, draft);
 }
 
 /** The project after Apply, as the preview shows it (see applyPageSetup). */
 export function previewPageSetup(draft: PageDraft): Project {
-  const base = pageSetupBase();
-  return sameDraft(draftOf(base), draft) ? base : withPageSetup(base, draft);
+  const now = projectStore.project;
+  return sameDraft(draftOf(now), draft) ? now : projectFor(draft);
 }
 
 /** Apply a draft of the page's settings as one undo step. */
 export function applyPageSetup(draft: PageDraft): void {
   const now = projectStore.project;
   if (sameDraft(draftOf(now), draft)) return;
-  if (run?.out !== now) run = { base: now, out: now };
-  // Back to where the run started: the project as it was, exactly.
-  const next = sameDraft(draftOf(run.base), draft) ? run.base : withPageSetup(run.base, draft);
+  const r = liveRun();
+  const base = r && r.base.page.unit === now.page.unit ? r.base : now;
+  const next = projectFor(draft);
   projectStore.replace(next);
-  run.out = projectStore.project;
+  // A new run starts where this one can no longer be computed from.
+  run = { base: r && (base === r.base || next === r.base) ? r.base : base, out: projectStore.project };
+}
+
+/**
+ * The draft with another unit: its size converted from the page Apply starts from, at that
+ * page's dpi (or the default dpi, to print at, going from pixels to inches).
+ */
+export function draftWithUnit(base: Project, draft: PageDraft, unit: Unit): PageDraft {
+  if (unit === draft.page.unit) return draft;
+  const pxPerUnit = unit === 'px' ? 1 : base.page.unit === 'in' ? base.page.pxPerUnit : DEFAULT_DPI;
+  const next: PageDraft = { ...draft, page: { ...draft.page, unit, pxPerUnit } };
+  const size = unit === base.page.unit ? base.page : draftConvertedSize(base, next);
+  return { ...next, page: { ...next.page, w: size.w, h: size.h } };
+}
+
+/**
+ * Whether the draft's dpi is the one to print pixels at: going from a pixel page to inches,
+ * where the dpi sets the size. Otherwise it's only the page's resolution.
+ */
+export function printsAt(project: Project, draft: PageDraft): boolean {
+  return project.page.unit === 'px' && draft.page.unit === 'in';
+}
+
+/**
+ * The draft at another dpi. Printing pixels at it, the size follows (unless it's been
+ * edited); otherwise nothing but the resolution changes.
+ */
+export function draftWithDpi(base: Project, project: Project, draft: PageDraft, dpi: number): PageDraft {
+  let { w, h } = draft.page;
+  const was = convertedSize(base.page, 'in', draft.page.pxPerUnit);
+  if (printsAt(project, draft) && was.w === w && was.h === h) ({ w, h } = convertedSize(base.page, 'in', dpi));
+  return { ...draft, page: { ...draft.page, w, h, pxPerUnit: dpi } };
 }
 
 /** The preset a draft matches, if any. */

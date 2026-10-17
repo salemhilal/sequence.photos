@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { folioLabel } from '../actions';
-import { useWindowEvent } from '../hooks';
+import { useElementSize, useWindowEvent } from '../hooks';
 import { useProject } from '../store';
 import { closeModal, openModal, ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
@@ -58,9 +58,8 @@ export function Preview() {
     );
   });
   const [dir, setDir] = useState<'next' | 'prev'>('next');
-  const stageRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  const [stage, setStage] = useState({ w: 900, h: 600 });
+  const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 900, h: 600 });
   const busy = ui.use((s) => s.busy);
   const sheet = sheetOf(project);
   // Saving (a PDF or images) shows its progress in the header: keep it up until that's done.
@@ -73,14 +72,6 @@ export function Preview() {
     setDir(d > 0 ? 'next' : 'prev');
     setIndex((i) => Math.min(spreads.length - 1, Math.max(0, i + d)));
   };
-
-  useLayoutEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => e && setStage({ w: e.contentRect.width, h: e.contentRect.height }));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   useWindowEvent(
     'keydown',

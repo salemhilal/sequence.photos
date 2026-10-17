@@ -26,3 +26,11 @@ export function isTextField(t: EventTarget | null): boolean {
     (t instanceof HTMLElement && t.isContentEditable)
   );
 }
+
+/**
+ * Whether arrow keys belong to the control they're aimed at: a text field, or a choice
+ * like a radio group, which moves its selection with them.
+ */
+export function ownsArrowKeys(t: EventTarget | null): boolean {
+  return isTextField(t) || (t instanceof HTMLInputElement && t.type === 'radio');
+}

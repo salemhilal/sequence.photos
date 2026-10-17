@@ -141,16 +141,38 @@ export function modalLocked(): boolean {
   return modalLock;
 }
 
+/**
+ * Asked before the open dialog closes or is replaced, by whatever does it (its own close
+ * button, a shortcut, a menu): resolves whether to go on. Layout sets it while page changes
+ * wait for Apply.
+ */
+let closeGuard: (() => Promise<boolean>) | null = null;
+
+export function setCloseGuard(guard: (() => Promise<boolean>) | null): void {
+  closeGuard = guard;
+}
+
+/** Change the open dialog, once its close guard (if any) agrees. */
+function leaveTo(modal: (open: Modal | null) => Modal | null): void {
+  if (modalLock) return;
+  const next = modal(ui.get().modal);
+  if (next === ui.get().modal) return;
+  if (!closeGuard) return ui.set({ modal: next });
+  void closeGuard().then((ok) => {
+    if (ok && !modalLock) ui.set({ modal: next });
+  });
+}
+
 export function openModal(modal: Modal): void {
-  if (!modalLock) ui.set({ modal });
+  leaveTo(() => modal);
 }
 
 export function closeModal(): void {
-  if (!modalLock) ui.set({ modal: null });
+  leaveTo(() => null);
 }
 
 export function toggleModal(modal: Modal): void {
-  if (!modalLock) ui.set((s) => ({ modal: s.modal === modal ? null : modal }));
+  leaveTo((open) => (open === modal ? null : modal));
 }
 
 /** Whether something covers the desk (a dialog, the spread editor, Quick Look, or the tour), pausing desk shortcuts. */

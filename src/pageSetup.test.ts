@@ -3,7 +3,11 @@ import { addPhotosToPile, putOnPage } from './actions';
 import {
   applyPageSetup,
   draftOf,
+  draftWithDpi,
+  draftWithUnit,
+  pageSetupBase,
   presetOf,
+  printsAt,
   previewPageSetup,
   resizes,
   withPageSetup,
@@ -151,6 +155,18 @@ describe('applyPageSetup: unit and resolution', () => {
     expect(item.w).toBeCloseTo(was.w * 300);
   });
 
+  it('after converting, a dpi change is only the resolution: nothing moves or resizes', () => {
+    applyPageSetup(draft({ page: INSTAGRAM, arrangement: 'frames' }));
+    applyPageSetup(draft({ page: { w: 3.6, h: 4.5, unit: 'in', pxPerUnit: 300 } }));
+    const converted = projectStore.project;
+    expect(printsAt(converted, draftOf(converted))).toBe(false);
+    const d = draftWithDpi(pageSetupBase(), converted, draftOf(converted), 150);
+    expect(d.page).toEqual({ w: 3.6, h: 4.5, unit: 'in', pxPerUnit: 150 });
+    applyPageSetup(d);
+    expect(projectStore.project.page).toEqual({ w: 3.6, h: 4.5, unit: 'in', pxPerUnit: 150 });
+    expect(projectStore.project.layout).toBe(converted.layout);
+  });
+
   it('goes back exactly through the run', () => {
     const before = projectStore.project;
     applyPageSetup(draft({ arrangement: 'frames', page: INSTAGRAM }));
@@ -172,6 +188,22 @@ describe('the draft', () => {
     const preview = previewPageSetup(d);
     applyPageSetup(d);
     expect(allSpreads(projectStore.project).map((s) => s.items)).toEqual(allSpreads(preview).map((s) => s.items));
+  });
+
+  it('converts its size when the unit changes, and prints pixels at the dpi chosen', () => {
+    const p = projectStore.project;
+    expect(draftWithUnit(p, draftOf(p), 'px').page).toEqual({ w: 3000, h: 2400, unit: 'px', pxPerUnit: 1 });
+    applyPageSetup(draft({ page: INSTAGRAM }));
+    const px = projectStore.project;
+    const toInches = draftWithUnit(pageSetupBase(), draftOf(px), 'in');
+    expect(toInches.page).toEqual({ w: 3.6, h: 4.5, unit: 'in', pxPerUnit: 300 });
+    expect(printsAt(px, toInches)).toBe(true);
+    expect(draftWithDpi(pageSetupBase(), px, toInches, 150).page).toEqual({ w: 7.2, h: 9, unit: 'in', pxPerUnit: 150 });
+  });
+
+  it('previews the project itself when nothing changes', () => {
+    const p = projectStore.project;
+    expect(previewPageSetup(draftOf(p))).toBe(p);
   });
 
   it('is pure: the project is left alone', () => {

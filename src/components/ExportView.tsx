@@ -1,4 +1,4 @@
-import { lazy, Suspense, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, FileText, Images, Info, Package, Send, TriangleAlert, X } from 'lucide-react';
 import { platform } from '#platform';
 import {
@@ -11,7 +11,7 @@ import {
   type ExportOptions,
   type Per,
 } from '../exportOptions';
-import { useWindowEvent } from '../hooks';
+import { useElementSize, usePager, useWindowEvent } from '../hooks';
 import { exportIndesign } from '../indesign';
 import { savePdf } from '../pdf';
 import { exportImages, imageNames } from '../rasterExport';
@@ -342,30 +342,9 @@ function OutputPreview({
   /** Images: the pixels each page becomes, shown in the label. */
   pxPerUnit: number | null;
 }) {
-  const [index, setIndex] = useState(0);
-  const at = Math.min(index, pages.length - 1);
+  const { at, go } = usePager(pages.length);
   const page = pages[at];
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [stage, setStage] = useState({ w: 800, h: 500 });
-
-  useLayoutEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      if (entry) setStage({ w: entry.contentRect.width, h: entry.contentRect.height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const go = (d: number) => setIndex(Math.min(pages.length - 1, Math.max(0, at + d)));
-  useWindowEvent('keydown', (e) => {
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-    if (e.key === 'ArrowLeft') go(-1);
-    else if (e.key === 'ArrowRight') go(1);
-    else return;
-    e.preventDefault();
-  });
+  const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 800, h: 500 });
 
   if (!page) return <div className="editor-stage" ref={stageRef} />;
   const region = pageRegion(page, sheet);

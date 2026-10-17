@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { startDrag } from '../drag';
 import {
@@ -12,14 +12,14 @@ import {
   spreadLeft,
   spreadWidth,
 } from '../geometry';
-import { useWindowEvent } from '../hooks';
+import { useElementSize, useWindowEvent } from '../hooks';
 import { isTyping } from '../input';
 import { newGuideId, toSpreadId, type GuideId } from '../ids';
 import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { Arrangement, LineGuide, PageSide, Spread } from '../types';
 import { TERMS, UNITS } from '../units';
-import { ask, closeModal, ui } from '../ui';
+import { ask, closeModal, setCloseGuard, ui } from '../ui';
 import { applyPageSetup, draftOf, sameDraft } from '../pageSetup';
 import { usePageDraft } from './pageDraft';
 import { PagePreview } from './PagePreview';
@@ -55,8 +55,7 @@ export function LayoutEditor() {
   /** The pages' (or frame's) left edge and width, around the canvas origin. */
   const extentLeft = spreadLeft(sample.kind, s);
   const across = spreadWidth(sample.kind, s);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [stage, setStage] = useState({ w: 800, h: 500 });
+  const [stageRef, stage, measureStage] = useElementSize<HTMLDivElement>({ w: 800, h: 500 });
   const [selected, setSelected] = useState<Selection | null>(null);
   const [dragLabel, setDragLabel] = useState<{ text: string; x: number; y: number } | null>(null);
   // The Page tab's draft, kept across tabs until Apply or Revert.
@@ -68,23 +67,11 @@ export function LayoutEditor() {
   // while changes wait, since guides can't be edited then.
   const previewing = tab === 'page' || pending;
 
-  useLayoutEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      if (entry) setStage({ w: entry.contentRect.width, h: entry.contentRect.height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
   // Hidden behind the preview, the stage measures nothing: measure it as it shows, before
   // it's painted, so the page doesn't flash at the wrong size.
   useLayoutEffect(() => {
-    const el = stageRef.current;
-    if (previewing || !el) return;
-    const r = el.getBoundingClientRect();
-    setStage({ w: r.width, h: r.height });
-  }, [previewing]);
+    if (!previewing) measureStage();
+  }, [previewing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const remove = (sel: Selection) => {
     if (sel.kind === 'center') return;
@@ -100,27 +87,32 @@ export function LayoutEditor() {
     setSelected(null);
   };
 
-  /** Close, first asking what to do with page changes that wait for Apply. */
-  const close = async () => {
-    if (!pending) return closeModal();
-    const answer = await ask({
-      title: 'Apply the page changes?',
-      message: 'Your changes on the Page tab haven’t been applied yet.',
-      actions: [
-        { label: 'Cancel', value: 'cancel' },
-        { label: 'Discard', value: 'discard' },
-        { label: 'Apply', value: 'apply', primary: true },
-      ],
+  // Closing or replacing Layout (here, or by a shortcut or menu) first asks what to do with
+  // page changes that wait for Apply.
+  useEffect(() => {
+    if (!pending) return;
+    setCloseGuard(async () => {
+      const answer = await ask({
+        title: 'Apply the page changes?',
+        message: 'Your changes on the Page tab haven’t been applied yet.',
+        actions: [
+          { label: 'Cancel', value: 'cancel' },
+          { label: 'Discard', value: 'discard' },
+          { label: 'Apply', value: 'apply', primary: true },
+        ],
+      });
+      if (answer === 'apply') applyPageSetup(draft);
+      return answer === 'apply' || answer === 'discard';
     });
-    if (answer === 'apply') applyPageSetup(draft);
-    if (answer === 'apply' || answer === 'discard') closeModal();
-  };
+    return () => setCloseGuard(null);
+  }, [pending, draft]);
+  const close = closeModal;
 
   useWindowEvent('keydown', (e) => {
     if (isTyping(e) || e.metaKey || e.ctrlKey || ui.get().confirm) return;
     if (e.key === 'Escape') {
       if (selected) setSelected(null);
-      else void close();
+      else close();
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected) {
       e.preventDefault();
       remove(selected);
@@ -243,7 +235,7 @@ export function LayoutEditor() {
   }
 
   return (
-    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && void close()}>
+    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
       <div className="modal editor layout-editor" data-modal>
         <header className="modal-head">
           <div className="modal-title">
@@ -258,7 +250,7 @@ export function LayoutEditor() {
               ? `${pending ? 'Preview of the changes · ' : ''}← → to flip through`
               : `Drag from a ruler to add a guide · Shift: snap to ${units.snapLabel} · Drag off the ${terms.page} to remove`}
           </span>
-          <button className="btn ghost icon" aria-label="Close" onClick={() => void close()}>
+          <button className="btn ghost icon" aria-label="Close" onClick={close}>
             <X />
           </button>
         </header>

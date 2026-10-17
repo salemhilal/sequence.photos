@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, X } from 'lucide-react';
 import { bump, dropPhotos, folioLabel, putInPile, putOnPage, raise } from '../actions';
 import { clearGhost, startDrag, trackGhost } from '../drag';
@@ -26,7 +26,7 @@ import type { Arrangement, BorderGuide, Project, Placement } from '../types';
 import { isMac, isTyping } from '../input';
 import { openPhotoMenu, toggleGuides, ui } from '../ui';
 import { shortcutLabel } from '../commands';
-import { useWindowEvent } from '../hooks';
+import { useElementSize, useWindowEvent } from '../hooks';
 import { placedSoft, resolutionNote } from '../resolution';
 import { NumberField } from './NumberField';
 import { SoftBadge } from './SoftBadge';
@@ -48,8 +48,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const PAD = sheet.pageW * PAD_SHARE;
   // A book's two pages (single ones on their side), or a frame.
   const { left: extentLeft, width: across } = sheetExtent(sheet);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [stage, setStage] = useState({ w: 800, h: 500 });
+  const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 800, h: 500 });
   // A photo asked for ("Show me" before an export), if any; taken once.
   const [selected, setSelected] = useState<PhotoId | null>(() => {
     const asked = ui.get().editorSelect;
@@ -64,16 +63,6 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const [hovered, setHovered] = useState<{ photoId: PhotoId; box: Rect } | null>(null);
   const glow = hovered && hovered.photoId === selected ? hovered.box : null;
   const guidesHidden = ui.use((s) => s.guidesHidden);
-
-  useLayoutEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      if (entry) setStage({ w: entry.contentRect.width, h: entry.contentRect.height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const scale = Math.min(stage.w / (across + 2 * PAD), stage.h / (sheet.pageH + 2 * PAD));
 
