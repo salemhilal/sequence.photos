@@ -1,5 +1,6 @@
 import { applyDeskColor } from './deskColor';
 import type { DropTarget } from './drag';
+import type { Destination } from './exportOptions';
 import type { PhotoId, SpreadId } from './ids';
 import { deskColorPref, sidebarOpenPref, sidebarWidthPref, themePref } from './prefs';
 import { createStore } from './store';
@@ -45,7 +46,10 @@ export interface ConfirmRequest {
   choose: (index: number | null) => void;
 }
 
-export type Modal = 'settings' | 'about' | 'preview' | 'layout';
+export type Modal = 'settings' | 'about' | 'preview' | 'layout' | 'export';
+
+/** The Layout view's tabs: the page's settings (applied together), or the guides (applied at once). */
+export type LayoutTab = 'page' | 'guides';
 
 export interface UiState {
   selection: PhotoId[];
@@ -86,6 +90,12 @@ export interface UiState {
   windowTitle: { name: string; edited: boolean } | null;
   /** The product tour's current step, while it's running (see tour.ts). */
   tour: number | null;
+  /** The Layout view's open tab. */
+  layoutTab: LayoutTab;
+  /** A photo for the spread editor to select when it opens ("Show me"), then cleared. */
+  editorSelect: PhotoId | null;
+  /** Where the Export view exports to: the last one picked, for now (not saved); null till then. */
+  exportTo: Destination | null;
 }
 
 export const ui = createStore<UiState>({
@@ -112,18 +122,57 @@ export const ui = createStore<UiState>({
   quickLook: null,
   windowTitle: null,
   tour: null,
+  layoutTab: 'page',
+  editorSelect: null,
+  exportTo: null,
 });
 
+/**
+ * While set, the open dialog stays open: nothing (shortcuts, menus, a new project) can
+ * close or replace it. For work that mustn't be hidden midway, like posting to Instagram.
+ */
+let modalLock = false;
+
+export function lockModal(locked: boolean): void {
+  modalLock = locked;
+}
+
+export function modalLocked(): boolean {
+  return modalLock;
+}
+
+/**
+ * Asked before the open dialog closes or is replaced, by whatever does it (its own close
+ * button, a shortcut, a menu): resolves whether to go on. Layout sets it while page changes
+ * wait for Apply.
+ */
+let closeGuard: (() => Promise<boolean>) | null = null;
+
+export function setCloseGuard(guard: (() => Promise<boolean>) | null): void {
+  closeGuard = guard;
+}
+
+/** Change the open dialog, once its close guard (if any) agrees. */
+function leaveTo(modal: (open: Modal | null) => Modal | null): void {
+  if (modalLock) return;
+  const next = modal(ui.get().modal);
+  if (next === ui.get().modal) return;
+  if (!closeGuard) return ui.set({ modal: next });
+  void closeGuard().then((ok) => {
+    if (ok && !modalLock) ui.set({ modal: next });
+  });
+}
+
 export function openModal(modal: Modal): void {
-  ui.set({ modal });
+  leaveTo(() => modal);
 }
 
 export function closeModal(): void {
-  ui.set({ modal: null });
+  leaveTo(() => null);
 }
 
 export function toggleModal(modal: Modal): void {
-  ui.set((s) => ({ modal: s.modal === modal ? null : modal }));
+  leaveTo((open) => (open === modal ? null : modal));
 }
 
 /** Whether something covers the desk (a dialog, the spread editor, Quick Look, or the tour), pausing desk shortcuts. */

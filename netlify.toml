@@ -7,6 +7,9 @@
 [build.environment]
   NODE_VERSION = "24"
 
+# The app's Content Security Policy and other security headers are generated at build
+# time from .env, as dist/_headers (see securityHeaders in vite.config.ts).
+
 # The service worker and app manifest must always be fetched fresh, so updates are noticed.
 [[headers]]
   for = "/app/sw.js"

@@ -2,10 +2,7 @@ import type { PhotoId } from './ids';
 import { useEffect } from 'react';
 import type { Platform } from './platform/types';
 import { deleteFromProject, importPhotos } from './actions';
-import { exportIndesign } from './indesign';
 import { copyPhotos, duplicateAndSelect } from './clipboard';
-import { savePdf } from './pdf';
-import { saveFrames } from './frames';
 import { hasMod, isMac, isTextField, isTyping, MOD_LABEL } from './input';
 import { platform } from '#platform';
 import { pickFiles } from './files';
@@ -98,14 +95,14 @@ export const commands = {
     run: addPhotos,
   },
   importProject: {
-    title: { browser: 'Import project…', macos: 'Open…' },
+    title: { browser: 'Open project…', macos: 'Open…' },
     bindings: [{ key: 'o', mod: true }],
     scope: 'app',
     inFields: true,
     run: () => platform.openProject(),
   },
   exportProject: {
-    title: { browser: 'Export project', macos: 'Save' },
+    title: { browser: 'Save project', macos: 'Save' },
     bindings: [{ key: 's', mod: true }],
     scope: 'app',
     inFields: true,
@@ -119,30 +116,17 @@ export const commands = {
     inFields: true,
     run: () => void platform.keepProjectAs?.(),
   },
-  savePdf: {
-    // The Mac app asks where to save it first.
-    title: { browser: 'Save PDF', macos: 'Save PDF…' },
-    bindings: [{ key: 'p', mod: true, shift: true }],
-    scope: 'app',
-    inFields: true,
-    run: () => void savePdf(),
-  },
-  // InDesign for print books; images for digital sequences.
-  exportIndesign: {
-    title: { browser: 'Export for InDesign', macos: 'Export for InDesign…' },
-    bindings: [],
-    scope: 'app',
-    run: () => (projectStore.project.layout.kind === 'print' ? void exportIndesign() : false),
-  },
-  saveImages: {
-    title: { browser: 'Save images', macos: 'Save Images…' },
+  // PDF, images, InDesign, or Instagram, chosen in the Export view.
+  export: {
+    title: { browser: 'Export…', macos: 'Export…' },
     bindings: [{ key: 'e', mod: true, shift: true }],
     scope: 'app',
     inFields: true,
-    run: () => (projectStore.project.layout.kind === 'digital' ? void saveFrames() : false),
+    run: () => openModal('export'),
   },
   preview: {
-    title: 'Preview book',
+    // The toolbar says "Preview book" for a book; menus just "Preview".
+    title: 'Preview',
     bindings: [{ key: 'p', mod: true }],
     scope: 'app',
     inFields: true,

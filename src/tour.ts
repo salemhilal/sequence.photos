@@ -57,7 +57,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Layout',
-    body: 'Make a print book or a digital sequence, and set its size. Set the border guides photos fit to when you drop them on a page, and drag guides out of the rulers. They apply to every spread, mirrored on facing pages.',
+    body: 'On the Page tab, choose spreads or frames, inches or pixels, and the size. On the Guides tab, set the border guides photos fit to when you drop them on a page, and drag guides out of the rulers. They apply to every spread, mirrored on facing pages.',
     target: '.modal.layout-editor',
     modal: 'layout',
   },
@@ -69,18 +69,18 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Preview the book',
-    body: 'Flip through it page by page, and save a PDF at true size.',
+    body: 'Flip through it page by page, then export it as a PDF, images, or for InDesign.',
     target: '[data-tour="preview"]',
   },
   {
     ...(platform.kind === 'macos'
       ? {
-          title: 'Save your book',
-          body: 'File → Save keeps your book, photos and all, in one file. Double-click it to pick up where you left off. Hold ⌘ to see every shortcut.',
+          title: 'Save your project',
+          body: 'File → Save keeps your project, photos and all, in one file. Double-click it to pick up where you left off. Hold ⌘ to see every shortcut.',
         }
       : {
           title: 'Keep a copy',
-          body: `Browsers can clear what sites store, so export your project now and then. It saves the photos and layout in one file. Hold ${isMac ? '⌘' : 'Ctrl'} to see every shortcut.`,
+          body: `Browsers can clear what sites store, so save your project now and then (File → Save project). It saves the photos and layout in one file. Hold ${isMac ? '⌘' : 'Ctrl'} to see every shortcut.`,
           target: '.toolbar .menu > .btn',
         }),
   },
@@ -95,6 +95,8 @@ const SAMPLES: [string, string][] = [
   ['lily', lily],
 ];
 const SAMPLE_PX = { pxW: 795, pxH: 1200 };
+/** The sample desk photos' spacing, as a share of their width. */
+const SAMPLE_STEP = 1.12;
 
 /** The sample project: four photos on the desk, two on the first middle spread. */
 export function sampleProject(): Project {
@@ -107,15 +109,15 @@ export function sampleProject(): Project {
     // A loose row, like prints set down by hand.
     project.pile.push({
       photoId: photo.id,
-      x: 0.4 + i * 1.8,
-      y: 0.4 + [0.1, 0, 0.25, 0.05][i]!,
+      x: i * w * SAMPLE_STEP,
+      y: [0.05, 0, 0.12, 0.02][i]! * h,
       w,
       h,
       z: project.nextZ++,
     });
   });
   return produce(project, (d) => {
-    // The book's first two-page spread (the sample is always a print book).
+    // The book's first two-page spread (the sample is always spreads).
     const spread = allSpreads(d)[1]!;
     putOnPage(d, [toPhotoId('tour-leaves')], spread.id, 'left');
     putOnPage(d, [toPhotoId('tour-lily')], spread.id, 'right');
@@ -152,6 +154,8 @@ export function goToStep(index: number): void {
   ui.set({
     tour: index,
     modal: step.modal ?? null,
+    // The Layout step shows the guides, which the sample book has.
+    ...(step.modal === 'layout' && { layoutTab: 'guides' as const }),
     editingSpreadId: step.editor ? (allSpreads(projectStore.project)[1]?.id ?? null) : null,
   });
 }
@@ -170,7 +174,9 @@ function frameSamples() {
   const desk = document.querySelector('.desk')?.getBoundingClientRect();
   const w = desk?.width ?? 800;
   const h = desk?.height ?? 600;
-  const box = { w: 4 * 1.8 + 0.4, h: 2.8 };
-  const zoom = Math.min(3, (w * 0.8) / (box.w * DESK_PPI), (h * 0.5) / (box.h * DESK_PPI));
+  // The row of four sample photos (see sampleProject), with room below for the tour's card.
+  const { w: pw, h: ph } = pileSize({ id: toPhotoId('tour'), name: '', ...SAMPLE_PX });
+  const box = { w: 3 * pw * SAMPLE_STEP + pw, h: ph * 1.12 };
+  const zoom = Math.min(1, (w * 0.8) / (box.w * DESK_PPI), (h * 0.5) / (box.h * DESK_PPI));
   return { zoom, panX: (w - box.w * DESK_PPI * zoom) / 2, panY: (h - box.h * DESK_PPI * zoom) / 3 };
 }

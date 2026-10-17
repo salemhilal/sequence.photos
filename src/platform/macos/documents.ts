@@ -74,6 +74,11 @@ export function isSaved(): boolean {
   return file !== null && !edited();
 }
 
+/** The project's file name without its extension, or null if it hasn't been saved yet. */
+export function documentName(): string | null {
+  return file ? name() : null;
+}
+
 function name(p = file?.path): string {
   const base = p?.split('/').pop() ?? 'Untitled';
   return base.endsWith(PROJECT_EXTENSION) ? base.slice(0, -PROJECT_EXTENSION.length) : base;

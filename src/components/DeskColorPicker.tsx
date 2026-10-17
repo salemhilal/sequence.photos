@@ -16,14 +16,14 @@ export function DeskColorPicker() {
           role="radio"
           aria-checked={color === p.value}
           aria-label={p.label}
-          title={p.label}
+          data-tip={p.label}
           onClick={() => setDeskColor(p.value)}
         />
       ))}
       <label
         className={`swatch custom${isPreset ? '' : ' on'}`}
         style={isPreset ? undefined : { background: color }}
-        title="Custom color"
+        data-tip="Custom color"
       >
         {isPreset && <Pipette />}
         <input

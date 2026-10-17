@@ -2,8 +2,15 @@ import { invoke } from '@tauri-apps/api/core';
 import { getImage } from '../../db';
 import { projectLoaded } from '../../persistence';
 import { tourSeenPref } from '../../prefs';
+import { putOnPage } from '../../actions';
+import { defaultOptions } from '../../exportOptions';
+import { renderPdf } from '../../pdf';
+import { renderImages } from '../../rasterExport';
+import { outputPages } from '../../renderPlan';
+import { toPhotoId } from '../../ids';
 import { newProject } from '../../project';
-import { setLayoutSize } from '../../pageSize';
+import { applyPageSetup, draftOf, setLayoutSize } from '../../pageSetup';
+import { DEFAULT_PAGE } from '../../units';
 import { sheetOf } from '../../spreads';
 import { projectStore } from '../../store';
 import { endTour } from '../../tour';
@@ -116,6 +123,68 @@ async function scenarios(dir: string): Promise<void> {
   ui.set({ importing: null });
   await waiting;
   check('then opens it', title()?.name === 'Fixture A' && photoCount() === 3);
+
+  // A sequence of frames: switched to, saved and reopened as one, and rendered as images
+  // in the app's WebKit (OffscreenCanvas, createImageBitmap).
+  applyPageSetup({
+    ...draftOf(projectStore.project),
+    arrangement: 'frames',
+    page: { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 },
+  });
+  const { layout, page } = projectStore.project;
+  const frame = layout.kind === 'frames' ? layout.frames[0] : undefined;
+  check('switches to frames', layout.kind === 'frames' && !!frame);
+  if (layout.kind === 'frames' && frame) {
+    projectStore.apply((d) => putOnPage(d, [toPhotoId('p0')], frame.id, 'whole'));
+    const frames = `${dir}/Frames.photo-sequence`;
+    check('saves a sequence of frames', await saveAs(frames), ui.get().notice ?? '');
+    const saved = await savedProject(frames);
+    check(
+      'the file is frames, at its size',
+      saved.layout.kind === 'frames' && saved.page.unit === 'px' && sheetOf(saved).pageW === page.w,
+      saved.layout.kind,
+    );
+    const placed = outputPages(projectStore.project, 'page');
+    const { files, missing } = await renderImages(placed, projectStore.project, () => undefined);
+    const first = files[0] && (await createImageBitmap(files[0].data).catch(() => null));
+    check(
+      'renders frames as JPEGs at the frame size',
+      missing === 0 && files.length === placed.length && first?.width === page.w && first.height === page.h,
+      `${files.length} files, ${missing} missing, ${first?.width}×${first?.height}`,
+    );
+    await openPath(a);
+    await openPath(frames);
+    check(
+      'reopens a sequence of frames',
+      title()?.name === 'Frames' && projectStore.project.layout.kind === 'frames' && !title()?.edited,
+    );
+    // Back to a book in inches, through the same Apply.
+    applyPageSetup({ ...draftOf(projectStore.project), arrangement: 'spreads', page: { ...DEFAULT_PAGE } });
+    const book = projectStore.project;
+    check(
+      'switches back to spreads in inches',
+      book.layout.kind === 'spreads' && book.page.unit === 'in' && book.page.w === 10,
+      `${book.layout.kind} ${book.page.w} ${book.page.unit}`,
+    );
+    // A page in inches renders at its dpi: 10 × 8 in at 300 is 3000 × 2400.
+    const pages = outputPages(book, 'page').slice(0, 2);
+    const out = await renderImages(pages, book, () => undefined);
+    const image = out.files[0] && (await createImageBitmap(out.files[0].data).catch(() => null));
+    check(
+      'renders a page in inches at its dpi',
+      out.files.length === 2 && image?.width === 3000 && image.height === 2400,
+      `${out.files.length} files, ${image?.width}×${image?.height}`,
+    );
+    // The PDF, from the photos' originals, in the app's WebKit.
+    const pdf = await renderPdf(defaultOptions(sheetOf(book)), () => undefined).catch(() => null);
+    check(
+      'renders a PDF from the originals',
+      !!pdf && pdf.missing === 0 && pdf.previews === 0 && pdf.blob.size > 0,
+      pdf ? `${pdf.missing} missing, ${pdf.previews} previews` : 'failed',
+    );
+    // Leave the file as saved, so New Project doesn't ask.
+    projectStore.undo();
+  }
 
   // New Project starts fresh history, so undo can't bring back a project without its file.
   await newProject();

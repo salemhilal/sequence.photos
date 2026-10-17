@@ -13,7 +13,7 @@ git clone git@github.com:salemhilal/sequence.photos.git
 cd sequence.photos
 nvm install      # or: brew install node@24
 npm install
-npm run dev      # → http://localhost:5173 (the landing page; the app is at /app/)
+npm run dev      # → http://localhost:5175 (the landing page; the app is at /app/)
 npm test
 ```
 

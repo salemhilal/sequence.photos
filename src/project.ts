@@ -4,9 +4,10 @@ import { allSpreads } from './spreads';
 import { setUrl, thumbFromBlob } from './images';
 import { migrateProject, NewerProjectError } from './schema';
 import { InvalidProjectError } from './validate';
+import { isRecord } from './guards';
 import { projectStore, emptyProject } from './store';
 import { MOD_LABEL } from './input';
-import { ask, ui } from './ui';
+import { ask, modalLocked, ui } from './ui';
 import { createZip, readZip, type ZipInput } from './zip';
 import { platform } from '#platform';
 
@@ -90,7 +91,9 @@ export async function importProject(file: File): Promise<void> {
     if (!manifestEntry) throw new ProjectFileError(`“${file.name}” isn't a Sequence project.`);
     const manifest = parseManifest(await (await manifestEntry.blob()).text());
     const newer = new ProjectFileError(
-      'This project was made by a newer version of Sequence. Reload to update, then try again.',
+      platform.kind === 'macos'
+        ? 'This project was made by a newer version of Sequence. Update Sequence from the App Store, then try again.'
+        : 'This project was made by a newer version of Sequence. Reload to update, then try again.',
     );
     // `version` is the file's layout; the project inside has its own schema version.
     if (manifest.version > VERSION) throw newer;
@@ -174,10 +177,6 @@ function parseManifest(text: string): Manifest {
   return { format: FORMAT, version: m.version, exportedAt: String(m.exportedAt ?? ''), doc: m.doc, files };
 }
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
-
 /** A filename not yet in `used` (case-insensitively), made safe for any file system. */
 export function uniqueName(name: string, id: string, used: Set<string>): string {
   const clean = name.replace(/[/\\:*?"<>|]/g, '_') || `${id}.jpg`;
@@ -220,10 +219,10 @@ export async function confirmReplace(title: string, what: string, confirmLabel: 
       (app
         ? 'Changes that aren’t saved to its file will be lost. To keep them, save first.'
         : `You can bring it back with ${MOD_LABEL}Z, but not after you reload or close the page. ` +
-          'To keep a copy, export it first.'),
+          'To keep a copy, save it first.'),
     actions: [
       { label: 'Cancel', value: 'cancel' },
-      ...(photoCount ? [{ label: app ? 'Save first' : 'Export current first', value: 'export' as const }] : []),
+      ...(photoCount ? [{ label: 'Save first', value: 'export' as const }] : []),
       { label: confirmLabel, value: 'replace', primary: true },
     ],
   });
@@ -232,6 +231,7 @@ export async function confirmReplace(title: string, what: string, confirmLabel: 
 }
 
 export async function openProjectFile(file: File): Promise<void> {
+  if (modalLocked()) return;
   const hasWork = Object.keys(projectStore.project.photos).length > 0;
   if (hasWork && !(await confirmReplace('Replace your current project?', `“${file.name}”`, 'Replace'))) return;
   try {
@@ -245,6 +245,8 @@ export async function openProjectFile(file: File): Promise<void> {
 
 /** Start over with an empty project, after confirming. Undoable on the website. */
 export async function newProject(): Promise<void> {
+  // Not while a dialog's work mustn't be interrupted (see lockModal).
+  if (modalLocked()) return;
   if (!(await confirmReplace('Start a new project?', 'A new, empty project', 'New project'))) return;
   projectStore.replace(emptyProject());
   ui.set({ selection: [], editingSpreadId: null, modal: null });

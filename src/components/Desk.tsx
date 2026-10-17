@@ -7,15 +7,14 @@ import { clearGhost, startDrag, trackGhost } from '../drag';
 import { intersects, resizeRect, type Corner, type Rect } from '../geometry';
 import { projectStore, useProject } from '../store';
 import type { Placement } from '../types';
-import { DESK_PPI, deskGeometry } from '../deskGeometry';
+import { TERMS } from '../units';
+import { DESK_PPI, deskGeometry, MAX_ZOOM, MIN_ZOOM } from '../deskGeometry';
 import { isTyping } from '../input';
 import { deskCovered, openPhotoMenu, openModal, openQuickLook, ui } from '../ui';
-import { PageSizeFields } from './PageSizeFields';
+import { OwnPageSettings } from './PageSettings';
 import { PhotoImg } from './PhotoImg';
 
 const CORNERS: Corner[] = ['nw', 'ne', 'sw', 'se'];
-const MIN_ZOOM = 0.2;
-const MAX_ZOOM = 5;
 const GHOST_MAX = 140;
 /** When moving photos on the desk, the drop border fades in within this distance of its edge. */
 const EDGE_FADE_PX = 120;
@@ -54,6 +53,10 @@ export function Desk() {
       const v = ui.get().view;
       const k = DESK_PPI * v.zoom;
       return { x: -v.panX / k, y: -v.panY / k, w: (r?.width ?? 800) / k, h: (r?.height ?? 600) / k };
+    };
+    deskGeometry.size = () => {
+      const r = ref.current?.getBoundingClientRect();
+      return { w: r?.width ?? 800, h: r?.height ?? 600 };
     };
   }, []);
 
@@ -338,9 +341,9 @@ export function Desk() {
             {Object.keys(project.photos).length ? 'Every photo is placed' : 'Start by adding photos'}
           </p>
           <p>
-            Add or drop photos or exported projects here.
+            Add or drop photos or saved projects here.
             <br />
-            They land on this desk, where you can drag them onto pages.
+            They land on this desk, where you can drag them onto {TERMS[project.layout.kind].pages}.
           </p>
           <button className="btn primary" onPointerDown={(e) => e.stopPropagation()} onClick={addPhotos}>
             Add photos
@@ -352,8 +355,8 @@ export function Desk() {
               onPointerDown={(e) => e.stopPropagation()}
               onContextMenu={(e) => e.stopPropagation()}
             >
-              <span className="caps muted">Layout</span>
-              <PageSizeFields />
+              <span className="caps muted">Page</span>
+              <OwnPageSettings />
               <p className="help">
                 You can change this anytime in{' '}
                 <button className="link" onClick={() => openModal('layout')}>
@@ -451,7 +454,12 @@ function ZoomControls() {
       <button className="btn icon" aria-label="Zoom out" onClick={() => step(1 / 1.25)}>
         <Minus />
       </button>
-      <button className="btn zoom-level" onClick={() => zoomAround(1, 0, 0)} title="Reset zoom">
+      <button
+        className="btn zoom-level"
+        onClick={() => zoomAround(1, 0, 0)}
+        data-tip="Reset zoom"
+        aria-label={`Reset zoom (now ${Math.round(zoom * 100)}%)`}
+      >
         {Math.round(zoom * 100)}%
       </button>
       <button className="btn icon" aria-label="Zoom in" onClick={() => step(1.25)}>

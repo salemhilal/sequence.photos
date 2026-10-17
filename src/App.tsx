@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   Download,
   FilePlus,
-  FileText,
-  Package,
   FolderOpen,
   ImagePlus,
   Info,
@@ -15,18 +13,20 @@ import {
   Undo2,
   X,
   Ruler,
-  Images,
+  Upload,
 } from 'lucide-react';
 import { usePasteHandler } from './clipboard';
 import { platform } from '#platform';
-import { commandTitle, runCommand, shortcutLabel, useCommandShortcuts, type CommandId } from './commands';
+import { runCommand, shortcutLabel, useCommandShortcuts } from './commands';
 import { AboutDialog } from './components/AboutDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ContextMenus } from './components/ContextMenu';
 import { Desk } from './components/Desk';
 import { FileMenu } from './components/FileMenu';
+import { useCommandItem } from './components/commandItem';
 import { LayoutEditor } from './components/LayoutEditor';
 import { PhotoImg } from './components/PhotoImg';
+import { ExportView } from './components/ExportView';
 import { Preview } from './components/Preview';
 import { QuickLook } from './components/QuickLook';
 import { SettingsDialog } from './components/SettingsDialog';
@@ -40,7 +40,8 @@ import { projectStore, useProject } from './store';
 import { openModal, toggleSidebar, ui } from './ui';
 import { takeOver } from './tabLock';
 import { checkForUpdate, reloadToUpdate } from './update';
-import { allSpreads } from './spreads';
+import { allSpreads, findSpread } from './spreads';
+import { TERMS } from './units';
 
 const NOTICE_MS = 6000;
 
@@ -55,7 +56,8 @@ function onTouchDevice(): boolean {
 
 export default function App() {
   const { project, canUndo, canRedo } = useProject();
-  const digital = project.layout.kind === 'digital';
+  const terms = TERMS[project.layout.kind];
+  const fileItem = useCommandItem();
   // Dismissed for this visit only: a reload shows it again.
   const [mobileNotice, setMobileNotice] = useState(onTouchDevice);
   const editing = ui.use((s) => s.editingSpreadId);
@@ -73,6 +75,12 @@ export default function App() {
   useCommandShortcuts();
   usePasteHandler();
 
+  // The open spread or frame went away (undo, a layout switch): close the editor, so it
+  // doesn't stay open, invisible, holding the desk's shortcuts.
+  useEffect(() => {
+    if (editing && !findSpread(project, editing)) ui.set({ editingSpreadId: null });
+  }, [project, editing]);
+
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => ui.set({ notice: null }), NOTICE_MS);
@@ -88,21 +96,12 @@ export default function App() {
   if (blocked === 'elsewhere') return <ElsewhereScreen />;
   if (blocked === 'outdated') return <OutdatedScreen />;
   if (mobileNotice) return <MobileNotice onContinue={() => setMobileNotice(false)} />;
-  if (!loaded) return <div className="loading">Opening your book…</div>;
+  if (!loaded) return <div className="loading">Opening your project…</div>;
 
-  const working = importing !== null || busy !== null;
   const placed = allSpreads(project).reduce((n, s) => n + s.items.length, 0);
   const status = importing?.total
     ? `Importing ${importing.done} of ${importing.total}…`
     : (busy ?? (importing ? 'Importing…' : `${project.pile.length} on desk · ${placed} placed`));
-
-  const fileItem = (id: CommandId, icon: React.ReactNode, disabled = working) => ({
-    label: commandTitle(id),
-    icon,
-    shortcut: shortcutLabel(id),
-    disabled,
-    onSelect: () => runCommand(id),
-  });
 
   return (
     <div className="app">
@@ -121,11 +120,10 @@ export default function App() {
             <FileMenu
               items={[
                 fileItem('newProject', <FilePlus />),
-                { ...fileItem('addPhotos', <ImagePlus />, importing !== null), separatorBefore: true },
                 fileItem('importProject', <FolderOpen />),
                 fileItem('exportProject', <Download />),
-                fileItem('savePdf', <FileText />),
-                digital ? fileItem('saveImages', <Images />) : fileItem('exportIndesign', <Package />),
+                { ...fileItem('addPhotos', <ImagePlus />, importing !== null), separatorBefore: true },
+                { ...fileItem('export', <Upload />), separatorBefore: true },
                 { ...fileItem('tour', <Compass />), separatorBefore: true },
                 fileItem('about', <Info />, false),
               ]}
@@ -134,7 +132,7 @@ export default function App() {
               <button
                 className="btn ghost icon"
                 aria-label="Undo"
-                title={`Undo (${shortcutLabel('undo')})`}
+                data-tip={`Undo (${shortcutLabel('undo')})`}
                 disabled={!canUndo}
                 onClick={() => projectStore.undo()}
               >
@@ -143,7 +141,7 @@ export default function App() {
               <button
                 className="btn ghost icon"
                 aria-label="Redo"
-                title={`Redo (${shortcutLabel('redo')})`}
+                data-tip={`Redo (${shortcutLabel('redo')})`}
                 disabled={!canRedo}
                 onClick={() => projectStore.redo()}
               >
@@ -161,7 +159,7 @@ export default function App() {
           className="btn ghost"
           data-tour="layout"
           onClick={() => openModal('layout')}
-          title="Layout: page size and guides"
+          data-tip="Layout: size and guides"
         >
           <Ruler />
           Layout
@@ -170,17 +168,17 @@ export default function App() {
           className="btn accent has-hint"
           data-tour="preview"
           onClick={() => openModal('preview')}
-          title={`Preview (${shortcutLabel('preview')})`}
+          data-tip={`Preview (${shortcutLabel('preview')})`}
         >
-          {digital ? 'Preview' : 'Preview book'}
+          {terms.preview}
           <ShortcutHint label={shortcutLabel('preview')} />
         </button>
         <button
           className={`btn ghost icon has-hint${sidebarOpen ? '' : ' active'}`}
-          aria-label={sidebarOpen ? 'Hide spreads' : 'Show spreads'}
+          aria-label={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads}`}
           aria-pressed={!sidebarOpen}
           onClick={toggleSidebar}
-          title={`${sidebarOpen ? 'Hide' : 'Show'} spreads (${shortcutLabel('toggleSidebar')})`}
+          data-tip={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads} (${shortcutLabel('toggleSidebar')})`}
         >
           {sidebarOpen ? <PanelRightClose /> : <PanelRightOpen />}
           <ShortcutHint label={shortcutLabel('toggleSidebar')} />
@@ -189,7 +187,7 @@ export default function App() {
           className="btn ghost icon has-hint"
           aria-label="Settings"
           onClick={() => openModal('settings')}
-          title={`Settings (${shortcutLabel('settings')})`}
+          data-tip={`Settings (${shortcutLabel('settings')})`}
         >
           <Settings />
           <ShortcutHint label={shortcutLabel('settings')} />
@@ -204,6 +202,7 @@ export default function App() {
       {modal === 'about' && <AboutDialog />}
       {modal === 'preview' && <Preview />}
       {modal === 'layout' && <LayoutEditor />}
+      {modal === 'export' && <ExportView />}
       <QuickLook />
       <Tour />
       <ConfirmDialog />
@@ -211,9 +210,11 @@ export default function App() {
       <DragGhost />
       {saveFailed && (
         <div className="save-failed" role="alert">
-          Couldn't save your work. Your browser's storage may be full.
+          {platform.kind === 'macos'
+            ? 'Couldn’t keep a copy of your work in the app’s storage.'
+            : 'Couldn’t save your work. Your browser’s storage may be full.'}
           <button className="btn primary" onClick={() => runCommand('exportProject')}>
-            Export a copy
+            {platform.kind === 'macos' ? 'Save to a file' : 'Export a copy'}
           </button>
         </div>
       )}
@@ -270,10 +271,17 @@ function OutdatedScreen() {
     <div className="screen-message" role="alert">
       <span className="wordmark">SEQUENCE</span>
       <h1>This project was saved by a newer version of Sequence.</h1>
-      <p>Reload to update. Your saved project hasn't been changed.</p>
-      <button className="btn primary" onClick={reloadToUpdate}>
-        Reload
-      </button>
+      {platform.kind === 'macos' ? (
+        // The Mac app updates through the App Store, not by reloading.
+        <p>Update Sequence from the App Store to open it. Your saved project hasn't been changed.</p>
+      ) : (
+        <>
+          <p>Reload to update. Your saved project hasn't been changed.</p>
+          <button className="btn primary" onClick={reloadToUpdate}>
+            Reload
+          </button>
+        </>
+      )}
     </div>
   );
 }

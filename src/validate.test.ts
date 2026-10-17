@@ -127,17 +127,14 @@ describe('validateProject', () => {
       );
     });
 
-    it('needs a known layout, and a digital one needs a frame', () => {
+    it('needs a known layout, and frames need at least one', () => {
       expect(check((d) => (d.layout.kind = 'scroll'))).toThrow(/layout.kind/);
-      expect(check((d) => (d.layout = { kind: 'digital', frame: { w: 1080, h: 1440 }, frames: [] }))).toThrow(
-        /layout.frames: none/,
-      );
+      expect(check((d) => (d.layout = { kind: 'frames', frames: [] }))).toThrow(/layout.frames: none/);
       expect(
         check(
           (d) =>
             (d.layout = {
-              kind: 'digital',
-              frame: { w: 1080, h: 1440 },
+              kind: 'frames',
               frames: [{ ...d.layout.firstSpread, kind: 'frame' }, d.layout.lastSpread],
             }),
         ),
@@ -154,9 +151,16 @@ describe('validateProject', () => {
   });
 
   describe('settings', () => {
-    it('needs a real page size and yes-or-no switches', () => {
-      expect(check((d) => (d.layout.page.w = 0))).toThrow(/layout.page.w/);
-      expect(check((d) => delete d.settings.sizes.digital)).toThrow(/settings.sizes.digital/);
+    it('needs a real page size, a known unit, and a resolution', () => {
+      expect(check((d) => delete d.page)).toThrow(/page/);
+      expect(check((d) => (d.page.w = 0))).toThrow(/page.w/);
+      expect(check((d) => (d.page.h = -1))).toThrow(/page.h/);
+      expect(check((d) => (d.page.unit = 'mm'))).toThrow(/page.unit/);
+      expect(check((d) => (d.page.pxPerUnit = 0))).toThrow(/page.pxPerUnit/);
+      expect(check((d) => delete d.page.pxPerUnit)).toThrow(/page.pxPerUnit/);
+    });
+
+    it('needs yes-or-no switches', () => {
       expect(check((d) => (d.settings.centerV = 'yes'))).toThrow(/settings.centerV/);
       expect(check((d) => delete d.settings.keepRelative)).toThrow(/settings.keepRelative/);
     });

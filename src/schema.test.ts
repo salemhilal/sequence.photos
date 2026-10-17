@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { toGuideId, toPhotoId, toSpreadId } from './ids';
 import { migrateProject, NewerProjectError } from './schema';
 import { CURRENT_SCHEMA, type Project } from './types';
-import { DEFAULT_FRAME } from './units';
 import { InvalidProjectError } from './validate';
 
 /**
@@ -53,6 +52,30 @@ const samples: Record<number, unknown> = {
     },
     nextZ: 2,
   },
+  // A print book: its kind decided its unit, its page size was in the layout, and the
+  // settings kept a size for each kind.
+  3: {
+    schemaVersion: 3,
+    photos: { a: { id: 'a', name: 'a.jpg', pxW: 1200, pxH: 800 } },
+    pile: [{ photoId: 'a', x: 1, y: 1, w: 2, h: 1.33, z: 1 }],
+    layout: {
+      kind: 'print',
+      page: { w: 10, h: 8 },
+      firstSpread: { kind: 'first', id: 's1', items: [] },
+      spreads: [],
+      lastSpread: { kind: 'last', id: 's2', items: [] },
+    },
+    settings: {
+      centerV: true,
+      centerH: false,
+      keepRelative: true,
+      borders: [{ id: 'm', kind: 'even', inset: 0.5 }],
+      lines: [],
+      dropBorder: 'm',
+      sizes: { print: { w: 10, h: 8 }, digital: { w: 1080, h: 1350 } },
+    },
+    nextZ: 2,
+  },
 };
 
 /**
@@ -64,16 +87,15 @@ const expected: Project = {
   schemaVersion: CURRENT_SCHEMA,
   photos: { [a]: { id: a, name: 'a.jpg', pxW: 1200, pxH: 800 } },
   pile: [{ photoId: a, x: 1, y: 1, w: 2, h: 1.33, z: 1 }],
-  // A print book: the first and last spreads, each in its place, and none between.
+  // A book in inches at 300 dpi: the first and last spreads, each in its place, and none between.
+  page: { w: 10, h: 8, unit: 'in', pxPerUnit: 300 },
   layout: {
-    kind: 'print',
-    page: { w: 10, h: 8 },
+    kind: 'spreads',
     firstSpread: { kind: 'first', id: toSpreadId('s1'), items: [] },
     spreads: [],
     lastSpread: { kind: 'last', id: toSpreadId('s2'), items: [] },
   },
   settings: {
-    sizes: { print: { w: 10, h: 8 }, digital: DEFAULT_FRAME },
     centerV: true,
     centerH: false,
     keepRelative: true,
@@ -112,6 +134,26 @@ describe('migrateProject', () => {
 
   it('refuses projects from a newer version', () => {
     expect(() => migrateProject({ ...expected, schemaVersion: CURRENT_SCHEMA + 1 })).toThrow(NewerProjectError);
+  });
+});
+
+describe('migrating version 3', () => {
+  const s = toSpreadId('s');
+  const frames = (kind: string) => ({
+    ...(samples[3] as object),
+    pile: [],
+    layout: { kind, frame: { w: 1080, h: 1440 }, frames: [{ kind: 'frame', id: 's', items: [] }] },
+  });
+
+  it('makes a digital sequence frames in pixels at 1×', () => {
+    const project = migrateProject(frames('digital'));
+    expect(project.page).toEqual({ w: 1080, h: 1440, unit: 'px', pxPerUnit: 1 });
+    expect(project.layout).toEqual({ kind: 'frames', frames: [{ kind: 'frame', id: s, items: [] }] });
+    expect(project.settings).not.toHaveProperty('sizes');
+  });
+
+  it('reports a layout of unknown kind as damage', () => {
+    expect(() => migrateProject(frames('scroll'))).toThrow(InvalidProjectError);
   });
 });
 

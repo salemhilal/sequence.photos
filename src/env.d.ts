@@ -1,10 +1,16 @@
+/** Read only by src/config.ts. */
 interface ImportMetaEnv {
   /** The website's domain (see .env). */
   readonly VITE_SITE_DOMAIN: string;
   /** The Mac app's App Store page (see .env). */
   readonly VITE_APP_STORE_URL: string;
-  /** Sequence's server, for posting to Instagram; empty until it's deployed (see .env). */
+  /** The source code's URL (see .env). */
+  readonly VITE_REPO_URL: string;
+  /** Sequence's servers, for posting to Instagram (see .env). */
   readonly VITE_SERVER_URL: string;
+  readonly VITE_DEV_SERVER_URL: string;
+  /** The Instagram app's id (see .env). */
+  readonly VITE_INSTAGRAM_APP_ID: string;
 }
 
 /** The app's version from package.json, inlined by Vite at build time. */

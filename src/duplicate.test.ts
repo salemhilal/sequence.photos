@@ -15,6 +15,8 @@ vi.mock('./db', () => ({
 
 const { addPhotosToPile, copyName, duplicatePhotos, putOnPage } = await import('./actions');
 const { projectStore, emptyProject } = await import('./store');
+const { applyPageSetup, draftOf } = await import('./pageSetup');
+const { sheetOf } = await import('./spreads');
 
 beforeEach(() => {
   images.clear();
@@ -35,7 +37,8 @@ describe('duplicatePhoto', () => {
     expect(id).not.toBe(A);
     expect(project.photos[id!]).toMatchObject({ name: 'IMG_1 copy.jpg', pxW: 1200, pxH: 800 });
     const [orig, copy] = [A, id!].map((pid) => project.pile.find((p) => p.photoId === pid)!);
-    expect(copy!.x - orig!.x).toBeCloseTo(0.25);
+    // In proportion to the photo: 0.25 in for a 2 in photo.
+    expect(copy!.x - orig!.x).toBeCloseTo((0.25 * Math.max(orig!.w, orig!.h)) / 2);
     expect(copy!.w).toBe(orig!.w);
     expect(copy!.z).toBeGreaterThan(orig!.z);
     expect(images.has(id!)).toBe(true);
@@ -49,6 +52,45 @@ describe('duplicatePhoto', () => {
     expect(projectStore.project.pile).toHaveLength(0);
   });
 
+  it('offsets a copy on a spread by the same inches as on the desk', async () => {
+    projectStore.apply((d) => putOnPage(d, [A], allSpreads(d)[1]!.id, 'right'));
+    const [id] = await duplicatePhotos([A]);
+    const [orig, copy] = [A, id!].map((pid) =>
+      allSpreads(projectStore.project)[1]!.items.find((p) => p.photoId === pid)!,
+    );
+    expect(copy!.x - orig!.x).toBeCloseTo(0.25);
+    expect(copy!.y - orig!.y).toBeCloseTo(0.25);
+  });
+
+  it('offsets a copy in a frame by the same share of its width as on a 10 in page', async () => {
+    applyPageSetup({
+      ...draftOf(projectStore.project),
+      arrangement: 'frames',
+      page: { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 },
+    });
+    expect(sheetOf(projectStore.project).pageW).toBe(1080);
+    projectStore.apply((d) => putOnPage(d, [A], allSpreads(d)[0]!.id, 'whole'));
+    const [id] = await duplicatePhotos([A]);
+    const [orig, copy] = [A, id!].map((pid) =>
+      allSpreads(projectStore.project)[0]!.items.find((p) => p.photoId === pid)!,
+    );
+    expect(copy!.x - orig!.x).toBeCloseTo(27);
+    expect(copy!.y - orig!.y).toBeCloseTo(27);
+  });
+
+  it('offsets a copy on the desk in proportion to the photo, even in a sequence', async () => {
+    applyPageSetup({
+      ...draftOf(projectStore.project),
+      arrangement: 'frames',
+      page: { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 },
+    });
+    const [id] = await duplicatePhotos([A], 0.5);
+    const [orig, copy] = [A, id!].map((pid) => projectStore.project.pile.find((p) => p.photoId === pid)!);
+    const step = (0.5 * Math.max(orig!.w, orig!.h)) / 2;
+    expect(copy!.x - orig!.x).toBeCloseTo(step);
+    expect(copy!.y - orig!.y).toBeCloseTo(step);
+  });
+
   it('duplicates several photos as one undo step, at a chosen offset', async () => {
     addPhotosToPile([{ id: B, name: 'IMG_2.jpg', pxW: 800, pxH: 800 }]);
     images.set(B, { full: new Blob([B]), thumb: new Blob([B]) });
@@ -56,7 +98,7 @@ describe('duplicatePhoto', () => {
     expect(ids).toHaveLength(2);
     const b = projectStore.project.pile.find((p) => p.photoId === B)!;
     const bCopy = projectStore.project.pile.find((p) => p.photoId === ids[1])!;
-    expect(bCopy.y - b.y).toBeCloseTo(0.5);
+    expect(bCopy.y - b.y).toBeCloseTo((0.5 * Math.max(b.w, b.h)) / 2);
     projectStore.undo();
     expect(Object.keys(projectStore.project.photos).sort()).toEqual([A, B]);
   });
