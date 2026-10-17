@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useWindowEvent } from '../hooks';
-import { useInstagram } from '../instagram';
+import { connectInstagram, returnToExportAfterSignIn, useInstagram } from '../instagram';
 import {
   fits,
   hashtagCount,
@@ -106,8 +106,26 @@ export function InstagramPost({ head }: Props) {
   // Cancelling stops before anything is published.
   const cancellable = posting && status.step.step !== 'publishing';
 
-  const problem =
-    slides.length === 0
+  // Everything previews and can be set up before connecting; posting needs the account.
+  const ready = connection !== null && !connection.needsReconnect;
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const connect = () => {
+    setConnecting(true);
+    setConnectError(null);
+    returnToExportAfterSignIn();
+    void connectInstagram().then((message) => {
+      // Null: on the way to Instagram's sign-in page.
+      if (message) {
+        setConnectError(message);
+        setConnecting(false);
+      }
+    });
+  };
+
+  const problem = !ready
+    ? null
+    : slides.length === 0
       ? 'Choose at least one slide to post.'
       : kind === 'feed' && caption.length > LIMITS.captionLength
         ? `Captions can be up to ${LIMITS.captionLength.toLocaleString()} characters.`
@@ -150,17 +168,29 @@ export function InstagramPost({ head }: Props) {
         sheet={sheet}
         layout={layout}
         kind={kind}
-        username={connection?.username ?? ''}
+        username={connection?.username ?? 'you'}
         caption={caption}
       />
       <aside className="inspector sectioned export-panel">
         {head(posting)}
-        {connection && (
-          <section>
-            <h3>Account</h3>
+        <section>
+          <h3>Account</h3>
+          {ready ? (
             <p className="data">@{connection.username}</p>
-          </section>
-        )}
+          ) : (
+            <>
+              <p className="help">
+                {connection
+                  ? `Connect @${connection.username} again to keep posting.`
+                  : 'Posting goes through your Instagram account. It needs a Business or Creator account.'}
+              </p>
+              <button className="btn" disabled={connecting} onClick={connect}>
+                {connecting ? 'Opening Instagram…' : connection ? 'Reconnect Instagram' : 'Connect Instagram'}
+              </button>
+              {connectError && <p className="help warn">{connectError}</p>}
+            </>
+          )}
+        </section>
         <section>
           <h3>Post as</h3>
           <Segmented halves label="Post as" options={KINDS} value={kind} onChange={setKind} disabled={posting} />
@@ -272,7 +302,7 @@ export function InstagramPost({ head }: Props) {
             </>
           ) : (
             <>
-              <button className="btn primary" disabled={posting || problem !== null} onClick={post}>
+              <button className="btn primary" disabled={posting || !ready || problem !== null} onClick={post}>
                 {posting ? 'Posting…' : 'Post to Instagram'}
               </button>
               {cancellable && (

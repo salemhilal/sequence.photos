@@ -192,6 +192,29 @@ export async function planSignIn(origin: string, server: string): Promise<SignIn
 }
 
 /** Start connecting: go to Instagram's sign-in page. Returns an error message if it can't. */
+/** Where to go back to after signing in (session only): set when connecting from Export. */
+const RETURN_KEY = 'sequence:instagram-return';
+
+/** Connecting from the Export view: come back to it, on Instagram, after signing in. */
+export function returnToExportAfterSignIn(): void {
+  try {
+    sessionStorage.setItem(RETURN_KEY, 'export');
+  } catch {
+    // Without storage, the sign-in lands on the desk as from Settings.
+  }
+}
+
+/** Whether a sign-in just finished was started from the Export view (asked once). */
+export function takeReturnToExport(): boolean {
+  try {
+    const back = sessionStorage.getItem(RETURN_KEY) === 'export';
+    sessionStorage.removeItem(RETURN_KEY);
+    return back;
+  } catch {
+    return false;
+  }
+}
+
 export async function connectInstagram(): Promise<string | null> {
   const plan = await planSignIn(location.origin, serverUrl());
   if ('error' in plan) return plan.error;

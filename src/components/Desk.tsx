@@ -356,7 +356,7 @@ export function Desk() {
               onContextMenu={(e) => e.stopPropagation()}
             >
               <span className="caps muted">Page</span>
-              <OwnPageSettings showContent={false} />
+              <OwnPageSettings />
               <p className="help">
                 You can change this anytime in{' '}
                 <button className="link" onClick={() => openModal('layout')}>

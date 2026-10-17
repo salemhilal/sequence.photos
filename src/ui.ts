@@ -94,8 +94,8 @@ export interface UiState {
   layoutTab: LayoutTab;
   /** A photo for the spread editor to select when it opens ("Show me"), then cleared. */
   editorSelect: PhotoId | null;
-  /** Where the Export view exports to: the last one picked, for now (not saved). */
-  exportTo: Destination;
+  /** Where the Export view exports to: the last one picked, for now (not saved); null till then. */
+  exportTo: Destination | null;
 }
 
 export const ui = createStore<UiState>({
@@ -124,7 +124,7 @@ export const ui = createStore<UiState>({
   tour: null,
   layoutTab: 'page',
   editorSelect: null,
-  exportTo: 'pdf',
+  exportTo: null,
 });
 
 /**

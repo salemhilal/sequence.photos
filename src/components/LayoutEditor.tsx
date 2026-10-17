@@ -19,8 +19,8 @@ import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { Arrangement, LineGuide, PageSide, Spread } from '../types';
 import { TERMS, UNITS } from '../units';
-import { closeModal, ui } from '../ui';
-import { draftOf, sameDraft } from '../pageSetup';
+import { ask, closeModal, ui } from '../ui';
+import { applyPageSetup, draftOf, sameDraft } from '../pageSetup';
 import { usePageDraft } from './pageDraft';
 import { PagePreview } from './PagePreview';
 import { LayoutPanel } from './LayoutPanel';
@@ -100,11 +100,27 @@ export function LayoutEditor() {
     setSelected(null);
   };
 
+  /** Close, first asking what to do with page changes that wait for Apply. */
+  const close = async () => {
+    if (!pending) return closeModal();
+    const answer = await ask({
+      title: 'Apply the page changes?',
+      message: 'Your changes on the Page tab haven’t been applied yet.',
+      actions: [
+        { label: 'Cancel', value: 'cancel' },
+        { label: 'Discard', value: 'discard' },
+        { label: 'Apply', value: 'apply', primary: true },
+      ],
+    });
+    if (answer === 'apply') applyPageSetup(draft);
+    if (answer === 'apply' || answer === 'discard') closeModal();
+  };
+
   useWindowEvent('keydown', (e) => {
-    if (isTyping(e) || e.metaKey || e.ctrlKey) return;
+    if (isTyping(e) || e.metaKey || e.ctrlKey || ui.get().confirm) return;
     if (e.key === 'Escape') {
       if (selected) setSelected(null);
-      else closeModal();
+      else void close();
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected) {
       e.preventDefault();
       remove(selected);
@@ -227,7 +243,7 @@ export function LayoutEditor() {
   }
 
   return (
-    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && closeModal()}>
+    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && void close()}>
       <div className="modal editor layout-editor" data-modal>
         <header className="modal-head">
           <div className="modal-title">
@@ -242,7 +258,7 @@ export function LayoutEditor() {
               ? `${pending ? 'Preview of the changes · ' : ''}← → to flip through`
               : `Drag from a ruler to add a guide · Shift: snap to ${units.snapLabel} · Drag off the ${terms.page} to remove`}
           </span>
-          <button className="btn ghost icon" aria-label="Close" onClick={closeModal}>
+          <button className="btn ghost icon" aria-label="Close" onClick={() => void close()}>
             <X />
           </button>
         </header>

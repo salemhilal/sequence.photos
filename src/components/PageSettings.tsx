@@ -38,6 +38,8 @@ interface Props {
   onChange: (d: PageDraft) => void;
   /** Show the choice of what photos do (not on a new project's card, where none are placed). */
   showContent: boolean;
+  /** Apply each change as it's made, with no Apply button (a new, empty project: nothing to preview). */
+  immediate?: boolean;
 }
 
 /**
@@ -45,19 +47,21 @@ interface Props {
  * and what photos do when the size changes. Changes wait for Apply, which makes them one
  * undo step. Used in the Layout view's Page tab and on a new project's empty desk.
  */
-export function PageSettings({ draft, onChange, showContent }: Props) {
+export function PageSettings({ draft, onChange: change, showContent, immediate = false }: Props) {
   // Unique per copy: the new-project card and the Layout view can both be open.
   const id = useId();
   const { project } = useProject();
   const base = pageSetupBase();
   const units = UNITS[draft.page.unit];
   const changed = !sameDraft(draft, draftOf(project));
+  const onChange = immediate ? applyPageSetup : change;
   const preset = presetOf(draft);
   // Going from pixels to inches, the dpi is the one to print at, which sets the size.
   const printAt = base.page.unit === 'px' && draft.page.unit === 'in';
-  const contentMatters = resizes(base, draft);
+  // Against what Apply starts from, and only while there's something to apply.
+  const contentMatters = changed && resizes(base, draft);
   const note =
-    draft.arrangement !== base.layout.kind
+    changed && draft.arrangement !== base.layout.kind
       ? draft.arrangement === 'frames'
         ? 'Each page becomes a frame.'
         : 'Frames pair up into spreads.'
@@ -85,6 +89,8 @@ export function PageSettings({ draft, onChange, showContent }: Props) {
       min={units.minSize}
       suffix={false}
       value={draft.page[dim]}
+      // Applied as it's made: once the number is typed, not at every keystroke.
+      commitOnBlur={immediate}
       onCommit={(n) => onChange({ ...draft, page: { ...draft.page, [dim]: units.round(n) } })}
     />
   );
@@ -178,22 +184,27 @@ export function PageSettings({ draft, onChange, showContent }: Props) {
         </fieldset>
       )}
 
-      <div className="inline">
-        <button type="submit" className={`btn${changed ? ' primary' : ''}`} disabled={!changed}>
-          Apply
-        </button>
-        {changed && (
-          <button type="button" className="btn ghost" onClick={() => onChange(draftOf(project))}>
-            Revert
+      {!immediate && (
+        <div className="inline">
+          <button type="submit" className={`btn${changed ? ' primary' : ''}`} disabled={!changed}>
+            Apply
           </button>
-        )}
-      </div>
+          {changed && (
+            <button type="button" className="btn ghost" onClick={() => change(draftOf(project))}>
+              Revert
+            </button>
+          )}
+        </div>
+      )}
     </form>
   );
 }
 
-/** The page's settings with a draft of their own (a new project's card). */
-export function OwnPageSettings({ showContent }: { showContent: boolean }) {
+/**
+ * The page's settings on a new project's card: applied as they're made, since an empty
+ * project has nothing to preview and adding photos shouldn't leave a choice behind.
+ */
+export function OwnPageSettings() {
   const [draft, setDraft] = usePageDraft();
-  return <PageSettings draft={draft} onChange={setDraft} showContent={showContent} />;
+  return <PageSettings draft={draft} onChange={setDraft} showContent={false} immediate />;
 }

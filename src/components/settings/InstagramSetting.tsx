@@ -59,7 +59,7 @@ export function InstagramSetting() {
             ? connection.needsReconnect
               ? `Instagram needs you to connect @${connection.username} again.`
               : `The connection to @${connection.username} expired. Connect again to keep posting.`
-            : 'Post digital sequences to Instagram. Needs a Business or Creator account.'}
+            : 'Post frames to Instagram from Export. Needs a Business or Creator account.'}
         </p>
       )}
     </div>

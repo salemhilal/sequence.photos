@@ -13,7 +13,6 @@ import {
 } from '../exportOptions';
 import { useWindowEvent } from '../hooks';
 import { exportIndesign } from '../indesign';
-import { useInstagram } from '../instagram';
 import { savePdf } from '../pdf';
 import { exportImages, imageNames } from '../rasterExport';
 import { outputPages, pageRegion, type OutputPage } from '../renderPlan';
@@ -21,7 +20,7 @@ import { showPhoto, softPhotos, softSentence } from '../resolution';
 import { sheetOf } from '../spreads';
 import { useProject } from '../store';
 import type { Project, Sheet } from '../types';
-import { closeModal, modalLocked, openModal, ui } from '../ui';
+import { closeModal, modalLocked, ui } from '../ui';
 import { TERMS, UNITS } from '../units';
 import { NumberField } from './NumberField';
 import { Segmented } from './Segmented';
@@ -43,6 +42,19 @@ const DESTINATIONS: Record<Destination, { label: string; icon: ReactNode }> = {
   instagram: { label: 'Instagram', icon: <Send /> },
 };
 
+/** The options last chosen, kept while the app is open. */
+let remembered: Partial<Omit<ExportOptions, 'dpi'>> = {};
+
+/**
+ * Where Export opens before anything's picked: a book or zine in inches as a PDF; pixel
+ * frames at Instagram's width to Instagram (on the web), other pixel frames as images.
+ */
+function defaultDestination(sheet: Sheet, available: Destination[]): Destination {
+  if (sheet.unit === 'in') return 'pdf';
+  if (sheet.arrangement === 'frames' && sheet.pageW === 1080 && available.includes('instagram')) return 'instagram';
+  return 'images';
+}
+
 /** Room around the preview, as a share of a page's width. */
 const PAD_SHARE = 0.05;
 
@@ -52,10 +64,16 @@ export function ExportView() {
   const { project } = useProject();
   const sheet = sheetOf(project);
   const available = destinations(platform.kind === 'browser');
-  const picked = ui.use((s) => s.exportTo);
+  const picked = ui.use((s) => s.exportTo) ?? defaultDestination(sheet, available);
   const to = available.includes(picked) ? picked : 'pdf';
-  const [options, setOptions] = useState<ExportOptions>(() => defaultOptions(sheet));
-  const set = (o: Partial<ExportOptions>) => setOptions((was) => ({ ...was, ...o }));
+  // The choices made last time, while the app is open. (The dpi starts from the page's.)
+  const [options, setOptions] = useState<ExportOptions>(() => ({ ...defaultOptions(sheet), ...remembered }));
+  const set = (o: Partial<ExportOptions>) =>
+    setOptions((was) => {
+      const next = { ...was, ...o };
+      remembered = { per: next.per, format: next.format, printAt: next.printAt };
+      return next;
+    });
   const busy = ui.use((s) => s.busy);
 
   const close = () => {
@@ -154,7 +172,7 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
   };
   const action =
     to === 'pdf'
-      ? 'Save PDF'
+      ? 'Export PDF'
       : to === 'images'
         ? `Export ${pages.length} ${pages.length === 1 ? 'image' : 'images'}`
         : 'Export for InDesign';
@@ -198,7 +216,7 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
                 </span>{' '}
                 a page.
               </p>
-              {dpiField('At', options.dpi, setDpi)}
+              {dpiField('Resolution', options.dpi, setDpi)}
               {options.dpi >= maxDpi && <p className="help">Up to the page’s {maxDpi} dpi.</p>}
             </div>
           </section>
@@ -223,9 +241,9 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
 
         {to === 'pdf' && sheet.unit === 'in' && (
           <section>
-            <h3>Photo resolution</h3>
-            {dpiField('Up to', options.dpi, setDpi)}
-            <p className="help">At most the page’s {maxDpi} dpi. Lower makes a smaller file, for a proof.</p>
+            <h3>Resolution</h3>
+            {dpiField('Photos at', options.dpi, setDpi)}
+            <p className="help">Up to the page’s {maxDpi} dpi. Lower makes a smaller file, for a proof.</p>
           </section>
         )}
 
@@ -289,28 +307,8 @@ function pixelSize(page: OutputPage | undefined, sheet: Sheet, pxPerUnit: number
   return `${Math.round(r.w * pxPerUnit)} × ${Math.round(r.h * pxPerUnit)} px`;
 }
 
-/** Instagram: its own preview and settings, once it's connected. */
+/** Instagram: its own preview and settings, connecting from there when it isn't yet. */
 function InstagramDestination({ sheet, picker }: { sheet: Sheet; picker: (locked: boolean) => ReactNode }) {
-  const connection = useInstagram();
-  const ready = connection !== null && !connection.needsReconnect;
-  if (!ready) {
-    return (
-      <>
-        <div className="editor-stage export-empty">
-          <p className="muted">{connection ? 'Instagram needs reconnecting.' : 'Instagram isn’t connected.'}</p>
-        </div>
-        <aside className="inspector sectioned export-panel">
-          {picker(false)}
-          <section className="export-actions">
-            <p className="help">Posting goes through your Instagram account, connected in Settings.</p>
-            <button className="btn primary" onClick={() => openModal('settings')}>
-              {connection ? 'Reconnect in Settings' : 'Connect in Settings'}
-            </button>
-          </section>
-        </aside>
-      </>
-    );
-  }
   return (
     <Suspense fallback={<div className="editor-stage" />}>
       <InstagramPost

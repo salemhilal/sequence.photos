@@ -152,7 +152,7 @@ and switches when you reload.
 
 ## Project files
 
-Export saves a `.photo-sequence` file (a ZIP inside) you can import anywhere:
+File → Save project saves a `.photo-sequence` file (a ZIP inside) you can open anywhere:
 
 ```
 photo-book-2026-09-26.photo-sequence
@@ -165,13 +165,14 @@ Drop a project on the desk to open it. Plain `.zip` files with the same contents
 
 ## Images
 
-For a digital sequence, File → Export frames as images saves a ZIP of JPEGs, one per frame at its
-pixel size (`01.jpg`, `02.jpg`, …, in order), drawn from the original photos.
+Export → Images saves a ZIP of JPEGs or PNGs drawn from the original photos: one per frame, or
+for spreads one per spread or per page (`01.jpg`, `02-03.jpg`, …, in order). Pixel pages come
+out at their pixel size; inches at the chosen dpi.
 
 ## InDesign
 
-For a print book, File → Export for InDesign saves a ZIP with an `.idml` file and a `Links/` folder of
+Export → InDesign saves a ZIP with an `.idml` file and a `Links/` folder of
 the placed photos. Unzip it and open the `.idml` in InDesign (or Affinity Publisher):
-you get a facing-pages document at the book's size, the On drop border guide as
+you get a facing-pages document at the book's size (or single pages, for frames), the On drop border guide as
 margins, the other guides as ruler guides, and each photo in a frame, linked to its
 original. If InDesign reports missing links, relink them to the `Links` folder.

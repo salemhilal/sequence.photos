@@ -23,7 +23,7 @@ import { allSpreads, findSpread, sheetOf } from '../spreads';
 import { TERMS, UNITS, type Units } from '../units';
 import { projectStore, useProject } from '../store';
 import type { Arrangement, BorderGuide, Project, Placement } from '../types';
-import { isTyping } from '../input';
+import { isMac, isTyping } from '../input';
 import { openPhotoMenu, toggleGuides, ui } from '../ui';
 import { shortcutLabel } from '../commands';
 import { useWindowEvent } from '../hooks';
@@ -267,7 +267,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
             <ChevronRight />
           </button>
           <span className="spacer" />
-          <span className="hint">Shift: free resize · Alt: no snapping · Arrows nudge</span>
+          <span className="hint">Shift: free resize · {isMac ? 'Option' : 'Alt'}: no snapping · Arrows nudge</span>
           <button
             className={`btn ghost icon${guidesHidden ? ' active' : ''}`}
             aria-label={guidesHidden ? 'Show guides' : 'Hide guides'}

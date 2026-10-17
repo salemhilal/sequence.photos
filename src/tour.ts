@@ -69,7 +69,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Preview the book',
-    body: 'Flip through it page by page, and save a PDF at true size.',
+    body: 'Flip through it page by page, then export it as a PDF, images, or for InDesign.',
     target: '[data-tour="preview"]',
   },
   {
@@ -80,7 +80,7 @@ export const TOUR_STEPS: TourStep[] = [
         }
       : {
           title: 'Keep a copy',
-          body: `Browsers can clear what sites store, so export your project now and then. It saves the photos and layout in one file. Hold ${isMac ? '⌘' : 'Ctrl'} to see every shortcut.`,
+          body: `Browsers can clear what sites store, so save your project now and then (File → Save project). It saves the photos and layout in one file. Hold ${isMac ? '⌘' : 'Ctrl'} to see every shortcut.`,
           target: '.toolbar .menu > .btn',
         }),
   },

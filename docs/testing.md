@@ -34,7 +34,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] File → New project… with photos: Cancel / Save first / New project. New
       project empties everything; ⌘Z brings the old one back.
 - [ ] A new project's empty desk: "Start by adding photos", Add photos, and a Page card with
-      the same settings as Layout's Page tab (no Content). **[F]** It says to drag photos onto
+      the same settings as Layout's Page tab (no Content), applied as they're picked (no Apply):
+      picking Frames or a preset, then adding photos, keeps the choice. **[F]** It says to drag photos onto
       frames.
 
 ## Desk
@@ -136,6 +137,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       The stage always shows the real spreads or frames, with ‹ › and ←/→ through them: as
       they are, or as they'd be after Apply once something changes, without the view
       switching. Revert drops the draft. The draft survives switching to Guides and back.
+      Closing Layout (Escape, ×, or outside it) with changes waiting asks: Cancel, Discard, or
+      Apply.
 - [ ] With changes waiting, the Guides tab says to apply or revert them first (Apply and
       Revert there work), and its stage shows the preview.
 - [ ] **[S→F]** Frames, Apply: each page becomes a frame in book order (a photo across the
@@ -189,8 +192,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 - [ ] File → Export… (⌘⇧E) opens the Export view: a preview of what it makes on the left,
       with ‹ › and ←/→, and the destination and its options on the right. Destinations: PDF,
-      Images, InDesign, and Instagram (web). The last one picked is kept while the app
-      is open.
+      Images, InDesign, and Instagram (web). It opens on PDF for inches, Instagram for
+      1080 px frames (web), else Images; then on the last one picked, with the last choices
+      (spread or page, format, Print at), while the app is open.
 - [ ] A conversion note (not a warning) shows only where the units differ: **[in]** Images:
       "Pages are measured in inches, so they're turned into pixels: 3000 × 2400 px a page" with
       At ___ dpi (up to the page's); Instagram: slides are made at Instagram's size. **[px]**
@@ -201,7 +205,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Photos below the export's resolution: "N photos are below 300 dpi." (or "are
       enlarged") above the button, with Show me opening the first in the editor, selected.
       Lowering the dpi updates it.
-- [ ] The button names the result (Save PDF, Export N images, Export for InDesign) and shows
+- [ ] The button names the result (Export PDF, Export N images, Export for InDesign) and shows
       the progress while exporting; once saved, the view closes. Cancelling the save keeps it.
 - [ ] PDF: at true size, single first and last pages **[S]**, photos cropped at the edges, no
       guides; `photo-book-DATE.pdf` **[S]** or `sequence-DATE.pdf` **[F]**. **[px]** Pages are
@@ -262,8 +266,10 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 ### Posting
 
-- [ ] Export → Instagram, for any project. Until it's connected, the panel says posting goes
-      through your account and offers Connect in Settings (or Reconnect in Settings).
+- [ ] Export → Instagram, for any project. Before connecting, the preview, slides, and options
+      all work; Account says posting needs a Business or Creator account, with Connect
+      Instagram (or Reconnect), and Post is disabled. Coming back from Instagram's sign-in
+      (connected or cancelled) reopens Export on Instagram.
 - [ ] The panel: Account @user; Feed post or Stories; "A carousel of N slides" / "N
       stories, one per slide".
 - [ ] Slides: every page or frame as a thumbnail with a checkbox; the first 10 with photos are
