@@ -16,6 +16,7 @@ import {
   type Slide,
 } from '../instagramImage';
 import { CancelledError, postToInstagram, type PostStep } from '../instagramPost';
+import { PREVIEWS_NOTICE } from '../rasterExport';
 import { firstNonEmpty, outputPages, slideKey } from '../renderPlan';
 import { sheetOf } from '../spreads';
 import { useProject } from '../store';
@@ -58,6 +59,14 @@ function stepLabel(step: PostStep): string {
   }
 }
 
+/** The post's choices, kept while the app is open so switching destinations keeps them. */
+let remembered: { kind: PostKind; fit: Fit; caption: string; chosen: Set<string> | null } = {
+  kind: 'feed',
+  fit: 'crop',
+  caption: '',
+  chosen: null,
+};
+
 interface Props {
   /** What the panel starts with (the destination picker), told whether a post is under way. */
   head: (posting: boolean) => ReactNode;
@@ -72,13 +81,22 @@ export function InstagramPost({ head }: Props) {
   const size = slideSize(sheet);
   const torn = project.layout.kind === 'spreads';
 
-  const [kind, setKind] = useState<PostKind>('feed');
-  const [fit, setFit] = useState<Fit>('crop');
-  const [caption, setCaption] = useState('');
+  // The choices made last time (kept while the app is open, like Export's), else the defaults.
+  const [kind, setKind] = useState<PostKind>(remembered.kind);
+  const [fit, setFit] = useState<Fit>(remembered.fit);
+  const [caption, setCaption] = useState(remembered.caption);
   // Instagram's API takes 10 at a time, for a carousel or a run of stories alike: the
-  // first 10 with photos to start with.
-  const [chosen, setChosen] = useState(() => firstNonEmpty(all, sheet, LIMITS.maxItems));
+  // first 10 with photos to start with, or those chosen last time that are still there.
+  const [chosen, setChosen] = useState(() => {
+    const kept = remembered.chosen && new Set(all.map(slideKey).filter((k) => remembered.chosen?.has(k)));
+    return kept?.size ? kept : firstNonEmpty(all, sheet, LIMITS.maxItems);
+  });
+  useEffect(() => {
+    remembered = { kind, fit, caption, chosen };
+  }, [kind, fit, caption, chosen]);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
+  // Photos that went out at preview size (their originals wouldn't decode here).
+  const [previews, setPreviews] = useState(0);
   const abort = useRef<AbortController | null>(null);
 
   // In the document's order; any that went away (an undo meanwhile) are left out.
@@ -144,10 +162,15 @@ export function InstagramPost({ head }: Props) {
       kind,
       fit,
       caption: caption.trim(),
+      onPreviews: setPreviews,
       signal: controller.signal,
       onStep: (step) => setStatus({ kind: 'posting', step }),
     }).then(
-      (link) => setStatus({ kind: 'done', link }),
+      (link) => {
+        // Posted: the next post starts fresh, not with this one's caption and slides.
+        remembered = { ...remembered, caption: '', chosen: null };
+        setStatus({ kind: 'done', link });
+      },
       (error: unknown) =>
         setStatus({
           kind: 'failed',
@@ -290,6 +313,7 @@ export function InstagramPost({ head }: Props) {
           {status.kind === 'done' ? (
             <>
               <p className="instagram-done">Posted to Instagram.</p>
+              {previews > 0 && <p className="help warn">{PREVIEWS_NOTICE}</p>}
               {status.link && (
                 <a className="btn" href={status.link} target="_blank" rel="noopener noreferrer">
                   <ExternalLink />

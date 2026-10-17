@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { rearrange } from './convertLayout';
 import { toPhotoId } from './ids';
 import { firstNonEmpty, fitPixels, itemsOn, outputPages, planPage, slideKey } from './renderPlan';
 import { allSpreads, sheetOf } from './spreads';
@@ -142,5 +143,20 @@ describe('choosing slides', () => {
     const [, left, right] = outputPages(p, 'page');
     expect(itemsOn(left!, sheetOf(p)).map((i) => i.photoId)).toEqual([A, B]);
     expect(itemsOn(right!, sheetOf(p)).map((i) => i.photoId)).toEqual([B]);
+  });
+});
+
+describe('planPage at a size that rounds', () => {
+  it('scales to the whole pixels, so a full-page photo reaches every edge', () => {
+    const project = rearrange(emptyProject(), 'frames');
+    project.page = { w: 13.33, h: 7.5, unit: 'in', pxPerUnit: 150 };
+    const id = toPhotoId('full');
+    project.photos[id] = { id, name: 'full.jpg', pxW: 4000, pxH: 2250 };
+    allSpreads(project)[0]!.items.push({ photoId: id, x: 0, y: 0, w: 13.33, h: 7.5, z: 1 });
+    const plan = planPage(outputPages(project, 'page')[0]!, sheetOf(project), project.photos);
+    expect(plan.pxW).toBe(2000);
+    const { dst } = plan.draws[0]!;
+    expect(dst.x + dst.w).toBeCloseTo(2000, 9);
+    expect(dst.y + dst.h).toBeCloseTo(1125, 9);
   });
 });

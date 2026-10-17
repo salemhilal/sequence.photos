@@ -1,5 +1,5 @@
 import type { Rect } from './geometry';
-import { renderPage } from './rasterExport';
+import { releaseCanvas, renderPage } from './rasterExport';
 import { planPage, type OutputPage } from './renderPlan';
 import type { Project, Sheet, Size } from './types';
 
@@ -128,7 +128,8 @@ export function postImageLayout(size: Size, kind: PostKind, fit: Fit): PostImage
 const QUALITIES = [0.92, 0.85, 0.75, 0.6];
 
 /**
- * One slide as the JPEG Instagram gets, or null if it can't fit Instagram's size limit.
+ * One slide as the JPEG Instagram gets (and how many photos were drawn from their
+ * previews), or null if it can't fit Instagram's size limit.
  * It's rendered at no more pixels than the post needs: a page at 300 dpi isn't drawn at
  * 3000 px only to be scaled down to 1440.
  */
@@ -137,10 +138,10 @@ export async function renderPostImage(
   sheet: Sheet,
   photos: Readonly<Project['photos']>,
   layout: PostImageLayout,
-): Promise<Blob | null> {
+): Promise<{ blob: Blob; previews: number } | null> {
   const scale = Math.min(1, layout.target.w / layout.source.w);
   const plan = planPage(slide, sheet, photos, sheet.pxPerUnit * scale);
-  const { canvas: rendered } = await renderPage(plan, photos);
+  const { canvas: rendered, previews } = await renderPage(plan, photos);
   // The layout's source is in slide pixels at the page's resolution; the render may be smaller.
   const r = plan.pxPerUnit / sheet.pxPerUnit;
   const out = new OffscreenCanvas(layout.width, layout.height);
@@ -151,11 +152,16 @@ export async function renderPostImage(
   ctx.imageSmoothingQuality = 'high';
   const { source: s, target: t } = layout;
   ctx.drawImage(rendered, s.x * r, s.y * r, s.w * r, s.h * r, t.x, t.y, t.w, t.h);
-  for (const quality of QUALITIES) {
-    const blob = await out.convertToBlob({ type: 'image/jpeg', quality });
-    if (blob.size <= LIMITS.maxBytes) return blob;
+  releaseCanvas(rendered);
+  try {
+    for (const quality of QUALITIES) {
+      const blob = await out.convertToBlob({ type: 'image/jpeg', quality });
+      if (blob.size <= LIMITS.maxBytes) return { blob, previews };
+    }
+    return null;
+  } finally {
+    releaseCanvas(out);
   }
-  return null;
 }
 
 /** Hashtags in a caption (Instagram allows 30). */

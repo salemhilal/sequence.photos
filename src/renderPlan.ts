@@ -90,11 +90,14 @@ export function planPage(
   const region = pageRegion(page, sheet);
   const pxW = Math.max(1, Math.round(region.w * k));
   const pxH = Math.max(1, Math.round(region.h * k));
+  // Scaled to the whole pixels, so a photo at the page's edge reaches the image's edge.
+  const kx = pxW / region.w;
+  const ky = pxH / region.h;
   const draws: Draw[] = [];
   for (const item of [...page.spread.items].sort((a, b) => a.z - b.z)) {
     const photo = photos[item.photoId];
     if (!photo) continue;
-    const placed = { x: (item.x - region.x) * k, y: (item.y - region.y) * k, w: item.w * k, h: item.h * k };
+    const placed = { x: (item.x - region.x) * kx, y: (item.y - region.y) * ky, w: item.w * kx, h: item.h * ky };
     const x1 = Math.max(0, placed.x);
     const y1 = Math.max(0, placed.y);
     const x2 = Math.min(pxW, placed.x + placed.w);

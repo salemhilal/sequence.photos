@@ -6,7 +6,10 @@ import type { Slide } from './instagramImage';
 import { toSpreadId } from './ids';
 
 // Rendering needs a real canvas: stand in for it, as a tiny JPEG per slide.
-vi.mock('./rasterExport', () => ({ renderPage: async () => ({ canvas: {}, missing: 0 }) }));
+vi.mock('./rasterExport', () => ({
+  renderPage: async () => ({ canvas: {}, missing: 0, previews: 0 }),
+  releaseCanvas: () => undefined,
+}));
 vi.stubGlobal(
   'OffscreenCanvas',
   class {

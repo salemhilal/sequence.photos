@@ -209,6 +209,8 @@ interface PostOptions {
   kind: PostKind;
   fit: Fit;
   caption: string;
+  /** Told how many photos had to be drawn from their previews (originals that wouldn't decode here). */
+  onPreviews?: (count: number) => void;
   onStep: (step: PostStep) => void;
   signal?: AbortSignal;
 }
@@ -260,13 +262,16 @@ export async function postToInstagram(options: PostOptions): Promise<string | nu
 
   const layout = postImageLayout(slideSize(sheet), kind, fit);
   const images: Blob[] = [];
+  let previews = 0;
   for (const [i, slide] of slides.entries()) {
     check(signal);
     onStep({ step: 'preparing', done: i, total: slides.length });
     const image = await renderPostImage(slide, sheet, photos, layout);
     if (!image) throw new PostError('A slide is too detailed to fit Instagram’s 8 MB limit.');
-    images.push(image);
+    images.push(image.blob);
+    previews += image.previews;
   }
+  if (previews) options.onPreviews?.(previews);
 
   check(signal);
   const batch = await startUpload(connection, images.length, signal);

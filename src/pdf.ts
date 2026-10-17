@@ -4,7 +4,7 @@ import { readImageInfo } from './imageInfo';
 import { exportPxPerUnit, perOf, type ExportOptions } from './exportOptions';
 import { orientationMatrix, passThrough, type Matrix } from './pdfImage';
 import { platform } from '#platform';
-import { decodePhoto } from './rasterExport';
+import { decodePhoto, PREVIEWS_NOTICE, releaseCanvas } from './rasterExport';
 import { outputPages, pageRegion, planPage, type Draw } from './renderPlan';
 import { projectStore } from './store';
 import { ui } from './ui';
@@ -120,6 +120,7 @@ async function embed(
   ctx.drawImage(bitmap, d.src.x * kx, d.src.y * ky, d.src.w * kx, d.src.h * ky, 0, 0, w, h);
   bitmap.close();
   const jpeg = await canvas.convertToBlob({ type: 'image/jpeg', quality: QUALITY });
+  releaseCanvas(canvas);
   const image = await pdf.embedJpg(await jpeg.arrayBuffer());
   return { image, whole: false, orientation: 1, preview };
 }
@@ -140,7 +141,7 @@ export async function savePdf(options: Pick<ExportOptions, 'per' | 'dpi' | 'prin
     });
     if (saved && result.missing) ui.set({ notice: "Some photos' images were missing, so they're left out." });
     else if (saved && result.previews) {
-      ui.set({ notice: "Some photos couldn't be read at full size, so their previews were used." });
+      ui.set({ notice: PREVIEWS_NOTICE });
     }
   } catch {
     ui.set({ notice: "Couldn't make the PDF." });
