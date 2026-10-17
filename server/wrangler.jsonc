@@ -1,0 +1,88 @@
+// Sequence's server: Instagram sign-in and short-lived frame hosting. See README.md.
+//
+// Secrets (IG_APP_SECRET, SERVER_SECRET) are never in this file: use
+// `wrangler secret put` (and `.dev.vars` locally).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sequence-server",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-06",
+  "workers_dev": true,
+
+  // Frames live here for minutes. The bucket also needs a 1-day lifecycle rule (set up
+  // by the owner) as a backstop to the sweep below.
+  "r2_buckets": [{ "binding": "FRAMES", "bucket_name": "sequence-frames" }],
+
+  // The sweep: delete frames over an hour old.
+  "triggers": { "crons": ["*/15 * * * *"] },
+
+  // Automatic invocation logs record full URLs (codes, signatures, frame ids), and
+  // traces record subrequest URLs (client_secret, tokens), so both are off. The Worker
+  // writes its own redacted line per request (src/log.ts).
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "invocation_logs": false },
+    "traces": { "enabled": false },
+  },
+
+  // Speed bumps, not quotas (see README "Abuse and rate limits"). namespace_id is any
+  // integer unique within the Cloudflare account.
+  "ratelimits": [
+    // POST /uploads, keyed by Instagram user.
+    { "name": "UPLOAD_RATE_LIMIT", "namespace_id": "1001", "simple": { "limit": 3, "period": 60 } },
+    // /auth/* and /meta/*, keyed by client IP.
+    { "name": "IP_RATE_LIMIT", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } },
+  ],
+
+  "secrets": { "required": ["IG_APP_SECRET", "SERVER_SECRET"] },
+
+  "vars": {
+    // The Instagram app's id (Meta dashboard → Instagram → API setup with Instagram
+    // business login). Public: it's in every sign-in URL.
+    "IG_APP_ID": "1673773837797048",
+    "GRAPH_VERSION": "v26.0",
+    // This Worker's /auth/callback URL, registered exactly as the Meta app's OAuth
+    // redirect URI.
+    "CALLBACK_URL": "https://sequence-server.sequence-photos.workers.dev/auth/callback",
+    // JSON map: `client` (from the OAuth state) → where to send the user back.
+    "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\"}",
+    // JSON array of origins allowed by CORS on /auth/redeem, /auth/renew, /uploads*.
+    "ALLOWED_ORIGINS": "[\"https://sequence.photos\"]",
+    "MAX_FRAMES": "10",
+  },
+
+  "env": {
+    // A separate Worker, bucket, and secrets for local development and testing. Ideally
+    // backed by its own Meta app too.
+    "dev": {
+      "name": "sequence-server-dev",
+      "r2_buckets": [{ "binding": "FRAMES", "bucket_name": "sequence-frames-dev" }],
+      "triggers": { "crons": ["*/15 * * * *"] },
+      "ratelimits": [
+        {
+          "name": "UPLOAD_RATE_LIMIT",
+          "namespace_id": "2001",
+          "simple": { "limit": 3, "period": 60 },
+        },
+        {
+          "name": "IP_RATE_LIMIT",
+          "namespace_id": "2002",
+          "simple": { "limit": 10, "period": 60 },
+        },
+      ],
+      "secrets": { "required": ["IG_APP_SECRET", "SERVER_SECRET"] },
+      "vars": {
+        // The same Meta app as production for now (a separate dev app would be safer;
+        // see README). Its callback URL below must also be registered with the app.
+        "IG_APP_ID": "1673773837797048",
+        "GRAPH_VERSION": "v26.0",
+        // The dev Worker's callback URL (or http://localhost:8787/auth/callback when
+        // running `wrangler dev`, if registered with the Meta app).
+        "CALLBACK_URL": "https://sequence-server-dev.sequence-photos.workers.dev/auth/callback",
+        "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\",\"dev\":\"http://localhost:5175/app/\"}",
+        "ALLOWED_ORIGINS": "[\"https://sequence.photos\",\"http://localhost:5175\"]",
+        "MAX_FRAMES": "10",
+      },
+    },
+  },
+}

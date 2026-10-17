@@ -1,4 +1,10 @@
 import { useSyncExternalStore } from 'react';
+import type {
+  InstagramConnection as ServerConnection,
+  InstagramError,
+  RedeemRequest,
+  RenewRequest,
+} from '../server/src/api';
 import { INSTAGRAM, SERVER_URL } from './config';
 import { decodeBase64Url, encodeBase64Url } from './base64url';
 import { isRecord } from './guards';
@@ -20,15 +26,8 @@ import { normalizeServerUrl, serverUrl } from './server';
  * this browser only.
  */
 
-/** As sequence-server's src/api.ts, plus what the app keeps with it. */
-export interface InstagramConnection {
-  token: string;
-  /** Unix seconds. */
-  expiresAt: number;
-  refreshedAt: number;
-  userId: string;
-  username: string;
-  enrollment: string;
+/** The server's connection (server/src/api.ts), plus what the app keeps with it. */
+export interface InstagramConnection extends ServerConnection {
   /**
    * The server that signed the enrollment: uploads and renewals go there, whatever
    * Settings → Advanced says now (each server's enrollments are its own).
@@ -37,8 +36,6 @@ export interface InstagramConnection {
   /** Instagram or the server refused it: the user has to connect again. */
   needsReconnect?: true;
 }
-
-type InstagramError = 'cancelled' | 'exchange_failed' | 'missing_permission' | 'not_professional';
 
 const STORAGE_KEY = 'photobook-instagram';
 const PENDING_KEY = 'photobook-instagram-pending';
@@ -280,7 +277,7 @@ export async function finishSignIn(): Promise<string | null> {
     res = await fetch(`${pending.server}/auth/redeem`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sealed: back.sealed, verifier: pending.verifier }),
+      body: JSON.stringify({ sealed: back.sealed, verifier: pending.verifier } satisfies RedeemRequest),
     });
   } catch (error) {
     // Unreachable, or not allowed (CORS, or the Content Security Policy).
@@ -356,7 +353,7 @@ async function renewEnrollment(c: InstagramConnection): Promise<InstagramConnect
     const res = await fetch(`${c.server}/auth/renew`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.token}` },
-      body: JSON.stringify({ enrollment: c.enrollment }),
+      body: JSON.stringify({ enrollment: c.enrollment } satisfies RenewRequest),
     });
     const body: unknown = await res.json().catch(() => null);
     if (res.ok && isRecord(body) && typeof body.enrollment === 'string') return { ...c, enrollment: body.enrollment };

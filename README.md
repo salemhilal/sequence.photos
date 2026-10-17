@@ -83,6 +83,13 @@ its settings. Fold away panel sections you don't need by clicking their titles. 
 
 File → Take the tour walks through the app with a few sample photos (it also runs on your first visit). Your own project is set aside while it runs and comes back when it ends.
 
+## Server
+
+Posting to Instagram goes through Sequence's server, a Cloudflare Worker in
+[`server/`](server/) with its own `package.json`: see [server/README.md](server/README.md)
+for what it does and how to run, test, and deploy it (from `server/`, e.g.
+`npx wrangler deploy --env=""`). The app imports its API types from `server/src/api.ts`.
+
 ## Mac app
 
 The same app also builds as a native Mac app with [Tauri](https://tauri.app): a menu

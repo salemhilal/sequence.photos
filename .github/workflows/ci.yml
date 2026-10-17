@@ -28,3 +28,22 @@ jobs:
       # The Mac app's web side (its native side needs macOS; see npm run test:app).
       - run: npm run build:web-ui-for-app
       - run: node scripts/check-app-bundle.mjs
+
+  # Sequence's server (server/): a Cloudflare Worker with its own tooling.
+  server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
