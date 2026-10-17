@@ -19,7 +19,7 @@ import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { Arrangement, LineGuide, PageSide, Spread } from '../types';
 import { TERMS, UNITS } from '../units';
-import { ask, closeModal, setCloseGuard, ui } from '../ui';
+import { ask, closeModal, setCloseGuard, ui, type LayoutTab } from '../ui';
 import { applyPageSetup, draftOf, sameDraft } from '../pageSetup';
 import { usePageDraft } from './pageDraft';
 import { PagePreview } from './PagePreview';
@@ -87,25 +87,35 @@ export function LayoutEditor() {
     setSelected(null);
   };
 
-  // Closing or replacing Layout (here, or by a shortcut or menu) first asks what to do with
-  // page changes that wait for Apply.
+  /**
+   * Page changes waiting for Apply: ask what to do with them before closing Layout or going
+   * to Guides. Resolves whether to go on (applied, or discarded).
+   */
+  const settlePage = async (): Promise<boolean> => {
+    if (!pending) return true;
+    const answer = await ask({
+      title: 'Apply the page changes?',
+      message: 'Your changes on the Page tab haven’t been applied yet.',
+      actions: [
+        { label: 'Cancel', value: 'cancel' },
+        { label: 'Discard', value: 'discard' },
+        { label: 'Apply', value: 'apply', primary: true },
+      ],
+    });
+    if (answer === 'apply') applyPageSetup(draft);
+    if (answer === 'discard') setDraft(draftOf(projectStore.project));
+    return answer === 'apply' || answer === 'discard';
+  };
+  // Closing or replacing Layout (here, or by a shortcut or menu) asks first.
   useEffect(() => {
     if (!pending) return;
-    setCloseGuard(async () => {
-      const answer = await ask({
-        title: 'Apply the page changes?',
-        message: 'Your changes on the Page tab haven’t been applied yet.',
-        actions: [
-          { label: 'Cancel', value: 'cancel' },
-          { label: 'Discard', value: 'discard' },
-          { label: 'Apply', value: 'apply', primary: true },
-        ],
-      });
-      if (answer === 'apply') applyPageSetup(draft);
-      return answer === 'apply' || answer === 'discard';
-    });
+    setCloseGuard(settlePage);
     return () => setCloseGuard(null);
-  }, [pending, draft]);
+  });
+  const goToTab = (t: LayoutTab) => {
+    if (t === 'page') return ui.set({ layoutTab: t });
+    void settlePage().then((ok) => ok && ui.set({ layoutTab: t }));
+  };
   const close = closeModal;
 
   useWindowEvent('keydown', (e) => {
@@ -245,11 +255,10 @@ export function LayoutEditor() {
             </span>
           </div>
           <span className="spacer" />
-          <span className="hint">
-            {previewing
-              ? `${pending ? 'Preview of the changes · ' : ''}← → to flip through`
-              : `Drag from a ruler to add a guide · Shift: snap to ${units.snapLabel} · Drag off the ${terms.page} to remove`}
-          </span>
+          {/* Guides are explained in their panel's note. */}
+          {previewing && (
+            <span className="hint">{`${pending ? 'Preview of the changes · ' : ''}← → to flip through`}</span>
+          )}
           <button className="btn ghost icon" aria-label="Close" onClick={close}>
             <X />
           </button>
@@ -298,7 +307,7 @@ export function LayoutEditor() {
             tab={tab}
             draft={draft}
             onDraft={setDraft}
-            pending={pending}
+            onTab={goToTab}
             selected={selected}
             onSelect={setSelected}
             onRemove={remove}

@@ -113,7 +113,7 @@ export const TERMS: Record<Arrangement, Terms> = {
     fileStem: 'photo-book',
     edges: { top: 'Top', bottom: 'Bottom', inside: 'Inside', outside: 'Outside' },
     guidesNote:
-      'Every spread, mirrored on facing pages. Inside is the edge at the gutter; vertical guides are measured from the outside edge.',
+      'Guides apply to every spread, mirrored on facing pages. Inside is the edge at the gutter; vertical guides are measured from the outside edge.',
   },
   frames: {
     spread: 'frame',
@@ -128,7 +128,7 @@ export const TERMS: Record<Arrangement, Terms> = {
     pdfTitle: 'Sequence',
     fileStem: 'sequence',
     edges: { top: 'Top', bottom: 'Bottom', inside: 'Right', outside: 'Left' },
-    guidesNote: 'Every frame. Vertical guides are measured from the left edge.',
+    guidesNote: 'Guides apply to every frame. Vertical guides are measured from the left edge.',
   },
 };
 

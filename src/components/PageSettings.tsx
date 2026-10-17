@@ -1,6 +1,9 @@
 import { useId } from 'react';
 import { usePageDraft } from './pageDraft';
+import { ArrowLeftRight } from 'lucide-react';
+import type { Anchor } from '../convertLayout';
 import {
+  anchorFor,
   applyPageSetup,
   draftOf,
   draftWithDpi,
@@ -23,6 +26,16 @@ import { Segmented } from './Segmented';
 const ARRANGEMENTS: { value: Arrangement; label: string }[] = [
   { value: 'spreads', label: 'Spreads' },
   { value: 'frames', label: 'Frames' },
+];
+
+/** What photos kept fixed stay put relative to, on each page: spreads also have an inside edge. */
+const FRAME_ANCHORS: { value: Anchor; label: string }[] = [
+  { value: 'center', label: 'Center' },
+  { value: 'top-left', label: 'Top left' },
+];
+const SPREAD_ANCHORS: { value: Anchor; label: string }[] = [
+  ...FRAME_ANCHORS,
+  { value: 'inside', label: 'Inside edge' },
 ];
 
 const CONTENT: { value: Content; label: string; help: string }[] = [
@@ -84,6 +97,8 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
     />
   );
 
+  const anchors = draft.arrangement === 'spreads' ? SPREAD_ANCHORS : FRAME_ANCHORS;
+
   return (
     <form
       className="layout-fields page-settings"
@@ -94,94 +109,119 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
         applyPageSetup(draft);
       }}
     >
-      <span className="field-label" id={`${id}-pages`}>
-        Pages
-      </span>
-      <Segmented
-        halves
-        labelledBy={`${id}-pages`}
-        options={ARRANGEMENTS}
-        value={draft.arrangement}
-        onChange={(arrangement) => onChange({ ...draft, arrangement })}
-      />
-      {note && <p className="help">{note}</p>}
+      {/* The settings scroll; Apply and Revert stay below them. */}
+      <div className="page-settings-body">
+        <span className="field-label" id={`${id}-pages`}>
+          Pages
+        </span>
+        <Segmented
+          halves
+          labelledBy={`${id}-pages`}
+          options={ARRANGEMENTS}
+          value={draft.arrangement}
+          onChange={(arrangement) => onChange({ ...draft, arrangement })}
+        />
+        {note && <p className="help">{note}</p>}
 
-      <span className="field-label">Size</span>
-      <div className="size-form">
-        <div className="inline">
-          {field('w', 'W')}
-          {field('h', 'H')}
-          <select aria-label="Unit" value={draft.page.unit} onChange={(e) => setUnit(e.target.value as Unit)}>
-            <option value="in">in</option>
-            <option value="px">px</option>
+        <span className="field-label">Size</span>
+        <div className="size-form">
+          <div className="inline">
+            {field('w', 'W')}
+            <button
+              type="button"
+              className="btn ghost icon small"
+              aria-label="Swap width and height"
+              data-tip="Swap width and height"
+              onClick={() => onChange({ ...draft, page: { ...draft.page, w: draft.page.h, h: draft.page.w } })}
+            >
+              <ArrowLeftRight />
+            </button>
+            {field('h', 'H')}
+            <select aria-label="Unit" value={draft.page.unit} onChange={(e) => setUnit(e.target.value as Unit)}>
+              <option value="in">in</option>
+              <option value="px">px</option>
+            </select>
+          </div>
+          <select
+            aria-label="Preset"
+            value={preset?.label ?? ''}
+            onChange={(e) => {
+              const p = PRESETS.find((x) => x.label === e.target.value);
+              if (p) onChange(withPreset(draft, p));
+            }}
+          >
+            {PRESETS.map((p) => (
+              <option key={p.label} value={p.label}>
+                {p.label} · {p.page.w} × {p.page.h} {p.page.unit}
+              </option>
+            ))}
+            {!preset && <option value="">Custom</option>}
           </select>
         </div>
-        <select
-          aria-label="Preset"
-          value={preset?.label ?? ''}
-          onChange={(e) => {
-            const p = PRESETS.find((x) => x.label === e.target.value);
-            if (p) onChange(withPreset(draft, p));
-          }}
-        >
-          {PRESETS.map((p) => (
-            <option key={p.label} value={p.label}>
-              {p.label} · {p.page.w} × {p.page.h} {p.page.unit}
-            </option>
-          ))}
-          {!preset && <option value="">Custom</option>}
-        </select>
-      </div>
 
-      <span className="field-label">{printAt ? 'Print at' : 'Resolution'}</span>
-      <div className="size-form">
-        {draft.page.unit === 'in' ? (
-          <div className="inline dpi">
-            <NumberField
-              units={UNITS.px}
-              min={1}
-              suffix={false}
-              value={draft.page.pxPerUnit}
-              ariaLabel={printAt ? 'Print at, in dpi' : 'Resolution, in dpi'}
-              commitOnBlur={immediate}
-              onCommit={(n) => setDpi(Math.max(1, Math.round(n)))}
-            />
-            <span className="muted data">dpi</span>
-          </div>
-        ) : (
-          <span
-            className="muted data"
-            data-tip="Pixel density"
-            role="img"
-            aria-label={`Pixel density ${draft.page.pxPerUnit}×`}
-          >
-            {draft.page.pxPerUnit}×
-          </span>
+        <span className="field-label">{printAt ? 'Print at' : 'Resolution'}</span>
+        <div className="size-form">
+          {draft.page.unit === 'in' ? (
+            <div className="inline dpi">
+              <NumberField
+                units={UNITS.px}
+                min={1}
+                suffix={false}
+                value={draft.page.pxPerUnit}
+                ariaLabel={printAt ? 'Print at, in dpi' : 'Resolution, in dpi'}
+                commitOnBlur={immediate}
+                onCommit={(n) => setDpi(Math.max(1, Math.round(n)))}
+              />
+              <span className="muted data">dpi</span>
+            </div>
+          ) : (
+            <span
+              className="muted data"
+              data-tip="Pixel density"
+              role="img"
+              aria-label={`Pixel density ${draft.page.pxPerUnit}×`}
+            >
+              {draft.page.pxPerUnit}×
+            </span>
+          )}
+        </div>
+
+        {showContent && (
+          <fieldset className="page-content" disabled={!contentMatters}>
+            <legend className="field-label">Content</legend>
+            {CONTENT.map((c) => (
+              <label key={c.value} className="check">
+                <input
+                  type="radio"
+                  name={`${id}-content`}
+                  checked={draft.content === c.value}
+                  onChange={() => onChange({ ...draft, content: c.value })}
+                />
+                {c.label}
+              </label>
+            ))}
+            {contentMatters && draft.content === 'fixed' && (
+              <>
+                <span className="field-label" id={`${id}-anchor`}>
+                  Relative to
+                </span>
+                <Segmented
+                  labelledBy={`${id}-anchor`}
+                  options={anchors}
+                  value={anchorFor(draft)}
+                  onChange={(anchor) => onChange({ ...draft, anchor })}
+                />
+              </>
+            )}
+            <p className="help">
+              {contentMatters ? CONTENT.find((c) => c.value === draft.content)?.help : 'Matters when the size changes.'}
+            </p>
+          </fieldset>
         )}
       </div>
 
-      {showContent && (
-        <fieldset className="page-content" disabled={!contentMatters}>
-          <legend className="field-label">Content</legend>
-          {CONTENT.map((c) => (
-            <label key={c.value} className="check">
-              <input
-                type="radio"
-                name={`${id}-content`}
-                checked={draft.content === c.value}
-                onChange={() => onChange({ ...draft, content: c.value })}
-              />
-              {c.label}
-            </label>
-          ))}
-          <p className="help">
-            {contentMatters ? CONTENT.find((c) => c.value === draft.content)?.help : 'Matters when the size changes.'}
-          </p>
-        </fieldset>
-      )}
-
       {!immediate && (
-        <div className="inline">
+        <div className="inline page-settings-actions">
           <button type="submit" className={`btn${changed ? ' primary' : ''}`} disabled={!changed}>
             Apply
           </button>

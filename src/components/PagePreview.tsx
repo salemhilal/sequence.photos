@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { folioLabel } from '../actions';
 import { sheetExtent } from '../geometry';
 import { useElementSize, usePager } from '../hooks';
 import { draftOf, previewPageSetup, sameDraft, type PageDraft } from '../pageSetup';
 import { allSpreads, sheetOf } from '../spreads';
 import { useProject } from '../store';
-import { TERMS, UNITS } from '../units';
+import { TERMS } from '../units';
 import { placedSoft, resolutionNote, softPhotos, softSentence } from '../resolution';
 import { PhotoImg } from './PhotoImg';
 import { SoftBadge } from './SoftBadge';
@@ -40,7 +39,6 @@ export function PagePreview({ draft }: Props) {
   // Room below for the controls.
   const scale = Math.max(0, Math.min(stage.w / (across + 2 * pad), (stage.h - 56) / (sheet.pageH + 2 * pad)));
   const terms = TERMS[sheet.arrangement];
-  const units = UNITS[sheet.unit];
   const soft = softPhotos(preview).length;
   // With no changes waiting, this is the project as it is: photos are soft, not would be.
   const changed = !sameDraft(draft, draftOf(project));
@@ -78,9 +76,8 @@ export function PagePreview({ draft }: Props) {
         >
           <ChevronLeft />
         </button>
-        <span className="folio">{folioLabel(at, spreads.length, sheet.arrangement)}</span>
         <span className="muted data">
-          {at + 1} / {spreads.length} · {units.format(sheet.pageW)} × {units.format(sheet.pageH)} {units.suffix}
+          {at + 1} / {spreads.length}
         </span>
         <button
           className="btn ghost icon"

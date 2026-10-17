@@ -162,3 +162,14 @@ describe('frames', () => {
     expect(borderBox('whole', s, g)).toEqual({ x: 30, y: 10, w: 1080 - 70, h: 864 - 30 });
   });
 });
+
+describe('anchorShift', () => {
+  it('moves with the point a photo is kept fixed to', async () => {
+    const { anchorShift } = await import('./convertLayout');
+    expect(anchorShift('center', 'right', 2, 4)).toEqual({ dx: 1, dy: 2 });
+    expect(anchorShift('center', 'left', 2, 4)).toEqual({ dx: -1, dy: 2 });
+    expect(anchorShift('top-left', 'left', 2, 4)).toEqual({ dx: -2, dy: 0 });
+    expect(anchorShift('top-left', 'whole', 2, 4)).toEqual({ dx: 0, dy: 0 });
+    expect(anchorShift('inside', 'left', 2, 4)).toEqual({ dx: 0, dy: 0 });
+  });
+});

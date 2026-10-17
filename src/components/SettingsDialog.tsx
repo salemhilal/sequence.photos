@@ -5,6 +5,7 @@ import type { ThemePref } from '../theme';
 import { setTheme, closeModal, ui } from '../ui';
 import { DeskColorPicker } from './DeskColorPicker';
 import { Segmented } from './Segmented';
+import { Tabs } from './Tabs';
 import { InstagramSetting } from './settings/InstagramSetting';
 import { ServerSetting } from './settings/ServerSetting';
 import { TestImagesSetting } from './settings/TestImagesSetting';
@@ -32,21 +33,7 @@ export function SettingsDialog() {
   const [tab, setTab] = useState<Tab>('general');
   return (
     <Dialog title="Settings" onClose={closeModal} className="settings">
-      <div className="settings-tabs" role="tablist" aria-label="Settings">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            role="tab"
-            id={`settings-tab-${t.value}`}
-            aria-selected={tab === t.value}
-            aria-controls="settings-panel"
-            className={tab === t.value ? 'on' : ''}
-            onClick={() => setTab(t.value)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs id="settings" label="Settings" options={TABS} value={tab} onChange={setTab} />
       <div className="settings-body" id="settings-panel" role="tabpanel" aria-labelledby={`settings-tab-${tab}`}>
         {tab === 'general' ? <GeneralSettings /> : <AdvancedSettings />}
       </div>
