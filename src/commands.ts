@@ -2,11 +2,7 @@ import type { PhotoId } from './ids';
 import { useEffect } from 'react';
 import type { Platform } from './platform/types';
 import { deleteFromProject, importPhotos } from './actions';
-import { exportIndesign } from './indesign';
 import { copyPhotos, duplicateAndSelect } from './clipboard';
-import { savePdf } from './pdf';
-import { exportImages } from './rasterExport';
-import { instagramConnection } from './instagram';
 import { hasMod, isMac, isTextField, isTyping, MOD_LABEL } from './input';
 import { platform } from '#platform';
 import { pickFiles } from './files';
@@ -120,38 +116,13 @@ export const commands = {
     inFields: true,
     run: () => void platform.keepProjectAs?.(),
   },
-  savePdf: {
-    // The Mac app asks where to save it first.
-    title: { browser: 'Save PDF', macos: 'Save PDF…' },
-    bindings: [{ key: 'p', mod: true, shift: true }],
-    scope: 'app',
-    inFields: true,
-    run: () => void savePdf(),
-  },
-  // InDesign for spreads; images and Instagram for either.
-  exportIndesign: {
-    title: { browser: 'Export for InDesign', macos: 'Export for InDesign…' },
-    bindings: [],
-    scope: 'app',
-    run: () => (projectStore.project.layout.kind === 'spreads' ? void exportIndesign() : false),
-  },
-  exportImages: {
-    title: { browser: 'Export images…', macos: 'Export Images…' },
+  // PDF, images, InDesign, or Instagram, chosen in the Export view.
+  export: {
+    title: { browser: 'Export…', macos: 'Export…' },
     bindings: [{ key: 'e', mod: true, shift: true }],
     scope: 'app',
     inFields: true,
-    run: () => void exportImages(),
-  },
-  // With an Instagram account connected (Settings), on the web.
-  postToInstagram: {
-    title: 'Post to Instagram…',
-    bindings: [],
-    scope: 'app',
-    run: () => {
-      const connection = instagramConnection();
-      const ready = connection && !connection.needsReconnect;
-      return ready ? openModal('instagram') : false;
-    },
+    run: () => openModal('export'),
   },
   preview: {
     // The toolbar says "Preview book" for a book; menus just "Preview".

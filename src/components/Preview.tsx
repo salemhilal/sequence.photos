@@ -2,10 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { folioLabel } from '../actions';
 import { useWindowEvent } from '../hooks';
-import { FileMenu } from './FileMenu';
-import { useExportItems } from './exportItems';
 import { useProject } from '../store';
-import { closeModal, ui } from '../ui';
+import { closeModal, openModal, ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
 import { sheetExtent } from '../geometry';
 import { TERMS } from '../units';
@@ -64,7 +62,6 @@ export function Preview() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 900, h: 600 });
   const busy = ui.use((s) => s.busy);
-  const exportItems = useExportItems();
   const sheet = sheetOf(project);
   // Saving (a PDF or images) shows its progress in the header: keep it up until that's done.
   const idle = useIdle(rootRef, busy !== null);
@@ -119,7 +116,9 @@ export function Preview() {
         {busy !== null ? (
           <span className="muted">{busy}</span>
         ) : (
-          <FileMenu items={exportItems} label="Export…" buttonClass="btn" alignRight />
+          <button className="btn" onClick={() => openModal('export')}>
+            Export…
+          </button>
         )}
         <button className="btn" onClick={close}>
           Exit preview

@@ -3,6 +3,7 @@ import { getImage } from '../../db';
 import { projectLoaded } from '../../persistence';
 import { tourSeenPref } from '../../prefs';
 import { putOnPage } from '../../actions';
+import { defaultOptions } from '../../exportOptions';
 import { renderPdf } from '../../pdf';
 import { renderImages } from '../../rasterExport';
 import { outputPages } from '../../renderPlan';
@@ -175,7 +176,7 @@ async function scenarios(dir: string): Promise<void> {
       `${out.files.length} files, ${image?.width}×${image?.height}`,
     );
     // The PDF, from the photos' originals, in the app's WebKit.
-    const pdf = await renderPdf(() => undefined).catch(() => null);
+    const pdf = await renderPdf(defaultOptions(sheetOf(book)), () => undefined).catch(() => null);
     check(
       'renders a PDF from the originals',
       !!pdf && pdf.missing === 0 && pdf.previews === 0 && pdf.blob.size > 0,

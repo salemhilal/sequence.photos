@@ -3,7 +3,6 @@ import { platform } from '#platform';
 import { buildIdml, type LinkedImage } from './idml';
 import { readImageInfo } from './imageInfo';
 import { uniqueName } from './project';
-import { checkResolution } from './resolution';
 import { projectStore } from './store';
 import { ui } from './ui';
 import { createZip, type ZipInput } from './zip';
@@ -18,9 +17,8 @@ const REENCODE_QUALITY = 0.95;
  * the placed photos' originals. Originals InDesign can't use as they are (formats it
  * doesn't read, or JPEGs it would show sideways) are saved as upright, high-quality JPEGs.
  */
-export async function exportIndesign(): Promise<void> {
-  if (ui.get().busy || ui.get().importing) return;
-  if (!(await checkResolution())) return;
+export async function exportIndesign(): Promise<boolean> {
+  if (ui.get().busy || ui.get().importing) return false;
   const project = projectStore.project;
   const placed = [...new Set(allSpreads(project).flatMap((s) => s.items.map((i) => i.photoId)))];
   const setBusy = (busy: string | null) => ui.set({ busy });
@@ -48,8 +46,10 @@ export async function exportIndesign(): Promise<void> {
       return createZip([{ name: `photo-book-${date}.idml`, data: idml }, ...files]);
     });
     if (saved && missing) ui.set({ notice: "Some photos' images were missing, so their frames are empty." });
+    return saved;
   } catch {
     ui.set({ notice: "Couldn't export for InDesign." });
+    return false;
   } finally {
     setBusy(null);
   }

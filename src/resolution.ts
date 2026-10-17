@@ -1,8 +1,7 @@
 import type { PhotoId, SpreadId } from './ids';
 import { allSpreads, sheetOf } from './spreads';
-import { projectStore } from './store';
 import type { PhotoMeta, Placement, Project, Sheet } from './types';
-import { ask, ui } from './ui';
+import { ui } from './ui';
 
 /**
  * Whether photos have enough detail for the page's resolution. One measure works for any
@@ -53,9 +52,12 @@ export function resolutionNote(
   return soft ? { text: `Enlarged ${Math.round(100 / c)}%`, soft } : null;
 }
 
-/** Placed photos with less detail than the page asks for, in book order. */
-export function softPhotos(project: Project): { photoId: PhotoId; spreadId: SpreadId }[] {
-  const sheet = sheetOf(project);
+/**
+ * Placed photos with less detail than the page asks for (or an export's `pxPerUnit`), in
+ * book order.
+ */
+export function softPhotos(project: Project, pxPerUnit?: number): { photoId: PhotoId; spreadId: SpreadId }[] {
+  const sheet = { ...sheetOf(project), ...(pxPerUnit === undefined ? {} : { pxPerUnit }) };
   return allSpreads(project).flatMap((spread) =>
     spread.items
       .filter((item) => placedSoft(project.photos[item.photoId], item, sheet))
@@ -76,27 +78,7 @@ export function softSentence(count: number, sheet: Pick<Sheet, 'unit' | 'pxPerUn
   return sheet.unit === 'in' ? `${photos} ${verb} below ${sheet.pxPerUnit} dpi.` : `${photos} ${verb} enlarged.`;
 }
 
-/**
- * Before a PDF, images, or InDesign export: when photos have less detail than the page
- * asks for, ask whether to go on. Resolves true to export. "Show me" opens the first one in
- * the spread editor, selected, and resolves false.
- */
-export async function checkResolution(): Promise<boolean> {
-  const project = projectStore.project;
-  const soft = softPhotos(project);
-  const first = soft[0];
-  if (!first) return true;
-  const answer = await ask({
-    title: 'Low resolution',
-    message: softSentence(soft.length, sheetOf(project)),
-    actions: [
-      { label: 'Show me', value: 'show' },
-      { label: 'Export anyway', value: 'export', primary: true },
-    ],
-  });
-  if (answer === 'export') return true;
-  if (answer === 'show') {
-    ui.set({ modal: null, editingSpreadId: first.spreadId, editorSelect: first.photoId });
-  }
-  return false;
+/** Open a placed photo in the spread editor, selected (closing what's open over it). */
+export function showPhoto(at: { photoId: PhotoId; spreadId: SpreadId }): void {
+  ui.set({ modal: null, editingSpreadId: at.spreadId, editorSelect: at.photoId });
 }

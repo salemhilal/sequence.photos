@@ -2,12 +2,12 @@ import { folioLabel } from './actions';
 import { getImage } from './db';
 import type { PhotoId } from './ids';
 import { platform } from '#platform';
-import { checkResolution } from './resolution';
+import { exportPxPerUnit, perOf, type ExportOptions } from './exportOptions';
 import { fitPixels, outputPages, planPage, type OutputPage, type PagePlan } from './renderPlan';
 import { allSpreads, sheetOf } from './spreads';
 import { projectStore } from './store';
 import type { PhotoMeta, Project } from './types';
-import { ask, ui } from './ui';
+import { ui } from './ui';
 import { TERMS } from './units';
 import { createZip, type ZipInput } from './zip';
 
@@ -86,88 +86,83 @@ export async function decodePhoto(
 }
 
 /** Each output page's file name: its page numbers, zero-padded, with spreads as "02-03". */
-export function imageNames(project: Project, pages: readonly OutputPage[]): string[] {
+export function imageNames(project: Project, pages: readonly OutputPage[], ext = 'jpg'): string[] {
   const arrangement = project.layout.kind;
   const spreads = allSpreads(project);
   if (pages.every((p) => p.part === 'spread')) {
     return pages.map(
-      (p) => `${folioLabel(spreads.indexOf(p.spread), spreads.length, arrangement).replace('–', '-')}.jpg`,
+      (p) => `${folioLabel(spreads.indexOf(p.spread), spreads.length, arrangement).replace('–', '-')}.${ext}`,
     );
   }
   const digits = Math.max(2, String(pages.length).length);
-  return pages.map((_, i) => `${String(i + 1).padStart(digits, '0')}.jpg`);
+  return pages.map((_, i) => `${String(i + 1).padStart(digits, '0')}.${ext}`);
 }
 
 /**
- * Render output pages as JPEGs, named in order, at the page's resolution: or, for a page
- * too large for one canvas, at the largest that fits (`lowest` is the least pxPerUnit used).
+ * Render output pages as JPEGs (or PNGs), named in order, at `pxPerUnit` (default: the
+ * page's resolution); or, for a page too large for one canvas, at the largest that fits
+ * (`lowest` is the least pxPerUnit used).
  */
 export async function renderImages(
   pages: readonly OutputPage[],
   project: Project,
   onProgress: (done: number) => void,
+  { format = 'jpeg', pxPerUnit }: { format?: ExportOptions['format']; pxPerUnit?: number } = {},
 ): Promise<{ files: ZipInput[]; missing: number; lowest: number }> {
   const sheet = sheetOf(project);
-  const names = imageNames(project, pages);
+  const ext = format === 'png' ? 'png' : 'jpg';
+  const names = imageNames(project, pages, ext);
   const files: ZipInput[] = [];
   let missing = 0;
-  let lowest = sheet.pxPerUnit;
+  let lowest = Math.min(sheet.pxPerUnit, pxPerUnit ?? Infinity);
   for (const [i, page] of pages.entries()) {
-    let plan = planPage(page, sheet, project.photos);
+    let plan = planPage(page, sheet, project.photos, pxPerUnit);
     const fits = fitPixels(plan, MAX_CANVAS_PIXELS);
     if (fits < plan.pxPerUnit) plan = planPage(page, sheet, project.photos, fits);
     lowest = Math.min(lowest, plan.pxPerUnit);
     const rendered = await renderPage(plan, project.photos);
     missing += rendered.missing;
-    const data = await rendered.canvas.convertToBlob({ type: 'image/jpeg', quality: QUALITY });
-    files.push({ name: names[i] ?? `${i + 1}.jpg`, data });
+    const data = await rendered.canvas.convertToBlob(
+      format === 'png' ? { type: 'image/png' } : { type: 'image/jpeg', quality: QUALITY },
+    );
+    files.push({ name: names[i] ?? `${i + 1}.${ext}`, data });
     onProgress(i + 1);
   }
   return { files, missing, lowest };
 }
 
 /**
- * File → Export images: a ZIP of JPEGs, one per frame, or (for spreads, as asked) one per
- * spread or per page. Reports progress and problems in the UI.
+ * Export images: a ZIP of JPEGs or PNGs, one per frame, or for spreads one per spread or
+ * per page, at the chosen dpi for inches. Reports progress and problems in the UI, and
+ * resolves whether it was saved.
  */
-export async function exportImages(): Promise<void> {
-  if (ui.get().busy || ui.get().importing) return;
-  if (!(await checkResolution())) return;
+export async function exportImages(options: Pick<ExportOptions, 'per' | 'format' | 'dpi'>): Promise<boolean> {
+  if (ui.get().busy || ui.get().importing) return false;
   const project = projectStore.project;
-  let per: 'spread' | 'page' = 'page';
-  if (project.layout.kind === 'spreads') {
-    const answer = await ask({
-      title: 'Export images',
-      message: 'One image for each spread, or one for each page?',
-      actions: [
-        { label: 'Cancel', value: 'cancel' },
-        { label: 'One per spread', value: 'spread' },
-        { label: 'One per page', value: 'page', primary: true },
-      ],
-    });
-    if (answer === null || answer === 'cancel') return;
-    per = answer;
-  }
-  const pages = outputPages(project, per);
+  const pages = outputPages(project, perOf(project, options));
   const sheet = sheetOf(project);
+  const target = exportPxPerUnit('images', sheet, options);
   let missing = 0;
-  let lowest = sheet.pxPerUnit;
+  let lowest = target;
   try {
     const saved = await platform.saveFile(
       `${TERMS[sheet.arrangement].fileStem}-${new Date().toISOString().slice(0, 10)}.zip`,
       async () => {
         ui.set({ busy: 'Rendering images…' });
-        const out = await renderImages(pages, project, (done) =>
-          ui.set({ busy: `Rendering image ${done} of ${pages.length}…` }),
+        const out = await renderImages(
+          pages,
+          project,
+          (done) => ui.set({ busy: `Rendering image ${done} of ${pages.length}…` }),
+          { format: options.format, pxPerUnit: target },
         );
         missing = out.missing;
         lowest = out.lowest;
         return createZip(out.files);
       },
     );
-    if (!saved) return;
+    if (!saved) return false;
     if (missing) ui.set({ notice: "Some photos' images were missing, so they're left out." });
-    else if (lowest < sheet.pxPerUnit) {
+    else if (lowest < target) {
       ui.set({
         notice:
           sheet.unit === 'in'
@@ -175,8 +170,10 @@ export async function exportImages(): Promise<void> {
             : `Some pages were exported at ${Math.floor(lowest * 100)}% of their size, the most this browser can make in one image.`,
       });
     }
+    return true;
   } catch {
     ui.set({ notice: "Couldn't export the images." });
+    return false;
   } finally {
     ui.set({ busy: null });
   }

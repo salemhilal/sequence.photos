@@ -8,21 +8,21 @@ afterEach(() => {
 
 describe('lockModal', () => {
   it('keeps the open dialog open, and nothing else opening, while locked', () => {
-    openModal('instagram');
+    openModal('export');
     lockModal(true);
     expect(modalLocked()).toBe(true);
     closeModal();
-    expect(ui.get().modal).toBe('instagram');
+    expect(ui.get().modal).toBe('export');
     openModal('settings');
-    expect(ui.get().modal).toBe('instagram');
-    toggleModal('instagram');
-    expect(ui.get().modal).toBe('instagram');
+    expect(ui.get().modal).toBe('export');
+    toggleModal('export');
+    expect(ui.get().modal).toBe('export');
     toggleModal('about');
-    expect(ui.get().modal).toBe('instagram');
+    expect(ui.get().modal).toBe('export');
   });
 
   it('lets dialogs open and close again once unlocked', () => {
-    openModal('instagram');
+    openModal('export');
     lockModal(true);
     lockModal(false);
     expect(modalLocked()).toBe(false);

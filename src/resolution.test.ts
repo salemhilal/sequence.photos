@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { toPhotoId } from './ids';
-import { checkResolution, coverage, isSoft, resolutionNote, softLabel, softPhotos, softSentence } from './resolution';
+import { coverage, isSoft, resolutionNote, softLabel, softPhotos, softSentence, showPhoto } from './resolution';
 import { allSpreads } from './spreads';
-import { emptyProject, projectStore } from './store';
+import { emptyProject } from './store';
 import type { Project } from './types';
 import { ui } from './ui';
 
@@ -74,38 +74,17 @@ describe('softPhotos', () => {
     expect(softPhotos(p)).toEqual([{ photoId: B, spreadId: allSpreads(p)[2]!.id }]);
     expect(softPhotos({ ...p, page: { ...p.page, pxPerUnit: 250 } })).toEqual([]);
   });
+
+  it('checks against an export’s resolution when given one', () => {
+    expect(softPhotos(book(), 250)).toEqual([]);
+  });
 });
 
-describe('checkResolution', () => {
-  beforeEach(() => ui.set({ confirm: null, editingSpreadId: null, editorSelect: null, modal: null }));
-
-  /** Answer the confirmation showing by clicking the button with this label. */
-  const pick = (label: string) => {
-    const c = ui.get().confirm!;
-    c.choose(c.actions.findIndex((a) => a.label === label));
-  };
-
-  it('goes ahead without asking when every photo has enough detail', async () => {
-    projectStore.reset({ ...book(), page: { ...book().page, pxPerUnit: 200 } });
-    expect(await checkResolution()).toBe(true);
-    expect(ui.get().confirm).toBeNull();
-  });
-
-  it('asks, and exports anyway when told to', async () => {
-    projectStore.reset(book());
-    const answer = checkResolution();
-    expect(ui.get().confirm!.message).toBe('1 photo is below 300 dpi.');
-    pick('Export anyway');
-    expect(await answer).toBe(true);
-  });
-
-  it('shows the first one in the editor, selected', async () => {
+describe('showPhoto', () => {
+  it('opens the photo in the editor, selected, closing what was open', () => {
     const p = book();
-    projectStore.reset(p);
-    ui.set({ modal: 'preview' });
-    const answer = checkResolution();
-    pick('Show me');
-    expect(await answer).toBe(false);
+    ui.set({ modal: 'export', editingSpreadId: null, editorSelect: null });
+    showPhoto({ photoId: B, spreadId: allSpreads(p)[2]!.id });
     expect(ui.get()).toMatchObject({ modal: null, editingSpreadId: allSpreads(p)[2]!.id, editorSelect: B });
   });
 });

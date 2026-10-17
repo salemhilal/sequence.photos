@@ -182,35 +182,44 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Folio and "n / total" are right.
 - [ ] Controls fade after the pointer rests about a second; moving or Tab brings them back;
       they stay while hovered and while saving.
-- [ ] The header's Export… menu (Save PDF, Export images, InDesign [S], Instagram on the web),
-      with progress in its place while exporting.
+- [ ] The header's Export… opens the Export view.
 - [ ] Escape, Exit preview, or ⌘P closes.
 
 ## Exports and project files
 
-- [ ] PDF (⌘⇧P): a page per spread at true size, single first and last pages, photos
-      cropped at the edges, no guides; `photo-book-DATE.pdf` **[S]** or `sequence-DATE.pdf`
-      **[F]**. **[px]** 1 pt per px.
+- [ ] File → Export… (⌘⇧E) opens the Export view: a preview of what it makes on the left,
+      with ‹ › and ←/→, and the destination and its options on the right. Destinations: PDF,
+      Images, InDesign **[S]**, and Instagram (web). The last one picked is kept while the app
+      is open.
+- [ ] A conversion note (not a warning) shows only where the units differ: **[in]** Images:
+      "Pages are measured in inches, so they're turned into pixels: 3000 × 2400 px a page" with
+      At ___ dpi (up to the page's); Instagram: slides are made at Instagram's size. **[px]**
+      PDF: "Frames are measured in pixels, so they're given a printed size: 3.6 × 4.5 in" with
+      Print at ___ dpi (300). None for **[in]** PDF or InDesign, or **[px]** Images.
+- [ ] **[S]** One PDF page per / One image per: Spread or Page. **[F]** Not shown: each frame
+      is its own page or image.
+- [ ] Photos below the export's resolution: "N photos are below 300 dpi." (or "are
+      enlarged") above the button, with Show me opening the first in the editor, selected.
+      Lowering the dpi updates it.
+- [ ] The button names the result (Save PDF, Export N images, Export for InDesign) and shows
+      the progress while exporting; once saved, the view closes. Cancelling the save keeps it.
+- [ ] PDF: at true size, single first and last pages **[S]**, photos cropped at the edges, no
+      guides; `photo-book-DATE.pdf` **[S]** or `sequence-DATE.pdf` **[F]**. **[px]** Pages are
+      printed at the Print at dpi. **[in]** Photo resolution: Up to 300 (the page's); 150 makes
+      a smaller file with the same page size.
 - [ ] PDF at full resolution: a book of full-size phone photos at 300 dpi shows each photo
       at its own ppi, or 300 when it has more (Preview.app's inspector, or
       `pdfimages -list`). Photos taken on their side (EXIF orientation) come out upright,
       mirrored ones too. A PNG and a HEIC (Safari or the Mac app) embed. An unreadable original:
       "Some photos couldn't be read at full size…".
-- [ ] **[S]** Export for InDesign: a ZIP with an `.idml` and `Links/`; opens in InDesign with
-      facing pages, margins from the On drop guide, ruler guides, linked photos. **[px]** The
-      document is in pixels at the same size.
-- [ ] **[F]** Export for InDesign is absent (web) or disabled (Mac).
-- [ ] Export images (⌘⇧E): **[F]** `sequence-DATE.zip` with 01.jpg, 02.jpg… at the page's
-      size times its resolution (1080 × 1350 for Instagram 4:5; 3000 × 2400 for 10 × 8 in at
-      300 dpi), on white. **[S]** It asks One per spread (01.jpg, 02-03.jpg, … the last page)
-      or One per page (01.jpg… in book order).
+- [ ] **[S]** InDesign: a ZIP with an `.idml` and `Links/`; opens in InDesign with facing
+      pages, margins from the On drop guide, ruler guides, linked photos. **[px]** The document
+      is in pixels at the same size (the panel says so).
+- [ ] Images: a ZIP of JPEGs or PNGs, on white. **[F]** 01.jpg, 02.jpg… at the frame's size.
+      **[S]** Per spread: 01.jpg, 02-03.jpg, … the last page; per page: 01.jpg… in book order.
+      **[in]** At the chosen dpi (3000 × 2400 for 10 × 8 in at 300).
 - [ ] A page too large for one image (11 × 17 in at 300 dpi): it's exported at the most that
       fits, and a notice says the dpi.
-- [ ] With photos below the page's resolution, PDF, images, and InDesign first ask: "N photos
-      are below 300 dpi." (or "are enlarged"). Export anyway goes on; Show me opens the first
-      one's spread in the editor with it selected. Instagram doesn't ask.
-- [ ] Preview's Export… lists Save PDF, Export images, Export for InDesign **[S]**, and Post to
-      Instagram (web), as the File menu does.
 - [ ] Export project (⌘S) and import it into a fresh project (⌘O): "Opened … · N photos. Undo
       to go back."; ⌘Z restores. Frames come back as frames, and pixels as pixels.
 - [ ] A project from an older version opens as a book with its guides.
@@ -252,10 +261,9 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 ### Posting
 
-- [ ] File → Post to Instagram… is always listed, for any project. It's disabled, with the
-      reason under it, until Instagram is connected ("Connect Instagram in Settings first.",
-      "Reconnect Instagram in Settings first.").
-- [ ] The pane: @user in the header; Feed post or Stories; "A carousel of N slides" / "N
+- [ ] Export → Instagram, for any project. Until it's connected, the panel says posting goes
+      through your account and offers Connect in Settings (or Reconnect in Settings).
+- [ ] The panel: Account @user; Feed post or Stories; "A carousel of N slides" / "N
       stories, one per slide".
 - [ ] Slides: every page or frame as a thumbnail with a checkbox; the first 10 with photos are
       chosen; an 11th can't be, and it says Instagram takes up to 10; "N of 10 chosen". Order
@@ -294,7 +302,7 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 - [ ] Hold ⌘ (Ctrl) for a moment: badges on Undo, Redo, Preview, the sidebar toggle,
       Settings; releasing hides them.
-- [ ] ⌘I add, ⌘O open, ⌘S export/save, ⌘⇧P PDF, ⌘⇧E images, ⌘P preview, ⌘; guides, ⌘,
+- [ ] ⌘I add, ⌘O open, ⌘S export/save, ⌘⇧E export, ⌘P preview, ⌘; guides, ⌘,
       settings, ⌘B sidebar.
 - [ ] Desk shortcuts (⌘A, ⌘C, ⌘D, Delete, arrows, Escape) do nothing while a dialog or the
       editor is open.
@@ -340,7 +348,7 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
 - [ ] No web File menu or Undo/Redo buttons; the toolbar is the title bar (file name, "—
       Edited", drag to move the window).
 - [ ] Menus in title case with shortcuts. File: New Project, Open…, Add Photos…, Close, Save,
-      Save As… (⌘⇧S), Save PDF…, Export Images… (always), Export for InDesign… (enabled for spreads).
+      Save As… (⌘⇧S), Export… (⌘⇧E).
 - [ ] View: Preview, Layout…, Hide/Show Guides, Hide/Show Spreads [S] or Frames [F], following
       their state.
 - [ ] Edit: Cut, Copy, Paste in text fields; Copy with photos selected copies them; Undo
@@ -349,7 +357,7 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
       a `.photo-sequence` open it; after a relaunch, Save still writes the same file.
 - [ ] Quitting or closing with unsaved changes asks to save; unsaved changes survive a quit
       and relaunch.
-- [ ] Save PDF…, Export Images…, and Export for InDesign… suggest the document's name ("Trip.pdf",
+- [ ] Exporting a PDF, images, or InDesign suggests the document's name ("Trip.pdf",
       "Trip (images).zip", "Trip (InDesign).zip"); an untitled project gets a dated name.
 - [ ] Settings is one page (Appearance, Desk), with no tabs; no Instagram and no Storage section.
 - [ ] Opening a project from a newer version says to update from the App Store (no Reload).

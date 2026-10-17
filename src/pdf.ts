@@ -1,7 +1,7 @@
 import type { PDFDocument, PDFImage, PDFPage } from 'pdf-lib';
 import { getImage } from './db';
 import { readImageInfo } from './imageInfo';
-import { checkResolution } from './resolution';
+import { exportPxPerUnit, perOf, type ExportOptions } from './exportOptions';
 import { orientationMatrix, passThrough, type Matrix } from './pdfImage';
 import { platform } from '#platform';
 import { decodePhoto } from './rasterExport';
@@ -12,21 +12,24 @@ import { sheetOf } from './spreads';
 import type { PhotoMeta, Unit } from './types';
 import { TERMS } from './units';
 
-/** PDF points per unit: 72 to the inch, and a pixel to a point (as InDesign does). */
-const PT: Record<Unit, number> = { in: 72, px: 1 };
+/** PDF points per unit: 72 to the inch, and for pixels, as many as print at `printAt` dpi. */
+function ptPerUnit(unit: Unit, printAt: number): number {
+  return unit === 'in' ? 72 : 72 / printAt;
+}
 /** Enough of a file to cover its metadata segments. */
 const HEADER_BYTES = 512 * 1024;
 const QUALITY = 0.92;
 
 /**
- * Render the project as a PDF: one PDF page per spread, at true size, with a book's first
- * and last pages as single pages (or one page per frame, a point to the pixel). Each photo
- * goes in at the page's resolution, or its own if that's less: its original as it is when
+ * Render the project as a PDF: one PDF page per spread (a book's first and last pages are
+ * single) or per page, at true size (pixels printed at `printAt` dpi). Each photo goes in at
+ * the chosen resolution (no more than the page's), or its own if that's less: its original as it is when
  * that's a JPEG near the size needed, else a copy resized to it, cropped to what shows.
  * Guides are left out. `previews` counts photos whose originals couldn't be read, so their
  * display copies went in; `missing`, photos with no image at all.
  */
 export async function renderPdf(
+  options: Pick<ExportOptions, 'per' | 'dpi' | 'printAt'>,
   onProgress: (done: number, total: number) => void,
 ): Promise<{ blob: Blob; previews: number; missing: number }> {
   const { PDFDocument, pushGraphicsState, popGraphicsState, concatTransformationMatrix, drawObject } =
@@ -45,13 +48,14 @@ export async function renderPdf(
     page.pushOperators(pushGraphicsState(), concatTransformationMatrix(...m), drawObject(name), popGraphicsState());
   };
 
-  const pages = outputPages(project, 'spread');
+  const toPt = ptPerUnit(sheet.unit, options.printAt);
+  const pages = outputPages(project, perOf(project, options));
   for (const [i, out] of pages.entries()) {
-    const plan = planPage(out, sheet, project.photos);
+    const plan = planPage(out, sheet, project.photos, exportPxPerUnit('pdf', sheet, options));
     // Output pixels to points; PDF's origin is the bottom-left corner.
-    const pt = PT[sheet.unit] / plan.pxPerUnit;
-    const pageH = sheet.pageH * PT[sheet.unit];
-    const page = pdf.addPage([pageRegion(out, sheet).w * PT[sheet.unit], pageH]);
+    const pt = toPt / plan.pxPerUnit;
+    const pageH = sheet.pageH * toPt;
+    const page = pdf.addPage([pageRegion(out, sheet).w * toPt, pageH]);
     const box = (r: { x: number; y: number; w: number; h: number }) => ({
       x: r.x * pt,
       y: pageH - (r.y + r.h) * pt,
@@ -120,17 +124,17 @@ async function embed(
   return { image, whole: false, orientation: 1, preview };
 }
 
-/** Render and save the PDF, reporting progress and problems in the UI. */
-export async function savePdf(): Promise<void> {
-  if (ui.get().busy || ui.get().importing) return;
-  if (!(await checkResolution())) return;
+/** Render and save the PDF, reporting progress and problems in the UI. Resolves whether it was saved. */
+export async function savePdf(options: Pick<ExportOptions, 'per' | 'dpi' | 'printAt'>): Promise<boolean> {
+  if (ui.get().busy || ui.get().importing) return false;
   // What rendering ran into, for the notice after saving.
   const result = { previews: 0, missing: 0 };
+  let saved = false;
   try {
     const name = TERMS[projectStore.project.layout.kind].fileStem;
-    const saved = await platform.saveFile(`${name}-${new Date().toISOString().slice(0, 10)}.pdf`, async () => {
+    saved = await platform.saveFile(`${name}-${new Date().toISOString().slice(0, 10)}.pdf`, async () => {
       ui.set({ busy: 'Rendering PDF…' });
-      const out = await renderPdf((done, total) => ui.set({ busy: `Rendering PDF ${done} of ${total}…` }));
+      const out = await renderPdf(options, (done, total) => ui.set({ busy: `Rendering PDF ${done} of ${total}…` }));
       Object.assign(result, { previews: out.previews, missing: out.missing });
       return out.blob;
     });
@@ -143,4 +147,5 @@ export async function savePdf(): Promise<void> {
   } finally {
     ui.set({ busy: null });
   }
+  return saved;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Download,
   FilePlus,
@@ -25,6 +25,7 @@ import { FileMenu } from './components/FileMenu';
 import { useCommandItem, useExportItems } from './components/exportItems';
 import { LayoutEditor } from './components/LayoutEditor';
 import { PhotoImg } from './components/PhotoImg';
+import { ExportView } from './components/ExportView';
 import { Preview } from './components/Preview';
 import { QuickLook } from './components/QuickLook';
 import { SettingsDialog } from './components/SettingsDialog';
@@ -42,7 +43,6 @@ import { allSpreads, findSpread } from './spreads';
 import { TERMS } from './units';
 
 // Loaded when opened: it's the website's only (the Mac app doesn't post to Instagram).
-const InstagramPost = lazy(() => import('./components/InstagramPost').then((m) => ({ default: m.InstagramPost })));
 
 const NOTICE_MS = 6000;
 
@@ -204,11 +204,7 @@ export default function App() {
       {modal === 'about' && <AboutDialog />}
       {modal === 'preview' && <Preview />}
       {modal === 'layout' && <LayoutEditor />}
-      {modal === 'instagram' && (
-        <Suspense fallback={null}>
-          <InstagramPost />
-        </Suspense>
-      )}
+      {modal === 'export' && <ExportView />}
       <QuickLook />
       <Tour />
       <ConfirmDialog />

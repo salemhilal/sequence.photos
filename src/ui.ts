@@ -1,5 +1,6 @@
 import { applyDeskColor } from './deskColor';
 import type { DropTarget } from './drag';
+import type { Destination } from './exportOptions';
 import type { PhotoId, SpreadId } from './ids';
 import { deskColorPref, sidebarOpenPref, sidebarWidthPref, themePref } from './prefs';
 import { createStore } from './store';
@@ -45,7 +46,7 @@ export interface ConfirmRequest {
   choose: (index: number | null) => void;
 }
 
-export type Modal = 'settings' | 'about' | 'preview' | 'layout' | 'instagram';
+export type Modal = 'settings' | 'about' | 'preview' | 'layout' | 'export';
 
 /** The Layout view's tabs: the page's settings (applied together), or the guides (applied at once). */
 export type LayoutTab = 'page' | 'guides';
@@ -93,6 +94,8 @@ export interface UiState {
   layoutTab: LayoutTab;
   /** A photo for the spread editor to select when it opens ("Show me"), then cleared. */
   editorSelect: PhotoId | null;
+  /** Where the Export view exports to: the last one picked, for now (not saved). */
+  exportTo: Destination;
 }
 
 export const ui = createStore<UiState>({
@@ -121,6 +124,7 @@ export const ui = createStore<UiState>({
   tour: null,
   layoutTab: 'page',
   editorSelect: null,
+  exportTo: 'pdf',
 });
 
 /**

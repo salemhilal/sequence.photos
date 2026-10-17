@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useWindowEvent } from '../hooks';
 import { useInstagram } from '../instagram';
 import {
@@ -25,9 +25,10 @@ import { Segmented } from './Segmented';
 import { PageCanvas } from './SpreadCanvas';
 
 /**
- * File → Post to Instagram: the post's settings beside a preview of how it'll look on
- * Instagram (a feed post's carousel, or stories), and the choice of which pages or frames
- * to post. Posting is in instagramPost.ts; the images, in instagramImage.ts.
+ * The Export view's Instagram destination: a preview of how the post will look on
+ * Instagram (a feed post's carousel, or stories) beside its settings and the choice of
+ * which pages or frames to post. Posting is in instagramPost.ts; the images, in
+ * instagramImage.ts.
  */
 
 /** Thumbnails' height in the slide picker. */
@@ -57,7 +58,12 @@ function stepLabel(step: PostStep): string {
   }
 }
 
-export function InstagramPost() {
+interface Props {
+  /** What the panel starts with (the destination picker), told whether a post is under way. */
+  head: (posting: boolean) => ReactNode;
+}
+
+export function InstagramPost({ head }: Props) {
   const { project } = useProject();
   const connection = useInstagram();
   const sheet = sheetOf(project);
@@ -109,13 +115,6 @@ export function InstagramPost() {
           ? `Instagram allows up to ${LIMITS.hashtags} hashtags.`
           : null;
 
-  const close = () => {
-    if (!posting) closeModal();
-  };
-  useWindowEvent('keydown', (e) => {
-    if (e.key === 'Escape' && !(e.target instanceof HTMLTextAreaElement)) close();
-  });
-
   const post = () => {
     const controller = new AbortController();
     abort.current = controller;
@@ -145,159 +144,150 @@ export function InstagramPost() {
   };
 
   return (
-    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="modal editor instagram-post" data-modal>
-        <header className="modal-head">
-          <div className="modal-title">
-            <span className="folio">Post to Instagram</span>
-            {connection && <span className="muted data">@{connection.username}</span>}
+    <>
+      <PostPreview
+        slides={slides}
+        sheet={sheet}
+        layout={layout}
+        kind={kind}
+        username={connection?.username ?? ''}
+        caption={caption}
+      />
+      <aside className="inspector sectioned export-panel">
+        {head(posting)}
+        {connection && (
+          <section>
+            <h3>Account</h3>
+            <p className="data">@{connection.username}</p>
+          </section>
+        )}
+        <section>
+          <h3>Post as</h3>
+          <Segmented halves label="Post as" options={KINDS} value={kind} onChange={setKind} disabled={posting} />
+          <p className="help">
+            {kind === 'feed'
+              ? slides.length > 1
+                ? `A carousel of ${slides.length} slides.`
+                : 'A single image.'
+              : `${slides.length} ${slides.length === 1 ? 'story' : 'stories'}, one per slide.`}
+          </p>
+        </section>
+
+        {!fits(size, kind) && (
+          <section>
+            <h3>Size</h3>
+            <p className="help">
+              {kind === 'feed'
+                ? `These pages have an aspect ratio of ${ratioLabel(size.w / size.h)}. Instagram’s upload API only takes feed posts from ${ratioLabel(LIMITS.minRatio)} (tall) to ${ratioLabel(LIMITS.maxRatio)} (wide), even where the Instagram app takes others.`
+                : `These pages have an aspect ratio of ${ratioLabel(size.w / size.h)}, too tall for stories through Instagram’s upload API.`}
+            </p>
+            <Segmented
+              halves
+              label="Fit"
+              options={[
+                { value: 'crop', label: `Crop to ${ratioLabel(ratio)}` },
+                { value: 'expand', label: `Expand to ${ratioLabel(ratio)}` },
+              ]}
+              value={fit}
+              onChange={setFit}
+              disabled={posting}
+            />
+            <p className="help">
+              {fit === 'crop'
+                ? `Trims the ${tall ? 'top and bottom' : 'sides'} of each slide.`
+                : `Adds white margins at the ${tall ? 'sides' : 'top and bottom'}.`}
+            </p>
+          </section>
+        )}
+
+        <section>
+          <h3>Slides</h3>
+          {torn && (
+            <p className="help warn">
+              Spreads are posted as their pages: {all.length} slides. Photos across the gutter continue onto the next
+              slide.
+            </p>
+          )}
+          <div className="slide-picker">
+            {all.map((p, i) => {
+              const key = slideKey(p);
+              const on = chosen.has(key);
+              return (
+                <label key={key} className={`slide-pick${on ? ' on' : ''}`}>
+                  <PageCanvas page={p} sheet={sheet} scale={THUMB_H / sheet.pageH} />
+                  <span className="slide-pick-label">
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      disabled={posting || (!on && full)}
+                      onChange={(e) => toggle(key, e.target.checked)}
+                    />
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                </label>
+              );
+            })}
           </div>
-          <span className="spacer" />
-          <button className="btn ghost icon" aria-label="Close" onClick={close} disabled={posting}>
-            <X />
-          </button>
-        </header>
-        <div className="editor-body">
-          <PostPreview
-            slides={slides}
-            sheet={sheet}
-            layout={layout}
-            kind={kind}
-            username={connection?.username ?? ''}
-            caption={caption}
-          />
-          <aside className="inspector sectioned instagram-panel">
-            <section>
-              <h3>Post as</h3>
-              <Segmented halves label="Post as" options={KINDS} value={kind} onChange={setKind} disabled={posting} />
-              <p className="help">
-                {kind === 'feed'
-                  ? slides.length > 1
-                    ? `A carousel of ${slides.length} slides.`
-                    : 'A single image.'
-                  : `${slides.length} ${slides.length === 1 ? 'story' : 'stories'}, one per slide.`}
-              </p>
-            </section>
+          <p className={`help${full ? ' warn' : ''}`}>
+            {slides.length} of {LIMITS.maxItems} chosen.
+            {full && ` Instagram takes up to ${LIMITS.maxItems} at a time.`}
+          </p>
+        </section>
 
-            {!fits(size, kind) && (
-              <section>
-                <h3>Size</h3>
-                <p className="help">
-                  {kind === 'feed'
-                    ? `These pages have an aspect ratio of ${ratioLabel(size.w / size.h)}. Instagram’s upload API only takes feed posts from ${ratioLabel(LIMITS.minRatio)} (tall) to ${ratioLabel(LIMITS.maxRatio)} (wide), even where the Instagram app takes others.`
-                    : `These pages have an aspect ratio of ${ratioLabel(size.w / size.h)}, too tall for stories through Instagram’s upload API.`}
-                </p>
-                <Segmented
-                  halves
-                  label="Fit"
-                  options={[
-                    { value: 'crop', label: `Crop to ${ratioLabel(ratio)}` },
-                    { value: 'expand', label: `Expand to ${ratioLabel(ratio)}` },
-                  ]}
-                  value={fit}
-                  onChange={setFit}
-                  disabled={posting}
-                />
-                <p className="help">
-                  {fit === 'crop'
-                    ? `Trims the ${tall ? 'top and bottom' : 'sides'} of each slide.`
-                    : `Adds white margins at the ${tall ? 'sides' : 'top and bottom'}.`}
-                </p>
-              </section>
-            )}
+        {kind === 'feed' ? (
+          <section>
+            <h3>Caption</h3>
+            <textarea
+              className="text-area"
+              value={caption}
+              rows={6}
+              placeholder="Write a caption…"
+              disabled={posting}
+              onChange={(e) => setCaption(e.target.value)}
+            />
+            <p className={`help data${caption.length > LIMITS.captionLength || tags > LIMITS.hashtags ? ' warn' : ''}`}>
+              {caption.length.toLocaleString()} / {LIMITS.captionLength.toLocaleString()}
+              {tags > 0 && ` · ${tags} / ${LIMITS.hashtags} hashtags`}
+            </p>
+          </section>
+        ) : (
+          <section>
+            <p className="help">Stories don’t have captions.</p>
+          </section>
+        )}
 
-            <section>
-              <h3>Slides</h3>
-              {torn && (
-                <p className="help warn">
-                  Spreads are posted as their pages: {all.length} slides. Photos across the gutter continue onto the
-                  next slide.
-                </p>
+        <section className="export-actions">
+          {status.kind === 'done' ? (
+            <>
+              <p className="instagram-done">Posted to Instagram.</p>
+              {status.link && (
+                <a className="btn" href={status.link} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink />
+                  View on Instagram
+                </a>
               )}
-              <div className="slide-picker">
-                {all.map((p, i) => {
-                  const key = slideKey(p);
-                  const on = chosen.has(key);
-                  return (
-                    <label key={key} className={`slide-pick${on ? ' on' : ''}`}>
-                      <PageCanvas page={p} sheet={sheet} scale={THUMB_H / sheet.pageH} />
-                      <span className="slide-pick-label">
-                        <input
-                          type="checkbox"
-                          checked={on}
-                          disabled={posting || (!on && full)}
-                          onChange={(e) => toggle(key, e.target.checked)}
-                        />
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-              <p className={`help${full ? ' warn' : ''}`}>
-                {slides.length} of {LIMITS.maxItems} chosen.
-                {full && ` Instagram takes up to ${LIMITS.maxItems} at a time.`}
-              </p>
-            </section>
-
-            {kind === 'feed' ? (
-              <section>
-                <h3>Caption</h3>
-                <textarea
-                  className="text-area"
-                  value={caption}
-                  rows={6}
-                  placeholder="Write a caption…"
-                  disabled={posting}
-                  onChange={(e) => setCaption(e.target.value)}
-                />
-                <p
-                  className={`help data${caption.length > LIMITS.captionLength || tags > LIMITS.hashtags ? ' warn' : ''}`}
-                >
-                  {caption.length.toLocaleString()} / {LIMITS.captionLength.toLocaleString()}
-                  {tags > 0 && ` · ${tags} / ${LIMITS.hashtags} hashtags`}
-                </p>
-              </section>
-            ) : (
-              <section>
-                <p className="help">Stories don’t have captions.</p>
-              </section>
-            )}
-
-            <section className="instagram-actions">
-              {status.kind === 'done' ? (
-                <>
-                  <p className="instagram-done">Posted to Instagram.</p>
-                  {status.link && (
-                    <a className="btn" href={status.link} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink />
-                      View on Instagram
-                    </a>
-                  )}
-                  <button className="btn ghost" onClick={closeModal}>
-                    Done
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button className="btn primary" disabled={posting || problem !== null} onClick={post}>
-                    {posting ? 'Posting…' : 'Post to Instagram'}
-                  </button>
-                  {cancellable && (
-                    <button className="btn ghost" onClick={() => abort.current?.abort()}>
-                      Cancel
-                    </button>
-                  )}
-                  {posting && <p className="help">{stepLabel(status.step)}</p>}
-                  {status.kind === 'failed' && <p className="help warn">{status.message}</p>}
-                  {problem && !posting && <p className="help warn">{problem}</p>}
-                </>
+              <button className="btn ghost" onClick={closeModal}>
+                Done
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn primary" disabled={posting || problem !== null} onClick={post}>
+                {posting ? 'Posting…' : 'Post to Instagram'}
+              </button>
+              {cancellable && (
+                <button className="btn ghost" onClick={() => abort.current?.abort()}>
+                  Cancel
+                </button>
               )}
-            </section>
-          </aside>
-        </div>
-      </div>
-    </div>
+              {posting && <p className="help">{stepLabel(status.step)}</p>}
+              {status.kind === 'failed' && <p className="help warn">{status.message}</p>}
+              {problem && !posting && <p className="help warn">{problem}</p>}
+            </>
+          )}
+        </section>
+      </aside>
+    </>
   );
 }
 
