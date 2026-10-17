@@ -7,8 +7,9 @@ export function AboutDialog() {
   return (
     <Dialog title="About" label="About Sequence" onClose={closeModal} className="about">
       <div className="about-body">
-        <span className="wordmark">SEQUENCE</span>
-        <h2 className="about-name">Sequence</h2>
+        <h2 className="wordmark" aria-label="Sequence">
+          SEQUENCE
+        </h2>
         <p className="about-version data muted">Version {__APP_VERSION__}</p>
         <p className="about-tagline">A tool for playing with photo sequences.</p>
         <div className="about-links">
