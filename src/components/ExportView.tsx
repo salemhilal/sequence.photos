@@ -1,5 +1,5 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, FileText, Images, Info, Package, Send, TriangleAlert, X } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight, FileText, Images, Info, Package, TriangleAlert, X } from 'lucide-react';
 import {
   converts,
   defaultOptions,
@@ -13,7 +13,7 @@ import {
 import { useElementSize, usePager, useWindowEvent } from '../hooks';
 import { exportIndesign } from '../indesign';
 import { savePdf } from '../pdf';
-import { exportImages, imageNames } from '../rasterExport';
+import { estimateImagesSize, exportImages, imageNames } from '../rasterExport';
 import { outputPages, pageRegion, type OutputPage } from '../renderPlan';
 import { showPhoto, softPhotos, softSentence } from '../resolution';
 import { sheetOf } from '../spreads';
@@ -39,7 +39,7 @@ const LOOKS: Record<Destination, { label: string; icon: ReactNode }> = {
   pdf: { label: 'PDF', icon: <FileText /> },
   images: { label: 'Images', icon: <Images /> },
   indesign: { label: 'InDesign', icon: <Package /> },
-  instagram: { label: 'Instagram', icon: <Send /> },
+  instagram: { label: 'Instagram', icon: <InstagramGlyph /> },
 };
 
 /** The options last chosen, kept while the app is open. */
@@ -69,7 +69,7 @@ export function ExportView() {
   const set = (o: Partial<ExportOptions>) =>
     setOptions((was) => {
       const next = { ...was, ...o };
-      remembered = { per: next.per, format: next.format, printAt: next.printAt };
+      remembered = { per: next.per, format: next.format, quality: next.quality, printAt: next.printAt };
       return next;
     });
   const busy = ui.use((s) => s.busy);
@@ -162,6 +162,8 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
   const converting = converts(to, sheet);
   const maxDpi = sheet.unit === 'in' ? sheet.pxPerUnit : 1;
   const setDpi = (n: number) => set({ dpi: Math.min(maxDpi, Math.max(1, Math.round(n))) });
+
+  const estimate = useImagesEstimate(to === 'images', project, per, options.format, options.quality, pxPerUnit);
 
   const run = async () => {
     const saved =
@@ -266,12 +268,33 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
               onChange={(format) => set({ format })}
               disabled={busy !== null}
             />
+            {options.format === 'jpeg' ? (
+              <label className="export-quality">
+                <span>Quality</span>
+                <input
+                  type="range"
+                  min={50}
+                  max={100}
+                  step={1}
+                  value={Math.round(options.quality * 100)}
+                  disabled={busy !== null}
+                  onChange={(e) => set({ quality: e.target.valueAsNumber / 100 })}
+                />
+                <span className="data">{Math.round(options.quality * 100)}%</span>
+              </label>
+            ) : (
+              <p className="help">Lossless, so larger.</p>
+            )}
             <p className="help">
               Saved as a ZIP:{' '}
               {imageNames(project, pages, options.format === 'png' ? 'png' : 'jpg')
                 .slice(0, 2)
                 .join(', ')}
               {pages.length > 2 ? ', …' : ''}
+            </p>
+            <p className="help data">
+              {pages.length} {pages.length === 1 ? 'image' : 'images'}
+              {estimate !== null && `, ~${formatBytes(estimate)} total`}
             </p>
           </section>
         )}
@@ -302,6 +325,61 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
         </section>
       </aside>
     </>
+  );
+}
+
+/** The images' total size, estimated a moment after the settings settle (null until then). */
+function useImagesEstimate(
+  active: boolean,
+  project: Project,
+  per: Per,
+  format: ExportOptions['format'],
+  quality: number,
+  pxPerUnit: number,
+): number | null {
+  const [estimate, setEstimate] = useState<{ key: string; bytes: number } | null>(null);
+  const key = JSON.stringify([per, format, quality, pxPerUnit]);
+  useEffect(() => {
+    if (!active) return;
+    let stale = false;
+    const timer = window.setTimeout(() => {
+      const pages = outputPages(project, perOf(project, { per }));
+      void estimateImagesSize(pages, project, { format, quality, pxPerUnit })
+        .then((bytes) => !stale && setEstimate({ key, bytes }))
+        .catch(() => undefined);
+    }, 400);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [active, project, key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return estimate?.key === key ? estimate.bytes : null;
+}
+
+/** "980 KB", "12 MB", "1.4 GB". */
+function formatBytes(n: number): string {
+  if (n < 1e6) return `${Math.max(1, Math.round(n / 1e3))} KB`;
+  if (n < 1e9) return `${Math.round(n / 1e6)} MB`;
+  return `${(n / 1e9).toFixed(1)} GB`;
+}
+
+/** Instagram's glyph (a rounded square, a lens, a flash), drawn like the other icons. */
+function InstagramGlyph() {
+  return (
+    <svg
+      className="lucide"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" />
+    </svg>
   );
 }
 

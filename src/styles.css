@@ -2495,3 +2495,13 @@ body.col-resizing * {
   padding: 12px 14px;
   border-top: 1px solid var(--border);
 }
+.export-quality {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.export-quality input {
+  flex: 1;
+  accent-color: var(--accent);
+}

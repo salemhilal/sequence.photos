@@ -8,7 +8,7 @@ const pixels = { arrangement: 'frames', unit: 'px', pxPerUnit: 1 } as const;
 
 describe('export options', () => {
   it('start per spread for spreads, at the page’s resolution, printing pixels at 300', () => {
-    expect(defaultOptions(inches)).toEqual({ per: 'spread', format: 'jpeg', dpi: null, printAt: 300 });
+    expect(defaultOptions(inches)).toEqual({ per: 'spread', format: 'jpeg', quality: 0.92, dpi: null, printAt: 300 });
     expect(defaultOptions(pixels)).toMatchObject({ per: 'page', dpi: null });
     // Null follows the page: its dpi in inches, one a pixel in pixels.
     expect(exportPxPerUnit('images', inches, defaultOptions(inches))).toBe(300);
