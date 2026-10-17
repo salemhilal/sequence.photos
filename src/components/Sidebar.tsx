@@ -38,13 +38,23 @@ const GRID_PAD_X = 24;
  * whole width, not its content's: the grid's padding differs, and measuring inside it would
  * flip between one column and two at some widths.
  */
-function listLayout(listWidth: number, arrangement: Arrangement, wanted: number): { cols: number; thumbW: number } {
+function listLayout(
+  listWidth: number,
+  arrangement: Arrangement,
+  wanted: number,
+): { cols: number; fit: number; thumbW: number } {
   const inGrid = listWidth - 2 * GRID_PAD_X;
-  const fit = Math.floor((inGrid + GRID_GAP_X) / (MIN_THUMB[arrangement] + ROW_PAD_X + GRID_GAP_X));
+  const fit = Math.max(
+    1,
+    Math.min(
+      SIDEBAR_MAX_COLUMNS,
+      Math.floor((inGrid + GRID_GAP_X) / (MIN_THUMB[arrangement] + ROW_PAD_X + GRID_GAP_X)),
+    ),
+  );
   const cols = Math.max(1, Math.min(wanted, fit));
   const contentWidth = cols > 1 ? inGrid : listWidth - 2 * LIST_PAD_X;
   const cellW = (contentWidth - GRID_GAP_X * (cols - 1)) / cols;
-  return { cols, thumbW: Math.max(MIN_THUMB[arrangement], cellW - ROW_PAD_X) };
+  return { cols, fit, thumbW: Math.max(MIN_THUMB[arrangement], cellW - ROW_PAD_X) };
 }
 
 export function Sidebar() {
@@ -66,7 +76,7 @@ export function Sidebar() {
   const preferredWidth = ui.use((s) => s.sidebarWidth);
   const width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(preferredWidth, window.innerWidth - MIN_DESK_WIDTH));
   const [listWidth, setListWidth] = useState(width);
-  const { cols, thumbW } = listLayout(listWidth, sheet.arrangement, columns);
+  const { cols, fit, thumbW } = listLayout(listWidth, sheet.arrangement, columns);
   const grid = cols > 1;
 
   useLayoutEffect(() => {
@@ -199,23 +209,20 @@ export function Sidebar() {
           <Plus />
         </button>
         <span className="spacer" />
-        <input
-          className="columns-slider"
-          type="range"
-          min={1}
-          max={SIDEBAR_MAX_COLUMNS}
-          step={1}
-          list="sidebar-columns"
-          value={columns}
-          aria-label="Columns"
-          data-tip={`${columns} ${columns === 1 ? 'column' : 'columns'}`}
-          onChange={(e) => pickColumns(e.target.valueAsNumber)}
-        />
-        <datalist id="sidebar-columns">
-          {Array.from({ length: SIDEBAR_MAX_COLUMNS }, (_, i) => (
-            <option key={i} value={i + 1} />
-          ))}
-        </datalist>
+        {/* Only as many columns as fit: none to choose from when one is all that fits. */}
+        {fit > 1 && (
+          <input
+            className="columns-slider"
+            type="range"
+            min={1}
+            max={fit}
+            step={1}
+            value={cols}
+            aria-label="Columns"
+            data-tip={`${cols} ${cols === 1 ? 'column' : 'columns'}`}
+            onChange={(e) => pickColumns(e.target.valueAsNumber)}
+          />
+        )}
       </div>
       <div
         className={`sidebar-list${grid ? ' grid' : ''}`}

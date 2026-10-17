@@ -2521,10 +2521,42 @@ body.col-resizing * {
   accent-color: var(--accent);
 }
 
-/* The sidebar's column count, in its header. */
+/* The sidebar's column count, in its header: a slim track with a pill that sits inside it. */
 .columns-slider {
-  width: 64px;
-  accent-color: var(--accent);
+  appearance: none;
+  width: 52px;
+  height: 12px;
+  margin: 0;
+  padding: 0 1px;
+  border-radius: 999px;
+  background: var(--fill);
+  box-shadow: inset 0 0 0 1px var(--border);
+  cursor: pointer;
+}
+.columns-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--muted);
+}
+.columns-slider::-moz-range-thumb {
+  width: 16px;
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--muted);
+}
+.columns-slider:hover::-webkit-slider-thumb {
+  background: var(--text);
+}
+.columns-slider:hover::-moz-range-thumb {
+  background: var(--text);
+}
+.columns-slider:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 /* How many spreads (or frames) there are, shown at the sidebar's foot while scrolling. */
 .sidebar-count {
