@@ -63,6 +63,13 @@ export const sidebarWidthPref = createPref('photobook-sidebar-width', SIDEBAR_DE
   return Number.isFinite(n) && n >= SIDEBAR_MIN_WIDTH ? n : undefined;
 });
 
+/** How many columns of spreads (or frames) the sidebar shows, as many as fit (1 to 4). */
+export const SIDEBAR_MAX_COLUMNS = 4;
+export const sidebarColumnsPref = createPref('photobook-sidebar-columns', 1, (raw) => {
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 1 && n <= SIDEBAR_MAX_COLUMNS ? n : undefined;
+});
+
 /** Which of the Layout panel's sections are folded away. */
 export const collapsedPref = createPref<string[]>(
   'photobook-layout-collapsed',

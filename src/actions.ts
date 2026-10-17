@@ -2,7 +2,7 @@ import type { Draft } from 'immer';
 import { getImage, putImage, type StoredImage } from './db';
 import { importFiles, setUrl } from './images';
 import { newPhotoId, newSpreadId, type PhotoId, type SpreadId } from './ids';
-import { allSpreads, findSpread, frameIndex, middleIndex, sheetOf } from './spreads';
+import { allSpreads, findSpread, frameIndex, hasFrames, middleIndex, sheetOf } from './spreads';
 import { projectStore } from './store';
 import { dropBox, fitCentered, pageRect, pileSize } from './geometry';
 import type { DropTarget } from './drag';
@@ -211,7 +211,9 @@ export function freeSpot(
   const gap = DESK_GAP * Math.max(size.w, size.h);
   const step = { x: size.w + gap, y: size.h + gap };
   const clear = (x: number, y: number) =>
-    pile.every((p) => x + size.w + gap <= p.x || p.x + p.w + gap <= x || y + size.h + gap <= p.y || p.y + p.h + gap <= y);
+    pile.every(
+      (p) => x + size.w + gap <= p.x || p.x + p.w + gap <= x || y + size.h + gap <= p.y || p.y + p.h + gap <= y,
+    );
   const origin = { x: near.x - size.w / 2, y: near.y - size.h / 2 };
   for (let ring = 0; ring <= 40; ring++) {
     let best: { x: number; y: number; d: number } | null = null;
@@ -349,20 +351,33 @@ export function insertSpread(index: number): void {
  * Delete a spread, returning its photos to the desk: a book's middle spread (the first and
  * last aren't in that list, so can't be), or any frame but a sequence's only one.
  */
-export function deleteSpread(spreadId: SpreadId): void {
+/** Whether a spread can move or be deleted: a book's middle spreads, and any frame. */
+export function isMovable(spread: Pick<Spread, 'kind'>): boolean {
+  return spread.kind === 'middle' || spread.kind === 'frame';
+}
+
+/**
+ * Delete spreads (or frames) as one undo step, their photos back on the desk in a small
+ * grid in the middle of the view. A book's first and last spreads stay, and so does a
+ * sequence's last frame.
+ */
+export function deleteSpreads(spreadIds: readonly SpreadId[]): void {
+  const doomed = new Set(spreadIds);
   projectStore.apply((d) => {
     const l = d.layout;
-    let spread: Draft<Spread> | undefined;
+    const removed: Draft<Spread>[] = [];
     if (l.kind === 'spreads') {
-      const idx = l.spreads.findIndex((s) => s.id === spreadId);
-      if (idx >= 0) spread = l.spreads.splice(idx, 1)[0];
+      removed.push(...l.spreads.filter((s) => doomed.has(s.id)));
+      l.spreads = l.spreads.filter((s) => !doomed.has(s.id));
     } else {
-      const idx = l.frames.findIndex((s) => s.id === spreadId);
-      if (idx >= 0 && l.frames.length > 1) spread = l.frames.splice(idx, 1)[0];
+      // A sequence keeps at least one frame: its first, if all were asked for.
+      const kept = l.frames.filter((s) => !doomed.has(s.id));
+      const next = hasFrames(kept) ? kept : ([l.frames[0]] as const);
+      removed.push(...l.frames.filter((s) => !next.includes(s)));
+      l.frames = [...next];
     }
-    if (!spread) return;
     // Back on the desk in a small grid in the middle of the view.
-    const ids = spread.items.map((i) => i.photoId);
+    const ids = removed.flatMap((s) => s.items.map((i) => i.photoId));
     const sizes = ids.flatMap((id) => {
       const photo = d.photos[id];
       return photo ? [pileSize(photo)] : [];
@@ -376,23 +391,45 @@ export function deleteSpread(spreadId: SpreadId): void {
       if (box) putInPile(d, id, { x: box.x + box.w / 2, y: box.y + box.h / 2 });
     });
   });
-  if (ui.get().editingSpreadId === spreadId) ui.set({ editingSpreadId: null });
+  const editing = ui.get().editingSpreadId;
+  if (editing && !findSpread(projectStore.project, editing)) ui.set({ editingSpreadId: null });
+  ui.set((u) => ({ spreadSelection: u.spreadSelection.filter((id) => findSpread(projectStore.project, id)) }));
+}
+
+export function deleteSpread(spreadId: SpreadId): void {
+  deleteSpreads([spreadId]);
+}
+
+/**
+ * Move spreads (or frames) together, keeping their order, to just before position
+ * `dropIndex` in the whole run (counted before they're taken out). A book's first and
+ * last spreads don't move, and nothing goes before the first or after the last.
+ */
+export function moveSpreads(spreadIds: readonly SpreadId[], dropIndex: number): void {
+  const moving = new Set(spreadIds);
+  /** The run with the moving ones taken out and put back together at `at` (in the run). */
+  const reorder = <T extends { id: SpreadId }>(run: T[], at: number): T[] => {
+    const i = Math.max(0, Math.min(run.length, at));
+    const stays = (s: T) => !moving.has(s.id);
+    return [...run.slice(0, i).filter(stays), ...run.filter((s) => moving.has(s.id)), ...run.slice(i).filter(stays)];
+  };
+  projectStore.apply((d) => {
+    const l = d.layout;
+    // A book's middle spreads start at position 1 in the whole run.
+    if (l.kind === 'spreads') l.spreads = reorder(l.spreads, dropIndex - 1);
+    else {
+      const next = reorder(l.frames, dropIndex);
+      if (hasFrames(next)) l.frames = next;
+    }
+  });
 }
 
 /** Move a book's middle spread, or a frame, to position `toIndex` (counted after its removal). */
 export function moveSpread(spreadId: SpreadId, toIndex: number): void {
-  projectStore.apply((d) => {
-    const l = d.layout;
-    if (l.kind === 'spreads') {
-      const from = l.spreads.findIndex((s) => s.id === spreadId);
-      const [spread] = from >= 0 ? l.spreads.splice(from, 1) : [];
-      if (spread) l.spreads.splice(middleIndex(l.spreads, toIndex), 0, spread);
-    } else {
-      const from = l.frames.findIndex((s) => s.id === spreadId);
-      const [frame] = from >= 0 ? l.frames.splice(from, 1) : [];
-      if (frame) l.frames.splice(frameIndex(l.frames, toIndex), 0, frame);
-    }
-  });
+  const all = allSpreads(projectStore.project);
+  const from = all.findIndex((s) => s.id === spreadId);
+  // As a drop index (before removal): one further along when moving later.
+  moveSpreads([spreadId], from >= 0 && toIndex >= from ? toIndex + 1 : toIndex);
 }
 
 /**

@@ -47,7 +47,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Drop a `.photo-sequence` file: "Drop to open project", then it opens after a confirm.
 - [ ] Paste an image copied in another app (⌘V): added as "Pasted image HH.MM.png".
 - [ ] Scroll or Space-drag pans; pinch or ⌘-scroll zooms around the cursor; the zoom buttons
-      zoom around the center; clicking the percentage resets to 100%.
+      zoom around the center; the middle one (no percentage) zooms to show every photo.
 - [ ] Click selects; Shift- or ⌘-click adds or removes; drag on empty desk to marquee-select;
       clicking empty desk clears.
 - [ ] Dragging selected photos moves them together and brings them forward; one ⌘Z undoes it.
@@ -62,13 +62,15 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       swatches change it at once.
 - [ ] Right-click a photo: Quick Look, Copy image, Duplicate, Return to desk (placed photos),
       Delete ("Deleted … Undo to bring it back").
-- [ ] With every photo placed: "Every photo is placed". The status bar's "N on desk · M placed"
-      stays right.
+- [ ] With every photo placed: "Every photo is placed". The toolbar shows no counts, only
+      progress while importing or exporting.
 
 ## Sidebar (spreads and frames)
 
-- [ ] **[S≠F]** Heading and count: "Spreads" and "N pages" [S]; "Frames" and "N frames" [F],
-      and "1 frame" for one.
+- [ ] **[S≠F]** Heading "Spreads" [S] or "Frames" [F]. Scrolling the list shows "N pages" [S] /
+      "N frames" [F] ("1 frame" for one) at its foot, gone a second after scrolling stops.
+- [ ] One column to start; the header's slider sets 1–4 columns (as many as fit), and it
+      survives a reload.
 - [ ] **[S≠F]** Labels: 01, 02–03, …, the last single page [S]; 01, 02, 03… [F].
 - [ ] **[S]** The first and last spreads have a locked grip ("The first and last pages stay in
       place") and no delete button.
@@ -76,9 +78,15 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] **[S≠F]** The header's +: a spread before the back page [S]; a frame at the end [F].
 - [ ] Hover a gap and click "+ Add spread" / "+ Add frame": a new empty one appears there.
       **[F]** There are gaps before the first frame and after the last.
-- [ ] Drag a row's header to reorder: the gap lights up and the row moves on release. **[S]**
-      Not before the first or after the last spread. **[F]** To the very start or end works.
-- [ ] Click a row: the editor opens on it, and the row is highlighted.
+- [ ] Click a row: selected (outlined). ⌘-click (Ctrl elsewhere) adds or removes one;
+      Shift-click selects a range. Clicking between rows, Escape, or selecting desk photos lets
+      the selection go (and selecting rows lets the desk's go).
+- [ ] Double-click a row, or hover it and click its pencil: the editor opens on it.
+- [ ] Drag a row: it moves with the rest of the selection, in order, to the lit gap (dragging
+      an unselected row moves it alone). **[S]** Not before the first or after the last spread;
+      those two don't move. **[F]** To the very start or end works. One ⌘Z undoes it.
+- [ ] Delete (or Backspace) deletes the selected rows in one undo step, photos back to the
+      desk. **[S]** The first and last spreads stay. **[F]** At least one frame stays.
 - [ ] A row's ×: deleted, its photos go back to the desk; if it was open, the editor closes.
 - [ ] Drag desk photos onto a thumbnail: **[S]** onto the left or right page (highlighted);
       **[F]** onto the frame. They fit the On drop guide, centered.
@@ -87,9 +95,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       lands where dropped.
 - [ ] Drag a photo a little and drop it back on its own page or frame: it stays exactly as it
       was.
-- [ ] Widen the sidebar from its edge: between one column and a grid with no flicker at any
-      width; double-click resets; the width survives a reload. **[F]** One column at the
-      narrowest, two at the default width.
+- [ ] Widen the sidebar from its edge: thumbnails grow, columns drop when they no longer fit;
+      double-click resets; the width survives a reload.
 - [ ] ⌘B hides and shows it, and that survives a reload.
 
 ## Spread and frame editor
@@ -129,7 +136,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 - [ ] Opens from the toolbar's Layout button (Mac: View → Layout…). Escape, ×, or the
       backdrop close it, including right after clicking a toggle or a checkbox.
-- [ ] Two tabs, Page and Guides; the tab is kept while the app is open.
+- [ ] Two tabs (underlined, like Settings'), Page and Guides; the tab is kept while the app is
+      open.
 
 ### Page tab
 
@@ -139,8 +147,11 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       switching. Revert drops the draft. The draft survives switching to Guides and back.
       Closing Layout (Escape, ×, or outside it) with changes waiting asks: Cancel, Discard, or
       Apply.
-- [ ] With changes waiting, the Guides tab says to apply or revert them first (Apply and
-      Revert there work), and its stage shows the preview.
+- [ ] With changes waiting, the Guides tab asks first, as closing does: Cancel stays on Page,
+      Discard drops them, Apply applies them, then Guides opens.
+- [ ] The pager says only "1 / 6". Apply and Revert stay at the panel's foot while the settings
+      above scroll (a short window).
+- [ ] The swap button between W and H swaps them (in the draft).
 - [ ] **[S→F]** Frames, Apply: each page becomes a frame in book order (a photo across the
       gutter goes with the page holding its center), same size and unit. One ⌘Z undoes it.
 - [ ] **[F→S]** Switching straight back restores the book exactly. After editing: frame 1 is
@@ -151,7 +162,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       changing the dpi changes the size, until the size is edited.
 - [ ] Content is enabled only when the size changes beyond converting. Rescale with layout:
       photos move and scale with the guides (book → Instagram 4:5 gives 54 px margins).
-      Keep fixed: photos keep their converted size and place.
+      Keep fixed: photos keep their converted size and place, relative to (a choice under it)
+      each page's Center or Top left, or **[S]** Inside edge (the default for spreads; Top left
+      for frames).
 - [ ] Presets (Book, Zine, Square book, Slides, the Instagram sizes) set Pages, unit, and size
       at once; a custom size shows "Custom". Apply is one undo step.
 - [ ] **[in]** Changing only the dpi moves nothing.
@@ -164,8 +177,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 - [ ] Center lines: Vertical and Horizontal show or hide the magenta lines here and in the
       editor.
-- [ ] Border guides: + adds one further in; linked values change all four; unlinking allows
-      per-edge values; relinking takes the top's. **[S≠F]** Edges are Inside/Outside, mirrored
+- [ ] Border guides: + adds one further in; linked, only Top can be edited and it sets all
+      four; unlinking allows per-edge values; relinking takes the top's. **[S≠F]** Edges are Inside/Outside, mirrored
       on facing pages [S], or Left/Right [F].
 - [ ] On drop picks the guide dropped photos fit; removing it falls back to the largest; ×
       removes a guide; values can't push the box off the page.
@@ -175,6 +188,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       the left [F]. Long px labels turn to fit.
 - [ ] The Guides section's buttons add a guide at a third; its field moves it (whole px **[px]**).
 - [ ] Sections fold by their titles; folding survives a reload.
+- [ ] No hint in the title bar. The note at the panel's foot starts "Guides apply to every
+      spread/frame" and ends "Drag a guide off the page/frame to remove it.
 
 ## Preview
 
@@ -205,6 +220,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Photos below the export's resolution: "N photos are below 300 dpi." (or "are
       enlarged") above the button, with Show me opening the first in the editor, selected.
       Lowering the dpi updates it.
+- [ ] Instagram shows Instagram's glyph. **[F]** Images has no "One image per" choice.
+- [ ] Images: JPEG has a Quality slider (50–100%, 92% to start); PNG says it's lossless. Under
+      it, "N images, ~X MB total", updating a moment after a change.
 - [ ] The button names the result (Export PDF, Export N images, Export for InDesign) and shows
       the progress while exporting; once saved, the view closes. Cancelling the save keeps it.
 - [ ] PDF: at true size, single first and last pages **[S]**, photos cropped at the edges, no
@@ -234,6 +252,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Settings
 
+- [ ] Tooltips show after a second's hover; moving straight to another shows its tip at once.
 - [ ] ⌘, opens on General; Advanced shows Server and Test images; tabs switch.
 - [ ] Advanced → Test images: a count (1–50, 6 to start) and Add test images. It closes
       Settings, says "Making test images…", then imports like Add photos: "Gradient 01.jpg"…

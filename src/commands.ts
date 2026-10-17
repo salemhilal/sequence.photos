@@ -1,7 +1,7 @@
 import type { PhotoId } from './ids';
 import { useEffect } from 'react';
 import type { Platform } from './platform/types';
-import { deleteFromProject, importPhotos } from './actions';
+import { deleteFromProject, deleteSpreads, importPhotos } from './actions';
 import { copyPhotos, duplicateAndSelect } from './clipboard';
 import { hasMod, isMac, isTextField, isTyping, MOD_LABEL } from './input';
 import { platform } from '#platform';
@@ -181,9 +181,18 @@ export const commands = {
     title: 'Delete',
     bindings: [{ key: 'delete' }, { key: 'backspace' }],
     scope: 'desk',
-    run: withSelection((ids) => deleteFromProject(ids)),
+    // Spreads selected in the sidebar, else photos on the desk.
+    run: () => {
+      const spreads = ui.get().spreadSelection;
+      if (spreads.length) return deleteSpreads(spreads);
+      return withSelection((ids) => deleteFromProject(ids))();
+    },
   },
-  clearSelection: { bindings: [{ key: 'escape' }], scope: 'desk', run: () => ui.set({ selection: [] }) },
+  clearSelection: {
+    bindings: [{ key: 'escape' }],
+    scope: 'desk',
+    run: () => ui.set({ selection: [], spreadSelection: [] }),
+  },
   nudge: {
     bindings: ['arrowleft', 'arrowright', 'arrowup', 'arrowdown'].map((key) => ({ key, shift: 'any' as const })),
     scope: 'desk',

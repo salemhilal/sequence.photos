@@ -96,6 +96,11 @@ export interface UiState {
   editorSelect: PhotoId | null;
   /** Where the Export view exports to: the last one picked, for now (not saved); null till then. */
   exportTo: Destination | null;
+  /**
+   * Spreads (or frames) selected in the sidebar, to delete or move together. Selecting
+   * them clears the desk's selection, and the other way around.
+   */
+  spreadSelection: SpreadId[];
 }
 
 export const ui = createStore<UiState>({
@@ -125,6 +130,17 @@ export const ui = createStore<UiState>({
   layoutTab: 'page',
   editorSelect: null,
   exportTo: null,
+  spreadSelection: [],
+});
+
+// One selection at a time: photos on the desk, or spreads in the sidebar.
+let selected = { photos: ui.get().selection, spreads: ui.get().spreadSelection };
+ui.subscribe(() => {
+  const { selection, spreadSelection } = ui.get();
+  if (selection !== selected.photos && selection.length && spreadSelection.length) ui.set({ spreadSelection: [] });
+  else if (spreadSelection !== selected.spreads && spreadSelection.length && selection.length)
+    ui.set({ selection: [] });
+  selected = { photos: ui.get().selection, spreads: ui.get().spreadSelection };
 });
 
 /**

@@ -935,13 +935,15 @@ body.col-resizing * {
 .grip.locked {
   visibility: hidden;
 }
-.spread-row-head.draggable {
-  cursor: grab;
+/* The whole row drags (a movable spread), with the rest of the selection. */
+.spread-row.draggable {
   touch-action: none;
 }
-.spread-row-head.draggable:active {
-  cursor: grabbing;
+.spread-row.selected .thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
+.row-edit,
 .row-delete {
   display: inline-flex;
   margin-left: auto;
@@ -953,12 +955,25 @@ body.col-resizing * {
   opacity: 0;
   padding: 0 4px;
 }
+.spread-row:hover .row-edit,
+.row-edit:focus-visible,
 .spread-row:hover .row-delete,
 .row-delete:focus-visible {
   opacity: 1;
 }
+.row-edit:hover,
 .row-delete:hover {
   color: var(--text);
+}
+.row-edit {
+  margin-left: 0;
+}
+.row-edit .lucide {
+  width: 13px;
+  height: 13px;
+}
+.row-edit + .row-delete {
+  margin-left: 0;
 }
 .spread-row-head .muted {
   margin-left: auto;
@@ -2504,4 +2519,28 @@ body.col-resizing * {
 .export-quality input {
   flex: 1;
   accent-color: var(--accent);
+}
+
+/* The sidebar's column count, in its header. */
+.columns-slider {
+  width: 64px;
+  accent-color: var(--accent);
+}
+/* How many spreads (or frames) there are, shown at the sidebar's foot while scrolling. */
+.sidebar-count {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font: 11px var(--mono);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+.sidebar-count.on {
+  opacity: 0.9;
 }

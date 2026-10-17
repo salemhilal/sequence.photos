@@ -6,10 +6,12 @@ import {
   folioLabel,
   deleteFromProject,
   deleteSpread,
+  deleteSpreads,
   dropPhotos,
   insertSpread,
   locate,
   moveSpread,
+  moveSpreads,
   putInPile,
   putOnNewSpread,
   raise,
@@ -380,5 +382,40 @@ describe('freeSpot', () => {
     expect(overlaps({ ...spot, ...size }, pile[0]!)).toBe(false);
     // Next to it, not far away.
     expect(Math.hypot(spot.x - 9, spot.y - 8.5)).toBeLessThan(5);
+  });
+});
+
+describe('several spreads at once', () => {
+  beforeEach(() => projectStore.reset(emptyProject())); // four spreads: first, two middle, last
+
+  it('move together, in order, to the drop point', () => {
+    const [first, a, b, last] = book().map((s) => s.id);
+    // Both middles to the end of the middles (before the last page).
+    moveSpreads([b!, a!], 3);
+    expect(book().map((s) => s.id)).toEqual([first, a, b, last]);
+    // The second middle before the first.
+    moveSpreads([b!], 1);
+    expect(book().map((s) => s.id)).toEqual([first, b, a, last]);
+  });
+
+  it('leave a book’s first and last spreads where they are', () => {
+    const [first, a, b, last] = book().map((s) => s.id);
+    moveSpreads([first!, last!, a!], 0);
+    expect(book().map((s) => s.id)).toEqual([first, a, b, last]);
+  });
+
+  it('delete together as one undo step, keeping the first and last spreads', () => {
+    const ids = book().map((s) => s.id);
+    deleteSpreads(ids);
+    expect(book().map((s) => s.kind)).toEqual(['first', 'last']);
+    projectStore.undo();
+    expect(book().map((s) => s.id)).toEqual(ids);
+  });
+
+  it('keep at least one frame', () => {
+    applyPageSetup({ ...draftOf(project()), arrangement: 'frames' });
+    const ids = book().map((s) => s.id);
+    deleteSpreads(ids);
+    expect(book().map((s) => s.id)).toEqual([ids[0]]);
   });
 });
