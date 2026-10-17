@@ -30,6 +30,7 @@ export function AboutDialog() {
           </a>
         </div>
         <p className="about-copyright data muted">© {new Date().getFullYear()} Salem Hilal</p>
+        <p className="about-copyright data muted">Sample photos © Salem Hilal</p>
       </div>
     </Dialog>
   );
