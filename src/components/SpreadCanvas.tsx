@@ -9,6 +9,7 @@ import {
   spreadWidth,
   type SnapFeedback,
 } from '../geometry';
+import { pageRegion, type OutputPage } from '../renderPlan';
 import type { Placement, Sheet, Spread } from '../types';
 import { ui } from '../ui';
 import { PhotoImg } from './PhotoImg';
@@ -16,7 +17,7 @@ import { PhotoImg } from './PhotoImg';
 interface Props {
   spread: Spread;
   sheet: Sheet;
-  /** Screen pixels per unit (an inch in print, a pixel in digital). */
+  /** Screen pixels per unit (an inch, or a pixel). */
   scale: number;
   /** Margin around the spread, in its units, where off-page photo edges remain visible. */
   pad?: number;
@@ -171,4 +172,17 @@ export function SpreadCanvas({
 
 function round(n: number): number {
   return Math.round(n * 1e6) / 1e6;
+}
+
+/** One page of a spread (or a frame), clipped to that page, as a slide or a thumbnail. */
+export function PageCanvas({ page, sheet, scale }: { page: OutputPage; sheet: Sheet; scale: number }) {
+  const region = pageRegion(page, sheet);
+  const extent = sheetExtent(sheet);
+  return (
+    <div className="page-canvas" style={{ width: region.w * scale, height: region.h * scale }}>
+      <div style={{ position: 'absolute', left: (extent.left - region.x) * scale, top: 0 }}>
+        <SpreadCanvas spread={page.spread} sheet={sheet} scale={scale} clip />
+      </div>
+    </div>
+  );
 }

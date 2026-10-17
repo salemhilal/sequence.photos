@@ -1,11 +1,20 @@
-import { renderFrame } from './frames';
 import type { Rect } from './geometry';
-import type { Frame, Size } from './types';
+import { releaseCanvas, renderPage } from './rasterExport';
+import { planPage, type OutputPage } from './renderPlan';
+import type { Project, Sheet, Size } from './types';
 
 /**
- * A digital sequence's frames as the images Instagram takes: its shapes and sizes, and
- * its limits on a post. Posting them is in instagramPost.ts.
+ * A project's pages as the images Instagram takes: its shapes and sizes, and its limits on
+ * a post. Posting them is in instagramPost.ts.
  */
+
+/** One image of a post: a frame, or one page of a spread (spreads are torn into pages). */
+export type Slide = OutputPage;
+
+/** A slide's size in output pixels: the page at its resolution (an inch page at its dpi). */
+export function slideSize(sheet: Pick<Sheet, 'pageW' | 'pageH' | 'pxPerUnit'>): Size {
+  return { w: sheet.pageW * sheet.pxPerUnit, h: sheet.pageH * sheet.pxPerUnit };
+}
 
 export type PostKind = 'feed' | 'story';
 /** How a frame outside the feed's shapes is fitted: trimmed, or given margins. */
@@ -28,11 +37,11 @@ export const LIMITS = {
   hashtags: 30,
 };
 
-/** An image as posted: its size, the part of the frame it shows, and where that goes. */
+/** An image as posted: its size, the part of the slide it shows, and where that goes. */
 export interface PostImageLayout {
   width: number;
   height: number;
-  /** The part of the frame shown, in frame pixels. */
+  /** The part of the slide shown, in its output pixels (see slideSize). */
   source: Rect;
   /** Where it's drawn, in image pixels (the rest is white). */
   target: Rect;
@@ -49,7 +58,7 @@ function ratioRange(kind: PostKind): { min: number; max: number } {
     : { min: LIMITS.minWidth / LIMITS.maxHeight, max: Infinity };
 }
 
-/** Whether a frame of this size can be posted as it is. */
+/** Whether a slide of this size can be posted as it is. */
 export function fits(size: Size, kind: PostKind): boolean {
   const { min, max } = ratioRange(kind);
   const r = size.w / size.h;
@@ -79,7 +88,7 @@ export function ratioLabel(r: number): string {
 }
 
 /**
- * How a frame becomes an image for Instagram. A frame outside the shapes Instagram takes
+ * How a slide becomes an image for Instagram. A slide outside the shapes Instagram takes
  * (see ratioRange) is cropped (centered) or expanded with white margins to the nearest
  * one. Then the image is scaled to Instagram's widths (320 to 1440 px) and the server's
  * height limit, rounding so it stays within the allowed shapes.
@@ -118,9 +127,23 @@ export function postImageLayout(size: Size, kind: PostKind, fit: Fit): PostImage
 /** Lower qualities to try, in turn, until an image is under Instagram's size limit. */
 const QUALITIES = [0.92, 0.85, 0.75, 0.6];
 
-/** One frame as the JPEG Instagram gets, or null if it can't fit Instagram's size limit. */
-export async function renderPostImage(frame: Frame, size: Size, layout: PostImageLayout): Promise<Blob | null> {
-  const { canvas: rendered } = await renderFrame(frame, size.w, size.h);
+/**
+ * One slide as the JPEG Instagram gets (and how many photos were drawn from their
+ * previews), or null if it can't fit Instagram's size limit.
+ * It's rendered at no more pixels than the post needs: a page at 300 dpi isn't drawn at
+ * 3000 px only to be scaled down to 1440.
+ */
+export async function renderPostImage(
+  slide: Slide,
+  sheet: Sheet,
+  photos: Readonly<Project['photos']>,
+  layout: PostImageLayout,
+): Promise<{ blob: Blob; previews: number } | null> {
+  const scale = Math.min(1, layout.target.w / layout.source.w);
+  const plan = planPage(slide, sheet, photos, sheet.pxPerUnit * scale);
+  const { canvas: rendered, previews } = await renderPage(plan, photos);
+  // The layout's source is in slide pixels at the page's resolution; the render may be smaller.
+  const r = plan.pxPerUnit / sheet.pxPerUnit;
   const out = new OffscreenCanvas(layout.width, layout.height);
   const ctx = out.getContext('2d');
   if (!ctx) throw new Error('No 2D canvas');
@@ -128,12 +151,17 @@ export async function renderPostImage(frame: Frame, size: Size, layout: PostImag
   ctx.fillRect(0, 0, layout.width, layout.height);
   ctx.imageSmoothingQuality = 'high';
   const { source: s, target: t } = layout;
-  ctx.drawImage(rendered, s.x, s.y, s.w, s.h, t.x, t.y, t.w, t.h);
-  for (const quality of QUALITIES) {
-    const blob = await out.convertToBlob({ type: 'image/jpeg', quality });
-    if (blob.size <= LIMITS.maxBytes) return blob;
+  ctx.drawImage(rendered, s.x * r, s.y * r, s.w * r, s.h * r, t.x, t.y, t.w, t.h);
+  releaseCanvas(rendered);
+  try {
+    for (const quality of QUALITIES) {
+      const blob = await out.convertToBlob({ type: 'image/jpeg', quality });
+      if (blob.size <= LIMITS.maxBytes) return { blob, previews };
+    }
+    return null;
+  } finally {
+    releaseCanvas(out);
   }
-  return null;
 }
 
 /** Hashtags in a caption (Instagram allows 30). */

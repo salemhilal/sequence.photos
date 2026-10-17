@@ -1,13 +1,14 @@
-import type { Edges, LayoutKind, Size } from './types';
+import type { Arrangement, Edges, PageSetup, Unit } from './types';
 
 /**
- * What changes with the layout's units: print works in inches, digital in pixels. Sizes,
- * guides, and placements are stored in these units; this is what the UI and geometry need
- * to know about them.
+ * What changes with the page's unit, inches or pixels. Sizes, guides, and placements are
+ * stored in it; this is what the UI and geometry need to know about it.
  */
 export interface Units {
   /** Shown after numbers. */
-  suffix: 'in' | 'px';
+  suffix: Unit;
+  /** The unit, in words. */
+  name: 'inches' | 'pixels';
   /** An arrow-key nudge, and with Shift. */
   nudge: number;
   nudgeBig: number;
@@ -35,9 +36,10 @@ const roundInches = (n: number) => {
   return eighths ? Math.round(n * 1000) / 1000 : Math.round(n * 100) / 100;
 };
 
-export const UNITS: Record<LayoutKind, Units> = {
-  print: {
+export const UNITS: Record<Unit, Units> = {
+  in: {
     suffix: 'in',
+    name: 'inches',
     nudge: 1 / 16,
     nudgeBig: 1 / 2,
     snap: 1 / 8,
@@ -50,8 +52,9 @@ export const UNITS: Record<LayoutKind, Units> = {
     round: roundInches,
     format: (n) => roundInches(n).toString(),
   },
-  digital: {
+  px: {
     suffix: 'px',
+    name: 'pixels',
     nudge: 1,
     nudgeBig: 10,
     snap: 10,
@@ -67,8 +70,8 @@ export const UNITS: Record<LayoutKind, Units> = {
 };
 
 /**
- * What the UI calls things in each layout: a book has spreads of pages, measured in
- * inches; a digital sequence has frames, measured in pixels.
+ * What the UI calls things in each arrangement: a book has spreads of pages; a sequence
+ * has frames.
  */
 export interface Terms {
   /** One of the run the sidebar lists and the editor goes through. */
@@ -78,8 +81,6 @@ export interface Terms {
   /** What photos are placed on. */
   page: 'page' | 'frame';
   pages: 'pages' | 'frames';
-  /** The units, in words. */
-  unitName: 'inches' | 'pixels';
   /** The sidebar's count: a book's pages, or a sequence's frames. */
   count: (spreads: number) => string;
   /** The sidebar's button that adds one at the end. */
@@ -88,8 +89,6 @@ export interface Terms {
   turn: string;
   /** The toolbar's preview button. */
   preview: string;
-  /** The preview's save button. */
-  save: string;
   /** Saved PDFs' title and file name. */
   pdfTitle: string;
   fileStem: string;
@@ -99,37 +98,33 @@ export interface Terms {
   guidesNote: string;
 }
 
-export const TERMS: Record<LayoutKind, Terms> = {
-  print: {
+export const TERMS: Record<Arrangement, Terms> = {
+  spreads: {
     spread: 'spread',
     spreads: 'spreads',
     Spreads: 'Spreads',
     page: 'page',
     pages: 'pages',
-    unitName: 'inches',
     count: (n) => `${n * 2 - 2} pages`,
     addAtEnd: 'Add a spread before the back page',
     turn: 'turn pages',
     preview: 'Preview book',
-    save: 'Download PDF',
     pdfTitle: 'Photo book',
     fileStem: 'photo-book',
     edges: { top: 'Top', bottom: 'Bottom', inside: 'Inside', outside: 'Outside' },
     guidesNote:
       'Every spread, mirrored on facing pages. Inside is the edge at the gutter; vertical guides are measured from the outside edge.',
   },
-  digital: {
+  frames: {
     spread: 'frame',
     spreads: 'frames',
     Spreads: 'Frames',
     page: 'frame',
     pages: 'frames',
-    unitName: 'pixels',
     count: (n) => `${n} ${n === 1 ? 'frame' : 'frames'}`,
     addAtEnd: 'Add a frame at the end',
     turn: 'go through frames',
     preview: 'Preview',
-    save: 'Export frames as images',
     pdfTitle: 'Sequence',
     fileStem: 'sequence',
     edges: { top: 'Top', bottom: 'Bottom', inside: 'Right', outside: 'Left' },
@@ -137,21 +132,33 @@ export const TERMS: Record<LayoutKind, Terms> = {
   },
 };
 
-/** A new project's book: 10 × 8 in pages. */
-export const DEFAULT_PAGE: Size = { w: 10, h: 8 };
+/** The resolution inches are exported at unless the document says otherwise. */
+export const DEFAULT_DPI = 300;
+
+/** A new project's book: 10 × 8 in pages, at 300 dpi. */
+export const DEFAULT_PAGE: PageSetup = { w: 10, h: 8, unit: 'in', pxPerUnit: DEFAULT_DPI };
+
+/** A page setting people often want, set all at once. */
+export interface Preset {
+  label: string;
+  arrangement: Arrangement;
+  /** The resolution comes from the draft for inches (else 300 dpi), and is 1× for pixels. */
+  page: Omit<PageSetup, 'pxPerUnit'>;
+}
 
 /**
- * A new digital sequence's frames: 4:5, the tallest shape Instagram's API posts as is, at
- * the 1080 px width Instagram shows posts at (larger uploads are scaled down to it).
+ * Books, zines, slides, and Instagram's feed and story sizes. None is pixel spreads, but any
+ * combination can be set by hand.
  */
-export const DEFAULT_FRAME: Size = { w: 1080, h: 1350 };
-
-/** Instagram's feed and story sizes, offered as presets for digital frames. */
-export const FRAME_PRESETS: { label: string; size: Size }[] = [
-  { label: 'Instagram 4:5', size: { w: 1080, h: 1350 } },
+export const PRESETS: Preset[] = [
+  { label: 'Book', arrangement: 'spreads', page: { w: 10, h: 8, unit: 'in' } },
+  { label: 'Zine', arrangement: 'spreads', page: { w: 5.5, h: 8.5, unit: 'in' } },
+  { label: 'Square book', arrangement: 'spreads', page: { w: 8, h: 8, unit: 'in' } },
+  { label: 'Slides', arrangement: 'frames', page: { w: 13.33, h: 7.5, unit: 'in' } },
+  { label: 'Instagram 4:5', arrangement: 'frames', page: { w: 1080, h: 1350, unit: 'px' } },
   // The Instagram app takes 3:4; its upload API doesn't (posting crops or expands it).
-  { label: 'Instagram 3:4 (app uploads)', size: { w: 1080, h: 1440 } },
-  { label: 'Instagram square', size: { w: 1080, h: 1080 } },
-  { label: 'Instagram landscape', size: { w: 1080, h: 566 } },
-  { label: 'Instagram story', size: { w: 1080, h: 1920 } },
+  { label: 'Instagram 3:4 (app uploads)', arrangement: 'frames', page: { w: 1080, h: 1440, unit: 'px' } },
+  { label: 'Instagram square', arrangement: 'frames', page: { w: 1080, h: 1080, unit: 'px' } },
+  { label: 'Instagram landscape', arrangement: 'frames', page: { w: 1080, h: 566, unit: 'px' } },
+  { label: 'Instagram story', arrangement: 'frames', page: { w: 1080, h: 1920, unit: 'px' } },
 ];

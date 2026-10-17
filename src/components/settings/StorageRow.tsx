@@ -33,7 +33,7 @@ export function StorageRow() {
           {declined && <p className="help">The browser declined. Installing the app usually helps.</p>}
         </>
       )}
-      <p className="help">Export your project to keep a backup.</p>
+      <p className="help">Save your project (File → Save project) to keep a backup.</p>
     </>
   );
 }

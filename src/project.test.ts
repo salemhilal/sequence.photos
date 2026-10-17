@@ -163,7 +163,7 @@ describe('project files', () => {
     expect(Object.keys(projectStore.project.photos)).toHaveLength(2);
 
     const confirmed = newProject();
-    expect(ui.get().confirm!.actions.map((a) => a.label)).toEqual(['Cancel', 'Export current first', 'New project']);
+    expect(ui.get().confirm!.actions.map((a) => a.label)).toEqual(['Cancel', 'Save first', 'New project']);
     pick('New project');
     await confirmed;
     expect(Object.keys(projectStore.project.photos)).toHaveLength(0);
@@ -173,12 +173,12 @@ describe('project files', () => {
 
   it('starts no new project while a dialog is locked open', async () => {
     projectStore.reset(sampleProject());
-    ui.set({ modal: 'instagram' });
+    ui.set({ modal: 'export' });
     lockModal(true);
     try {
       await newProject();
       expect(ui.get().confirm).toBeNull();
-      expect(ui.get().modal).toBe('instagram');
+      expect(ui.get().modal).toBe('export');
       expect(Object.keys(projectStore.project.photos)).toHaveLength(2);
     } finally {
       lockModal(false);

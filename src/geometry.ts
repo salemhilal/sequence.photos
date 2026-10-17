@@ -22,14 +22,14 @@ export function pageSides(kind: SpreadKind): PageSide[] {
   return ['left', 'right'];
 }
 
-/** Page rectangle in spread coordinates: gutter-relative in print, from the left edge in a frame. */
+/** Page rectangle in spread coordinates: gutter-relative in spreads, from the left edge in a frame. */
 export function pageRect(side: PageSide, s: Sheet): Rect {
   return { x: side === 'left' ? -s.pageW : 0, y: 0, w: s.pageW, h: s.pageH };
 }
 
 /** The page a point (or a photo's center) is on: a book's left or right page, or the frame. */
 export function sideAt(s: Sheet, x: number): PageSide {
-  if (s.layout === 'digital') return 'whole';
+  if (s.arrangement === 'frames') return 'whole';
   return x < 0 ? 'left' : 'right';
 }
 
@@ -47,8 +47,8 @@ export function spreadLeft(kind: SpreadKind, s: Sheet): number {
  * What a sheet's spreads are drawn on, around the canvas origin: a book's two pages (its
  * single first and last pages sit on their side), or a frame.
  */
-export function sheetExtent(s: Pick<Sheet, 'layout' | 'pageW'>): { left: number; width: number } {
-  return s.layout === 'print' ? { left: -s.pageW, width: 2 * s.pageW } : { left: 0, width: s.pageW };
+export function sheetExtent(s: Pick<Sheet, 'arrangement' | 'pageW'>): { left: number; width: number } {
+  return s.arrangement === 'spreads' ? { left: -s.pageW, width: 2 * s.pageW } : { left: 0, width: s.pageW };
 }
 
 /** Whether a page is laid out like a left page: outside at its left edge (a book's left pages, and frames). */
@@ -88,8 +88,8 @@ export function dropGuide(s: Sheet): BorderGuide | null {
 }
 
 /** Keeps a border guide's box on the page (after an edit, or when the page shrinks). */
-export function clampBorder(g: BorderGuide, s: Pick<Sheet, 'layout' | 'pageW' | 'pageH'>): void {
-  const min = UNITS[s.layout].minBox;
+export function clampBorder(g: BorderGuide, s: Pick<Sheet, 'unit' | 'pageW' | 'pageH'>): void {
+  const min = UNITS[s.unit].minBox;
   if (g.kind === 'even') {
     g.inset = Math.max(0, Math.min(g.inset, (Math.min(s.pageW, s.pageH) - min) / 2));
     return;
@@ -234,7 +234,7 @@ export function resizeRect(
   lockAspect: boolean,
   lines: GuideLines | null,
   threshold: number,
-  /** The smallest a side gets: the units' minPhoto (0.1 in, or 10 px in a frame). */
+  /** The smallest a side gets: the unit's minPhoto (0.1 in, or 10 px). */
   min = 0.1,
 ): { rect: Rect; hit: SnapFeedback } {
   const west = corner === 'nw' || corner === 'sw';
@@ -362,7 +362,7 @@ export function relayoutRect(r: Rect, from: Sheet, to: Sheet): Rect {
   const inside = b.map((g) => g.inside);
   // Left page (and a frame): outside at its start. Right page: inside at its start.
   const xs: Knots = [];
-  if (from.layout === 'digital') {
+  if (from.arrangement === 'frames') {
     pageKnots(xs, 0, 0, from.pageW, to.pageW, outside, inside);
   } else {
     pageKnots(xs, -from.pageW, -to.pageW, from.pageW, to.pageW, outside, inside);

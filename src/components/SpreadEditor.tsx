@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, X } from 'lucide-react';
 import { bump, dropPhotos, folioLabel, putInPile, putOnPage, raise } from '../actions';
 import { clearGhost, startDrag, trackGhost } from '../drag';
@@ -22,12 +22,14 @@ import type { PhotoId, SpreadId } from '../ids';
 import { allSpreads, findSpread, sheetOf } from '../spreads';
 import { TERMS, UNITS, type Units } from '../units';
 import { projectStore, useProject } from '../store';
-import type { BorderGuide, LayoutKind, Project, Placement } from '../types';
-import { isTyping } from '../input';
+import type { Arrangement, BorderGuide, Project, Placement } from '../types';
+import { isMac, isTyping } from '../input';
 import { openPhotoMenu, toggleGuides, ui } from '../ui';
 import { shortcutLabel } from '../commands';
-import { useWindowEvent } from '../hooks';
+import { useElementSize, useWindowEvent } from '../hooks';
+import { placedSoft, resolutionNote } from '../resolution';
 import { NumberField } from './NumberField';
+import { SoftBadge } from './SoftBadge';
 import { PhotoImg } from './PhotoImg';
 import { SpreadCanvas } from './SpreadCanvas';
 
@@ -42,13 +44,22 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const index = book.findIndex((s) => s.id === spreadId);
   const spread = book[index];
   const sheet = sheetOf(project);
-  const units = UNITS[sheet.layout];
+  const units = UNITS[sheet.unit];
   const PAD = sheet.pageW * PAD_SHARE;
   // A book's two pages (single ones on their side), or a frame.
   const { left: extentLeft, width: across } = sheetExtent(sheet);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [stage, setStage] = useState({ w: 800, h: 500 });
+  const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 800, h: 500 });
   const [selected, setSelected] = useState<PhotoId | null>(null);
+  // A photo asked for ("Show me", from Export), whether the editor was open or not: taken once.
+  const asked = ui.use((s) => s.editorSelect);
+  const [seen, setSeen] = useState<PhotoId | null>(null);
+  if (asked !== seen) {
+    setSeen(asked);
+    if (asked) setSelected(asked);
+  }
+  useEffect(() => {
+    if (asked) ui.set({ editorSelect: null });
+  }, [asked]);
   const [snapHit, setSnapHit] = useState<SnapFeedback | null>(null);
   /**
    * A guide box to glow while a Fit button is hovered, for the photo it was for: the
@@ -57,16 +68,6 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const [hovered, setHovered] = useState<{ photoId: PhotoId; box: Rect } | null>(null);
   const glow = hovered && hovered.photoId === selected ? hovered.box : null;
   const guidesHidden = ui.use((s) => s.guidesHidden);
-
-  useLayoutEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      if (entry) setStage({ w: entry.contentRect.width, h: entry.contentRect.height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const scale = Math.min(stage.w / (across + 2 * PAD), stage.h / (sheet.pageH + 2 * PAD));
 
@@ -218,6 +219,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
       onContextMenu={(e) => openPhotoMenu(e, p.photoId)}
     >
       <PhotoImg id={p.photoId} />
+      {placedSoft(project.photos[p.photoId], p, sheet) && <SoftBadge note={softNote(p)} />}
       {p.photoId === selected &&
         CORNERS.map((c) => (
           <div key={c} className={`handle handle-${c}`} onPointerDown={(e) => onHandleDown(e, p, c)} />
@@ -225,8 +227,12 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
     </div>
   );
 
-  const label = folioLabel(index, book.length, sheet.layout);
-  const noun = TERMS[sheet.layout].spread;
+  const softNote = (p: Placement) => {
+    const photo = project.photos[p.photoId];
+    return (photo && resolutionNote(photo, p, sheet)?.text) ?? '';
+  };
+  const label = folioLabel(index, book.length, sheet.arrangement);
+  const noun = TERMS[sheet.arrangement].spread;
 
   return (
     <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
@@ -255,12 +261,12 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
             <ChevronRight />
           </button>
           <span className="spacer" />
-          <span className="hint">Shift: free resize · Alt: no snapping · Arrows nudge</span>
+          <span className="hint">Shift: free resize · {isMac ? 'Option' : 'Alt'}: no snapping · Arrows nudge</span>
           <button
             className={`btn ghost icon${guidesHidden ? ' active' : ''}`}
             aria-label={guidesHidden ? 'Show guides' : 'Hide guides'}
             aria-pressed={guidesHidden}
-            title={`${guidesHidden ? 'Show' : 'Hide'} guides (${shortcutLabel('toggleGuides')})`}
+            data-tip={`${guidesHidden ? 'Show' : 'Hide'} guides (${shortcutLabel('toggleGuides')})`}
             onClick={toggleGuides}
           >
             {guidesHidden ? <EyeOff /> : <Eye />}
@@ -320,9 +326,9 @@ function guideLabel(g: BorderGuide, u: Units): string {
 }
 
 /** A border guide's distances, for a tooltip: top, outside (left, in a frame), bottom, inside. */
-function guideSummary(g: BorderGuide, u: Units, layout: LayoutKind): string {
+function guideSummary(g: BorderGuide, u: Units, arrangement: Arrangement): string {
   const e = edgesOf(g);
-  const { outside, inside } = TERMS[layout].edges;
+  const { outside, inside } = TERMS[arrangement].edges;
   const f = u.format;
   return `Top ${f(e.top)} · ${outside} ${f(e.outside)} · Bottom ${f(e.bottom)} · ${inside} ${f(e.inside)} ${u.suffix}`;
 }
@@ -343,7 +349,7 @@ interface InspectorProps {
 function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorProps) {
   const [lock, setLock] = useState(true);
   const sheet = sheetOf(project);
-  const units = UNITS[sheet.layout];
+  const units = UNITS[sheet.unit];
   if (!item) {
     return (
       <aside className="inspector">
@@ -362,10 +368,9 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
   const boxes = sheet.borders
     .map((g) => ({ g, box: borderBox(side, sheet, g) }))
     .sort((a, b) => b.box.w * b.box.h - a.box.w * a.box.h);
-  // Print: the photo's pixels per inch. Digital: how much it's enlarged, if it is.
   const where = side === 'whole' ? 'frame' : 'page';
-  const ppi = photo && sheet.layout === 'print' ? Math.round(photo.pxW / item.w) : null;
-  const enlarged = photo && sheet.layout === 'digital' ? item.w / photo.pxW : null;
+  // Inches: the photo's pixels per inch. Pixels: how much it's enlarged, if it is.
+  const quality = photo ? resolutionNote(photo, item, sheet) : null;
 
   return (
     <aside className="inspector">
@@ -410,15 +415,10 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
       <label className="check">
         <input type="checkbox" checked={lock} onChange={(e) => setLock(e.target.checked)} /> Keep proportions
       </label>
-      {ppi !== null && (
-        <div className={`small ${ppi < 200 ? 'warn' : 'muted'}`}>
-          <span className="data">{ppi} ppi</span>
-          {ppi < 200 ? ' · may print soft' : ''}
-        </div>
-      )}
-      {enlarged !== null && enlarged > 1 && (
-        <div className="small warn">
-          <span className="data">Enlarged {Math.round(enlarged * 100)}%</span> · may look soft
+      {quality && (
+        <div className={`small ${quality.soft ? 'warn' : 'muted'}`}>
+          <span className="data">{quality.text}</span>
+          {quality.soft && ' · may look soft'}
         </div>
       )}
       <div className="inspector-actions">
@@ -443,7 +443,7 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
             onClick={() => fit(box)}
             onPointerEnter={() => onHoverBox(box)}
             onPointerLeave={() => onHoverBox(null)}
-            title={g.kind === 'edges' ? guideSummary(g, units, sheet.layout) : undefined}
+            data-tip={g.kind === 'edges' ? guideSummary(g, units, sheet.arrangement) : undefined}
           >
             {guideLabel(g, units)}
           </button>
@@ -501,7 +501,7 @@ function PileStrip({ spreadId }: { spreadId: SpreadId }) {
               style={{ width: (56 * p.w) / p.h }}
               onPointerDown={(e) => onDown(e, p)}
               onContextMenu={(e) => openPhotoMenu(e, p.photoId)}
-              title={`Drag onto the ${TERMS[project.layout.kind].page}, or click to add`}
+              data-tip={`Drag onto the ${TERMS[project.layout.kind].page}, or click to add`}
             >
               <PhotoImg id={p.photoId} />
             </div>

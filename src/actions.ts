@@ -6,7 +6,7 @@ import { allSpreads, findSpread, frameIndex, middleIndex, sheetOf } from './spre
 import { projectStore } from './store';
 import { dropBox, fitCentered, pageRect, pileSize } from './geometry';
 import type { DropTarget } from './drag';
-import type { LayoutKind, Project, PageSide, PhotoMeta, Placement, Spread } from './types';
+import type { Arrangement, Project, PageSide, PhotoMeta, Placement, Spread } from './types';
 import { deskGeometry, viewToFit } from './deskGeometry';
 import { ui } from './ui';
 
@@ -157,7 +157,7 @@ export function putOnPage(d: Draft<Project>, photoIds: PhotoId[], spreadId: Spre
 function addSpread(d: Draft<Project>, index: number): SpreadId {
   const l = d.layout;
   const id = newSpreadId();
-  if (l.kind === 'print') l.spreads.splice(middleIndex(l.spreads, index), 0, { kind: 'middle', id, items: [] });
+  if (l.kind === 'spreads') l.spreads.splice(middleIndex(l.spreads, index), 0, { kind: 'middle', id, items: [] });
   else l.frames.splice(frameIndex(l.frames, index), 0, { kind: 'frame', id, items: [] });
   return id;
 }
@@ -165,7 +165,7 @@ function addSpread(d: Draft<Project>, index: number): SpreadId {
 /** Recipe: add a spread before position `index` and put photos on it (a new spread's left page). */
 export function putOnNewSpread(d: Draft<Project>, photoIds: PhotoId[], index: number): void {
   const id = addSpread(d, index);
-  putOnPage(d, photoIds, id, d.layout.kind === 'print' ? 'left' : 'whole');
+  putOnPage(d, photoIds, id, d.layout.kind === 'spreads' ? 'left' : 'whole');
 }
 
 /** Recipe: return a photo to the pile, centered on a desk point (defaults to the visible center). */
@@ -251,9 +251,9 @@ const DUPLICATE_OFFSET = 0.25;
 
 /**
  * Duplicate photos as new, independent photos (each with its own copy of the image
- * data), placed `offset` inches down and right of the originals: on the desk, or on
- * the same spread. In a frame, that's the same share of its width as on a 10 in page
- * (0.25 in → 27 px of 1,080). One undo step. Returns the new photos' ids.
+ * data), placed down and right of the originals: on the desk, or on the same spread. On
+ * a page, the step is the share of its width `offset` inches is of a 10 in page, in any
+ * unit (0.25 in on 10 in; 27 px of 1,080). One undo step. Returns the new photos' ids.
  */
 export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OFFSET): Promise<PhotoId[]> {
   const sources: { from: PhotoId; id: PhotoId; img: StoredImage }[] = [];
@@ -268,7 +268,7 @@ export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OF
   // of unreferenced images can't remove them in between.
   projectStore.apply((d) => {
     const sheet = sheetOf(d);
-    const onSpread = sheet.layout === 'digital' ? (offset * sheet.pageW) / 10 : offset;
+    const onSpread = (offset * sheet.pageW) / 10;
     for (const { from, id } of sources) {
       const meta = d.photos[from];
       if (!meta) continue;
@@ -312,7 +312,7 @@ export function deleteSpread(spreadId: SpreadId): void {
   projectStore.apply((d) => {
     const l = d.layout;
     let spread: Draft<Spread> | undefined;
-    if (l.kind === 'print') {
+    if (l.kind === 'spreads') {
       const idx = l.spreads.findIndex((s) => s.id === spreadId);
       if (idx >= 0) spread = l.spreads.splice(idx, 1)[0];
     } else {
@@ -342,7 +342,7 @@ export function deleteSpread(spreadId: SpreadId): void {
 export function moveSpread(spreadId: SpreadId, toIndex: number): void {
   projectStore.apply((d) => {
     const l = d.layout;
-    if (l.kind === 'print') {
+    if (l.kind === 'spreads') {
       const from = l.spreads.findIndex((s) => s.id === spreadId);
       const [spread] = from >= 0 ? l.spreads.splice(from, 1) : [];
       if (spread) l.spreads.splice(middleIndex(l.spreads, toIndex), 0, spread);
@@ -358,17 +358,17 @@ export function moveSpread(spreadId: SpreadId, toIndex: number): void {
  * Folio-style labels, zero-padded like a book's page numbers: "01", "02–03", "08" for a
  * book's spreads, or "01", "02", … for a sequence's frames.
  */
-export function folioLabel(index: number, total: number, layout: LayoutKind): string {
-  const width = Math.max(2, String(layout === 'print' ? total * 2 : total).length);
-  return spreadLabel(index, total, layout)
+export function folioLabel(index: number, total: number, arrangement: Arrangement): string {
+  const width = Math.max(2, String(arrangement === 'spreads' ? total * 2 : total).length);
+  return spreadLabel(index, total, arrangement)
     .split('–')
     .map((n) => n.padStart(width, '0'))
     .join('–');
 }
 
 /** Page labels, e.g. "1", "2–3", counting a book's single first and last pages; a frame's number. */
-export function spreadLabel(index: number, total: number, layout: LayoutKind): string {
-  if (layout === 'digital' || index === 0) return String(index + 1);
+export function spreadLabel(index: number, total: number, arrangement: Arrangement): string {
+  if (arrangement === 'frames' || index === 0) return String(index + 1);
   const left = index * 2;
   if (index === total - 1) return String(left);
   return `${left}–${left + 1}`;

@@ -57,7 +57,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Layout',
-    body: 'Make a print book or a digital sequence, and set its size. Set the border guides photos fit to when you drop them on a page, and drag guides out of the rulers. They apply to every spread, mirrored on facing pages.',
+    body: 'On the Page tab, choose spreads or frames, inches or pixels, and the size. On the Guides tab, set the border guides photos fit to when you drop them on a page, and drag guides out of the rulers. They apply to every spread, mirrored on facing pages.',
     target: '.modal.layout-editor',
     modal: 'layout',
   },
@@ -69,7 +69,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Preview the book',
-    body: 'Flip through it page by page, and save a PDF at true size.',
+    body: 'Flip through it page by page, then export it as a PDF, images, or for InDesign.',
     target: '[data-tour="preview"]',
   },
   {
@@ -80,7 +80,7 @@ export const TOUR_STEPS: TourStep[] = [
         }
       : {
           title: 'Keep a copy',
-          body: `Browsers can clear what sites store, so export your project now and then. It saves the photos and layout in one file. Hold ${isMac ? '⌘' : 'Ctrl'} to see every shortcut.`,
+          body: `Browsers can clear what sites store, so save your project now and then (File → Save project). It saves the photos and layout in one file. Hold ${isMac ? '⌘' : 'Ctrl'} to see every shortcut.`,
           target: '.toolbar .menu > .btn',
         }),
   },
@@ -117,7 +117,7 @@ export function sampleProject(): Project {
     });
   });
   return produce(project, (d) => {
-    // The book's first two-page spread (the sample is always a print book).
+    // The book's first two-page spread (the sample is always spreads).
     const spread = allSpreads(d)[1]!;
     putOnPage(d, [toPhotoId('tour-leaves')], spread.id, 'left');
     putOnPage(d, [toPhotoId('tour-lily')], spread.id, 'right');
@@ -154,6 +154,8 @@ export function goToStep(index: number): void {
   ui.set({
     tour: index,
     modal: step.modal ?? null,
+    // The Layout step shows the guides, which the sample book has.
+    ...(step.modal === 'layout' && { layoutTab: 'guides' as const }),
     editingSpreadId: step.editor ? (allSpreads(projectStore.project)[1]?.id ?? null) : null,
   });
 }

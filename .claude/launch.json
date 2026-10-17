@@ -8,7 +8,7 @@
       "port": 5175
     },
     {
-      "name": "sequence-built",
+      "name": "sequence-prod",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite", "preview", "--port", "4173", "--strictPort"],
       "port": 4173

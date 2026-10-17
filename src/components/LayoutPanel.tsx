@@ -4,31 +4,46 @@ import { clampBorder, dropGuide, edgesOf } from '../geometry';
 import { newGuideId } from '../ids';
 import { collapsedPref } from '../prefs';
 import { projectStore } from '../store';
-import type { BorderGuide, Edges, LayoutKind, Sheet } from '../types';
+import type { Arrangement, BorderGuide, Edges, Sheet } from '../types';
 import { TERMS, UNITS } from '../units';
 import { NumberField } from './NumberField';
-import { PageSizeFields } from './PageSizeFields';
+import { applyPageSetup, draftOf, type PageDraft } from '../pageSetup';
+import { ui, type LayoutTab } from '../ui';
+import { PageSettings } from './PageSettings';
+import { Segmented } from './Segmented';
 import { same, type Axis, type Selection } from './layoutSelection';
 
 /**
- * The Layout view's settings: the size, center lines, border guides, and guides from the
- * rulers. Selecting a guide here or on the page highlights it in both.
+ * The Layout view's settings, in two tabs: the page (spreads or frames, size, unit,
+ * resolution), which waits for Apply, and the guides (center lines, border guides, guides
+ * from the rulers), which apply at once. Selecting a guide here or on the page highlights
+ * it in both.
  */
 
+const TABS: { value: LayoutTab; label: string }[] = [
+  { value: 'page', label: 'Page' },
+  { value: 'guides', label: 'Guides' },
+];
+
 /** A border guide's fields, in pairs: a frame's left before its right. */
-const EDGES: Record<LayoutKind, (keyof Edges)[]> = {
-  print: ['top', 'bottom', 'inside', 'outside'],
-  digital: ['top', 'bottom', 'outside', 'inside'],
+const EDGES: Record<Arrangement, (keyof Edges)[]> = {
+  spreads: ['top', 'bottom', 'inside', 'outside'],
+  frames: ['top', 'bottom', 'outside', 'inside'],
 };
 
 interface PanelProps {
   s: Sheet;
+  tab: LayoutTab;
+  draft: PageDraft;
+  onDraft: (d: PageDraft) => void;
+  /** The draft has changes not yet applied: guides wait until they're applied or reverted. */
+  pending: boolean;
   selected: Selection | null;
   onSelect: (sel: Selection | null) => void;
   onRemove: (sel: Selection) => void;
 }
 
-type SectionId = 'page' | 'center' | 'borders' | 'lines';
+type SectionId = 'center' | 'borders' | 'lines';
 
 /** The section showing each kind of selection's settings. */
 const SECTION_OF: Record<Selection['kind'], SectionId> = { center: 'center', border: 'borders', line: 'lines' };
@@ -62,7 +77,7 @@ function PanelSection({ id, title, actions, collapsed, shown, onToggle, children
   );
 }
 
-export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
+export function LayoutPanel({ s, tab, draft, onDraft, pending, selected, onSelect, onRemove }: PanelProps) {
   const [collapsed, setCollapsed] = useState(() => new Set(collapsedPref.load()));
   // A guide selected on the page shows its settings, even in a folded section.
   const shown = selected ? SECTION_OF[selected.kind] : null;
@@ -77,8 +92,8 @@ export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
   };
   const fold = { collapsed, shown, onToggle: toggle };
   const drop = dropGuide(s);
-  const units = UNITS[s.layout];
-  const terms = TERMS[s.layout];
+  const units = UNITS[s.unit];
+  const terms = TERMS[s.arrangement];
   const addLine = (axis: Axis) => {
     const size = axis === 'vertical' ? s.pageW : s.pageH;
     const id = newGuideId();
@@ -112,24 +127,55 @@ export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
     );
   };
 
+  const tabs = (
+    <div className="layout-tabs">
+      <Segmented
+        halves
+        label="Layout"
+        options={TABS}
+        value={tab}
+        onChange={(t) => {
+          onSelect(null);
+          ui.set({ layoutTab: t });
+        }}
+      />
+    </div>
+  );
+
+  if (tab === 'page') {
+    return (
+      <aside className="inspector sectioned layout-panel">
+        {tabs}
+        <section>
+          <PageSettings draft={draft} onChange={onDraft} showContent />
+        </section>
+      </aside>
+    );
+  }
+
+  // Guides are edited on the page as it is, so not while the Page tab has changes waiting.
+  if (pending) {
+    return (
+      <aside className="inspector sectioned layout-panel">
+        {tabs}
+        <section>
+          <p className="help">Apply or revert the page changes first.</p>
+          <div className="inline">
+            <button className="btn primary" onClick={() => applyPageSetup(draft)}>
+              Apply
+            </button>
+            <button className="btn ghost" onClick={() => onDraft(draftOf(projectStore.project))}>
+              Revert
+            </button>
+          </div>
+        </section>
+      </aside>
+    );
+  }
+
   return (
     <aside className="inspector sectioned layout-panel">
-      <PanelSection id="page" title="Spreads" {...fold}>
-        <PageSizeFields />
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={s.keepRelative}
-            onChange={(e) => projectStore.apply((d) => void (d.settings.keepRelative = e.target.checked))}
-          />
-          Keep photos relative to guides
-        </label>
-        <p className="help">
-          {s.keepRelative
-            ? 'When the size changes, photos move and scale with the guides.'
-            : 'When the size changes, photos keep their exact position.'}
-        </p>
-      </PanelSection>
+      {tabs}
 
       <PanelSection id="center" title="Center lines" {...fold}>
         <div className="inline">
@@ -146,7 +192,7 @@ export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
           <button
             className="btn ghost icon small"
             aria-label="Add border guide"
-            title="Add border guide"
+            data-tip="Add border guide"
             onClick={addBorder}
           >
             <Plus />
@@ -176,7 +222,7 @@ export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
             <button
               className="btn ghost icon small"
               aria-label="Add horizontal guide"
-              title="Add horizontal guide"
+              data-tip="Add horizontal guide"
               onClick={() => addLine('horizontal')}
             >
               <SeparatorHorizontal />
@@ -184,7 +230,7 @@ export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
             <button
               className="btn ghost icon small"
               aria-label="Add vertical guide"
-              title="Add vertical guide"
+              data-tip="Add vertical guide"
               onClick={() => addLine('vertical')}
             >
               <SeparatorVertical />
@@ -228,7 +274,7 @@ export function LayoutPanel({ s, selected, onSelect, onRemove }: PanelProps) {
       </PanelSection>
 
       <p className="help layout-note">
-        {terms.guidesNote} Distances in {terms.unitName}. Shift snaps a dragged guide to {units.snapLabel}.
+        {terms.guidesNote} Distances in {units.name}. Shift snaps a dragged guide to {units.snapLabel}.
       </p>
     </aside>
   );
@@ -246,8 +292,8 @@ interface BorderRowProps {
 /** A border guide's settings. A linked (even) guide edits all four distances at once. */
 function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProps) {
   const e = edgesOf(g);
-  const units = UNITS[s.layout];
-  const terms = TERMS[s.layout];
+  const units = UNITS[s.unit];
+  const terms = TERMS[s.arrangement];
   const linked = g.kind === 'even';
   const update = (change: (b: BorderGuide) => BorderGuide, coalesce?: string) =>
     projectStore.apply(
@@ -272,7 +318,7 @@ function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProp
   return (
     <div className={`border-guide pick${selected ? ' selected' : ''}`} onPointerDown={onSelect}>
       <div className="grid2">
-        {EDGES[s.layout].map((edge) => (
+        {EDGES[s.arrangement].map((edge) => (
           <NumberField
             key={edge}
             label={terms.edges[edge]}
@@ -302,7 +348,7 @@ function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProp
           className={`btn ghost icon small${linked ? ' active' : ''}`}
           aria-label={linked ? 'Unlink edges' : 'Link edges'}
           aria-pressed={linked}
-          title={linked ? 'Edges linked: editing one sets all four' : 'Link edges (all four take the top distance)'}
+          data-tip={linked ? 'Edges linked: editing one sets all four' : 'Link edges (all four take the top distance)'}
           onClick={toggleLinked}
         >
           {linked ? <Link2 /> : <Link2Off />}

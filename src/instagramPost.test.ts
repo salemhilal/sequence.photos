@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { INSTAGRAM, SERVER_URL } from './config';
 import type { InstagramConnection } from './instagram';
-import type { Frame } from './types';
+import type { Sheet } from './types';
+import type { Slide } from './instagramImage';
+import { toSpreadId } from './ids';
 
-// Rendering needs a real canvas: stand in for it, as a tiny JPEG per frame.
-vi.mock('./frames', () => ({ renderFrame: async () => ({ canvas: {}, missing: 0 }) }));
+// Rendering needs a real canvas: stand in for it, as a tiny JPEG per slide.
+vi.mock('./rasterExport', () => ({
+  renderPage: async () => ({ canvas: {}, missing: 0, previews: 0 }),
+  releaseCanvas: () => undefined,
+}));
 vi.stubGlobal(
   'OffscreenCanvas',
   class {
@@ -116,13 +121,31 @@ function fakeServers(overrides: Partial<Record<string, (call: Call) => Response 
   return { calls, to, firstIndex, lastIndex, fetch };
 }
 
-const frames = (n: number) => Array.from({ length: n }, () => ({}) as Frame);
+const slides = (n: number): Slide[] =>
+  Array.from({ length: n }, (_, i) => ({
+    spread: { kind: 'frame', id: toSpreadId(`f${i}`), items: [] },
+    part: 'whole',
+  }));
+const sheet: Sheet = {
+  arrangement: 'frames',
+  unit: 'px',
+  pxPerUnit: 1,
+  pageW: 1080,
+  pageH: 1350,
+  centerV: false,
+  centerH: false,
+  keepRelative: true,
+  borders: [],
+  lines: [],
+  dropBorder: null,
+};
 
 /** Posts, letting the polling's waits pass at once. */
 async function post(options: Partial<Parameters<typeof postToInstagram>[0]> = {}) {
   const promise = postToInstagram({
-    frames: frames(1),
-    size: { w: 1080, h: 1350 },
+    slides: slides(1),
+    sheet,
+    photos: {},
     kind: 'feed',
     fit: 'crop',
     caption: 'A caption #film',
@@ -162,7 +185,7 @@ describe('postToInstagram: feed', () => {
 
   it('sends the upload request with the connection’s token and enrollment', async () => {
     const server = fakeServers();
-    await post({ frames: frames(2) });
+    await post({ slides: slides(2) });
     const [upload] = server.to('uploads');
     expect(upload!.init?.method).toBe('POST');
     expect(new Headers(upload!.init?.headers).get('Authorization')).toBe('Bearer TOKEN');
@@ -175,7 +198,7 @@ describe('postToInstagram: feed', () => {
 
   it('posts several frames as a carousel: its items, then the carousel, each ready before publishing', async () => {
     const server = fakeServers();
-    const link = await post({ frames: frames(3) });
+    const link = await post({ slides: slides(3) });
     expect(link).toBe('https://www.instagram.com/p/abc/');
     const media = server.to('media').map((c) => c.params);
     expect(media.slice(0, 3)).toEqual(
@@ -200,13 +223,13 @@ describe('postToInstagram: feed', () => {
 
   it('refuses more than 10 frames before doing anything', async () => {
     const server = fakeServers();
-    await expect(post({ frames: frames(LIMITS.maxItems + 1) })).rejects.toThrow(/up to 10 frames/);
+    await expect(post({ slides: slides(LIMITS.maxItems + 1) })).rejects.toThrow(/up to 10 slides/);
     expect(server.calls).toHaveLength(0);
   });
 
   it('refuses no frames', async () => {
     const server = fakeServers();
-    await expect(post({ frames: [] })).rejects.toThrow(/no frames/);
+    await expect(post({ slides: [] })).rejects.toThrow(/no slides/);
     expect(server.calls).toHaveLength(0);
   });
 
@@ -225,7 +248,7 @@ describe('postToInstagram: feed', () => {
 describe('postToInstagram: stories', () => {
   it('creates and readies every story before publishing any, then publishes each', async () => {
     const server = fakeServers();
-    const link = await post({ frames: frames(3), kind: 'story' });
+    const link = await post({ slides: slides(3), kind: 'story' });
     expect(link).toBe('https://www.instagram.com/p/abc/');
     expect(server.to('media').map((c) => c.params.media_type)).toEqual(['STORIES', 'STORIES', 'STORIES']);
     expect(server.to('media').every((c) => c.params.caption === undefined)).toBe(true);
@@ -241,21 +264,21 @@ describe('postToInstagram: stories', () => {
     fakeServers({
       publish: () => (++n === 1 ? json({ id: 'm1' }) : json({ error: { code: 4 } }, 400)),
     });
-    await expect(post({ frames: frames(3), kind: 'story' })).rejects.toThrow(
+    await expect(post({ slides: slides(3), kind: 'story' })).rejects.toThrow(
       /^1 of 3 stories were posted, then it stopped\. Instagram’s posting limit was reached/,
     );
   });
 
   it('reports the first publish failing as it is', async () => {
     fakeServers({ publish: () => json({ error: { code: 4 } }, 400) });
-    await expect(post({ frames: frames(2), kind: 'story' })).rejects.toThrow(/^Instagram’s posting limit/);
+    await expect(post({ slides: slides(2), kind: 'story' })).rejects.toThrow(/^Instagram’s posting limit/);
   });
 
   it('counts each story against the daily limit', async () => {
     const server = fakeServers({
       quota: () => json({ data: [{ quota_usage: 23, config: { quota_total: 25 } }] }),
     });
-    await expect(post({ frames: frames(3), kind: 'story' })).rejects.toThrow(/allows 25 posts a day/);
+    await expect(post({ slides: slides(3), kind: 'story' })).rejects.toThrow(/allows 25 posts a day/);
     expect(server.to('uploads')).toHaveLength(0);
   });
 });
@@ -290,7 +313,7 @@ describe('postToInstagram: cancelling', () => {
     const server = fakeServers();
     const controller = new AbortController();
     const promise = post({
-      frames: frames(2),
+      slides: slides(2),
       signal: controller.signal,
       onStep: (s) => {
         if (s.step === 'preparing' && s.done === 1) controller.abort();
@@ -325,7 +348,7 @@ describe('postToInstagram: cancelling', () => {
         return json({ status_code: 'FINISHED' });
       },
     });
-    await expect(post({ frames: frames(3), kind: 'story', signal: controller.signal })).rejects.toBeInstanceOf(
+    await expect(post({ slides: slides(3), kind: 'story', signal: controller.signal })).rejects.toBeInstanceOf(
       CancelledError,
     );
     expect(server.to('media')).toHaveLength(3);
@@ -372,7 +395,7 @@ describe('postToInstagram: the server’s copies', () => {
 
   it('deletes them after a failure', async () => {
     const server = fakeServers({ put: () => new Response(null, { status: 500 }) });
-    await expect(post()).rejects.toThrow(/refused a frame \(HTTP 500\)/);
+    await expect(post()).rejects.toThrow(/refused an image \(HTTP 500\)/);
     expect(server.to('delete')).toHaveLength(1);
   });
 

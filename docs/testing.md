@@ -3,9 +3,10 @@
 What to check before a release: the automated checks, then a pass through the app by hand.
 Tick items off as you go.
 
-Tags: **[P]** print books only, **[D]** digital sequences only, **[P≠D]** behaves differently
-in each. Untagged items apply to both. Test both layouts where it matters: make a book, then
-switch it to digital in Layout (and back).
+Tags: **[S]** spreads only, **[F]** frames only, **[S≠F]** behaves differently in each;
+**[in]** and **[px]** for a page in inches or pixels. Untagged items apply to all. Test the
+combinations where it matters: make a book, then switch it to frames, and to pixels, in Layout
+(and back). Pixel spreads and frames in inches work too.
 
 ## Automated checks
 
@@ -30,10 +31,12 @@ switch it to digital in Layout (and back).
       editing there and blocks the other.
 - [ ] Reload after editing: everything comes back (desk, spreads or frames, guides, layout,
       size).
-- [ ] File → New project… with photos: Cancel / Export current first / New project. New
+- [ ] File → New project… with photos: Cancel / Save first / New project. New
       project empties everything; ⌘Z brings the old one back.
-- [ ] A new project's empty desk: "Start by adding photos", Add photos, and a Layout card with
-      the format and size. **[D]** It says to drag photos onto frames.
+- [ ] A new project's empty desk: "Start by adding photos", Add photos, and a Page card with
+      the same settings as Layout's Page tab (no Content), applied as they're picked (no Apply):
+      picking Frames or a preset, then adding photos, keeps the choice. **[F]** It says to drag photos onto
+      frames.
 
 ## Desk
 
@@ -64,119 +67,166 @@ switch it to digital in Layout (and back).
 
 ## Sidebar (spreads and frames)
 
-- [ ] **[P≠D]** Heading and count: "Spreads" and "N pages" [P]; "Frames" and "N frames" [D],
+- [ ] **[S≠F]** Heading and count: "Spreads" and "N pages" [S]; "Frames" and "N frames" [F],
       and "1 frame" for one.
-- [ ] **[P≠D]** Labels: 01, 02–03, …, the last single page [P]; 01, 02, 03… [D].
-- [ ] **[P]** The first and last spreads have a locked grip ("The first and last pages stay in
+- [ ] **[S≠F]** Labels: 01, 02–03, …, the last single page [S]; 01, 02, 03… [F].
+- [ ] **[S]** The first and last spreads have a locked grip ("The first and last pages stay in
       place") and no delete button.
-- [ ] **[D]** A sequence's only frame can't be deleted or dragged; with more, any can.
-- [ ] **[P≠D]** The header's +: a spread before the back page [P]; a frame at the end [D].
+- [ ] **[F]** A sequence's only frame can't be deleted or dragged; with more, any can.
+- [ ] **[S≠F]** The header's +: a spread before the back page [S]; a frame at the end [F].
 - [ ] Hover a gap and click "+ Add spread" / "+ Add frame": a new empty one appears there.
-      **[D]** There are gaps before the first frame and after the last.
-- [ ] Drag a row's header to reorder: the gap lights up and the row moves on release. **[P]**
-      Not before the first or after the last spread. **[D]** To the very start or end works.
+      **[F]** There are gaps before the first frame and after the last.
+- [ ] Drag a row's header to reorder: the gap lights up and the row moves on release. **[S]**
+      Not before the first or after the last spread. **[F]** To the very start or end works.
 - [ ] Click a row: the editor opens on it, and the row is highlighted.
 - [ ] A row's ×: deleted, its photos go back to the desk; if it was open, the editor closes.
-- [ ] Drag desk photos onto a thumbnail: **[P]** onto the left or right page (highlighted);
-      **[D]** onto the frame. They fit the On drop guide, centered.
+- [ ] Drag desk photos onto a thumbnail: **[S]** onto the left or right page (highlighted);
+      **[F]** onto the frame. They fit the On drop guide, centered.
 - [ ] Drag desk photos onto a gap ("Drop to add a spread/frame"): a new one holding them.
 - [ ] Drag a photo from one thumbnail to another spread or frame: it moves; onto the desk: it
       lands where dropped.
 - [ ] Drag a photo a little and drop it back on its own page or frame: it stays exactly as it
       was.
 - [ ] Widen the sidebar from its edge: between one column and a grid with no flicker at any
-      width; double-click resets; the width survives a reload. **[D]** One column at the
+      width; double-click resets; the width survives a reload. **[F]** One column at the
       narrowest, two at the default width.
 - [ ] ⌘B hides and shows it, and that survives a reload.
 
 ## Spread and frame editor
 
-- [ ] **[P≠D]** The header shows the folio and size in inches [P] or px [D] (frame 3 is "03").
+- [ ] The header shows the folio (frame 3 is "03") and the size in in **[in]** or px **[px]**.
 - [ ] ‹ › (and ←/→ with nothing selected) go back and forth, disabled at the ends.
-- [ ] Click a strip photo: **[P]** placed on the first empty page, else the right; **[D]**
+- [ ] Click a strip photo: **[S]** placed on the first empty page, else the right; **[F]**
       placed on the frame.
 - [ ] Drag a strip photo onto the page or frame: placed. Drag a placed photo onto the strip:
       back to the desk. The strip says "Desk · N", or "Empty…".
 - [ ] Moving snaps to edges, center lines, border guides, and ruler guides, with feedback; Alt
-      turns snapping off. **[P]** Photos snap to the gutter and can cross it.
+      turns snapping off. **[S]** Photos snap to the gutter and can cross it.
 - [ ] Corner resize keeps proportions and snaps; Shift resizes freely; Alt doesn't snap.
-      **[D]** Resizing stops at 10 px.
-- [ ] **[P≠D]** Arrows nudge 1/16 in (Shift ½ in) [P] or 1 px (Shift 10 px) [D].
+      **[px]** Resizing stops at 10 px.
+- [ ] Arrows nudge 1/16 in (Shift ½ in) **[in]** or 1 px (Shift 10 px) **[px]**.
 - [ ] Delete returns the selected photo to the desk; Escape deselects, then closes; clicking
       the backdrop closes.
 - [ ] Hide guides (eye button or ⌘;): guides disappear; photos still snap to edges.
-- [ ] **[P≠D]** Inspector: "Left page"/"Right page" [P] or "Frame" [D]; X/Y/W/H in inches [P]
-      or whole px [D], X from that page's left edge.
+- [ ] **[S≠F]** Inspector: "Left page"/"Right page" [S] or "Frame" [F]; X/Y/W/H in inches
+      **[in]** or whole px **[px]**, X from that page's left edge.
 - [ ] Keep proportions on: changing W changes H and back; off: independent.
 - [ ] After clicking Keep proportions (or any checkbox), Escape, Delete, and the arrows still
       work.
-- [ ] **[P≠D]** Quality: "N ppi", warning under 200 ("may print soft") [P]; "Enlarged N% · may
-      look soft" only when enlarged [D].
+- [ ] Quality: "N ppi" **[in]**, and "N ppi · below 300 dpi · may look soft" in orange when
+      the photo has fewer pixels than the page's dpi asks for (lowering the dpi in Layout clears
+      it); "Enlarged N% · may look soft" only when enlarged **[px]**. A photo stretched with
+      Shift counts its thinner side.
+- [ ] A photo below the page's resolution has a warning mark on it in the editor, and its
+      spread's row in the sidebar has one, titled "N photos below 300 dpi" (or "enlarged").
 - [ ] Center on page/frame and Fit page/frame work. "Fit … guide" buttons, largest first;
       hovering one makes its box glow; per-edge guides show a range and a tooltip.
-- [ ] Right-click a placed photo → Duplicate: the copy is visibly offset (about 27 px in a
-      1,080 px frame).
+- [ ] Right-click a placed photo → Duplicate: the copy is offset by a fortieth of the page's
+      width (0.25 in on a 10 in page, about 27 px on a 1,080 px frame).
 - [ ] Add a frame, open it, ⌘Z: the editor closes cleanly and desk shortcuts work.
 
 ## Layout
 
 - [ ] Opens from the toolbar's Layout button (Mac: View → Layout…). Escape, ×, or the
-      backdrop close it, including right after clicking the format toggle or a checkbox.
-- [ ] Picking For print or For digital changes nothing until Apply: the form shows that
-      format's units and last size, with a note; Revert puts it back.
-- [ ] **[P→D]** For digital, Apply: each page becomes a frame in book order (a photo across the
-      gutter goes with the page holding its center), at the size in the form; guides in px.
-      One ⌘Z undoes it.
-- [ ] **[D→P]** Switching straight back restores the book exactly. After editing: frame 1 is
+      backdrop close it, including right after clicking a toggle or a checkbox.
+- [ ] Two tabs, Page and Guides; the tab is kept while the app is open.
+
+### Page tab
+
+- [ ] Nothing changes until Apply: Pages, size, unit, preset, dpi, and Content are a draft.
+      The stage always shows the real spreads or frames, with ‹ › and ←/→ through them: as
+      they are, or as they'd be after Apply once something changes, without the view
+      switching. Revert drops the draft. The draft survives switching to Guides and back.
+      Closing Layout (Escape, ×, or outside it) with changes waiting asks: Cancel, Discard, or
+      Apply.
+- [ ] With changes waiting, the Guides tab says to apply or revert them first (Apply and
+      Revert there work), and its stage shows the preview.
+- [ ] **[S→F]** Frames, Apply: each page becomes a frame in book order (a photo across the
+      gutter goes with the page holding its center), same size and unit. One ⌘Z undoes it.
+- [ ] **[F→S]** Switching straight back restores the book exactly. After editing: frame 1 is
       the first page, the rest pair into spreads, a leftover becomes the last page.
-- [ ] Each format remembers its own last size.
-- [ ] Size: editing W or H shows Apply (primary) and Revert; Revert restores; Apply resizes in
-      one undo step; Enter applies. 10 → 8 → 10 puts photos and guides back exactly.
-- [ ] **[D]** A new sequence is 1080 × 1350 (4:5). Presets: Instagram 4:5, 3:4 (app uploads),
-      square, landscape, story; a custom size shows
-      "Custom".
-- [ ] **[P≠D]** Smallest size 1 in [P] or 100 px [D].
-- [ ] Keep photos relative to guides: on, photos follow the guides on resize; off, they stay
-      put; the help text changes.
+- [ ] **[in→px]** Picking px fills the size converted at the dpi (10 × 8 in at 300 → 3000 ×
+      2400); Apply as is converts, and photos keep their resolution. Resolution shows 1×.
+- [ ] **[px→in]** Picking in shows "Print at 300 dpi" and the size in inches (1080 px → 3.6 in);
+      changing the dpi changes the size, until the size is edited.
+- [ ] Content is enabled only when the size changes beyond converting. Rescale with layout:
+      photos move and scale with the guides (book → Instagram 4:5 gives 54 px margins).
+      Keep fixed: photos keep their converted size and place.
+- [ ] Presets (Book, Zine, Square book, Slides, the Instagram sizes) set Pages, unit, and size
+      at once; a custom size shows "Custom". Apply is one undo step.
+- [ ] **[in]** Changing only the dpi moves nothing.
+- [ ] The preview marks photos below the resolution: "N photos are below 300 dpi." as they
+      are, "would be" with changes waiting (8 × 10 in → 16 × 20 in shows which go soft).
+- [ ] Size: Apply resizes in one undo step; Enter applies. 10 → 8 → 10 puts photos and guides
+      back exactly. Smallest size 1 in **[in]** or 100 px **[px]**.
+
+### Guides tab
+
 - [ ] Center lines: Vertical and Horizontal show or hide the magenta lines here and in the
       editor.
 - [ ] Border guides: + adds one further in; linked values change all four; unlinking allows
-      per-edge values; relinking takes the top's. **[P≠D]** Edges are Inside/Outside, mirrored
-      on facing pages [P], or Left/Right [D].
+      per-edge values; relinking takes the top's. **[S≠F]** Edges are Inside/Outside, mirrored
+      on facing pages [S], or Left/Right [F].
 - [ ] On drop picks the guide dropped photos fit; removing it falls back to the largest; ×
       removes a guide; values can't push the box off the page.
-- [ ] Ruler guides: drag from a ruler with a "N from …" label; Shift snaps to ⅛ in [P] or 10 px
-      [D]; dragging off removes; clicking selects and opens its section; Delete removes the
-      selected guide. **[P≠D]** Rulers mirror from each outside edge [P] or run from the left
-      [D]. Long px labels turn to fit.
-- [ ] The Guides section's buttons add a guide at a third; its field moves it (whole px [D]).
+- [ ] Ruler guides: drag from a ruler with a "N from …" label; Shift snaps to ⅛ in **[in]** or
+      10 px **[px]**; dragging off removes; clicking selects and opens its section; Delete
+      removes the selected guide. **[S≠F]** Rulers mirror from each outside edge [S] or run from
+      the left [F]. Long px labels turn to fit.
+- [ ] The Guides section's buttons add a guide at a third; its field moves it (whole px **[px]**).
 - [ ] Sections fold by their titles; folding survives a reload.
 
 ## Preview
 
-- [ ] ⌘P or the toolbar: opens on the spread being edited, else the first. **[P≠D]** The
-      button says "Preview book" [P] or "Preview" [D].
+- [ ] ⌘P or the toolbar: opens on the spread being edited, else the first. **[S≠F]** The
+      button says "Preview book" [S] or "Preview" [F].
 - [ ] →, Space, PageDown forward; ←, PageUp back; Home and End; arrow buttons disable at the
-      ends. **[P]** Single pages on their side, with gutter shading.
+      ends. **[S]** Single pages on their side, with gutter shading.
 - [ ] Folio and "n / total" are right.
 - [ ] Controls fade after the pointer rests about a second; moving or Tab brings them back;
       they stay while hovered and while saving.
-- [ ] **[P≠D]** The header button: Download PDF [P] or Export frames as images [D], with progress.
+- [ ] The header's Export… opens the Export view.
 - [ ] Escape, Exit preview, or ⌘P closes.
 
 ## Exports and project files
 
-- [ ] **[P]** PDF (⌘⇧P): a page per spread at true size, single first and last pages, photos
-      cropped at the edges, no guides; `photo-book-DATE.pdf`.
-- [ ] **[D]** PDF: a page per frame, 1 pt per px; titled "Sequence", `sequence-DATE.pdf`.
-- [ ] **[P]** Export for InDesign: a ZIP with an `.idml` and `Links/`; opens in InDesign with
-      facing pages, margins from the On drop guide, ruler guides, linked photos.
-- [ ] **[D]** Export for InDesign is absent (web) or disabled (Mac). **[P]** Export frames as images is
-      absent or disabled.
-- [ ] **[D]** Export frames as images (⌘⇧E): `sequence-DATE.zip` with 01.jpg, 02.jpg… at the frame's size,
-      on white.
-- [ ] Export project (⌘S) and import it into a fresh project (⌘O): "Opened … · N photos. Undo
-      to go back."; ⌘Z restores. A digital project comes back digital.
+- [ ] File → Export… (⌘⇧E) opens the Export view: a preview of what it makes on the left,
+      with ‹ › and ←/→, and the destination and its options on the right. Destinations: PDF,
+      Images, InDesign, and Instagram (web). It opens on PDF for inches, Instagram for
+      1080 px frames (web), else Images; then on the last one picked, with the last choices
+      (spread or page, format, Print at), while the app is open.
+- [ ] A conversion note (not a warning) shows only where the units differ: **[in]** Images:
+      "Pages are measured in inches, so they're turned into pixels: 3000 × 2400 px a page" with
+      At ___ dpi (up to the page's); Instagram: slides are made at Instagram's size. **[px]**
+      PDF: "Frames are measured in pixels, so they're given a printed size: 3.6 × 4.5 in" with
+      Print at ___ dpi (300). None for **[in]** PDF or InDesign, or **[px]** Images.
+- [ ] **[S]** One PDF page per / One image per: Spread or Page. **[F]** Not shown: each frame
+      is its own page or image.
+- [ ] Photos below the export's resolution: "N photos are below 300 dpi." (or "are
+      enlarged") above the button, with Show me opening the first in the editor, selected.
+      Lowering the dpi updates it.
+- [ ] The button names the result (Export PDF, Export N images, Export for InDesign) and shows
+      the progress while exporting; once saved, the view closes. Cancelling the save keeps it.
+- [ ] PDF: at true size, single first and last pages **[S]**, photos cropped at the edges, no
+      guides; `photo-book-DATE.pdf` **[S]** or `sequence-DATE.pdf` **[F]**. **[px]** Pages are
+      printed at the Print at dpi. **[in]** Photo resolution: Up to 300 (the page's); 150 makes
+      a smaller file with the same page size.
+- [ ] PDF at full resolution: a book of full-size phone photos at 300 dpi shows each photo
+      at its own ppi, or 300 when it has more (Preview.app's inspector, or
+      `pdfimages -list`). Photos taken on their side (EXIF orientation) come out upright,
+      mirrored ones too. A PNG and a HEIC (Safari or the Mac app) embed. An unreadable original:
+      "Some photos couldn't be read at full size…".
+- [ ] InDesign: a ZIP with an `.idml` and `Links/`; opens in InDesign with facing pages **[S]**
+      or single pages without facing pages **[F]** (photos where they sit on each), margins from
+      the On drop guide, ruler guides, linked photos. **[px]** The document
+      is in pixels at the same size (the panel says so).
+- [ ] Images: a ZIP of JPEGs or PNGs, on white. **[F]** 01.jpg, 02.jpg… at the frame's size.
+      **[S]** Per spread: 01.jpg, 02-03.jpg, … the last page; per page: 01.jpg… in book order.
+      **[in]** At the chosen dpi (3000 × 2400 for 10 × 8 in at 300).
+- [ ] A page too large for one image (11 × 17 in at 300 dpi): it's exported at the most that
+      fits, and a notice says the dpi.
+- [ ] Save project (⌘S) and open it into a fresh project (⌘O): "Opened … · N photos. Undo
+      to go back."; ⌘Z restores. Frames come back as frames, and pixels as pixels.
 - [ ] A project from an older version opens as a book with its guides.
 - [ ] A damaged file: "The project file is damaged." A ZIP that isn't a project: "This file
       isn't a Sequence project." Either way the current project is untouched.
@@ -216,28 +266,32 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 ### Posting
 
-- [ ] File → Post to Instagram… is always listed. It's disabled, with the reason under it, unless
-      the project is digital and Instagram is connected ("Needs a digital project…", "Connect
-      Instagram in Settings first.", "Reconnect Instagram in Settings first.").
-- [ ] The pane: @user in the header; Feed post or Stories; "A carousel of N frames" / "N
-      stories, one per frame".
+- [ ] Export → Instagram, for any project. Before connecting, the preview, slides, and options
+      all work; Account says posting needs a Business or Creator account, with Connect
+      Instagram (or Reconnect), and Post is disabled. Coming back from Instagram's sign-in
+      (connected or cancelled) reopens Export on Instagram.
+- [ ] The panel: Account @user; Feed post or Stories; "A carousel of N slides" / "N
+      stories, one per slide".
+- [ ] Slides: every page or frame as a thumbnail with a checkbox; the first 10 with photos are
+      chosen; an 11th can't be, and it says Instagram takes up to 10; "N of 10 chosen". Order
+      follows the document. None chosen: "Choose at least one slide to post."
+- [ ] **[S]** Spreads are torn into pages, with "Spreads are posted as their pages: N slides.
+      Photos across the gutter continue onto the next slide."; a photo across the gutter
+      continues from one slide to the next on Instagram.
+- [ ] **[in]** A book in inches posts at Instagram's sizes (rendered at its dpi, then scaled).
 - [ ] Preview: arrows and ←/→; feed shows dots and "n/N", a white card, and the caption with
       blue hashtags and mentions; stories show progress bars on a 9:16 screen.
-- [ ] Frames outside 4:5 to 1.91:1 (feed), or too tall for stories: Size offers Crop or Expand
+- [ ] Pages outside 4:5 to 1.91:1 (feed), or too tall for stories: Size offers Crop or Expand
       to the nearest shape; the preview and help follow.
 - [ ] Caption: "n / 2,200" and "n / 30 hashtags"; over either turns red and disables Post.
       Stories say they have no captions.
-- [ ] Empty frames: "Skip N empty frames", on by default. Nothing to post: "There are no frames
-      with photos to post."
-- [ ] More than 10 frames: only the first 10 will be posted (feed and stories), and the
-      preview shows 10.
-- [ ] Post: Preparing and Uploading frame n of N, Instagram processing, Publishing. Cancel
+- [ ] Post: Preparing and Uploading slide n of N, Instagram processing, Publishing. Cancel
       until publishing: "Cancelled. Nothing was posted." and nothing appears on Instagram.
 - [ ] While posting, Escape, ×, the backdrop, ⌘P, ⌘, and New project don't close or replace
       the pane.
 - [ ] Done: "Posted to Instagram.", View on Instagram opens the post, Done closes. A failure
       shows its message and Post can be tried again.
-- [ ] On Instagram: a carousel's frames are in order and cropped or expanded as chosen;
+- [ ] On Instagram: a carousel's slides are in order and cropped or expanded as chosen;
       stories in order.
 
 ## Undo and redo
@@ -255,7 +309,7 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 - [ ] Hold ⌘ (Ctrl) for a moment: badges on Undo, Redo, Preview, the sidebar toggle,
       Settings; releasing hides them.
-- [ ] ⌘I add, ⌘O open, ⌘S export/save, ⌘⇧P PDF, ⌘⇧E images [D], ⌘P preview, ⌘; guides, ⌘,
+- [ ] ⌘I add, ⌘O open, ⌘S export/save, ⌘⇧E export, ⌘P preview, ⌘; guides, ⌘,
       settings, ⌘B sidebar.
 - [ ] Desk shortcuts (⌘A, ⌘C, ⌘D, Delete, arrows, Escape) do nothing while a dialog or the
       editor is open.
@@ -300,9 +354,10 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
 
 - [ ] No web File menu or Undo/Redo buttons; the toolbar is the title bar (file name, "—
       Edited", drag to move the window).
-- [ ] Menus in title case with shortcuts. File: New Project, Open…, Add Photos…, Close, Save,
-      Save As… (⌘⇧S), Save PDF…, Export for InDesign… [P], Export Frames as Images… [D].
-- [ ] View: Preview, Layout…, Hide/Show Guides, Hide/Show Spreads [P] or Frames [D], following
+- [ ] Menus in title case with shortcuts. File: New Project, Open…, Save, Save As… (⌘⇧S),
+      Close; Add Photos…; Export… (⌘⇧E). The web File menu matches: New project…, Open
+      project…, Save project; Add photos…; Export…; the tour and About.
+- [ ] View: Preview, Layout…, Hide/Show Guides, Hide/Show Spreads [S] or Frames [F], following
       their state.
 - [ ] Edit: Cut, Copy, Paste in text fields; Copy with photos selected copies them; Undo
       follows the project (and text fields while typing).
@@ -310,7 +365,7 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
       a `.photo-sequence` open it; after a relaunch, Save still writes the same file.
 - [ ] Quitting or closing with unsaved changes asks to save; unsaved changes survive a quit
       and relaunch.
-- [ ] Save PDF…, Export Frames as Images…, and Export for InDesign… suggest the document's name ("Trip.pdf",
+- [ ] Exporting a PDF, images, or InDesign suggests the document's name ("Trip.pdf",
       "Trip (images).zip", "Trip (InDesign).zip"); an untitled project gets a dated name.
 - [ ] Settings is one page (Appearance, Desk), with no tabs; no Instagram and no Storage section.
 - [ ] Opening a project from a newer version says to update from the App Store (no Reload).

@@ -15,7 +15,7 @@ vi.mock('./db', () => ({
 
 const { addPhotosToPile, copyName, duplicatePhotos, putOnPage } = await import('./actions');
 const { projectStore, emptyProject } = await import('./store');
-const { convertLayout } = await import('./convertLayout');
+const { applyPageSetup, draftOf } = await import('./pageSetup');
 const { sheetOf } = await import('./spreads');
 
 beforeEach(() => {
@@ -63,7 +63,11 @@ describe('duplicatePhoto', () => {
   });
 
   it('offsets a copy in a frame by the same share of its width as on a 10 in page', async () => {
-    projectStore.reset(convertLayout(projectStore.project, 'digital'));
+    applyPageSetup({
+      ...draftOf(projectStore.project),
+      arrangement: 'frames',
+      page: { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 },
+    });
     expect(sheetOf(projectStore.project).pageW).toBe(1080);
     projectStore.apply((d) => putOnPage(d, [A], allSpreads(d)[0]!.id, 'whole'));
     const [id] = await duplicatePhotos([A]);
@@ -75,7 +79,11 @@ describe('duplicatePhoto', () => {
   });
 
   it('offsets a copy on the desk in proportion to the photo, even in a sequence', async () => {
-    projectStore.reset(convertLayout(projectStore.project, 'digital'));
+    applyPageSetup({
+      ...draftOf(projectStore.project),
+      arrangement: 'frames',
+      page: { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 },
+    });
     const [id] = await duplicatePhotos([A], 0.5);
     const [orig, copy] = [A, id!].map((pid) => projectStore.project.pile.find((p) => p.photoId === pid)!);
     const step = (0.5 * Math.max(orig!.w, orig!.h)) / 2;

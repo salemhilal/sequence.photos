@@ -1,8 +1,8 @@
 import type { GuideId, PhotoId, SpreadId } from './ids';
 
 /**
- * Positions and sizes on pages are in the layout's units (inches in print, pixels in
- * digital; see units.ts). The desk is always in inches.
+ * Positions and sizes on pages are in the page's unit (inches or pixels; see PageSetup and
+ * units.ts). The desk is always in inches.
  */
 
 export interface PhotoMeta {
@@ -24,15 +24,14 @@ export interface Placement {
 }
 
 /**
- * A spread's items are in its layout's units (inches in print, pixels in digital), with
- * y = 0 at the top edge. In print, x = 0 is the gutter (the left page spans -pageW..0,
- * the right page 0..pageW): anchoring to the gutter keeps layouts stable when the page
- * size changes. A digital frame's x = 0 is its left edge.
+ * A spread's items are in the page's unit, with y = 0 at the top edge. In spreads, x = 0
+ * is the gutter (the left page spans -pageW..0, the right page 0..pageW): anchoring to the
+ * gutter keeps layouts stable when the page size changes. A frame's x = 0 is its left edge.
  *
  * A book opens on a single right page (the first spread) and closes on a single left
- * page (the last); every spread between is a pair. A digital sequence is frames, one
- * image each. Each kind has its own type, and its own place in its layout, so one can't
- * end up in another's.
+ * page (the last); every spread between is a pair. A sequence is frames, one image each.
+ * Each kind has its own type, and its own place in its layout, so one can't end up in
+ * another's.
  */
 interface SpreadOf<K extends string> {
   kind: K;
@@ -42,45 +41,58 @@ interface SpreadOf<K extends string> {
 export type FirstSpread = SpreadOf<'first'>;
 export type MiddleSpread = SpreadOf<'middle'>;
 export type LastSpread = SpreadOf<'last'>;
-/** One image of a digital sequence, like a carousel slide. */
+/** One image of a sequence of frames, like a carousel slide. */
 export type Frame = SpreadOf<'frame'>;
 export type Spread = FirstSpread | MiddleSpread | LastSpread | Frame;
 export type SpreadKind = Spread['kind'];
 
-/** A page of a spread: a book's left or right page, or the whole of a digital frame. */
+/** A page of a spread: a book's left or right page, or the whole of a frame. */
 export type PageSide = 'left' | 'right' | 'whole';
 
-/** A page's or frame's size, in its layout's units: inches for print, pixels for digital. */
+/** A width and height, in some unit. */
 export interface Size {
   w: number;
   h: number;
 }
 
-/** A printed book: today's structure, with its page size. */
-export interface PrintLayout {
-  kind: 'print';
-  /** In inches. */
-  page: Size;
+/** Facing pages (a book) or single pages in order (a sequence of frames). */
+export type Arrangement = 'spreads' | 'frames';
+/** What sizes and positions on pages are stored in. The desk is always inches. */
+export type Unit = 'in' | 'px';
+
+/** The page: one page's size (a spread is two of them), its unit, and its resolution. */
+export interface PageSetup {
+  /** One page's size, in `unit`. */
+  w: number;
+  h: number;
+  unit: Unit;
+  /**
+   * Output pixels per unit: the dpi for inches (300 by default), the pixel density for
+   * pixels (1). Exports make this many pixels, and warnings check against it.
+   */
+  pxPerUnit: number;
+}
+
+/** A book: a single first page, spreads of two, and a single last page. */
+export interface SpreadsLayout {
+  kind: 'spreads';
   firstSpread: FirstSpread;
   spreads: MiddleSpread[];
   lastSpread: LastSpread;
 }
 
-/** A digital sequence, like an Instagram carousel: frames, all one size, in order. */
-export interface DigitalLayout {
-  kind: 'digital';
-  /** In pixels. */
-  frame: Size;
+/** A sequence, like an Instagram carousel: frames, all one size, in order. */
+export interface FramesLayout {
+  kind: 'frames';
   /** Never empty. */
   frames: [Frame, ...Frame[]];
 }
 
-export type Layout = PrintLayout | DigitalLayout;
-export type LayoutKind = Layout['kind'];
+export type Layout = SpreadsLayout | FramesLayout;
 
 /**
- * Distances from a page's edges, in its layout's units. Inside is the edge at the gutter
- * and outside the one opposite, so they mirror on facing pages. A digital frame is laid
+ * Distances from a page's edges, in the page's unit. Inside is the edge at the gutter
+ * and outside the one opposite, so they mirror on facing pages. A frame is laid
  * out like a left page: outside is its left edge, inside its right (the UI says Left and
  * Right there).
  */
@@ -120,20 +132,16 @@ export interface Settings {
    * gone) means the one with the largest box; with no border guides, the page.
    */
   dropBorder: GuideId | null;
-  /**
-   * Each layout kind's last size (print in inches, digital in pixels), so switching back
-   * restores it. The current kind's matches its layout's size.
-   */
-  sizes: Record<LayoutKind, Size>;
 }
 
 /**
- * What geometry lays photos out on: the project's page (print) or frame (digital), with
- * its size, its units, and its guides. Worked out from the project (see `sheetOf`), never
- * saved.
+ * What geometry lays photos out on: the project's page, with its arrangement, size, unit,
+ * resolution, and guides. Worked out from the project (see `sheetOf`), never saved.
  */
-export interface Sheet extends Omit<Settings, 'sizes'> {
-  layout: LayoutKind;
+export interface Sheet extends Settings {
+  arrangement: Arrangement;
+  unit: Unit;
+  pxPerUnit: number;
   pageW: number;
   pageH: number;
 }
@@ -142,7 +150,7 @@ export interface Sheet extends Omit<Settings, 'sizes'> {
  * The version of the saved project's shape. Bump it (and add a migration and a
  * test sample in schema.ts / schema.test.ts) whenever what gets saved changes.
  */
-export const CURRENT_SCHEMA = 3;
+export const CURRENT_SCHEMA = 4;
 
 export interface Project {
   /** Always the current shape: older ones are upgraded on load (see schema.ts). */
@@ -150,7 +158,9 @@ export interface Project {
   photos: Record<PhotoId, PhotoMeta>;
   /** Photos on the desktop; x/y are desk coordinates, always in inches (the desk isn't a page). */
   pile: Placement[];
-  /** The book's pages, or the sequence's frames, with their size (see `allSpreads`, `sheetOf`). */
+  /** The page size, unit, and resolution, shared by every spread or frame. */
+  page: PageSetup;
+  /** The book's spreads, or the sequence's frames (see `allSpreads`, `sheetOf`). */
   layout: Layout;
   settings: Settings;
   nextZ: number;

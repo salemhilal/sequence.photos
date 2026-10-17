@@ -52,10 +52,9 @@ Netlify runs `npm test && npm run build` for production, pull-request previews, 
 | Add photos          | ⌘I      | Ctrl+I          |
 | Preview             | ⌘P      | Ctrl+P          |
 | Settings            | ⌘,      | Ctrl+,          |
-| Import project      | ⌘O      | Ctrl+O          |
-| Export              | ⌘S      | Ctrl+S          |
-| Save PDF            | ⇧⌘P     | Ctrl+Shift+P    |
-| Export frames       | ⇧⌘E     | Ctrl+Shift+E    |
+| Open project        | ⌘O      | Ctrl+O          |
+| Save project        | ⌘S      | Ctrl+S          |
+| Export…             | ⇧⌘E     | Ctrl+Shift+E    |
 | Show/hide spreads   | ⌘B      | Ctrl+B          |
 | Copy / paste photos | ⌘C / ⌘V | Ctrl+C / Ctrl+V |
 | Duplicate photos    | ⌘D      | Ctrl+D          |
@@ -67,12 +66,16 @@ Hold ⌘ / Ctrl to see them on screen.
 
 Right-click the desk to tidy photos into a grid or change the desk color.
 
-**Print or digital.** A project is a print book (spreads of facing pages, sized in
-inches) or a digital sequence (single frames, sized in pixels, like an Instagram
-carousel; 1080 × 1350 px (4:5) by default, with Instagram's sizes as presets). Choose in
-**Layout** (in the toolbar). Switching breaks a book's spreads into frames, each photo going with
-the page that holds its center; going back, frame 1 becomes the first page and the rest
-pair into spreads. Guides and photos convert in proportion to the page width.
+**Spreads or frames, inches or pixels.** A project is spreads (facing pages, like a book)
+or frames (single pages in order, like slides or an Instagram carousel), measured in inches
+(with a resolution, 300 dpi by default) or pixels. Choose in **Layout** → Page, or pick a
+preset (Book, Zine, Slides, Instagram's sizes). Changes wait for Apply, with a preview of
+every page. Switching to frames breaks spreads into pages, each photo going with the page
+that holds its center; going back, frame 1 becomes the first page and the rest pair into
+spreads. Photos with less detail than the resolution asks for are marked.
+
+**Export…** (File menu, or the preview) saves a PDF, images, or an InDesign file, or posts
+to Instagram, with a preview of what it makes.
 
 **Layout** also sets up the guides photos snap to, on every spread and mirrored
 on facing pages: center lines, border guides (a distance from each edge: top, bottom,
@@ -149,7 +152,7 @@ and switches when you reload.
 
 ## Project files
 
-Export saves a `.photo-sequence` file (a ZIP inside) you can import anywhere:
+File → Save project saves a `.photo-sequence` file (a ZIP inside) you can open anywhere:
 
 ```
 photo-book-2026-09-26.photo-sequence
@@ -162,13 +165,14 @@ Drop a project on the desk to open it. Plain `.zip` files with the same contents
 
 ## Images
 
-For a digital sequence, File → Export frames as images saves a ZIP of JPEGs, one per frame at its
-pixel size (`01.jpg`, `02.jpg`, …, in order), drawn from the original photos.
+Export → Images saves a ZIP of JPEGs or PNGs drawn from the original photos: one per frame, or
+for spreads one per spread or per page (`01.jpg`, `02-03.jpg`, …, in order). Pixel pages come
+out at their pixel size; inches at the chosen dpi.
 
 ## InDesign
 
-For a print book, File → Export for InDesign saves a ZIP with an `.idml` file and a `Links/` folder of
+Export → InDesign saves a ZIP with an `.idml` file and a `Links/` folder of
 the placed photos. Unzip it and open the `.idml` in InDesign (or Affinity Publisher):
-you get a facing-pages document at the book's size, the On drop border guide as
+you get a facing-pages document at the book's size (or single pages, for frames), the On drop border guide as
 margins, the other guides as ruler guides, and each photo in a frame, linked to its
 original. If InDesign reports missing links, relink them to the `Links` folder.

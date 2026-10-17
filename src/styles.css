@@ -647,7 +647,7 @@ button {
 .photo-loading {
   background: var(--border);
 }
-/* A photo whose image can't be found: a grey stand-in with an alert icon (and a tooltip). */
+/* A photo whose image can't be found: a grey stand-in with an alert icon (and a tip). */
 .photo-missing {
   display: flex;
   align-items: center;
@@ -661,18 +661,8 @@ button {
   opacity: 0.7;
   pointer-events: auto;
   cursor: help;
-  /* On the desk, counter its zoom so the icon and tooltip stay one size. */
+  /* On the desk, counter its zoom so the icon stays one size. */
   transform: scale(var(--inv, 1));
-}
-/* Above neighboring photos while its tip shows. */
-.item:has(.photo-missing-icon:hover) {
-  z-index: 1;
-}
-/* Centered under the icon, which can sit anywhere, rather than right-aligned like other tips. */
-.photo-missing-icon[data-tip]::after {
-  right: auto;
-  left: 50%;
-  transform: translateX(-50%);
 }
 .photo-missing-icon .lucide {
   width: 18px;
@@ -1319,11 +1309,6 @@ body.col-resizing * {
   cursor: pointer;
   white-space: nowrap;
 }
-/* The panel scrolls, so it clips: open the tooltip rightward, inside it. */
-.drop-toggle[data-tip]::after {
-  right: auto;
-  left: 0;
-}
 .drop-toggle:hover {
   color: var(--text);
 }
@@ -1600,20 +1585,10 @@ body.col-resizing * {
 .setting .inline {
   gap: 14px;
 }
-/*
- * Tooltips: `data-tip` on an element shows its text on hover or keyboard focus.
- * They open below and toward the left, so they stay inside dialogs.
- */
-[data-tip] {
-  position: relative;
-}
-[data-tip]:hover::after,
-[data-tip]:focus-visible::after {
-  content: attr(data-tip);
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 5;
+/* Tooltips: `data-tip` on an element shows its text (see tooltip.ts). */
+.tooltip {
+  position: fixed;
+  z-index: 100;
   width: max-content;
   max-width: 240px;
   padding: 6px 9px;
@@ -1626,6 +1601,9 @@ body.col-resizing * {
   text-transform: none;
   white-space: normal;
   pointer-events: none;
+}
+.tooltip[hidden] {
+  display: none;
 }
 
 /* Confirmation */
@@ -1786,18 +1764,135 @@ body.col-resizing * {
   border-color: var(--accent);
 }
 
+/* The Layout view's tabs, and the Page tab's form and preview. */
+.layout-tabs {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.layout-tabs .segmented {
+  display: grid;
+}
+.size-form .inline select,
+.layout-panel .size-form .inline select {
+  width: auto;
+  flex: none;
+}
+.page-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.page-content legend {
+  padding: 0;
+  margin-bottom: 4px;
+}
+.page-content:disabled .check {
+  opacity: 0.5;
+}
+.page-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+/* Above the page's photos, which are positioned. */
+.page-preview-controls,
+.page-preview-footer {
+  position: relative;
+  z-index: 1;
+}
+.page-preview-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.layout-panel .size-form .dpi .num-field {
+  flex: 0 0 90px;
+}
+.page-preview-footer {
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+/* A photo with less detail than the page asks for: on the photo, and on its spread's row. */
+.soft-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--warn);
+  box-shadow: var(--shadow);
+}
+.soft-badge svg {
+  width: 12px;
+  height: 12px;
+}
+.item .soft-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  pointer-events: auto;
+  cursor: help;
+}
+
+/* One page of a spread, clipped to it (Instagram's slides). */
+.page-canvas {
+  position: relative;
+  overflow: hidden;
+}
+
 /* Post to Instagram */
-.inspector.instagram-panel {
+.slide-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.slide-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.slide-pick .page-canvas {
+  outline: 1px solid var(--border);
+  opacity: 0.5;
+}
+.slide-pick.on .page-canvas {
+  outline: 2px solid var(--accent);
+  opacity: 1;
+}
+.slide-pick-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.inspector.export-panel {
   width: 300px;
 }
-.instagram-panel .segmented {
+.export-panel .segmented {
   display: grid;
 }
 /* The last section: nothing below it to divide from. */
-.instagram-panel .instagram-actions {
+.export-panel .export-actions {
   border-bottom: 0;
 }
-.instagram-actions .btn {
+.export-actions .btn {
   justify-content: center;
 }
 .instagram-done {
@@ -2301,4 +2396,65 @@ body.col-resizing * {
   background: transparent;
   border-color: transparent;
   color: inherit;
+}
+
+/* Export */
+.export-destinations {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.export-destination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.export-destination:hover:not(:disabled) {
+  background: var(--fill);
+}
+.export-destination.on {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.export-destination:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.export-destination .lucide {
+  width: 15px;
+  height: 15px;
+}
+/* How the project's measurements convert for this destination: a note, not a warning. */
+.export-note {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: var(--radius);
+  background: var(--fill);
+  font-size: 12.5px;
+}
+.export-note p {
+  margin: 0;
+}
+.export-note p > .lucide,
+.export-actions .warn > .lucide {
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+}
+.export-panel .dpi {
+  align-items: center;
+  gap: 8px;
+}
+.export-panel .dpi .num-field {
+  flex: 0 0 80px;
 }

@@ -3,13 +3,15 @@ import { GripVertical, Plus, X } from 'lucide-react';
 import { deleteSpread, dropPhotos, folioLabel, insertSpread, moveSpread } from '../actions';
 import { clearGhost, sameTarget, startDrag, trackGhost } from '../drag';
 import { projectStore, useProject } from '../store';
-import type { LayoutKind, Placement, Sheet, Spread } from '../types';
+import type { Arrangement, Placement, Sheet, Spread } from '../types';
 import { sheetExtent, sideAt } from '../geometry';
 import { TERMS } from '../units';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH } from '../prefs';
 import { openPhotoMenu, setSidebarWidth, ui } from '../ui';
+import { placedSoft, softLabel } from '../resolution';
 import { PhotoImg } from './PhotoImg';
+import { SoftBadge } from './SoftBadge';
 import { SpreadCanvas } from './SpreadCanvas';
 import { allSpreads, sheetOf } from '../spreads';
 
@@ -18,8 +20,8 @@ const GHOST_MAX = 140;
  * Narrowest a spread (or a frame, half as wide: a book's page) can be before the list
  * falls back to fewer columns, and the narrowest its picture gets.
  */
-const GRID_MIN_CELL: Record<LayoutKind, number> = { print: 280, digital: 96 };
-const MIN_THUMB: Record<LayoutKind, number> = { print: 120, digital: 60 };
+const GRID_MIN_CELL: Record<Arrangement, number> = { spreads: 280, frames: 96 };
+const MIN_THUMB: Record<Arrangement, number> = { spreads: 120, frames: 60 };
 /** Space between grid columns; the vertical insert gaps live here. */
 const GRID_GAP_X = 20;
 /** Horizontal padding inside each spread row. */
@@ -36,13 +38,13 @@ const GRID_PAD_X = 24;
  * from the list's whole width, not its content's: the grid's padding differs, and
  * measuring inside it would flip between one column and two at some widths.
  */
-function listLayout(listWidth: number, layout: LayoutKind): { cols: number; thumbW: number } {
-  const min = GRID_MIN_CELL[layout];
+function listLayout(listWidth: number, arrangement: Arrangement): { cols: number; thumbW: number } {
+  const min = GRID_MIN_CELL[arrangement];
   const inGrid = listWidth - 2 * GRID_PAD_X;
   const cols = Math.max(1, Math.floor((inGrid + GRID_GAP_X) / (min + GRID_GAP_X)));
   const contentWidth = cols > 1 ? inGrid : listWidth - 2 * LIST_PAD_X;
   const cellW = (contentWidth - GRID_GAP_X * (cols - 1)) / cols;
-  return { cols, thumbW: Math.max(MIN_THUMB[layout], cellW - ROW_PAD_X) };
+  return { cols, thumbW: Math.max(MIN_THUMB[arrangement], cellW - ROW_PAD_X) };
 }
 
 export function Sidebar() {
@@ -50,14 +52,14 @@ export function Sidebar() {
   const listRef = useRef<HTMLDivElement>(null);
   const [reorder, setReorder] = useState<{ id: string; dropIndex: number } | null>(null);
   const sheet = sheetOf(project);
-  const print = sheet.layout === 'print';
-  const terms = TERMS[sheet.layout];
+  const book = sheet.arrangement === 'spreads';
+  const terms = TERMS[sheet.arrangement];
   // The whole book (or sequence), in order; indexes below count through it.
   const spreads = allSpreads(project);
   const preferredWidth = ui.use((s) => s.sidebarWidth);
   const width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(preferredWidth, window.innerWidth - MIN_DESK_WIDTH));
   const [listWidth, setListWidth] = useState(width);
-  const { cols, thumbW } = listLayout(listWidth, sheet.layout);
+  const { cols, thumbW } = listLayout(listWidth, sheet.arrangement);
   const grid = cols > 1;
 
   useLayoutEffect(() => {
@@ -119,7 +121,7 @@ export function Sidebar() {
         const before = grid ? ev.clientX < best.r.left + best.r.width / 2 : ev.clientY < best.r.top + best.r.height / 2;
         const at = before ? best.idx : best.idx + 1;
         // A book's first and last spreads stay put; frames can go anywhere.
-        dropIndex = print ? Math.min(Math.max(1, at), spreads.length - 1) : at;
+        dropIndex = book ? Math.min(Math.max(1, at), spreads.length - 1) : at;
         setReorder({ id: spread.id, dropIndex });
       },
       onEnd: (_, moved) => {
@@ -136,7 +138,7 @@ export function Sidebar() {
     <aside className="sidebar" style={{ width }}>
       <div
         className="sidebar-resize"
-        title="Drag to resize · double-click to reset"
+        data-tip="Drag to resize · double-click to reset"
         onPointerDown={onResizeDown}
         onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH, true)}
       />
@@ -145,8 +147,8 @@ export function Sidebar() {
         <button
           className="btn ghost icon small"
           aria-label={`Add ${terms.spread} at the end`}
-          title={terms.addAtEnd}
-          onClick={() => insertSpread(print ? spreads.length - 1 : spreads.length)}
+          data-tip={terms.addAtEnd}
+          onClick={() => insertSpread(book ? spreads.length - 1 : spreads.length)}
         >
           <Plus />
         </button>
@@ -161,7 +163,7 @@ export function Sidebar() {
         {spreads.map((spread, i) => (
           <div key={spread.id} className="spread-cell">
             {/* A book's first and last spreads stay put; frames can go anywhere. */}
-            {(i > 0 || !print) && (
+            {(i > 0 || !book) && (
               <InsertGap index={i} active={reorder?.dropIndex === i} vertical={grid} noun={terms.spread} />
             )}
             <SpreadRow
@@ -170,12 +172,13 @@ export function Sidebar() {
               total={spreads.length}
               sheet={sheet}
               thumbW={thumbW}
+              soft={spread.items.filter((it) => placedSoft(project.photos[it.photoId], it, sheet)).length}
               dragging={reorder?.id === spread.id}
               onHeaderDown={onHeaderDown}
             />
           </div>
         ))}
-        {!print && (
+        {!book && (
           <div className="spread-cell">
             <InsertGap
               index={spreads.length}
@@ -219,7 +222,8 @@ function InsertGap({
       ) : (
         <button
           className="insert-btn"
-          title={vertical ? `Add a ${noun} here` : undefined}
+          data-tip={vertical ? `Add a ${noun} here` : undefined}
+          aria-label={vertical ? `Add a ${noun} here` : undefined}
           onClick={() => insertSpread(index)}
         >
           {vertical ? '+' : `+ Add ${noun}`}
@@ -235,17 +239,19 @@ interface RowProps {
   total: number;
   sheet: Sheet;
   thumbW: number;
+  /** How many of its photos have less detail than the page asks for. */
+  soft: number;
   dragging: boolean;
   onHeaderDown: (e: React.PointerEvent, s: Spread) => void;
 }
 
-function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown }: RowProps) {
+function SpreadRow({ spread, index, total, sheet, thumbW, soft, dragging, onHeaderDown }: RowProps) {
   const editing = ui.use((s) => s.editingSpreadId === spread.id);
   // Thumbnails are as wide as a book's two pages, or a frame.
   const scale = thumbW / sheetExtent(sheet).width;
   // A book's middle spreads move and delete; so does any frame but a sequence's only one.
   const movable = spread.kind === 'middle' || (spread.kind === 'frame' && total > 1);
-  const label = folioLabel(index, total, sheet.layout);
+  const label = folioLabel(index, total, sheet.arrangement);
 
   const open = () => ui.set({ editingSpreadId: spread.id });
 
@@ -292,19 +298,22 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
     <div className={`spread-row${editing ? ' editing' : ''}${dragging ? ' dragging' : ''}`} data-row-index={index}>
       <div
         className={`spread-row-head${movable ? ' draggable' : ''}`}
-        title={movable ? 'Drag to reorder' : spread.kind === 'frame' ? '' : 'The first and last pages stay in place'}
+        data-tip={
+          movable ? 'Drag to reorder' : spread.kind === 'frame' ? undefined : 'The first and last pages stay in place'
+        }
         onPointerDown={movable ? (e) => onHeaderDown(e, spread) : undefined}
       >
         <span className={`grip${movable ? '' : ' locked'}`} aria-hidden="true">
           <GripVertical />
         </span>
         <span className="spread-label">{label}</span>
+        {soft > 0 && <SoftBadge note={softLabel(soft, sheet)} />}
         <span className="spacer" />
         {movable && (
           <button
             className="row-delete"
             aria-label={spread.kind === 'frame' ? `Delete frame ${label}` : `Delete pages ${label}`}
-            title={`Delete ${spread.kind === 'frame' ? 'frame' : 'spread'} (photos return to the desk)`}
+            data-tip={`Delete ${spread.kind === 'frame' ? 'frame' : 'spread'} (photos return to the desk)`}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => deleteSpread(spread.id)}
           >

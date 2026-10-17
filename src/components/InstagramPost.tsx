@@ -1,31 +1,39 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
-import { useWindowEvent } from '../hooks';
-import { useInstagram } from '../instagram';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { useElementSize, usePager } from '../hooks';
+import { connectInstagram, returnToExportAfterSignIn, takeReturnToExport, useInstagram } from '../instagram';
 import {
   fits,
   hashtagCount,
   LIMITS,
   postImageLayout,
   ratioLabel,
+  slideSize,
   targetRatio,
   type Fit,
   type PostImageLayout,
   type PostKind,
+  type Slide,
 } from '../instagramImage';
 import { CancelledError, postToInstagram, type PostStep } from '../instagramPost';
-import { allSpreads, sheetOf } from '../spreads';
+import { PREVIEWS_NOTICE } from '../rasterExport';
+import { firstNonEmpty, outputPages, slideKey } from '../renderPlan';
+import { sheetOf } from '../spreads';
 import { useProject } from '../store';
-import type { Frame, Sheet } from '../types';
+import type { Sheet } from '../types';
 import { closeModal, lockModal } from '../ui';
 import { Segmented } from './Segmented';
-import { SpreadCanvas } from './SpreadCanvas';
+import { PageCanvas } from './SpreadCanvas';
 
 /**
- * File → Post to Instagram: the post's settings beside a preview of how it'll look on
- * Instagram (a feed post's carousel, or stories). Posting is in instagramPost.ts; the
- * images, in instagramImage.ts.
+ * The Export view's Instagram destination: a preview of how the post will look on
+ * Instagram (a feed post's carousel, or stories) beside its settings and the choice of
+ * which pages or frames to post. Posting is in instagramPost.ts; the images, in
+ * instagramImage.ts.
  */
+
+/** Thumbnails' height in the slide picker. */
+const THUMB_H = 64;
 
 type Status =
   | { kind: 'idle' }
@@ -41,9 +49,9 @@ const KINDS: { value: PostKind; label: string }[] = [
 function stepLabel(step: PostStep): string {
   switch (step.step) {
     case 'preparing':
-      return `Preparing frame ${step.done + 1} of ${step.total}…`;
+      return `Preparing slide ${step.done + 1} of ${step.total}…`;
     case 'uploading':
-      return `Uploading frame ${step.done + 1} of ${step.total}…`;
+      return `Uploading slide ${step.done + 1} of ${step.total}…`;
     case 'processing':
       return 'Instagram is processing the post…';
     case 'publishing':
@@ -51,24 +59,55 @@ function stepLabel(step: PostStep): string {
   }
 }
 
-export function InstagramPost() {
+/** The post's choices, kept while the app is open so switching destinations keeps them. */
+let remembered: { kind: PostKind; fit: Fit; caption: string; chosen: Set<string> | null } = {
+  kind: 'feed',
+  fit: 'crop',
+  caption: '',
+  chosen: null,
+};
+
+interface Props {
+  /** What the panel starts with (the destination picker), told whether a post is under way. */
+  head: (posting: boolean) => ReactNode;
+}
+
+export function InstagramPost({ head }: Props) {
   const { project } = useProject();
   const connection = useInstagram();
   const sheet = sheetOf(project);
-  const all = allSpreads(project).filter((s): s is Frame => s.kind === 'frame');
-  const size = { w: sheet.pageW, h: sheet.pageH };
+  // Every page or frame, in order: spreads are torn into their pages.
+  const all = outputPages(project, 'page');
+  const size = slideSize(sheet);
+  const torn = project.layout.kind === 'spreads';
 
-  const [kind, setKind] = useState<PostKind>('feed');
-  const [fit, setFit] = useState<Fit>('crop');
-  const [caption, setCaption] = useState('');
-  const [skipEmpty, setSkipEmpty] = useState(true);
+  // The choices made last time (kept while the app is open, like Export's), else the defaults.
+  const [kind, setKind] = useState<PostKind>(remembered.kind);
+  const [fit, setFit] = useState<Fit>(remembered.fit);
+  const [caption, setCaption] = useState(remembered.caption);
+  // Instagram's API takes 10 at a time, for a carousel or a run of stories alike: the
+  // first 10 with photos to start with, or those chosen last time that are still there.
+  const [chosen, setChosen] = useState(() => {
+    const kept = remembered.chosen && new Set(all.map(slideKey).filter((k) => remembered.chosen?.has(k)));
+    return kept?.size ? kept : firstNonEmpty(all, sheet, LIMITS.maxItems);
+  });
+  useEffect(() => {
+    remembered = { kind, fit, caption, chosen };
+  }, [kind, fit, caption, chosen]);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
+  // Photos that went out at preview size (their originals wouldn't decode here).
+  const [previews, setPreviews] = useState(0);
   const abort = useRef<AbortController | null>(null);
 
-  const emptyCount = all.filter((f) => f.items.length === 0).length;
-  const chosen = skipEmpty ? all.filter((f) => f.items.length > 0) : all;
-  // Instagram's API takes 10 at a time, for a carousel or a run of stories alike.
-  const frames = chosen.slice(0, LIMITS.maxItems);
+  // In the document's order; any that went away (an undo meanwhile) are left out.
+  const slides = all.filter((p) => chosen.has(slideKey(p)));
+  const full = slides.length >= LIMITS.maxItems;
+  const toggle = (key: string, on: boolean) => {
+    const next = new Set([...chosen].filter((k) => all.some((p) => slideKey(p) === k)));
+    if (on && next.size < LIMITS.maxItems) next.add(key);
+    else next.delete(key);
+    setChosen(next);
+  };
   const layout = postImageLayout(size, kind, fit);
   const tags = hashtagCount(caption);
   const posting = status.kind === 'posting';
@@ -85,36 +124,55 @@ export function InstagramPost() {
   // Cancelling stops before anything is published.
   const cancellable = posting && status.step.step !== 'publishing';
 
-  const problem =
-    frames.length === 0
-      ? 'There are no frames with photos to post.'
+  // Everything previews and can be set up before connecting; posting needs the account.
+  const ready = connection !== null && !connection.needsReconnect;
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const connect = () => {
+    setConnecting(true);
+    setConnectError(null);
+    returnToExportAfterSignIn();
+    void connectInstagram().then((message) => {
+      // Null: on the way to Instagram's sign-in page.
+      if (message) {
+        // Not on the way to Instagram after all: a later sign-in from Settings returns there.
+        takeReturnToExport();
+        setConnectError(message);
+        setConnecting(false);
+      }
+    });
+  };
+
+  const problem = !ready
+    ? null
+    : slides.length === 0
+      ? 'Choose at least one slide to post.'
       : kind === 'feed' && caption.length > LIMITS.captionLength
         ? `Captions can be up to ${LIMITS.captionLength.toLocaleString()} characters.`
         : kind === 'feed' && tags > LIMITS.hashtags
           ? `Instagram allows up to ${LIMITS.hashtags} hashtags.`
           : null;
 
-  const close = () => {
-    if (!posting) closeModal();
-  };
-  useWindowEvent('keydown', (e) => {
-    if (e.key === 'Escape' && !(e.target instanceof HTMLTextAreaElement)) close();
-  });
-
   const post = () => {
     const controller = new AbortController();
     abort.current = controller;
-    setStatus({ kind: 'posting', step: { step: 'preparing', done: 0, total: frames.length } });
+    setStatus({ kind: 'posting', step: { step: 'preparing', done: 0, total: slides.length } });
     postToInstagram({
-      frames,
-      size,
+      slides,
+      sheet,
+      photos: project.photos,
       kind,
       fit,
       caption: caption.trim(),
+      onPreviews: setPreviews,
       signal: controller.signal,
       onStep: (step) => setStatus({ kind: 'posting', step }),
     }).then(
-      (link) => setStatus({ kind: 'done', link }),
+      (link) => {
+        // Posted: the next post starts fresh, not with this one's caption and slides.
+        remembered = { ...remembered, caption: '', chosen: null };
+        setStatus({ kind: 'done', link });
+      },
       (error: unknown) =>
         setStatus({
           kind: 'failed',
@@ -129,148 +187,163 @@ export function InstagramPost() {
   };
 
   return (
-    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="modal editor instagram-post" data-modal>
-        <header className="modal-head">
-          <div className="modal-title">
-            <span className="folio">Post to Instagram</span>
-            {connection && <span className="muted data">@{connection.username}</span>}
-          </div>
-          <span className="spacer" />
-          <button className="btn ghost icon" aria-label="Close" onClick={close} disabled={posting}>
-            <X />
-          </button>
-        </header>
-        <div className="editor-body">
-          <PostPreview
-            frames={frames}
-            sheet={sheet}
-            layout={layout}
-            kind={kind}
-            username={connection?.username ?? ''}
-            caption={caption}
-          />
-          <aside className="inspector sectioned instagram-panel">
-            <section>
-              <h3>Post as</h3>
-              <Segmented halves label="Post as" options={KINDS} value={kind} onChange={setKind} disabled={posting} />
+    <>
+      <PostPreview
+        slides={slides}
+        sheet={sheet}
+        layout={layout}
+        kind={kind}
+        username={connection?.username ?? 'you'}
+        caption={caption}
+      />
+      <aside className="inspector sectioned export-panel">
+        {head(posting)}
+        <section>
+          <h3>Account</h3>
+          {ready ? (
+            <p className="data">@{connection.username}</p>
+          ) : (
+            <>
               <p className="help">
-                {kind === 'feed'
-                  ? frames.length > 1
-                    ? `A carousel of ${frames.length} frames.`
-                    : 'A single image.'
-                  : `${frames.length} ${frames.length === 1 ? 'story' : 'stories'}, one per frame.`}
+                {connection
+                  ? `Connect @${connection.username} again to keep posting.`
+                  : 'Posting goes through your Instagram account. It needs a Business or Creator account.'}
               </p>
-            </section>
+              <button className="btn" disabled={connecting} onClick={connect}>
+                {connecting ? 'Opening Instagram…' : connection ? 'Reconnect Instagram' : 'Connect Instagram'}
+              </button>
+              {connectError && <p className="help warn">{connectError}</p>}
+            </>
+          )}
+        </section>
+        <section>
+          <h3>Post as</h3>
+          <Segmented halves label="Post as" options={KINDS} value={kind} onChange={setKind} disabled={posting} />
+          <p className="help">
+            {kind === 'feed'
+              ? slides.length > 1
+                ? `A carousel of ${slides.length} slides.`
+                : 'A single image.'
+              : `${slides.length} ${slides.length === 1 ? 'story' : 'stories'}, one per slide.`}
+          </p>
+        </section>
 
-            {!fits(size, kind) && (
-              <section>
-                <h3>Size</h3>
-                <p className="help">
-                  {kind === 'feed'
-                    ? `These frames have an aspect ratio of ${ratioLabel(size.w / size.h)}. Instagram’s upload API only takes feed posts from ${ratioLabel(LIMITS.minRatio)} (tall) to ${ratioLabel(LIMITS.maxRatio)} (wide), even where the Instagram app takes others.`
-                    : `These frames have an aspect ratio of ${ratioLabel(size.w / size.h)}, too tall for stories through Instagram’s upload API.`}
-                </p>
-                <Segmented
-                  halves
-                  label="Fit"
-                  options={[
-                    { value: 'crop', label: `Crop to ${ratioLabel(ratio)}` },
-                    { value: 'expand', label: `Expand to ${ratioLabel(ratio)}` },
-                  ]}
-                  value={fit}
-                  onChange={setFit}
-                  disabled={posting}
-                />
-                <p className="help">
-                  {fit === 'crop'
-                    ? `Trims the ${tall ? 'top and bottom' : 'sides'} of each frame.`
-                    : `Adds white margins at the ${tall ? 'sides' : 'top and bottom'}.`}
-                </p>
-              </section>
-            )}
+        {!fits(size, kind) && (
+          <section>
+            <h3>Size</h3>
+            <p className="help">
+              {kind === 'feed'
+                ? `These pages have an aspect ratio of ${ratioLabel(size.w / size.h)}. Instagram’s upload API only takes feed posts from ${ratioLabel(LIMITS.minRatio)} (tall) to ${ratioLabel(LIMITS.maxRatio)} (wide), even where the Instagram app takes others.`
+                : `These pages have an aspect ratio of ${ratioLabel(size.w / size.h)}, too tall for stories through Instagram’s upload API.`}
+            </p>
+            <Segmented
+              halves
+              label="Fit"
+              options={[
+                { value: 'crop', label: `Crop to ${ratioLabel(ratio)}` },
+                { value: 'expand', label: `Expand to ${ratioLabel(ratio)}` },
+              ]}
+              value={fit}
+              onChange={setFit}
+              disabled={posting}
+            />
+            <p className="help">
+              {fit === 'crop'
+                ? `Trims the ${tall ? 'top and bottom' : 'sides'} of each slide.`
+                : `Adds white margins at the ${tall ? 'sides' : 'top and bottom'}.`}
+            </p>
+          </section>
+        )}
 
-            {(emptyCount > 0 || chosen.length > LIMITS.maxItems) && (
-              <section>
-                <h3>Frames</h3>
-                {emptyCount > 0 && (
-                  <label className="check">
+        <section>
+          <h3>Slides</h3>
+          {torn && (
+            <p className="help warn">
+              Spreads are posted as their pages: {all.length} slides. Photos across the gutter continue onto the next
+              slide.
+            </p>
+          )}
+          <div className="slide-picker">
+            {all.map((p, i) => {
+              const key = slideKey(p);
+              const on = chosen.has(key);
+              return (
+                <label key={key} className={`slide-pick${on ? ' on' : ''}`}>
+                  <PageCanvas page={p} sheet={sheet} scale={THUMB_H / sheet.pageH} />
+                  <span className="slide-pick-label">
                     <input
                       type="checkbox"
-                      checked={skipEmpty}
-                      disabled={posting}
-                      onChange={(e) => setSkipEmpty(e.target.checked)}
+                      checked={on}
+                      disabled={posting || (!on && full)}
+                      onChange={(e) => toggle(key, e.target.checked)}
                     />
-                    Skip {emptyCount} empty {emptyCount === 1 ? 'frame' : 'frames'}
-                  </label>
-                )}
-                {chosen.length > LIMITS.maxItems && (
-                  <p className="help warn">
-                    Instagram takes up to {LIMITS.maxItems} {kind === 'feed' ? 'frames per post' : 'stories at a time'}{' '}
-                    from apps, so only the first {LIMITS.maxItems} of {chosen.length} will be posted.
-                  </p>
-                )}
-              </section>
-            )}
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          <p className={`help${full ? ' warn' : ''}`}>
+            {slides.length} of {LIMITS.maxItems} chosen.
+            {full && ` Instagram takes up to ${LIMITS.maxItems} at a time.`}
+          </p>
+        </section>
 
-            {kind === 'feed' ? (
-              <section>
-                <h3>Caption</h3>
-                <textarea
-                  className="text-area"
-                  value={caption}
-                  rows={6}
-                  placeholder="Write a caption…"
-                  disabled={posting}
-                  onChange={(e) => setCaption(e.target.value)}
-                />
-                <p
-                  className={`help data${caption.length > LIMITS.captionLength || tags > LIMITS.hashtags ? ' warn' : ''}`}
-                >
-                  {caption.length.toLocaleString()} / {LIMITS.captionLength.toLocaleString()}
-                  {tags > 0 && ` · ${tags} / ${LIMITS.hashtags} hashtags`}
-                </p>
-              </section>
-            ) : (
-              <section>
-                <p className="help">Stories don’t have captions.</p>
-              </section>
-            )}
+        {kind === 'feed' ? (
+          <section>
+            <h3>Caption</h3>
+            <textarea
+              className="text-area"
+              value={caption}
+              rows={6}
+              placeholder="Write a caption…"
+              disabled={posting}
+              onChange={(e) => setCaption(e.target.value)}
+            />
+            <p className={`help data${caption.length > LIMITS.captionLength || tags > LIMITS.hashtags ? ' warn' : ''}`}>
+              {caption.length.toLocaleString()} / {LIMITS.captionLength.toLocaleString()}
+              {tags > 0 && ` · ${tags} / ${LIMITS.hashtags} hashtags`}
+            </p>
+          </section>
+        ) : (
+          <section>
+            <p className="help">Stories don’t have captions.</p>
+          </section>
+        )}
 
-            <section className="instagram-actions">
-              {status.kind === 'done' ? (
-                <>
-                  <p className="instagram-done">Posted to Instagram.</p>
-                  {status.link && (
-                    <a className="btn" href={status.link} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink />
-                      View on Instagram
-                    </a>
-                  )}
-                  <button className="btn ghost" onClick={closeModal}>
-                    Done
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button className="btn primary" disabled={posting || problem !== null} onClick={post}>
-                    {posting ? 'Posting…' : 'Post to Instagram'}
-                  </button>
-                  {cancellable && (
-                    <button className="btn ghost" onClick={() => abort.current?.abort()}>
-                      Cancel
-                    </button>
-                  )}
-                  {posting && <p className="help">{stepLabel(status.step)}</p>}
-                  {status.kind === 'failed' && <p className="help warn">{status.message}</p>}
-                  {problem && !posting && <p className="help warn">{problem}</p>}
-                </>
+        <section className="export-actions">
+          {status.kind === 'done' ? (
+            <>
+              <p className="instagram-done">Posted to Instagram.</p>
+              {previews > 0 && <p className="help warn">{PREVIEWS_NOTICE}</p>}
+              {status.link && (
+                <a className="btn" href={status.link} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink />
+                  View on Instagram
+                </a>
               )}
-            </section>
-          </aside>
-        </div>
-      </div>
-    </div>
+              <button className="btn ghost" onClick={closeModal}>
+                Done
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn primary" disabled={posting || !ready || problem !== null} onClick={post}>
+                {posting ? 'Posting…' : 'Post to Instagram'}
+              </button>
+              {cancellable && (
+                <button className="btn ghost" onClick={() => abort.current?.abort()}>
+                  Cancel
+                </button>
+              )}
+              {posting && <p className="help">{stepLabel(status.step)}</p>}
+              {status.kind === 'failed' && <p className="help warn">{status.message}</p>}
+              {problem && !posting && <p className="help warn">{problem}</p>}
+            </>
+          )}
+        </section>
+      </aside>
+    </>
   );
 }
 
@@ -289,7 +362,7 @@ function Caption({ text }: { text: string }) {
 }
 
 interface PreviewProps {
-  frames: readonly Frame[];
+  slides: readonly Slide[];
   sheet: Sheet;
   layout: PostImageLayout;
   kind: PostKind;
@@ -298,27 +371,9 @@ interface PreviewProps {
 }
 
 /** How the post will look on Instagram: a feed post's carousel, or stories. */
-function PostPreview({ frames, sheet, layout, kind, username, caption }: PreviewProps) {
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [stage, setStage] = useState({ w: 700, h: 600 });
-  const [index, setIndex] = useState(0);
-  const at = Math.min(index, Math.max(0, frames.length - 1));
-
-  useLayoutEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      if (entry) setStage({ w: entry.contentRect.width, h: entry.contentRect.height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  useWindowEvent('keydown', (e) => {
-    if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
-    if (e.key === 'ArrowLeft') setIndex(Math.max(0, at - 1));
-    if (e.key === 'ArrowRight') setIndex(Math.min(frames.length - 1, at + 1));
-  });
+function PostPreview({ slides, sheet, layout, kind, username, caption }: PreviewProps) {
+  const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 700, h: 600 });
+  const { at, go } = usePager(slides.length);
 
   // The media box: the image's shape in the feed; a phone screen (9:16) for stories.
   const aspect = kind === 'story' ? 9 / 16 : layout.width / layout.height;
@@ -330,7 +385,7 @@ function PostPreview({ frames, sheet, layout, kind, username, caption }: Preview
   const imageW = kind === 'story' ? Math.min(w, h * (layout.width / layout.height)) : w;
   const imageH = imageW * (layout.height / layout.width);
 
-  const slide = (frame: Frame) => {
+  const render = (slide: Slide) => {
     const k = imageW / layout.width;
     const s = k * (layout.target.w / layout.source.w);
     return (
@@ -342,21 +397,21 @@ function PostPreview({ frames, sheet, layout, kind, username, caption }: Preview
             top: layout.target.y * k - layout.source.y * s,
           }}
         >
-          <SpreadCanvas spread={frame} sheet={sheet} scale={s} clip />
+          <PageCanvas page={slide} sheet={sheet} scale={s * sheet.pxPerUnit} />
         </div>
       </div>
     );
   };
 
-  const nav = frames.length > 1 && (
+  const nav = slides.length > 1 && (
     <>
       {at > 0 && (
-        <button className="ig-arrow prev" aria-label="Previous frame" onClick={() => setIndex(at - 1)}>
+        <button className="ig-arrow prev" aria-label="Previous slide" onClick={() => go(-1)}>
           <ChevronLeft />
         </button>
       )}
-      {at < frames.length - 1 && (
-        <button className="ig-arrow next" aria-label="Next frame" onClick={() => setIndex(at + 1)}>
+      {at < slides.length - 1 && (
+        <button className="ig-arrow next" aria-label="Next slide" onClick={() => go(1)}>
           <ChevronRight />
         </button>
       )}
@@ -374,20 +429,20 @@ function PostPreview({ frames, sheet, layout, kind, username, caption }: Preview
 
   return (
     <div className="editor-stage instagram-stage" ref={stageRef}>
-      {frames.length === 0 ? (
+      {slides.length === 0 ? (
         <p className="muted">Nothing to preview.</p>
       ) : kind === 'story' ? (
         <div className="ig-story" style={{ width: w, height: h }}>
           <div className="ig-track" style={{ transform: `translateX(${-at * w}px)` }}>
-            {frames.map((frame) => (
-              <div key={frame.id} className="ig-slide" style={{ width: w, height: h }}>
-                {slide(frame)}
+            {slides.map((item) => (
+              <div key={slideKey(item)} className="ig-slide" style={{ width: w, height: h }}>
+                {render(item)}
               </div>
             ))}
           </div>
           <div className="ig-progress">
-            {frames.map((frame, i) => (
-              <span key={frame.id} className={i <= at ? 'seen' : ''} />
+            {slides.map((item, i) => (
+              <span key={slideKey(item)} className={i <= at ? 'seen' : ''} />
             ))}
           </div>
           {head}
@@ -398,23 +453,23 @@ function PostPreview({ frames, sheet, layout, kind, username, caption }: Preview
           {head}
           <div className="ig-media" style={{ width: w, height: h }}>
             <div className="ig-track" style={{ transform: `translateX(${-at * w}px)` }}>
-              {frames.map((frame) => (
-                <div key={frame.id} className="ig-slide" style={{ width: w, height: h }}>
-                  {slide(frame)}
+              {slides.map((item) => (
+                <div key={slideKey(item)} className="ig-slide" style={{ width: w, height: h }}>
+                  {render(item)}
                 </div>
               ))}
             </div>
-            {frames.length > 1 && (
+            {slides.length > 1 && (
               <span className="ig-count">
-                {at + 1}/{frames.length}
+                {at + 1}/{slides.length}
               </span>
             )}
             {nav}
           </div>
-          {frames.length > 1 && (
+          {slides.length > 1 && (
             <div className="ig-dots">
-              {frames.map((frame, i) => (
-                <span key={frame.id} className={i === at ? 'on' : ''} />
+              {slides.map((item, i) => (
+                <span key={slideKey(item)} className={i === at ? 'on' : ''} />
               ))}
             </div>
           )}

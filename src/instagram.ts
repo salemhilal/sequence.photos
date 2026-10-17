@@ -122,6 +122,7 @@ export function markNeedsReconnect(): void {
   if (current && !current.needsReconnect) set({ ...current, needsReconnect: true });
 }
 
+/** The connection now, outside React (see useInstagram). */
 export function instagramConnection(): InstagramConnection | null {
   return current;
 }
@@ -189,6 +190,29 @@ export async function planSignIn(origin: string, server: string): Promise<SignIn
     state,
   });
   return { url: `${INSTAGRAM.authorizeUrl}?${params}`, pending: { state, verifier, server } };
+}
+
+/** Where to go back to after signing in (session only): set when connecting from Export. */
+const RETURN_KEY = 'sequence:instagram-return';
+
+/** Connecting from the Export view: come back to it, on Instagram, after signing in. */
+export function returnToExportAfterSignIn(): void {
+  try {
+    sessionStorage.setItem(RETURN_KEY, 'export');
+  } catch {
+    // Without storage, the sign-in lands on the desk as from Settings.
+  }
+}
+
+/** Whether a sign-in just finished was started from the Export view (asked once). */
+export function takeReturnToExport(): boolean {
+  try {
+    const back = sessionStorage.getItem(RETURN_KEY) === 'export';
+    sessionStorage.removeItem(RETURN_KEY);
+    return back;
+  } catch {
+    return false;
+  }
 }
 
 /** Start connecting: go to Instagram's sign-in page. Returns an error message if it can't. */
