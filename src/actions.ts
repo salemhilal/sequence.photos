@@ -189,17 +189,44 @@ export function putInPile(d: Draft<Project>, photoId: PhotoId, at?: { x: number;
   removeFromSpreads(d, photoId);
   if (locate(d, photoId)?.where === 'desk') return;
   const { w, h } = pileSize(photo);
-  let c = at;
-  if (!c) {
-    // Near the middle of the view, a little off so several don't stack exactly.
-    const v = deskGeometry.visible();
-    const jitter = Math.max(w, h) * 0.2;
-    c = {
-      x: v.x + v.w / 2 + (Math.random() - 0.5) * jitter,
-      y: v.y + v.h / 2 + (Math.random() - 0.5) * jitter,
-    };
+  // Where asked; else the nearest place to the middle of the view clear of other photos.
+  const box = at ? { x: at.x - w / 2, y: at.y - h / 2 } : freeSpot(d.pile, { w, h }, centerOf(deskGeometry.visible()));
+  d.pile.push({ photoId, ...box, w, h, z: d.nextZ++ });
+}
+
+function centerOf(r: { x: number; y: number; w: number; h: number }): { x: number; y: number } {
+  return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+}
+
+/**
+ * Where a photo of `size` can go on the desk without overlapping any other (a gap apart):
+ * the clear spot nearest `near`, trying a grid around it in widening rings. Its top-left
+ * corner, in desk inches.
+ */
+export function freeSpot(
+  pile: readonly { x: number; y: number; w: number; h: number }[],
+  size: { w: number; h: number },
+  near: { x: number; y: number },
+): { x: number; y: number } {
+  const gap = DESK_GAP * Math.max(size.w, size.h);
+  const step = { x: size.w + gap, y: size.h + gap };
+  const clear = (x: number, y: number) =>
+    pile.every((p) => x + size.w + gap <= p.x || p.x + p.w + gap <= x || y + size.h + gap <= p.y || p.y + p.h + gap <= y);
+  const origin = { x: near.x - size.w / 2, y: near.y - size.h / 2 };
+  for (let ring = 0; ring <= 40; ring++) {
+    let best: { x: number; y: number; d: number } | null = null;
+    for (let i = -ring; i <= ring; i++) {
+      for (let j = -ring; j <= ring; j++) {
+        if (Math.max(Math.abs(i), Math.abs(j)) !== ring) continue;
+        const x = origin.x + i * step.x;
+        const y = origin.y + j * step.y;
+        const d = Math.hypot(i * step.x, j * step.y);
+        if (clear(x, y) && (!best || d < best.d)) best = { x, y, d };
+      }
+    }
+    if (best) return { x: best.x, y: best.y };
   }
-  d.pile.push({ photoId, x: c.x - w / 2, y: c.y - h / 2, w, h, z: d.nextZ++ });
+  return origin;
 }
 
 /**

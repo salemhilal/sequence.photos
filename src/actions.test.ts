@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { produce } from 'immer';
 import {
+  freeSpot,
   addPhotosToPile,
   folioLabel,
   deleteFromProject,
@@ -361,5 +362,23 @@ describe('frames', () => {
   it('numbers frames one by one', () => {
     expect(spreadLabel(4, 6, 'frames')).toBe('5');
     expect(folioLabel(4, 6, 'frames')).toBe('05');
+  });
+});
+
+describe('freeSpot', () => {
+  const size = { w: 2, h: 3 };
+
+  it('is the spot asked for on an empty desk', () => {
+    expect(freeSpot([], size, { x: 10, y: 10 })).toEqual({ x: 9, y: 8.5 });
+  });
+
+  it('is the nearest spot clear of other photos', async () => {
+    const pile = [{ x: 8, y: 8, w: 4, h: 4 }];
+    const spot = freeSpot(pile, size, { x: 10, y: 10 });
+    const overlaps = (a: (typeof pile)[number], b: (typeof pile)[number]) =>
+      a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    expect(overlaps({ ...spot, ...size }, pile[0]!)).toBe(false);
+    // Next to it, not far away.
+    expect(Math.hypot(spot.x - 9, spot.y - 8.5)).toBeLessThan(5);
   });
 });
