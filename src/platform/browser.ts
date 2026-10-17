@@ -47,6 +47,19 @@ export const platform: Platform = {
 
   projectIsSafe: () => false,
   projectReplaced() {},
+
+  openSignIn(url) {
+    location.assign(url);
+    return 'here';
+  },
+
+  onSignInReturn(finish) {
+    const { hash } = location;
+    if (!/[#&]instagram(_error)?=/.test(hash)) return;
+    // Out of the address bar right away (it's useless without this tab's verifier, but still).
+    history.replaceState(history.state, '', location.pathname + location.search);
+    finish(hash);
+  },
 };
 
 /** Once the project has photos, ask (once) for the browser not to clear its storage. */

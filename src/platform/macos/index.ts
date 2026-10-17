@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { ui } from '../../ui';
 import type { Platform } from '../types';
@@ -64,4 +66,22 @@ export const platform: Platform = {
   // Until documents have loaded (a moment after starting), nothing is known to be saved.
   projectIsSafe: () => documents?.isSaved() ?? false,
   projectReplaced: () => void loadDocuments().then((m) => m.forgetFile()),
+
+  openSignIn(url) {
+    void openUrl(url);
+    return 'browser';
+  },
+
+  onSignInReturn(finish) {
+    // The app's links macOS has handed it (src-tauri/src/lib.rs), including one that came
+    // before the page was ready.
+    const take = async () => {
+      for (const link of await invoke<string[]>('take_opened_links')) {
+        const url = new URL(link);
+        if (url.protocol === 'sequence-photos:' && url.host === 'instagram') finish(url.hash);
+      }
+    };
+    void listen('opened-links', () => void take());
+    void take();
+  },
 };

@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type {
   InstagramConnection as ServerConnection,
   InstagramError,
@@ -8,6 +8,7 @@ import type {
 import { INSTAGRAM, SERVER_URL } from './config';
 import { decodeBase64Url, encodeBase64Url } from './base64url';
 import { isRecord } from './guards';
+import { platform } from '#platform';
 import { normalizeServerUrl, serverUrl } from './server';
 
 /**
@@ -19,7 +20,8 @@ import { normalizeServerUrl, serverUrl } from './server';
  *    hash is the challenge) for this tab.
  * 2. Instagram sends the user to the server, which exchanges the code and sends them back
  *    here with a sealed bundle in the URL's fragment (useless without the verifier).
- * 3. `finishSignIn`, at startup, strips the fragment, checks the state is the one this tab
+ * 3. `finishSignIn` gets the fragment (from the address at startup on the website, or the
+ *    app's `sequence-photos://` link on the Mac), checks the state is the one this tab
  *    started, and trades the bundle and verifier for the connection (`/auth/redeem`).
  *
  * The connection (the Instagram token, the account, and Sequence's enrollment) is kept in
@@ -215,17 +217,60 @@ export function takeReturnToExport(): boolean {
   }
 }
 
-/** Start connecting: go to Instagram's sign-in page. Returns an error message if it can't. */
-export async function connectInstagram(): Promise<string | null> {
+/**
+ * Start connecting: open Instagram's sign-in page, here (the website) or in the browser (the
+ * Mac app). Resolves to where it opened, or a message saying why it couldn't.
+ */
+export async function connectInstagram(): Promise<{ opened: 'here' | 'browser' } | { error: string }> {
   const plan = await planSignIn(location.origin, serverUrl());
-  if ('error' in plan) return plan.error;
+  if ('error' in plan) return plan;
   try {
     sessionStorage.setItem(PENDING_KEY, JSON.stringify(plan.pending));
   } catch {
-    return 'This browser isn’t keeping data for this site, so Instagram can’t be connected.';
+    return { error: 'This browser isn’t keeping data for this site, so Instagram can’t be connected.' };
   }
-  location.assign(plan.url);
-  return null;
+  return { opened: platform.openSignIn(plan.url) };
+}
+
+/** Said while the Mac app waits for a sign-in in the browser to come back. */
+export const SIGN_IN_IN_BROWSER = 'Finish signing in to Instagram in your browser, then come back.';
+
+/**
+ * A Connect Instagram button's behavior: `connect` starts it, `busy` while it opens, and a
+ * `message` to show (why it couldn't, or to finish in the browser). From Export
+ * (`returnToExport`), a sign-in that comes back reopens Export on Instagram.
+ */
+export function useConnectInstagram({ returnToExport = false } = {}): {
+  connect: () => void;
+  busy: boolean;
+  message: { text: string; warn: boolean } | null;
+} {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ text: string; warn: boolean } | null>(null);
+  // Back from Instagram's page without signing in (restored from the back/forward cache): ready again.
+  useEffect(() => {
+    const shown = (e: PageTransitionEvent) => e.persisted && setBusy(false);
+    window.addEventListener('pageshow', shown);
+    return () => window.removeEventListener('pageshow', shown);
+  }, []);
+  const connect = () => {
+    setBusy(true);
+    setMessage(null);
+    if (returnToExport) returnToExportAfterSignIn();
+    void connectInstagram().then((result) => {
+      if ('error' in result) {
+        // Not on the way to Instagram after all: a later sign-in from Settings stays there.
+        if (returnToExport) takeReturnToExport();
+        setMessage({ text: result.error, warn: true });
+        setBusy(false);
+      } else if (result.opened === 'browser') {
+        // This window stays: ready again, with a word on where to go.
+        setMessage({ text: SIGN_IN_IN_BROWSER, warn: false });
+        setBusy(false);
+      }
+    });
+  };
+  return { connect, busy, message };
 }
 
 /** What came back in the URL's fragment, if it's a sign-in's return. */
@@ -276,15 +321,14 @@ export const ERROR_MESSAGES: Record<InstagramError, string | null> = {
 };
 
 /**
- * At startup: if the URL is a sign-in's return, strip it from the address bar right away,
- * then finish (or report) the sign-in this tab started. A return this tab didn't start
- * (no matching state) is ignored, so a link can't connect someone to another account.
- * Resolves to a message for the user, or null.
+ * A sign-in come back (its URL's fragment; see Platform.onSignInReturn): finish (or report)
+ * the sign-in this tab started. A return this tab didn't start (no matching state) is
+ * ignored, so a link can't connect someone to another account. Resolves to a message for
+ * the user, or null.
  */
-export async function finishSignIn(): Promise<string | null> {
-  const back = parseSignInReturn(location.hash);
+export async function finishSignIn(fragment: string): Promise<string | null> {
+  const back = parseSignInReturn(fragment);
   if (!back) return null;
-  history.replaceState(history.state, '', location.pathname + location.search);
   const pending = takePending();
   // Ignored (see above), but say so. The warnings say why, for debugging (nothing secret).
   if (!pending || pending.state !== back.state) {

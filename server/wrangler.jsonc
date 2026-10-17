@@ -45,9 +45,9 @@
     // redirect URI.
     "CALLBACK_URL": "https://sequence-server.sequence-photos.workers.dev/auth/callback",
     // JSON map: `client` (from the OAuth state) → where to send the user back.
-    "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\"}",
+    "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\",\"mac\":\"sequence-photos://instagram\"}",
     // JSON array of origins allowed by CORS on /auth/redeem, /auth/renew, /uploads*.
-    "ALLOWED_ORIGINS": "[\"https://sequence.photos\"]",
+    "ALLOWED_ORIGINS": "[\"https://sequence.photos\",\"tauri://localhost\"]",
     "MAX_FRAMES": "10",
   },
 
@@ -79,8 +79,8 @@
         // The dev Worker's callback URL (or http://localhost:8787/auth/callback when
         // running `wrangler dev`, if registered with the Meta app).
         "CALLBACK_URL": "https://sequence-server-dev.sequence-photos.workers.dev/auth/callback",
-        "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\",\"dev\":\"http://localhost:5175/app/\"}",
-        "ALLOWED_ORIGINS": "[\"https://sequence.photos\",\"http://localhost:5175\"]",
+        "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\",\"dev\":\"http://localhost:5175/app/\",\"mac\":\"sequence-photos://instagram\"}",
+        "ALLOWED_ORIGINS": "[\"https://sequence.photos\",\"http://localhost:5175\",\"tauri://localhost\"]",
         "MAX_FRAMES": "10",
       },
     },

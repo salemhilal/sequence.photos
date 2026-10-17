@@ -1,10 +1,9 @@
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, FileText, Images, Info, Package, Send, TriangleAlert, X } from 'lucide-react';
-import { platform } from '#platform';
 import {
   converts,
   defaultOptions,
-  destinations,
+  DESTINATIONS,
   exportPxPerUnit,
   perOf,
   type Destination,
@@ -35,7 +34,8 @@ const InstagramPost = lazy(() => import('./InstagramPost').then((m) => ({ defaul
  * how it converts, with the dpi it converts at.
  */
 
-const DESTINATIONS: Record<Destination, { label: string; icon: ReactNode }> = {
+/** How each destination shows in the picker. */
+const LOOKS: Record<Destination, { label: string; icon: ReactNode }> = {
   pdf: { label: 'PDF', icon: <FileText /> },
   images: { label: 'Images', icon: <Images /> },
   indesign: { label: 'InDesign', icon: <Package /> },
@@ -49,9 +49,9 @@ let remembered: Partial<Omit<ExportOptions, 'dpi'>> = {};
  * Where Export opens before anything's picked: a book or zine in inches as a PDF; pixel
  * frames at Instagram's width to Instagram (on the web), other pixel frames as images.
  */
-function defaultDestination(sheet: Sheet, available: Destination[]): Destination {
+function defaultDestination(sheet: Sheet): Destination {
   if (sheet.unit === 'in') return 'pdf';
-  if (sheet.arrangement === 'frames' && sheet.pageW === 1080 && available.includes('instagram')) return 'instagram';
+  if (sheet.arrangement === 'frames' && sheet.pageW === 1080) return 'instagram';
   return 'images';
 }
 
@@ -63,9 +63,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 export function ExportView() {
   const { project } = useProject();
   const sheet = sheetOf(project);
-  const available = destinations(platform.kind === 'browser');
-  const picked = ui.use((s) => s.exportTo) ?? defaultDestination(sheet, available);
-  const to = available.includes(picked) ? picked : 'pdf';
+  const to = ui.use((s) => s.exportTo) ?? defaultDestination(sheet);
   // The choices made last time, while the app is open. (The dpi starts from the page's.)
   const [options, setOptions] = useState<ExportOptions>(() => ({ ...defaultOptions(sheet), ...remembered }));
   const set = (o: Partial<ExportOptions>) =>
@@ -87,7 +85,7 @@ export function ExportView() {
     <section>
       <h3>Destination</h3>
       <div className="export-destinations" role="radiogroup" aria-label="Destination">
-        {available.map((d) => (
+        {DESTINATIONS.map((d) => (
           <button
             key={d}
             role="radio"
@@ -96,8 +94,8 @@ export function ExportView() {
             disabled={locked}
             onClick={() => ui.set({ exportTo: d })}
           >
-            {DESTINATIONS[d].icon}
-            {DESTINATIONS[d].label}
+            {LOOKS[d].icon}
+            {LOOKS[d].label}
           </button>
         ))}
       </div>

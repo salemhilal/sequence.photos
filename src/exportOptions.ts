@@ -37,10 +37,8 @@ export function defaultOptions(sheet: Pick<Sheet, 'arrangement'>): ExportOptions
   };
 }
 
-/** Where a project can go: Instagram is web only. */
-export function destinations(web: boolean): Destination[] {
-  return ['pdf', 'images', 'indesign', ...(web ? (['instagram'] as const) : [])];
-}
+/** Where a project can go. */
+export const DESTINATIONS: readonly Destination[] = ['pdf', 'images', 'indesign', 'instagram'];
 
 /** Whether a destination measures in pixels (so an inches project converts to it). */
 export function measuresInPixels(d: Destination): boolean {

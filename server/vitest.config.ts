@@ -19,8 +19,13 @@ export default defineConfig({
           RETURN_URLS: JSON.stringify({
             web: 'https://sequence.photos/app/',
             dev: 'http://localhost:5175/app/',
+            mac: 'sequence-photos://instagram',
           }),
-          ALLOWED_ORIGINS: JSON.stringify(['https://sequence.photos', 'http://localhost:5175']),
+          ALLOWED_ORIGINS: JSON.stringify([
+            'https://sequence.photos',
+            'http://localhost:5175',
+            'tauri://localhost',
+          ]),
           MAX_FRAMES: '10',
         },
         // High limits so ordinary tests never trip them; test/ratelimit.test.ts checks the

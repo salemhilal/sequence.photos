@@ -24,8 +24,7 @@ function ThemePicker({ labelledBy }: { labelledBy: string }) {
 type Tab = 'general' | 'advanced';
 const TABS: { value: Tab; label: string }[] = [
   { value: 'general', label: 'General' },
-  // Its only setting is the server for posting to Instagram, which the Mac app doesn't do.
-  ...(platform.kind === 'browser' ? [{ value: 'advanced' as const, label: 'Advanced' }] : []),
+  { value: 'advanced', label: 'Advanced' },
 ];
 
 /** The app's own preferences; the project's page setup is in Layout. */
@@ -33,29 +32,22 @@ export function SettingsDialog() {
   const [tab, setTab] = useState<Tab>('general');
   return (
     <Dialog title="Settings" onClose={closeModal} className="settings">
-      {/* One page needs no tabs (the Mac app). */}
-      {TABS.length > 1 && (
-        <div className="settings-tabs" role="tablist" aria-label="Settings">
-          {TABS.map((t) => (
-            <button
-              key={t.value}
-              role="tab"
-              id={`settings-tab-${t.value}`}
-              aria-selected={tab === t.value}
-              aria-controls="settings-panel"
-              className={tab === t.value ? 'on' : ''}
-              onClick={() => setTab(t.value)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      )}
-      <div
-        className="settings-body"
-        id="settings-panel"
-        {...(TABS.length > 1 && { role: 'tabpanel', 'aria-labelledby': `settings-tab-${tab}` })}
-      >
+      <div className="settings-tabs" role="tablist" aria-label="Settings">
+        {TABS.map((t) => (
+          <button
+            key={t.value}
+            role="tab"
+            id={`settings-tab-${t.value}`}
+            aria-selected={tab === t.value}
+            aria-controls="settings-panel"
+            className={tab === t.value ? 'on' : ''}
+            onClick={() => setTab(t.value)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="settings-body" id="settings-panel" role="tabpanel" aria-labelledby={`settings-tab-${tab}`}>
         {tab === 'general' ? <GeneralSettings /> : <AdvancedSettings />}
       </div>
     </Dialog>
@@ -83,12 +75,10 @@ function GeneralSettings() {
   const appearance = useId();
   return (
     <>
-      {platform.kind === 'browser' && (
-        <section className="setting">
-          <h3>Instagram</h3>
-          <InstagramSetting />
-        </section>
-      )}
+      <section className="setting">
+        <h3>Instagram</h3>
+        <InstagramSetting />
+      </section>
       <section className="setting">
         <h3 id={appearance}>Appearance</h3>
         <div className="setting-controls">

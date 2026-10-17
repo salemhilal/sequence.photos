@@ -21,6 +21,16 @@ fn take_opened_files(opened: tauri::State<OpenedFiles>) -> Vec<String> {
   std::mem::take(&mut *opened.0.lock().unwrap())
 }
 
+/// The app's own links (`sequence-photos://…`) macOS has handed it, until the page takes
+/// them: an Instagram sign-in coming back from the browser.
+#[derive(Default)]
+struct OpenedLinks(Mutex<Vec<String>>);
+
+#[tauri::command]
+fn take_opened_links(opened: tauri::State<OpenedLinks>) -> Vec<String> {
+  std::mem::take(&mut *opened.0.lock().unwrap())
+}
+
 /// A project file's contents, as raw bytes (projects can be hundreds of megabytes).
 #[tauri::command]
 fn read_project(path: String) -> Result<Response, String> {
@@ -169,6 +179,7 @@ mod e2e {
 fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
   tauri::generate_handler![
     take_opened_files,
+    take_opened_links,
     read_project,
     begin_save,
     append_save,
@@ -182,6 +193,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
 fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
   tauri::generate_handler![
     take_opened_files,
+    take_opened_links,
     read_project,
     begin_save,
     append_save,
@@ -201,6 +213,7 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
     .manage(OpenedFiles::default())
+    .manage(OpenedLinks::default())
     .manage(Saves::default())
     .invoke_handler(handlers())
     .build(tauri::generate_context!())
@@ -215,6 +228,15 @@ pub fn run() {
         .map(|path| path.to_string_lossy().into_owned());
       handle.state::<OpenedFiles>().0.lock().unwrap().extend(paths);
       let _ = handle.emit("opened-files", ());
+      let links: Vec<String> = urls
+        .iter()
+        .filter(|url| url.scheme() == "sequence-photos")
+        .map(|url| url.to_string())
+        .collect();
+      if !links.is_empty() {
+        handle.state::<OpenedLinks>().0.lock().unwrap().extend(links);
+        let _ = handle.emit("opened-links", ());
+      }
     }
     #[cfg(not(any(target_os = "macos", target_os = "ios")))]
     let _ = (handle, event);

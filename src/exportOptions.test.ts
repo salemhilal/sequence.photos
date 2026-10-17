@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { converts, defaultOptions, destinations, exportPxPerUnit, perOf } from './exportOptions';
+import { converts, defaultOptions, exportPxPerUnit, perOf } from './exportOptions';
 import { rearrange } from './convertLayout';
 import { emptyProject } from './store';
 
@@ -13,11 +13,6 @@ describe('export options', () => {
     // Null follows the page: its dpi in inches, one a pixel in pixels.
     expect(exportPxPerUnit('images', inches, defaultOptions(inches))).toBe(300);
     expect(exportPxPerUnit('images', pixels, defaultOptions(pixels))).toBe(1);
-  });
-
-  it('offer Instagram on the web', () => {
-    expect(destinations(true)).toEqual(['pdf', 'images', 'indesign', 'instagram']);
-    expect(destinations(false)).toEqual(['pdf', 'images', 'indesign']);
   });
 
   it('convert only where the destination measures differently', () => {

@@ -40,7 +40,10 @@ export const INSTAGRAM = {
   /**
    * Where the server sends someone back after signing in, by the app's address: the
    * `client` in the sign-in state, which the server looks up in its RETURN_URLS. Only the
-   * development server knows `dev` (this computer's `npm run dev`).
+   * development server knows `dev` (this computer's `npm run dev`); `mac` is the Mac app
+   * (its pages' origin), which comes back through its `sequence-photos://` link.
    */
-  clients: { [SITE_URL]: 'web', 'http://localhost:5175': 'dev' } as Readonly<Record<string, 'web' | 'dev'>>,
+  clients: { [SITE_URL]: 'web', 'http://localhost:5175': 'dev', 'tauri://localhost': 'mac' } as Readonly<
+    Record<string, 'web' | 'dev' | 'mac'>
+  >,
 } as const;

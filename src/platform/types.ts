@@ -32,4 +32,16 @@ export interface Platform {
 
   /** The project was replaced: by a new, empty one, or by one opened without a file behind it. */
   projectReplaced(): void;
+
+  /**
+   * Open Instagram's sign-in page: in this window (the website, which comes back to its own
+   * address), or in the browser (the Mac app, which comes back through its link).
+   */
+  openSignIn(url: string): 'here' | 'browser';
+
+  /**
+   * Call `finish` with each Instagram sign-in that comes back (its URL's fragment): at
+   * startup, from the address (the website), or whenever the app's link arrives (the Mac app).
+   */
+  onSignInReturn(finish: (fragment: string) => void): void;
 }

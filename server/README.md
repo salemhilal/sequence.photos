@@ -114,9 +114,11 @@ lifetime allows** (a backstop against bugs or a leaked key).
 a JSON map), e.g. `web` → `https://sequence.photos/app/`. The **production** Worker's
 allowlist has only production URLs: `dev` (`http://localhost:5175/app/`) lives in a
 separate `dev` environment (its own Worker, secrets, and ideally its own Meta app). Never
-a wildcard (e.g. `*.netlify.app` for deploy previews). The Mac app, later: prefer an
-https Universal Link (Associated Domains) over a `sequence://` scheme, which any app can
-claim (the sealed handoff makes interception harmless either way).
+a wildcard (e.g. `*.netlify.app` for deploy previews). The Mac app is `mac` →
+`sequence-photos://instagram`, its own link scheme (registered in its Info.plist), which
+macOS hands to the running app. Any app could claim the same scheme, but the sealed
+handoff makes interception harmless: redeeming needs the verifier, which never leaves the
+app that started the sign-in. Return URLs are http(s), or that one scheme.
 
 ### `GET /auth/callback`
 
@@ -344,8 +346,8 @@ doesn't add raw request URLs.
 ## CORS
 
 For `/auth/redeem`, `/auth/renew`, and `/uploads*` only: allow origins from env
-`ALLOWED_ORIGINS` (`https://sequence.photos`; `http://localhost:5175` only in the `dev`
-environment; the Mac app's origin later). Allow `Authorization`, `Content-Type`; methods
+`ALLOWED_ORIGINS` (`https://sequence.photos` and the Mac app's `tauri://localhost`;
+`http://localhost:5175` only in the `dev` environment). Allow `Authorization`, `Content-Type`; methods
 `POST, PUT, DELETE`. A preflight from any other origin gets `403` (logged as
 `forbidden_origin`). Origins aren't a security boundary (non-browsers can send
 anything); the enrollment and token checks are.
@@ -573,8 +575,8 @@ Worker's redacted lines are recorded.
 ## Out of scope (for now)
 
 Scheduling, video and reels, saved drafts, analytics, multiple accounts, any database,
-a custom domain, the Mac app's sign-in (Universal Link or deep link) and Keychain
-storage.
+a custom domain, a Universal Link for the Mac app's sign-in (it uses its link scheme),
+and Keychain storage.
 
 ## Open questions
 

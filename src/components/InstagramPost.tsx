@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useElementSize, usePager } from '../hooks';
-import { connectInstagram, returnToExportAfterSignIn, takeReturnToExport, useInstagram } from '../instagram';
+import { useConnectInstagram, useInstagram } from '../instagram';
 import {
   fits,
   hashtagCount,
@@ -126,22 +126,7 @@ export function InstagramPost({ head }: Props) {
 
   // Everything previews and can be set up before connecting; posting needs the account.
   const ready = connection !== null && !connection.needsReconnect;
-  const [connecting, setConnecting] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
-  const connect = () => {
-    setConnecting(true);
-    setConnectError(null);
-    returnToExportAfterSignIn();
-    void connectInstagram().then((message) => {
-      // Null: on the way to Instagram's sign-in page.
-      if (message) {
-        // Not on the way to Instagram after all: a later sign-in from Settings returns there.
-        takeReturnToExport();
-        setConnectError(message);
-        setConnecting(false);
-      }
-    });
-  };
+  const signIn = useConnectInstagram({ returnToExport: true });
 
   const problem = !ready
     ? null
@@ -209,10 +194,10 @@ export function InstagramPost({ head }: Props) {
                   ? `Connect @${connection.username} again to keep posting.`
                   : 'Posting goes through your Instagram account. It needs a Business or Creator account.'}
               </p>
-              <button className="btn" disabled={connecting} onClick={connect}>
-                {connecting ? 'Opening Instagram…' : connection ? 'Reconnect Instagram' : 'Connect Instagram'}
+              <button className="btn" disabled={signIn.busy} onClick={signIn.connect}>
+                {signIn.busy ? 'Opening Instagram…' : connection ? 'Reconnect Instagram' : 'Connect Instagram'}
               </button>
-              {connectError && <p className="help warn">{connectError}</p>}
+              {signIn.message && <p className={`help${signIn.message.warn ? ' warn' : ''}`}>{signIn.message.text}</p>}
             </>
           )}
         </section>

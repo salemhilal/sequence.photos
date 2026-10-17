@@ -192,8 +192,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 - [ ] File → Export… (⌘⇧E) opens the Export view: a preview of what it makes on the left,
       with ‹ › and ←/→, and the destination and its options on the right. Destinations: PDF,
-      Images, InDesign, and Instagram (web). It opens on PDF for inches, Instagram for
-      1080 px frames (web), else Images; then on the last one picked, with the last choices
+      Images, InDesign, and Instagram. It opens on PDF for inches, Instagram for
+      1080 px frames, else Images; then on the last one picked, with the last choices
       (spread or page, format, Print at), while the app is open.
 - [ ] A conversion note (not a warning) shows only where the units differ: **[in]** Images:
       "Pages are measured in inches, so they're turned into pixels: 3000 × 2400 px a page" with
@@ -246,7 +246,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       valid and changed). Survives a reload. Running locally (`npm run dev`), the default is
       Development. The help says it applies the next time you connect Instagram.
 
-## Instagram (web)
+## Instagram
 
 Posts made while testing are real and public. Use a test account, or delete them after.
 
@@ -258,6 +258,12 @@ Posts made while testing are real and public. Use a test account, or delete them
       "Connected to Instagram as @user", and Settings shows it.
 - [ ] Cancel at Instagram: back with nothing said. A personal account, or a missing
       permission: the matching message in place of Settings' description.
+- [ ] **Mac app** (a bundled build: `npm run build:app`; links don't reach `tauri dev`):
+      Connect Instagram opens the sign-in in the default browser, and the button says to
+      finish there. After signing in, the browser offers to open Sequence
+      (`sequence-photos://instagram`); the app says "Connected to Instagram as @user". From
+      Export, it reopens Export on Instagram. A sign-in finished after the app was quit is
+      ignored ("started in another tab or window").
 - [ ] Running locally with the Sequence server chosen: "Couldn't connect to the Sequence
       server. Check the server in the Advanced tab."
 - [ ] A sign-in finished in a different tab (or opened twice): ignored, with a notice to
@@ -371,5 +377,6 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
       and relaunch.
 - [ ] Exporting a PDF, images, or InDesign suggests the document's name ("Trip.pdf",
       "Trip (images).zip", "Trip (InDesign).zip"); an untitled project gets a dated name.
-- [ ] Settings is one page (Appearance, Desk), with no tabs; no Instagram and no Storage section.
+- [ ] Settings has General (Instagram, Appearance, Desk; no Storage) and Advanced (Server,
+      Test images), as on the website.
 - [ ] Opening a project from a newer version says to update from the App Store (no Reload).
