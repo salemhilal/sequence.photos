@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useElementSize, usePager } from '../hooks';
-import { connectInstagram, returnToExportAfterSignIn, useInstagram } from '../instagram';
+import { connectInstagram, returnToExportAfterSignIn, takeReturnToExport, useInstagram } from '../instagram';
 import {
   fits,
   hashtagCount,
@@ -135,6 +135,8 @@ export function InstagramPost({ head }: Props) {
     void connectInstagram().then((message) => {
       // Null: on the way to Instagram's sign-in page.
       if (message) {
+        // Not on the way to Instagram after all: a later sign-in from Settings returns there.
+        takeReturnToExport();
         setConnectError(message);
         setConnecting(false);
       }

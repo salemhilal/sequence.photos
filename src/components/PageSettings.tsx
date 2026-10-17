@@ -142,6 +142,7 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
               min={1}
               suffix={false}
               value={draft.page.pxPerUnit}
+              commitOnBlur={immediate}
               onCommit={(n) => setDpi(Math.max(1, Math.round(n)))}
             />
             <span className="muted data">dpi</span>

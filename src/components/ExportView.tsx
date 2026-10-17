@@ -216,8 +216,8 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
                 </span>{' '}
                 a page.
               </p>
-              {dpiField('Resolution', options.dpi, setDpi)}
-              {options.dpi >= maxDpi && <p className="help">Up to the page’s {maxDpi} dpi.</p>}
+              {dpiField('Resolution', pxPerUnit, setDpi)}
+              {pxPerUnit >= maxDpi && <p className="help">Up to the page’s {maxDpi} dpi.</p>}
             </div>
           </section>
         )}
@@ -242,7 +242,7 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
         {to === 'pdf' && sheet.unit === 'in' && (
           <section>
             <h3>Resolution</h3>
-            {dpiField('Photos at', options.dpi, setDpi)}
+            {dpiField('Photos at', pxPerUnit, setDpi)}
             <p className="help">Up to the page’s {maxDpi} dpi. Lower makes a smaller file, for a proof.</p>
           </section>
         )}

@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, X } from 'lucide-react';
 import { bump, dropPhotos, folioLabel, putInPile, putOnPage, raise } from '../actions';
 import { clearGhost, startDrag, trackGhost } from '../drag';
@@ -49,12 +49,17 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   // A book's two pages (single ones on their side), or a frame.
   const { left: extentLeft, width: across } = sheetExtent(sheet);
   const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 800, h: 500 });
-  // A photo asked for ("Show me" before an export), if any; taken once.
-  const [selected, setSelected] = useState<PhotoId | null>(() => {
-    const asked = ui.get().editorSelect;
+  const [selected, setSelected] = useState<PhotoId | null>(null);
+  // A photo asked for ("Show me", from Export), whether the editor was open or not: taken once.
+  const asked = ui.use((s) => s.editorSelect);
+  const [seen, setSeen] = useState<PhotoId | null>(null);
+  if (asked !== seen) {
+    setSeen(asked);
+    if (asked) setSelected(asked);
+  }
+  useEffect(() => {
     if (asked) ui.set({ editorSelect: null });
-    return asked;
-  });
+  }, [asked]);
   const [snapHit, setSnapHit] = useState<SnapFeedback | null>(null);
   /**
    * A guide box to glow while a Fit button is hovered, for the photo it was for: the

@@ -18,20 +18,21 @@ export interface ExportOptions {
   format: 'jpeg' | 'png';
   /**
    * Inches projects: output pixels per inch, for a PDF's photos or for images. At most the
-   * project's dpi: more would only enlarge the photos.
+   * project's dpi: more would only enlarge the photos. Null: the project's, whatever it is
+   * now (so it follows an undo while Export is open).
    */
-  dpi: number;
+  dpi: number | null;
   /** Pixel projects as a PDF: how many pixels make an inch of the page. */
   printAt: number;
 }
 
 export const DEFAULT_PRINT_AT = 300;
 
-export function defaultOptions(sheet: Pick<Sheet, 'arrangement' | 'unit' | 'pxPerUnit'>): ExportOptions {
+export function defaultOptions(sheet: Pick<Sheet, 'arrangement'>): ExportOptions {
   return {
     per: sheet.arrangement === 'spreads' ? 'spread' : 'page',
     format: 'jpeg',
-    dpi: sheet.unit === 'in' ? sheet.pxPerUnit : 1,
+    dpi: null,
     printAt: DEFAULT_PRINT_AT,
   };
 }
@@ -62,7 +63,7 @@ export function exportPxPerUnit(
   o: Pick<ExportOptions, 'dpi'>,
 ): number {
   if (sheet.unit === 'px' || d === 'indesign' || d === 'instagram') return sheet.pxPerUnit;
-  return Math.min(sheet.pxPerUnit, Math.max(1, o.dpi));
+  return Math.min(sheet.pxPerUnit, Math.max(1, o.dpi ?? sheet.pxPerUnit));
 }
 
 /** One output per spread or per page, as asked; frames are pages either way. */
