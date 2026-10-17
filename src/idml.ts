@@ -5,16 +5,28 @@ import { allSpreads, sheetOf } from './spreads';
 
 /**
  * Build an IDML file (InDesign Markup Language: a ZIP of XML that InDesign opens
- * as a new document). The book becomes a facing-pages document with the same
- * page size and spreads (in inches, or pixels at a point each), the drop border guide as margins, the other guides as
- * ruler guides, and each photo as a frame with its image linked from `Links/`.
+ * as a new document). A book becomes a facing-pages document with the same page size and
+ * spreads, and a sequence of frames a document of single pages, one to a spread (in
+ * inches, or pixels at a point each), with the drop border guide as margins, the other
+ * guides as ruler guides, and each photo as a frame with its image linked from `Links/`.
  *
  * Coordinates: an IDML spread's origin is at its binding (our gutter) and vertical
- * center, in points; y grows downward, as in the app.
+ * center, in points; y grows downward, as in the app. A single page without facing pages
+ * is centered on it, so a frame's photos shift left by half its width.
  */
 
 /** Points to the inch: images are sized by their own resolution in it. */
 const PT_PER_INCH = 72;
+
+/** Where a frame's left edge sits in its spread, in page units: centered on the origin. */
+function frameShift(s: Pick<Sheet, 'arrangement' | 'pageW'>): number {
+  return s.arrangement === 'frames' ? -s.pageW / 2 : 0;
+}
+
+/** A page's left and right distances from a border guide's edges: outside is a frame's (and a left page's) left. */
+function leftRight(side: PageSide | undefined, g: { inside: number; outside: number }): [number, number] {
+  return side === 'right' || side === undefined ? [g.inside, g.outside] : [g.outside, g.inside];
+}
 
 /** Points per page unit: 72 to the inch, and a point to the pixel (InDesign's pixels). */
 function ptPerUnit(s: Pick<Sheet, 'unit'>): number {
@@ -85,20 +97,21 @@ function preferencesXml(s: Sheet): string {
   const h = s.pageH * pt;
   return `${HEAD}
 <idPkg:Preferences xmlns:idPkg="${PKG}" DOMVersion="${DOM}">
-<DocumentPreference PageHeight="${n(h)}" PageWidth="${n(w)}" PageOrientation="${w > h ? 'Landscape' : 'Portrait'}" PagesPerDocument="1" FacingPages="true" StartPageNumber="1" PageBinding="LeftToRight" AllowPageShuffle="true" DocumentBleedUniformSize="true" DocumentBleedTopOffset="0" DocumentBleedBottomOffset="0" DocumentBleedInsideOrLeftOffset="0" DocumentBleedOutsideOrRightOffset="0" Intent="PrintIntent"/>
+<DocumentPreference PageHeight="${n(h)}" PageWidth="${n(w)}" PageOrientation="${w > h ? 'Landscape' : 'Portrait'}" PagesPerDocument="1" FacingPages="${s.arrangement === 'spreads'}" StartPageNumber="1" PageBinding="LeftToRight" AllowPageShuffle="true" DocumentBleedUniformSize="true" DocumentBleedTopOffset="0" DocumentBleedBottomOffset="0" DocumentBleedInsideOrLeftOffset="0" DocumentBleedOutsideOrRightOffset="0" Intent="PrintIntent"/>
 ${marginXml(s)}
 <ViewPreference HorizontalMeasurementUnits="${rulers}" VerticalMeasurementUnits="${rulers}"/>
 </idPkg:Preferences>`;
 }
 
 /**
- * Margins from the border guide dropped photos fit inside. For the document, with facing
- * pages, Left and Right are inside and outside; on a page, they're its own left and right.
+ * Margins from the border guide dropped photos fit inside. For a facing-pages document,
+ * Left and Right are inside and outside; for single pages, and on a page, they're its own
+ * left and right.
  */
 function marginXml(s: Sheet, side?: PageSide): string {
   const drop = dropGuide(s);
   const g = drop ? edgesOf(drop) : { top: 0, bottom: 0, inside: 0, outside: 0 };
-  const [left, right] = side === 'left' ? [g.outside, g.inside] : [g.inside, g.outside];
+  const [left, right] = leftRight(side ?? (s.arrangement === 'frames' ? 'whole' : undefined), g);
   const pt = ptPerUnit(s);
   const m = (v: number) => n(v * pt);
   return `<MarginPreference ColumnCount="1" ColumnGutter="12" Top="${m(g.top)}" Bottom="${m(g.bottom)}" Left="${m(left)}" Right="${m(right)}" ColumnDirection="Horizontal" ColumnsPositions="0 ${m(s.pageW - left - right)}"/>`;
@@ -121,7 +134,7 @@ function spreadXml(
   const top = (-s.pageH * pt) / 2;
 
   const pages = sides.map((side, i) => {
-    const x = pageRect(side, s).x * pt;
+    const x = (pageRect(side, s).x + frameShift(s)) * pt;
     return `<Page Self="${id()}" Name="${first + i + 1}" AppliedMaster="n" GeometricBounds="0 0 ${n(s.pageH * pt)} ${n(s.pageW * pt)}" ItemTransform="1 0 0 1 ${n(x)} ${n(top)}" MasterPageTransform="1 0 0 1 0 0">
 ${marginXml(s, side)}
 ${guidesXml(s, side, i, id)}
@@ -131,7 +144,7 @@ ${guidesXml(s, side, i, id)}
   const frames = [...spread.items]
     .sort((a, b) => a.z - b.z)
     .map((p) => {
-      const x1 = p.x * pt;
+      const x1 = (p.x + frameShift(s)) * pt;
       const y1 = p.y * pt + top;
       const x2 = x1 + p.w * pt;
       const y2 = y1 + p.h * pt;
@@ -178,7 +191,7 @@ function guidesXml(s: Sheet, side: PageSide, pageIndex: number, id: () => string
   for (const b of s.borders) {
     if (b.id === margin?.id) continue;
     const g = edgesOf(b);
-    const [left, right] = side === 'left' ? [g.outside, g.inside] : [g.inside, g.outside];
+    const [left, right] = leftRight(side, g);
     vertical.push(left * pt, w - right * pt);
     horizontal.push(g.top * pt, h - g.bottom * pt);
   }

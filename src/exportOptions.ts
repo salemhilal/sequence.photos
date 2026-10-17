@@ -36,14 +36,9 @@ export function defaultOptions(sheet: Pick<Sheet, 'arrangement' | 'unit' | 'pxPe
   };
 }
 
-/** Where a project can go: InDesign takes spreads; Instagram is web only. */
-export function destinations(project: Project, web: boolean): Destination[] {
-  return [
-    'pdf',
-    'images',
-    ...(project.layout.kind === 'spreads' ? (['indesign'] as const) : []),
-    ...(web ? (['instagram'] as const) : []),
-  ];
+/** Where a project can go: Instagram is web only. */
+export function destinations(web: boolean): Destination[] {
+  return ['pdf', 'images', 'indesign', ...(web ? (['instagram'] as const) : [])];
 }
 
 /** Whether a destination measures in pixels (so an inches project converts to it). */

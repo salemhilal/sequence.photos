@@ -7,6 +7,7 @@ import { projectStore } from './store';
 import { ui } from './ui';
 import { createZip, type ZipInput } from './zip';
 import { allSpreads } from './spreads';
+import { TERMS } from './units';
 
 /** Enough of a file to cover its metadata segments. */
 const HEADER_BYTES = 512 * 1024;
@@ -23,9 +24,10 @@ export async function exportIndesign(): Promise<boolean> {
   const placed = [...new Set(allSpreads(project).flatMap((s) => s.items.map((i) => i.photoId)))];
   const setBusy = (busy: string | null) => ui.set({ busy });
   const date = new Date().toISOString().slice(0, 10);
+  const stem = TERMS[project.layout.kind].fileStem;
   let missing = 0;
   try {
-    const saved = await platform.saveFile(`photo-book-${date}-indesign.zip`, async () => {
+    const saved = await platform.saveFile(`${stem}-${date}-indesign.zip`, async () => {
       const links = new Map<string, LinkedImage>();
       const files: ZipInput[] = [];
       const used = new Set<string>();
@@ -43,7 +45,7 @@ export async function exportIndesign(): Promise<boolean> {
       missing = placed.length - links.size;
       setBusy('Writing InDesign file…');
       const idml = await createZip(buildIdml(project, links));
-      return createZip([{ name: `photo-book-${date}.idml`, data: idml }, ...files]);
+      return createZip([{ name: `${stem}-${date}.idml`, data: idml }, ...files]);
     });
     if (saved && missing) ui.set({ notice: "Some photos' images were missing, so their frames are empty." });
     return saved;

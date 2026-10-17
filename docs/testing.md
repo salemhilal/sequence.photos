@@ -189,7 +189,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 - [ ] File → Export… (⌘⇧E) opens the Export view: a preview of what it makes on the left,
       with ‹ › and ←/→, and the destination and its options on the right. Destinations: PDF,
-      Images, InDesign **[S]**, and Instagram (web). The last one picked is kept while the app
+      Images, InDesign, and Instagram (web). The last one picked is kept while the app
       is open.
 - [ ] A conversion note (not a warning) shows only where the units differ: **[in]** Images:
       "Pages are measured in inches, so they're turned into pixels: 3000 × 2400 px a page" with
@@ -212,8 +212,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       `pdfimages -list`). Photos taken on their side (EXIF orientation) come out upright,
       mirrored ones too. A PNG and a HEIC (Safari or the Mac app) embed. An unreadable original:
       "Some photos couldn't be read at full size…".
-- [ ] **[S]** InDesign: a ZIP with an `.idml` and `Links/`; opens in InDesign with facing
-      pages, margins from the On drop guide, ruler guides, linked photos. **[px]** The document
+- [ ] InDesign: a ZIP with an `.idml` and `Links/`; opens in InDesign with facing pages **[S]**
+      or single pages without facing pages **[F]** (photos where they sit on each), margins from
+      the On drop guide, ruler guides, linked photos. **[px]** The document
       is in pixels at the same size (the panel says so).
 - [ ] Images: a ZIP of JPEGs or PNGs, on white. **[F]** 01.jpg, 02.jpg… at the frame's size.
       **[S]** Per spread: 01.jpg, 02-03.jpg, … the last page; per page: 01.jpg… in book order.

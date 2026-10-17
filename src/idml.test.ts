@@ -2,7 +2,7 @@
 import { toGuideId, toPhotoId } from './ids';
 import { describe, expect, it } from 'vitest';
 import { buildIdml } from './idml';
-import { convertUnits } from './convertLayout';
+import { convertUnits, rearrange } from './convertLayout';
 import { emptyProject } from './store';
 import type { Project } from './types';
 import { allSpreads } from './spreads';
@@ -126,6 +126,23 @@ describe('buildIdml', () => {
     const spread = [...files.entries()].filter(([name]) => name.startsWith('Spreads/'))[1]![1];
     expect(spread.querySelector('Rectangle')).not.toBeNull();
     expect(spread.querySelector('Image')).toBeNull();
+  });
+
+  it('writes frames as single pages, one to a spread, without facing pages', async () => {
+    const { files } = await build(rearrange(sample(), 'frames'));
+    const prefs = files.get('Resources/Preferences.xml')!;
+    expect(prefs.querySelector('DocumentPreference')!.getAttribute('FacingPages')).toBe('false');
+    const spreads = [...files.entries()].filter(([name]) => name.startsWith('Spreads/')).map(([, d]) => d);
+    expect(spreads).toHaveLength(6);
+    // Each page centered on its spread's origin: 10 in is 720 pt.
+    for (const sp of spreads) {
+      expect([...sp.querySelectorAll('Page')].map((p) => p.getAttribute('ItemTransform'))).toEqual([
+        '1 0 0 1 -360 -288',
+      ]);
+    }
+    // The photo was on the first spread's left page: frame 2, 1 in from its left edge.
+    const anchors = [...spreads[1]!.querySelectorAll('PathPointType')].map((p) => p.getAttribute('Anchor'));
+    expect(anchors).toEqual(['-288 -216', '-288 72', '144 72', '144 -216']);
   });
 
   it('writes pixel spreads a point to the pixel, with rulers in pixels', async () => {

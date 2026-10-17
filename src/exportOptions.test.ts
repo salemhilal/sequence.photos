@@ -12,10 +12,9 @@ describe('export options', () => {
     expect(defaultOptions(pixels)).toMatchObject({ per: 'page', dpi: 1 });
   });
 
-  it('offer InDesign for spreads and Instagram on the web', () => {
-    const book = emptyProject();
-    expect(destinations(book, true)).toEqual(['pdf', 'images', 'indesign', 'instagram']);
-    expect(destinations(rearrange(book, 'frames'), false)).toEqual(['pdf', 'images']);
+  it('offer Instagram on the web', () => {
+    expect(destinations(true)).toEqual(['pdf', 'images', 'indesign', 'instagram']);
+    expect(destinations(false)).toEqual(['pdf', 'images', 'indesign']);
   });
 
   it('convert only where the destination measures differently', () => {

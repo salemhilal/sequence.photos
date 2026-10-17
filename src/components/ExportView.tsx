@@ -51,7 +51,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 export function ExportView() {
   const { project } = useProject();
   const sheet = sheetOf(project);
-  const available = destinations(project, platform.kind === 'browser');
+  const available = destinations(platform.kind === 'browser');
   const picked = ui.use((s) => s.exportTo);
   const to = available.includes(picked) ? picked : 'pdf';
   const [options, setOptions] = useState<ExportOptions>(() => defaultOptions(sheet));
@@ -257,6 +257,7 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
           <section>
             <p className="help">
               An InDesign file with every photo linked at full size, and the guides as InDesign guides.
+              {!spreads && ' Frames become single pages, without facing pages.'}
               {sheet.unit === 'px' &&
                 ` InDesign counts a pixel as a point, so pages open at ${sheet.pageW} × ${sheet.pageH} px.`}
             </p>
