@@ -266,10 +266,6 @@ button {
 .btn.active {
   background: var(--accent-soft);
 }
-.menu-list.right {
-  left: auto;
-  right: 0;
-}
 .menu-list {
   position: absolute;
   top: calc(100% + 4px);
@@ -2461,9 +2457,4 @@ body.col-resizing * {
 }
 .export-panel .dpi .num-field {
   flex: 0 0 80px;
-}
-.export-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }

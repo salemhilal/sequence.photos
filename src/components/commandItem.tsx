@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { Upload } from 'lucide-react';
 import { commandTitle, runCommand, shortcutLabel, type CommandId } from '../commands';
 import { ui } from '../ui';
 import type { MenuItem } from './FileMenu';
@@ -14,10 +13,4 @@ export function useCommandItem(): (id: CommandId, icon: ReactNode, disabled?: bo
     disabled,
     onSelect: () => runCommand(id),
   });
-}
-
-/** The File menu's way out: Export…, which opens the Export view. */
-export function useExportItems(): MenuItem[] {
-  const item = useCommandItem();
-  return [item('export', <Upload />)];
 }

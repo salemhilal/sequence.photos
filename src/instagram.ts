@@ -122,6 +122,7 @@ export function markNeedsReconnect(): void {
   if (current && !current.needsReconnect) set({ ...current, needsReconnect: true });
 }
 
+/** The connection now, outside React (see useInstagram). */
 export function instagramConnection(): InstagramConnection | null {
   return current;
 }
@@ -191,7 +192,6 @@ export async function planSignIn(origin: string, server: string): Promise<SignIn
   return { url: `${INSTAGRAM.authorizeUrl}?${params}`, pending: { state, verifier, server } };
 }
 
-/** Start connecting: go to Instagram's sign-in page. Returns an error message if it can't. */
 /** Where to go back to after signing in (session only): set when connecting from Export. */
 const RETURN_KEY = 'sequence:instagram-return';
 
@@ -215,6 +215,7 @@ export function takeReturnToExport(): boolean {
   }
 }
 
+/** Start connecting: go to Instagram's sign-in page. Returns an error message if it can't. */
 export async function connectInstagram(): Promise<string | null> {
   const plan = await planSignIn(location.origin, serverUrl());
   if ('error' in plan) return plan.error;

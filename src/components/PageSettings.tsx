@@ -149,8 +149,13 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
             <span className="muted data">dpi</span>
           </div>
         ) : (
-          <span className="muted data" data-tip="Pixel density" role="img" aria-label="Pixel density 1×">
-            1×
+          <span
+            className="muted data"
+            data-tip="Pixel density"
+            role="img"
+            aria-label={`Pixel density ${draft.page.pxPerUnit}×`}
+          >
+            {draft.page.pxPerUnit}×
           </span>
         )}
       </div>

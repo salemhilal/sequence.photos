@@ -138,12 +138,6 @@ export const DEFAULT_DPI = 300;
 /** A new project's book: 10 × 8 in pages, at 300 dpi. */
 export const DEFAULT_PAGE: PageSetup = { w: 10, h: 8, unit: 'in', pxPerUnit: DEFAULT_DPI };
 
-/**
- * A new sequence's frames: 4:5, the tallest shape Instagram's API posts as is, at the
- * 1080 px width Instagram shows posts at (larger uploads are scaled down to it).
- */
-export const DEFAULT_FRAME: PageSetup = { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 };
-
 /** A page setting people often want, set all at once. */
 export interface Preset {
   label: string;

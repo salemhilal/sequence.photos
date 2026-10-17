@@ -13,6 +13,7 @@ import {
   Undo2,
   X,
   Ruler,
+  Upload,
 } from 'lucide-react';
 import { usePasteHandler } from './clipboard';
 import { platform } from '#platform';
@@ -22,7 +23,7 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { ContextMenus } from './components/ContextMenu';
 import { Desk } from './components/Desk';
 import { FileMenu } from './components/FileMenu';
-import { useCommandItem, useExportItems } from './components/exportItems';
+import { useCommandItem } from './components/commandItem';
 import { LayoutEditor } from './components/LayoutEditor';
 import { PhotoImg } from './components/PhotoImg';
 import { ExportView } from './components/ExportView';
@@ -42,8 +43,6 @@ import { checkForUpdate, reloadToUpdate } from './update';
 import { allSpreads, findSpread } from './spreads';
 import { TERMS } from './units';
 
-// Loaded when opened: it's the website's only (the Mac app doesn't post to Instagram).
-
 const NOTICE_MS = 6000;
 
 /**
@@ -58,7 +57,6 @@ function onTouchDevice(): boolean {
 export default function App() {
   const { project, canUndo, canRedo } = useProject();
   const terms = TERMS[project.layout.kind];
-  const exportItems = useExportItems();
   const fileItem = useCommandItem();
   // Dismissed for this visit only: a reload shows it again.
   const [mobileNotice, setMobileNotice] = useState(onTouchDevice);
@@ -125,7 +123,7 @@ export default function App() {
                 fileItem('importProject', <FolderOpen />),
                 fileItem('exportProject', <Download />),
                 { ...fileItem('addPhotos', <ImagePlus />, importing !== null), separatorBefore: true },
-                ...exportItems.map((item, i) => (i === 0 ? { ...item, separatorBefore: true } : item)),
+                { ...fileItem('export', <Upload />), separatorBefore: true },
                 { ...fileItem('tour', <Compass />), separatorBefore: true },
                 fileItem('about', <Info />, false),
               ]}

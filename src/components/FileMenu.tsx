@@ -13,18 +13,8 @@ export interface MenuItem {
   separatorBefore?: boolean;
 }
 
-interface Props {
-  items: MenuItem[];
-  /** The button's text (default "File"), and its style. */
-  label?: string;
-  buttonClass?: string;
-  /** Open the list leftward from the button's right edge (for a button near the right). */
-  alignRight?: boolean;
-  disabled?: boolean;
-}
-
-/** Dropdown for file actions. Closes on selection, outside click, or Escape. */
-export function FileMenu({ items, label = 'File', buttonClass = 'btn ghost', alignRight = false, disabled }: Props) {
+/** Toolbar dropdown for file actions. Closes on selection, outside click, or Escape. */
+export function FileMenu({ items }: { items: MenuItem[] }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -60,17 +50,16 @@ export function FileMenu({ items, label = 'File', buttonClass = 'btn ghost', ali
     <div className="menu" ref={rootRef}>
       <button
         ref={buttonRef}
-        className={`${buttonClass}${open ? ' active' : ''}`}
+        className={`btn ghost${open ? ' active' : ''}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        disabled={disabled}
         onClick={() => setOpen((o) => !o)}
       >
-        {label}
+        File
         <ChevronDown />
       </button>
       {open && (
-        <div className={`menu-list${alignRight ? ' right' : ''}`} role="menu">
+        <div className="menu-list" role="menu">
           {items.map((item) => [
             item.separatorBefore && <div key={`${item.label}-sep`} className="menu-separator" />,
             <button

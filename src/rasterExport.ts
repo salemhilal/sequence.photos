@@ -14,10 +14,11 @@ import { createZip, type ZipInput } from './zip';
 const QUALITY = 0.92;
 /** Said after an export that had to use some photos' display copies (originals that wouldn't decode here). */
 export const PREVIEWS_NOTICE = "Some photos couldn't be read at full size, so their previews were used.";
-/** The most pixels a photo is decoded at (Safari's limit is about 16.7 million). */
-const MAX_DECODE_PIXELS = 16_000_000;
-/** The most pixels one canvas holds: Safari (the Mac app) refuses larger ones. */
-export const MAX_CANVAS_PIXELS = 16_000_000;
+/**
+ * The most pixels one canvas or decoded photo holds: Safari (the Mac app) refuses more
+ * than about 16.7 million.
+ */
+const MAX_PIXELS = 16_000_000;
 
 /**
  * An output page drawn from its plan, on white: each photo from its original, resized once
@@ -81,7 +82,7 @@ export async function decodePhoto(
   // 16 megapixels, which Safari (the Mac app) refuses. A photo scaled far past its page
   // would otherwise decode huge, mostly for the parts cropped off.
   const own = Math.min(1, meta.pxW / w, meta.pxH / h);
-  const k = Math.min(own, Math.sqrt(MAX_DECODE_PIXELS / (w * h)));
+  const k = Math.min(own, Math.sqrt(MAX_PIXELS / (w * h)));
   const size = { resizeWidth: Math.max(1, Math.round(w * k)), resizeHeight: Math.max(1, Math.round(h * k)) };
   for (const source of [img.full, img.thumb]) {
     try {
@@ -131,7 +132,7 @@ export async function renderImages(
   let lowest = Math.min(sheet.pxPerUnit, pxPerUnit ?? Infinity);
   for (const [i, page] of pages.entries()) {
     let plan = planPage(page, sheet, project.photos, pxPerUnit);
-    const fits = fitPixels(plan, MAX_CANVAS_PIXELS);
+    const fits = fitPixels(plan, MAX_PIXELS);
     if (fits < plan.pxPerUnit) plan = planPage(page, sheet, project.photos, fits);
     lowest = Math.min(lowest, plan.pxPerUnit);
     const rendered = await renderPage(plan, project.photos);

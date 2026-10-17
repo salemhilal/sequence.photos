@@ -238,3 +238,12 @@ describe('presets', () => {
     expect(zine.page.pxPerUnit).toBe(200);
   });
 });
+
+describe('pixel density', () => {
+  it('is kept by an Apply that doesn’t change the unit, as exports use it', () => {
+    applyPageSetup(draft({ page: INSTAGRAM }));
+    projectStore.apply((d) => void (d.page.pxPerUnit = 2));
+    applyPageSetup(draft({ page: { w: 1080, h: 1080 } }));
+    expect(projectStore.project.page).toEqual({ w: 1080, h: 1080, unit: 'px', pxPerUnit: 2 });
+  });
+});

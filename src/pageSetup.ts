@@ -77,7 +77,8 @@ export function resizes(project: Project, draft: PageDraft): boolean {
 export function withPageSetup(project: Project, draft: PageDraft): Project {
   const rescale = draft.content === 'rescale';
   const { unit } = draft.page;
-  const pxPerUnit = unit === 'px' ? 1 : draft.page.pxPerUnit;
+  // The draft's: a dpi for inches; for pixels, the density the page has (1× unless a file says more).
+  const { pxPerUnit } = draft.page;
   let p = project;
   if (p.page.unit !== unit) {
     p = rescale
