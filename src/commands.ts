@@ -5,7 +5,8 @@ import { deleteFromProject, importPhotos } from './actions';
 import { exportIndesign } from './indesign';
 import { copyPhotos, duplicateAndSelect } from './clipboard';
 import { savePdf } from './pdf';
-import { saveFrames } from './frames';
+import { exportFrames } from './frames';
+import { instagramConnection } from './instagram';
 import { hasMod, isMac, isTextField, isTyping, MOD_LABEL } from './input';
 import { platform } from '#platform';
 import { pickFiles } from './files';
@@ -134,15 +135,27 @@ export const commands = {
     scope: 'app',
     run: () => (projectStore.project.layout.kind === 'print' ? void exportIndesign() : false),
   },
-  saveImages: {
-    title: { browser: 'Save images', macos: 'Save Images…' },
+  exportFrames: {
+    title: { browser: 'Export frames as images', macos: 'Export Frames as Images…' },
     bindings: [{ key: 'e', mod: true, shift: true }],
     scope: 'app',
     inFields: true,
-    run: () => (projectStore.project.layout.kind === 'digital' ? void saveFrames() : false),
+    run: () => (projectStore.project.layout.kind === 'digital' ? void exportFrames() : false),
+  },
+  // Digital sequences, with an Instagram account connected (Settings), on the web.
+  postToInstagram: {
+    title: 'Post to Instagram…',
+    bindings: [],
+    scope: 'app',
+    run: () => {
+      const connection = instagramConnection();
+      const ready = projectStore.project.layout.kind === 'digital' && connection && !connection.needsReconnect;
+      return ready ? openModal('instagram') : false;
+    },
   },
   preview: {
-    title: 'Preview book',
+    // The toolbar says "Preview book" for a book; menus just "Preview".
+    title: 'Preview',
     bindings: [{ key: 'p', mod: true }],
     scope: 'app',
     inFields: true,

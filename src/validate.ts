@@ -12,6 +12,7 @@ import {
   type SpreadKind,
 } from './types';
 import { hasFrames } from './spreads';
+import { isRecord } from './guards';
 
 /**
  * Checking a whole project before the app uses it. Projects come from outside the code's
@@ -35,7 +36,7 @@ function fail(where: string): never {
 }
 
 function record(v: unknown, where: string): Raw {
-  return typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Raw) : fail(where);
+  return isRecord(v) ? v : fail(where);
 }
 
 function list(v: unknown, where: string): unknown[] {

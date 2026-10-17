@@ -2,45 +2,68 @@ import type { Draft } from 'immer';
 import { getImage, putImage, type StoredImage } from './db';
 import { importFiles, setUrl } from './images';
 import { newPhotoId, newSpreadId, type PhotoId, type SpreadId } from './ids';
-import { allSpreads, findSpread, middleIndex, sheetOf } from './spreads';
+import { allSpreads, findSpread, frameIndex, middleIndex, sheetOf } from './spreads';
 import { projectStore } from './store';
-import { dropBox, fitCentered, pageRect, pileSize, PILE_PHOTO_SIZE } from './geometry';
+import { dropBox, fitCentered, pageRect, pileSize } from './geometry';
 import type { DropTarget } from './drag';
 import type { LayoutKind, Project, PageSide, PhotoMeta, Placement, Spread } from './types';
-import { DESK_PPI, deskGeometry } from './deskGeometry';
+import { deskGeometry, viewToFit } from './deskGeometry';
 import { ui } from './ui';
 
-const CELL = 1.8;
-const JITTER = 0.3;
+/** Photos per row when several land on the desk at once. */
+const DESK_COLUMNS = 6;
+/** Space between desk photos, as a share of the largest one. */
+const DESK_GAP = 0.08;
 
-/** Scatter new photos like prints on a desk: a loose grid with jitter, overlapping slightly. */
+type Box = { x: number; y: number; w: number; h: number };
+
+/**
+ * Places sizes in a grid of `columns`, starting at `origin`: cells as wide as the widest
+ * and as tall as the tallest, each photo centered in its cell, with a gap in proportion.
+ * Returns the placements and the grid's bounds.
+ */
+function deskGrid(
+  sizes: { w: number; h: number }[],
+  origin: { x: number; y: number },
+  columns = DESK_COLUMNS,
+): { at: Box[]; bounds: Box } {
+  const cw = Math.max(...sizes.map((s) => s.w));
+  const ch = Math.max(...sizes.map((s) => s.h));
+  const gap = Math.max(cw, ch) * DESK_GAP;
+  const cols = Math.min(columns, sizes.length);
+  const rows = Math.ceil(sizes.length / cols);
+  const at = sizes.map((s, i) => ({
+    x: origin.x + (i % cols) * (cw + gap) + (cw - s.w) / 2,
+    y: origin.y + Math.floor(i / cols) * (ch + gap) + (ch - s.h) / 2,
+    w: s.w,
+    h: s.h,
+  }));
+  return { at, bounds: { x: origin.x, y: origin.y, w: cols * (cw + gap) - gap, h: rows * (ch + gap) - gap } };
+}
+
+/**
+ * New photos land on the desk at full size (as large as their preview stays sharp at
+ * 100%), in rows of six below anything already there, and the view zooms to fit them.
+ */
 export function addPhotosToPile(photos: PhotoMeta[]): void {
   if (!photos.length) return;
-  const vis = deskGeometry.visible();
-  const cols = Math.max(3, Math.floor((vis.w - 0.5) / CELL));
-  let top = vis.y + 0.4;
+  const sizes = photos.map(pileSize);
   const pile = projectStore.project.pile;
-  if (pile.length) top = Math.max(...pile.map((p) => p.y + p.h)) + 0.6;
-  const left = vis.x + 0.4;
+  const vis = deskGeometry.visible();
+  const gap = Math.max(...sizes.map((s) => Math.max(s.w, s.h))) * DESK_GAP;
+  const origin = pile.length
+    ? { x: Math.min(...pile.map((p) => p.x)), y: Math.max(...pile.map((p) => p.y + p.h)) + gap }
+    : { x: vis.x + gap, y: vis.y + gap };
+  const { at, bounds } = deskGrid(sizes, origin);
 
   projectStore.apply((d) => {
     photos.forEach((photo, i) => {
       d.photos[photo.id] = photo;
-      const { w, h } = pileSize(photo);
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const cx = left + col * CELL + CELL / 2 + (Math.random() * 2 - 1) * JITTER;
-      const cy = top + row * CELL + CELL / 2 + (Math.random() * 2 - 1) * JITTER;
-      d.pile.push({ photoId: photo.id, x: cx - w / 2, y: cy - h / 2, w, h, z: d.nextZ++ });
+      const box = at[i];
+      if (box) d.pile.push({ photoId: photo.id, ...box, z: d.nextZ++ });
     });
   });
-
-  // Bring the new batch into view if it landed below the fold.
-  const view = ui.get().view;
-  const rows = Math.ceil(photos.length / cols);
-  if (top > vis.y + vis.h - 1 && rows > 0) {
-    ui.set({ view: { ...view, panY: view.panY - (top - vis.y - 0.4) * DESK_PPI * view.zoom } });
-  }
+  ui.set({ view: viewToFit(bounds, deskGeometry.size()) });
 }
 
 /** Placement for a photo freshly dropped on a page: fit inside the drop border guide, centered on the page. */
@@ -135,7 +158,7 @@ function addSpread(d: Draft<Project>, index: number): SpreadId {
   const l = d.layout;
   const id = newSpreadId();
   if (l.kind === 'print') l.spreads.splice(middleIndex(l.spreads, index), 0, { kind: 'middle', id, items: [] });
-  else l.frames.splice(Math.min(Math.max(0, index), l.frames.length), 0, { kind: 'frame', id, items: [] });
+  else l.frames.splice(frameIndex(l.frames, index), 0, { kind: 'frame', id, items: [] });
   return id;
 }
 
@@ -154,16 +177,16 @@ export function putInPile(d: Draft<Project>, photoId: PhotoId, at?: { x: number;
   const { w, h } = pileSize(photo);
   let c = at;
   if (!c) {
+    // Near the middle of the view, a little off so several don't stack exactly.
     const v = deskGeometry.visible();
+    const jitter = Math.max(w, h) * 0.2;
     c = {
-      x: v.x + v.w / 2 + (Math.random() - 0.5) * PILE_PHOTO_SIZE,
-      y: v.y + v.h / 2 + (Math.random() - 0.5) * PILE_PHOTO_SIZE,
+      x: v.x + v.w / 2 + (Math.random() - 0.5) * jitter,
+      y: v.y + v.h / 2 + (Math.random() - 0.5) * jitter,
     };
   }
   d.pile.push({ photoId, x: c.x - w / 2, y: c.y - h / 2, w, h, z: d.nextZ++ });
 }
-
-const TIDY_GAP = 0.3;
 
 /**
  * Arrange desk photos in a tidy grid, keeping their rough reading order
@@ -176,7 +199,9 @@ export function tidyPile(photoIds?: PhotoId[]): void {
   const items = projectStore.project.pile.filter((p) => !ids || ids.has(p.photoId));
   if (items.length < 2) return;
 
-  const cell = Math.max(...items.map((p) => Math.max(p.w, p.h))) + TIDY_GAP;
+  const big = Math.max(...items.map((p) => Math.max(p.w, p.h)));
+  const gap = big * DESK_GAP;
+  const cell = big + gap;
   const cy = (p: Placement) => p.y + p.h / 2;
   const cx = (p: Placement) => p.x + p.w / 2;
 
@@ -210,8 +235,8 @@ export function tidyPile(photoIds?: PhotoId[]): void {
     for (const p of d.pile) {
       const at = slot.get(p.photoId);
       if (!at) continue;
-      p.x = left + at.col * cell + (cell - TIDY_GAP - p.w) / 2;
-      p.y = top + at.row * cell + (cell - TIDY_GAP - p.h) / 2;
+      p.x = left + at.col * cell + (big - p.w) / 2;
+      p.y = top + at.row * cell + (big - p.h) / 2;
     }
   });
 }
@@ -227,7 +252,8 @@ const DUPLICATE_OFFSET = 0.25;
 /**
  * Duplicate photos as new, independent photos (each with its own copy of the image
  * data), placed `offset` inches down and right of the originals: on the desk, or on
- * the same spread. One undo step. Returns the new photos' ids.
+ * the same spread. In a frame, that's the same share of its width as on a 10 in page
+ * (0.25 in → 27 px of 1,080). One undo step. Returns the new photos' ids.
  */
 export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OFFSET): Promise<PhotoId[]> {
   const sources: { from: PhotoId; id: PhotoId; img: StoredImage }[] = [];
@@ -241,6 +267,8 @@ export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OF
   // Reference the new photos before storing their images, so a background cleanup
   // of unreferenced images can't remove them in between.
   projectStore.apply((d) => {
+    const sheet = sheetOf(d);
+    const onSpread = sheet.layout === 'digital' ? (offset * sheet.pageW) / 10 : offset;
     for (const { from, id } of sources) {
       const meta = d.photos[from];
       if (!meta) continue;
@@ -251,7 +279,9 @@ export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OF
         continue;
       }
       const p = at.placement;
-      const copy = { ...p, photoId: id, x: p.x + offset, y: p.y + offset, z: d.nextZ++ };
+      // On the desk, in proportion to the photo (0.25 in for the old 2 in desk photos).
+      const step = at.where === 'desk' ? (offset * Math.max(p.w, p.h)) / 2 : onSpread;
+      const copy = { ...p, photoId: id, x: p.x + step, y: p.y + step, z: d.nextZ++ };
       (at.where === 'desk' ? d.pile : at.spread.items).push(copy);
     }
   });
@@ -290,13 +320,19 @@ export function deleteSpread(spreadId: SpreadId): void {
       if (idx >= 0 && l.frames.length > 1) spread = l.frames.splice(idx, 1)[0];
     }
     if (!spread) return;
+    // Back on the desk in a small grid in the middle of the view.
     const ids = spread.items.map((i) => i.photoId);
+    const sizes = ids.flatMap((id) => {
+      const photo = d.photos[id];
+      return photo ? [pileSize(photo)] : [];
+    });
+    if (!sizes.length) return;
     const v = deskGeometry.visible();
+    const { bounds } = deskGrid(sizes, { x: 0, y: 0 }, 4);
+    const { at } = deskGrid(sizes, { x: v.x + (v.w - bounds.w) / 2, y: v.y + (v.h - bounds.h) / 2 }, 4);
     ids.forEach((id, n) => {
-      putInPile(d, id, {
-        x: v.x + v.w / 2 + ((n % 4) - 1.5) * CELL + (Math.random() - 0.5) * JITTER,
-        y: v.y + v.h / 2 + (Math.floor(n / 4) - 0.5) * CELL + (Math.random() - 0.5) * JITTER,
-      });
+      const box = at[n];
+      if (box) putInPile(d, id, { x: box.x + box.w / 2, y: box.y + box.h / 2 });
     });
   });
   if (ui.get().editingSpreadId === spreadId) ui.set({ editingSpreadId: null });
@@ -313,7 +349,7 @@ export function moveSpread(spreadId: SpreadId, toIndex: number): void {
     } else {
       const from = l.frames.findIndex((s) => s.id === spreadId);
       const [frame] = from >= 0 ? l.frames.splice(from, 1) : [];
-      if (frame) l.frames.splice(Math.min(Math.max(0, toIndex), l.frames.length), 0, frame);
+      if (frame) l.frames.splice(frameIndex(l.frames, toIndex), 0, frame);
     }
   });
 }
@@ -322,7 +358,7 @@ export function moveSpread(spreadId: SpreadId, toIndex: number): void {
  * Folio-style labels, zero-padded like a book's page numbers: "01", "02–03", "08" for a
  * book's spreads, or "01", "02", … for a sequence's frames.
  */
-export function folioLabel(index: number, total: number, layout: LayoutKind = 'print'): string {
+export function folioLabel(index: number, total: number, layout: LayoutKind): string {
   const width = Math.max(2, String(layout === 'print' ? total * 2 : total).length);
   return spreadLabel(index, total, layout)
     .split('–')
@@ -331,7 +367,7 @@ export function folioLabel(index: number, total: number, layout: LayoutKind = 'p
 }
 
 /** Page labels, e.g. "1", "2–3", counting a book's single first and last pages; a frame's number. */
-export function spreadLabel(index: number, total: number, layout: LayoutKind = 'print'): string {
+export function spreadLabel(index: number, total: number, layout: LayoutKind): string {
   if (layout === 'digital' || index === 0) return String(index + 1);
   const left = index * 2;
   if (index === total - 1) return String(left);

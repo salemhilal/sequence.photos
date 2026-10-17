@@ -4,6 +4,8 @@ import { deleteSpread, dropPhotos, folioLabel, insertSpread, moveSpread } from '
 import { clearGhost, sameTarget, startDrag, trackGhost } from '../drag';
 import { projectStore, useProject } from '../store';
 import type { LayoutKind, Placement, Sheet, Spread } from '../types';
+import { sheetExtent, sideAt } from '../geometry';
+import { TERMS } from '../units';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
 import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH } from '../prefs';
 import { openPhotoMenu, setSidebarWidth, ui } from '../ui';
@@ -49,6 +51,7 @@ export function Sidebar() {
   const [reorder, setReorder] = useState<{ id: string; dropIndex: number } | null>(null);
   const sheet = sheetOf(project);
   const print = sheet.layout === 'print';
+  const terms = TERMS[sheet.layout];
   // The whole book (or sequence), in order; indexes below count through it.
   const spreads = allSpreads(project);
   const preferredWidth = ui.use((s) => s.sidebarWidth);
@@ -138,17 +141,17 @@ export function Sidebar() {
         onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH, true)}
       />
       <div className="sidebar-head">
-        <span className="caps">{print ? 'Spreads' : 'Frames'}</span>
+        <span className="caps">{terms.Spreads}</span>
         <button
           className="btn ghost icon small"
-          aria-label={print ? 'Add spread at the end' : 'Add frame at the end'}
-          title={print ? 'Add a spread before the back page' : 'Add a frame at the end'}
+          aria-label={`Add ${terms.spread} at the end`}
+          title={terms.addAtEnd}
           onClick={() => insertSpread(print ? spreads.length - 1 : spreads.length)}
         >
           <Plus />
         </button>
         <span className="spacer" />
-        <span className="caps muted">{print ? `${spreads.length * 2 - 2} pages` : `${spreads.length} frames`}</span>
+        <span className="caps muted">{terms.count(spreads.length)}</span>
       </div>
       <div
         className={`sidebar-list${grid ? ' grid' : ''}`}
@@ -157,7 +160,10 @@ export function Sidebar() {
       >
         {spreads.map((spread, i) => (
           <div key={spread.id} className="spread-cell">
-            {i > 0 && <InsertGap index={i} active={reorder?.dropIndex === i} vertical={grid} />}
+            {/* A book's first and last spreads stay put; frames can go anywhere. */}
+            {(i > 0 || !print) && (
+              <InsertGap index={i} active={reorder?.dropIndex === i} vertical={grid} noun={terms.spread} />
+            )}
             <SpreadRow
               spread={spread}
               index={i}
@@ -169,6 +175,16 @@ export function Sidebar() {
             />
           </div>
         ))}
+        {!print && (
+          <div className="spread-cell">
+            <InsertGap
+              index={spreads.length}
+              active={reorder?.dropIndex === spreads.length}
+              vertical={grid}
+              noun="frame"
+            />
+          </div>
+        )}
       </div>
     </aside>
   );
@@ -178,7 +194,17 @@ export function Sidebar() {
  * The gap between two spreads: hover to add a spread there, or drop photos on it
  * to add a spread holding them.
  */
-function InsertGap({ index, active, vertical }: { index: number; active: boolean; vertical: boolean }) {
+function InsertGap({
+  index,
+  active,
+  vertical,
+  noun,
+}: {
+  index: number;
+  active: boolean;
+  vertical: boolean;
+  noun: 'spread' | 'frame';
+}) {
   const dropHover = ui.use((s) => sameTarget(s.hover, { kind: 'insert', index }));
   const photoDrag = ui.use((s) => s.ghost !== null);
   return (
@@ -189,14 +215,14 @@ function InsertGap({ index, active, vertical }: { index: number; active: boolean
     >
       {/* In the grid, gaps are narrow vertical gutters, so the button is just "+". */}
       {dropHover ? (
-        <span className="insert-btn">{vertical ? '+' : 'Drop to add a spread'}</span>
+        <span className="insert-btn">{vertical ? '+' : `Drop to add a ${noun}`}</span>
       ) : (
         <button
           className="insert-btn"
-          title={vertical ? 'Add a spread here' : undefined}
+          title={vertical ? `Add a ${noun} here` : undefined}
           onClick={() => insertSpread(index)}
         >
-          {vertical ? '+' : '+ Add spread'}
+          {vertical ? '+' : `+ Add ${noun}`}
         </button>
       )}
     </div>
@@ -216,9 +242,9 @@ interface RowProps {
 function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown }: RowProps) {
   const editing = ui.use((s) => s.editingSpreadId === spread.id);
   // Thumbnails are as wide as a book's two pages, or a frame.
-  const scale = thumbW / (sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW);
+  const scale = thumbW / sheetExtent(sheet).width;
   // A book's middle spreads move and delete; so does any frame but a sequence's only one.
-  const middle = spread.kind === 'middle' || (spread.kind === 'frame' && total > 1);
+  const movable = spread.kind === 'middle' || (spread.kind === 'frame' && total > 1);
   const label = folioLabel(index, total, sheet.layout);
 
   const open = () => ui.set({ editingSpreadId: spread.id });
@@ -234,7 +260,7 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
     const k = DESK_PPI * ui.get().view.zoom;
     const w = Math.min(GHOST_MAX, p.w * k);
     const ghost = { photoId: p.photoId, count: 1, w, h: (w * p.h) / p.w };
-    const fromSide = p.x + p.w / 2 < 0 ? 'left' : 'right';
+    const fromSide = sideAt(sheet, p.x + p.w / 2);
     startDrag(e, {
       onMove: ({ e: ev }) => trackGhost(ev, ghost),
       onEnd: ({ e: ev }, moved) => {
@@ -265,16 +291,16 @@ function SpreadRow({ spread, index, total, sheet, thumbW, dragging, onHeaderDown
   return (
     <div className={`spread-row${editing ? ' editing' : ''}${dragging ? ' dragging' : ''}`} data-row-index={index}>
       <div
-        className={`spread-row-head${middle ? ' draggable' : ''}`}
-        title={middle ? 'Drag to reorder' : spread.kind === 'frame' ? '' : 'The first and last pages stay in place'}
-        onPointerDown={middle ? (e) => onHeaderDown(e, spread) : undefined}
+        className={`spread-row-head${movable ? ' draggable' : ''}`}
+        title={movable ? 'Drag to reorder' : spread.kind === 'frame' ? '' : 'The first and last pages stay in place'}
+        onPointerDown={movable ? (e) => onHeaderDown(e, spread) : undefined}
       >
-        <span className={`grip${middle ? '' : ' locked'}`} aria-hidden="true">
+        <span className={`grip${movable ? '' : ' locked'}`} aria-hidden="true">
           <GripVertical />
         </span>
         <span className="spread-label">{label}</span>
         <span className="spacer" />
-        {middle && (
+        {movable && (
           <button
             className="row-delete"
             aria-label={spread.kind === 'frame' ? `Delete frame ${label}` : `Delete pages ${label}`}

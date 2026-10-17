@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { fmt } from '../geometry';
+import type { Units } from '../units';
 
 interface Props {
   value: number;
   onCommit: (n: number) => void;
+  /** The value's units: how it steps and is shown, and the suffix after it. */
+  units: Units;
   min?: number;
-  step?: number;
   label?: string;
-  suffix?: string;
-  /** The value as shown (default: inches, eighths exact). */
-  format?: (n: number) => string;
+  /** Show the units after the number (default); false where they're shown once for a group. */
+  suffix?: boolean;
   /** Called when editing starts and ends (focus and blur). */
   onBegin?: () => void;
   onEnd?: () => void;
@@ -21,17 +21,17 @@ interface Props {
 export function NumberField({
   value,
   onCommit,
+  units,
   min,
-  step = 0.125,
   label,
-  suffix = 'in',
-  format = fmt,
+  suffix = true,
   onBegin,
   onEnd,
   commitOnBlur = false,
 }: Props) {
   // While editing, show what's typed; otherwise show the live value.
   const [draft, setDraft] = useState<string | null>(null);
+  const { format } = units;
 
   const parse = (s: string): number | null => {
     const n = Number(s);
@@ -46,7 +46,7 @@ export function NumberField({
       <input
         type="number"
         inputMode="decimal"
-        step={step}
+        step={units.fieldStep}
         min={min}
         value={draft ?? format(value)}
         onFocus={() => {
@@ -74,7 +74,7 @@ export function NumberField({
           }
         }}
       />
-      {suffix && <span className="num-suffix">{suffix}</span>}
+      {suffix && <span className="num-suffix">{units.suffix}</span>}
     </label>
   );
 }

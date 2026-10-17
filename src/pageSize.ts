@@ -17,17 +17,25 @@ let resizeRun: { base: Project; out: Project } | null = null;
 let lastSwitch: { from: Project; to: Project } | null = null;
 
 /**
- * Turn the project into a print book or a digital sequence (see convertLayout): one undo
- * step. Photos moved with the guides to a new shape don't come back exactly when moved
+ * Turn the project into a print book or a digital sequence (see convertLayout), at `size`
+ * (default: that format's last size): one undo step. Photos moved with the guides to a new shape don't come back exactly when moved
  * back, so switching straight back, with nothing changed between, restores the project
  * as it was.
  */
-export function switchLayout(kind: LayoutKind): void {
+export function switchLayout(kind: LayoutKind, size?: Size): void {
   const now = projectStore.project;
   if (now.layout.kind === kind) return;
-  const back = lastSwitch?.to === now && lastSwitch.from.layout.kind === kind;
-  projectStore.replace(back && lastSwitch ? lastSwitch.from : convertLayout(now, kind));
+  // At a size other than the format's last one: converted straight to it, in the same step.
+  const target = size ?? now.settings.sizes[kind];
+  const from = lastSwitch?.from;
+  const back = lastSwitch?.to === now && from?.layout.kind === kind && sameSize(sheetOf(from), target);
+  const base = { ...now, settings: { ...now.settings, sizes: { ...now.settings.sizes, [kind]: { ...target } } } };
+  projectStore.replace(back && from ? from : convertLayout(base, kind));
   lastSwitch = { from: now, to: projectStore.project };
+}
+
+function sameSize(sheet: Sheet, size: Size): boolean {
+  return sheet.pageW === size.w && sheet.pageH === size.h;
 }
 
 /** Set the page's (print) or frames' (digital) size, and remember it for its layout kind. */
@@ -41,7 +49,7 @@ export function setLayoutSize(d: Draft<Project>, size: Size): void {
 }
 
 /**
- * Change the page or frame size (Settings' Apply): one undo step. Photos keep their place
+ * Change the page or frame size (Layout's Apply): one undo step. Photos keep their place
  * relative to the guides (if chosen), and border guides stay on the page.
  */
 export function setPageSize(size: Size): void {

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   borderBox,
   clampBorder,
-  fmt,
   dropBox,
   dropGuide,
   fitCentered,
@@ -11,6 +10,7 @@ import {
   pageRect,
   relayoutRect,
   resizeRect,
+  sheetExtent,
   snapLines,
   snapMove,
   spreadGuides,
@@ -44,6 +44,11 @@ describe('pages', () => {
   it('places the left page before the gutter and the right page after it', () => {
     expect(pageRect('left', settings)).toEqual({ x: -10, y: 0, w: 10, h: 8 });
     expect(pageRect('right', settings)).toEqual({ x: 0, y: 0, w: 10, h: 8 });
+  });
+
+  it('draws a book two pages wide around the gutter, and a frame one wide from its left', () => {
+    expect(sheetExtent(settings)).toEqual({ left: -10, width: 20 });
+    expect(sheetExtent({ ...settings, layout: 'digital' })).toEqual({ left: 0, width: 10 });
   });
 
   it('fits dropped photos inside the border guide with the largest box', () => {
@@ -191,6 +196,26 @@ describe('resizeRect', () => {
     expect(rect.w / rect.h).toBeCloseTo(2);
     expect(hit.xs).toEqual([9.5]);
   });
+
+  it('keeps each side at least 0.1 in by default', () => {
+    // Dragged to within 0.01 in of the opposite corner.
+    expect(resizeRect(start, 'se', -3.99, -1.99, false, null, 0).rect).toEqual({ x: 1, y: 1, w: 0.1, h: 0.1 });
+    const locked = resizeRect(start, 'se', -3.99, -1.99, true, null, 0).rect;
+    expect(locked.w).toBeCloseTo(0.2);
+    expect(locked.h).toBeCloseTo(0.1);
+  });
+
+  it('keeps each side at least the minimum given (10 px in a frame)', () => {
+    const px = { x: 100, y: 100, w: 400, h: 200 };
+    expect(resizeRect(px, 'se', -395, -195, false, null, 0, 10).rect).toEqual({ x: 100, y: 100, w: 10, h: 10 });
+    expect(resizeRect(px, 'se', -395, -195, true, null, 0, 10).rect).toEqual({ x: 100, y: 100, w: 20, h: 10 });
+    expect(resizeRect(px, 'nw', 395, 195, true, null, 0, 10).rect).toEqual({ x: 480, y: 290, w: 20, h: 10 });
+  });
+
+  it('keeps the anchored corner put when a north-west handle is dragged below the minimum', () => {
+    const px = { x: 100, y: 100, w: 400, h: 200 };
+    expect(resizeRect(px, 'nw', 395, 195, false, null, 0, 10).rect).toEqual({ x: 490, y: 290, w: 10, h: 10 });
+  });
 });
 
 describe('relayoutRect', () => {
@@ -249,14 +274,5 @@ describe('relayoutRect', () => {
   it('changes nothing when the size is unchanged', () => {
     const r = { x: 1.3, y: 2.1, w: 3, h: 2 };
     expect(round(relayoutRect(r, settings, settings))).toEqual(r);
-  });
-});
-
-describe('fmt', () => {
-  it('shows eighths of an inch exactly, and anything else to the hundredth', () => {
-    expect(fmt(2.875)).toBe('2.875');
-    expect(fmt(0.125)).toBe('0.125');
-    expect(fmt(2.68333)).toBe('2.68');
-    expect(fmt(10)).toBe('10');
   });
 });

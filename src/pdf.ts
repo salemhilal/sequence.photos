@@ -1,10 +1,11 @@
 import { getImage } from './db';
-import { pageSides } from './geometry';
+import { spreadLeft, spreadWidth } from './geometry';
 import { platform } from '#platform';
 import { projectStore } from './store';
 import { ui } from './ui';
 import { allSpreads, sheetOf } from './spreads';
 import type { LayoutKind } from './types';
+import { TERMS } from './units';
 
 /** PDF points per unit: 72 to the inch, and a pixel to a point (as image editors do). */
 const PT: Record<LayoutKind, number> = { print: 72, digital: 1 };
@@ -17,17 +18,17 @@ const PT: Record<LayoutKind, number> = { print: 72, digital: 1 };
 export async function renderPdf(onProgress: (done: number, total: number) => void): Promise<Blob> {
   const { PDFDocument } = await import('pdf-lib');
   const project = projectStore.project;
-  const { pageW, pageH, layout } = sheetOf(project);
+  const sheet = sheetOf(project);
+  const { pageH, layout } = sheet;
   const pt = PT[layout];
   const pdf = await PDFDocument.create();
-  pdf.setTitle('Photo book');
+  pdf.setTitle(TERMS[layout].pdfTitle);
   pdf.setCreator('Sequence');
 
   const book = allSpreads(project);
   for (const [i, spread] of book.entries()) {
-    const sides = pageSides(spread.kind);
-    const left = sides[0] === 'left' ? -pageW : 0;
-    const page = pdf.addPage([sides.length * pageW * pt, pageH * pt]);
+    const left = spreadLeft(spread.kind, sheet);
+    const page = pdf.addPage([spreadWidth(spread.kind, sheet) * pt, pageH * pt]);
 
     for (const p of [...spread.items].sort((a, b) => a.z - b.z)) {
       const img = await getImage(p.photoId);
@@ -58,7 +59,8 @@ export async function renderPdf(onProgress: (done: number, total: number) => voi
 export async function savePdf(): Promise<void> {
   if (ui.get().busy || ui.get().importing) return;
   try {
-    await platform.saveFile(`photo-book-${new Date().toISOString().slice(0, 10)}.pdf`, () => {
+    const name = TERMS[projectStore.project.layout.kind].fileStem;
+    await platform.saveFile(`${name}-${new Date().toISOString().slice(0, 10)}.pdf`, () => {
       ui.set({ busy: 'Rendering PDF…' });
       return renderPdf((done, total) => ui.set({ busy: `Rendering PDF ${done} of ${total}…` }));
     });

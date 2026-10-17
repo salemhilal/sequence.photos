@@ -1,14 +1,5 @@
-import type {
-  BorderGuide,
-  Edges,
-  LayoutKind,
-  LineGuide,
-  PageSide,
-  PhotoMeta,
-  Sheet,
-  Spread,
-  SpreadKind,
-} from './types';
+import { DESK_PPI } from './deskGeometry';
+import type { BorderGuide, Edges, LineGuide, PageSide, PhotoMeta, Sheet, Spread, SpreadKind } from './types';
 import { UNITS } from './units';
 
 export interface Rect {
@@ -18,8 +9,11 @@ export interface Rect {
   h: number;
 }
 
-/** Longest edge of a photo when it lands on the desk. */
-export const PILE_PHOTO_SIZE = 2;
+/**
+ * A desk photo's longest side at 100% zoom, in screen pixels: the size of the preview the
+ * app keeps of each photo (images.ts), so on the desk it's as large as it stays sharp.
+ */
+export const DESK_PHOTO_PX = 1400;
 
 export function pageSides(kind: SpreadKind): PageSide[] {
   if (kind === 'frame') return ['whole'];
@@ -49,16 +43,17 @@ export function spreadLeft(kind: SpreadKind, s: Sheet): number {
   return pageSides(kind)[0] === 'left' ? -s.pageW : 0;
 }
 
+/**
+ * What a sheet's spreads are drawn on, around the canvas origin: a book's two pages (its
+ * single first and last pages sit on their side), or a frame.
+ */
+export function sheetExtent(s: Pick<Sheet, 'layout' | 'pageW'>): { left: number; width: number } {
+  return s.layout === 'print' ? { left: -s.pageW, width: 2 * s.pageW } : { left: 0, width: s.pageW };
+}
+
 /** Whether a page is laid out like a left page: outside at its left edge (a book's left pages, and frames). */
 function outsideLeft(side: PageSide): boolean {
   return side !== 'right';
-}
-
-/** An edge's name: a frame has a left and right where a book page has an outside and inside. */
-export function edgeLabel(edge: keyof Edges, layout: LayoutKind): string {
-  if (layout === 'digital' && edge === 'outside') return 'Left';
-  if (layout === 'digital' && edge === 'inside') return 'Right';
-  return edge[0]!.toUpperCase() + edge.slice(1);
 }
 
 /** A border guide's distance from each edge, whichever kind it is. */
@@ -143,10 +138,10 @@ export function fitCentered(photo: Pick<PhotoMeta, 'pxW' | 'pxH'>, box: Rect, ce
 }
 
 export function pileSize(photo: PhotoMeta): { w: number; h: number } {
+  // Its own size if smaller than the preview; in desk inches.
+  const long = Math.min(Math.max(photo.pxW, photo.pxH), DESK_PHOTO_PX) / DESK_PPI;
   const aspect = photo.pxW / photo.pxH;
-  return aspect >= 1
-    ? { w: PILE_PHOTO_SIZE, h: PILE_PHOTO_SIZE / aspect }
-    : { w: PILE_PHOTO_SIZE * aspect, h: PILE_PHOTO_SIZE };
+  return aspect >= 1 ? { w: long, h: long / aspect } : { w: long * aspect, h: long };
 }
 
 export interface GuideLines {
@@ -239,6 +234,8 @@ export function resizeRect(
   lockAspect: boolean,
   lines: GuideLines | null,
   threshold: number,
+  /** The smallest a side gets: the units' minPhoto (0.1 in, or 10 px in a frame). */
+  min = 0.1,
 ): { rect: Rect; hit: SnapFeedback } {
   const west = corner === 'nw' || corner === 'sw';
   const north = corner === 'nw' || corner === 'ne';
@@ -247,21 +244,26 @@ export function resizeRect(
   let mx = (west ? start.x : start.x + start.w) + dx;
   let my = (north ? start.y : start.y + start.h) + dy;
   const hit: SnapFeedback = { xs: [], ys: [] };
-  const min = 0.1;
   const aspect = start.w / start.h;
 
   const sx = lines ? snapPoints([mx], lines.xs, threshold) : { delta: 0, line: null };
   const sy = lines ? snapPoints([my], lines.ys, threshold) : { delta: 0, line: null };
+  // The new size, measured from the fixed corner (so the floor never moves it, and
+  // dragging past it stops at the smallest size).
+  let w: number;
+  let h: number;
 
   if (!lockAspect) {
     mx += sx.delta;
     my += sy.delta;
     if (sx.line !== null) hit.xs.push(sx.line);
     if (sy.line !== null) hit.ys.push(sy.line);
+    w = Math.max(min, west ? ax - mx : mx - ax);
+    h = Math.max(min, north ? ay - my : my - ay);
   } else {
     // Size follows whichever axis the pointer moved further along, or the axis that snapped.
-    let w = Math.abs(mx - ax);
-    let h = Math.abs(my - ay);
+    w = Math.abs(mx - ax);
+    h = Math.abs(my - ay);
     const useX =
       sx.line !== null && (sy.line === null || Math.abs(sx.delta) <= Math.abs(sy.delta))
         ? true
@@ -283,19 +285,10 @@ export function resizeRect(
       h = Math.max(min, Math.abs(my - ay));
       w = h * aspect;
     }
-    mx = west ? ax - w : ax + w;
-    my = north ? ay - h : ay + h;
   }
 
-  const x1 = Math.min(ax, mx);
-  const y1 = Math.min(ay, my);
   return {
-    rect: {
-      x: x1,
-      y: y1,
-      w: Math.max(min, Math.abs(mx - ax)),
-      h: Math.max(min, Math.abs(my - ay)),
-    },
+    rect: { x: west ? ax - w : ax, y: north ? ay - h : ay, w, h },
     hit,
   };
 }
@@ -304,17 +297,11 @@ export function intersects(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
-/** Inches for display: to the hundredth, but eighths exactly (2.875, not 2.88). */
-export function fmt(n: number): string {
-  const eighths = Math.abs(n * 8 - Math.round(n * 8)) < 1e-9;
-  return (eighths ? Math.round(n * 1000) / 1000 : Math.round(n * 100) / 100).toString();
-}
-
 type Knots = [old: number, next: number][];
 
 /**
  * Guide positions along one axis of one page, paired old → new: its edges and center
- * always, then each guide (inches from the page's start or end), kept only if it's on
+ * always, then each guide (its distance from the page's start or end), kept only if it's on
  * the page at both sizes and in the same order among the others.
  */
 function pageKnots(

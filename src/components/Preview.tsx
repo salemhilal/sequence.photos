@@ -2,11 +2,15 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { folioLabel } from '../actions';
 import { useWindowEvent } from '../hooks';
-import { saveFrames } from '../frames';
+import { exportFrames } from '../frames';
 import { savePdf } from '../pdf';
+import { platform } from '#platform';
+import { commandTitle } from '../commands';
 import { useProject } from '../store';
 import { closeModal, ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
+import { sheetExtent } from '../geometry';
+import { TERMS } from '../units';
 import { allSpreads, sheetOf } from '../spreads';
 
 /** How long the pointer rests before the controls fade, as a video player's do. */
@@ -99,9 +103,10 @@ export function Preview() {
 
   if (!spread) return null;
   // A book shows both pages' width (single pages on their side); a frame, its own.
-  const across = sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW;
+  const across = sheetExtent(sheet).width;
   const scale = Math.min((stage.w - 40) / across, (stage.h - 40) / sheet.pageH);
   const label = folioLabel(index, spreads.length, sheet.layout);
+  const terms = TERMS[sheet.layout];
 
   return (
     <div className={`preview${idle ? ' idle' : ''}`} data-modal ref={rootRef}>
@@ -111,20 +116,29 @@ export function Preview() {
           {index + 1} / {spreads.length}
         </span>
         <span className="spacer" />
-        <span className="hint">← → to turn pages · Esc to exit</span>
+        <span className="hint">← → to {terms.turn} · Esc to exit</span>
         <button
           className="btn"
-          onClick={() => void (sheet.layout === 'print' ? savePdf() : saveFrames())}
+          onClick={() => void (sheet.layout === 'print' ? savePdf() : exportFrames())}
           disabled={busy !== null}
         >
-          {busy ?? (sheet.layout === 'print' ? 'Download PDF' : 'Save images')}
+          {/* The Mac app names it as its menu does (Save PDF…, Export Frames as Images…). */}
+          {busy ??
+            (platform.kind === 'macos'
+              ? commandTitle(sheet.layout === 'print' ? 'savePdf' : 'exportFrames')
+              : terms.save)}
         </button>
         <button className="btn" onClick={close}>
           Exit preview
         </button>
       </header>
       <div className="preview-stage" ref={stageRef}>
-        <button className="turn prev" aria-label="Previous spread" disabled={index === 0} onClick={() => go(-1)}>
+        <button
+          className="turn prev"
+          aria-label={`Previous ${terms.spread}`}
+          disabled={index === 0}
+          onClick={() => go(-1)}
+        >
           <ChevronLeft />
         </button>
         <div key={spread.id} className={`preview-spread turn-${dir}`}>
@@ -132,7 +146,7 @@ export function Preview() {
         </div>
         <button
           className="turn next"
-          aria-label="Next spread"
+          aria-label={`Next ${terms.spread}`}
           disabled={index === spreads.length - 1}
           onClick={() => go(1)}
         >

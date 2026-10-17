@@ -4,11 +4,12 @@ import { bump, dropPhotos, folioLabel, putInPile, putOnPage, raise } from '../ac
 import { clearGhost, startDrag, trackGhost } from '../drag';
 import {
   borderBox,
-  edgeLabel,
   edgesOf,
   fitCentered,
   pageRect,
+  pageSides,
   resizeRect,
+  sheetExtent,
   sideAt,
   snapLines,
   snapMove,
@@ -19,9 +20,9 @@ import {
 import type { Draft } from 'immer';
 import type { PhotoId, SpreadId } from '../ids';
 import { allSpreads, findSpread, sheetOf } from '../spreads';
-import { UNITS, type Units } from '../units';
+import { TERMS, UNITS, type Units } from '../units';
 import { projectStore, useProject } from '../store';
-import type { BorderGuide, LayoutKind, PageSide, Project, Placement } from '../types';
+import type { BorderGuide, LayoutKind, Project, Placement } from '../types';
 import { isTyping } from '../input';
 import { openPhotoMenu, toggleGuides, ui } from '../ui';
 import { shortcutLabel } from '../commands';
@@ -44,8 +45,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const units = UNITS[sheet.layout];
   const PAD = sheet.pageW * PAD_SHARE;
   // A book's two pages (single ones on their side), or a frame.
-  const extentLeft = sheet.layout === 'print' ? -sheet.pageW : 0;
-  const across = sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW;
+  const { left: extentLeft, width: across } = sheetExtent(sheet);
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 800, h: 500 });
   const [selected, setSelected] = useState<PhotoId | null>(null);
@@ -190,6 +190,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
           !ev.shiftKey,
           ev.altKey ? null : lines,
           threshold,
+          units.minPhoto,
         );
         setSnapHit(hit);
         projectStore.preview((d) => {
@@ -224,13 +225,19 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
     </div>
   );
 
-  const label = folioLabel(index, book.length);
+  const label = folioLabel(index, book.length, sheet.layout);
+  const noun = TERMS[sheet.layout].spread;
 
   return (
     <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
       <div className="modal editor" data-modal>
         <header className="modal-head">
-          <button className="btn ghost icon" aria-label="Previous spread" disabled={index === 0} onClick={() => go(-1)}>
+          <button
+            className="btn ghost icon"
+            aria-label={`Previous ${noun}`}
+            disabled={index === 0}
+            onClick={() => go(-1)}
+          >
             <ChevronLeft />
           </button>
           <div className="modal-title">
@@ -241,7 +248,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
           </div>
           <button
             className="btn ghost icon"
-            aria-label="Next spread"
+            aria-label={`Next ${noun}`}
             disabled={index === book.length - 1}
             onClick={() => go(1)}
           >
@@ -315,7 +322,7 @@ function guideLabel(g: BorderGuide, u: Units): string {
 /** A border guide's distances, for a tooltip: top, outside (left, in a frame), bottom, inside. */
 function guideSummary(g: BorderGuide, u: Units, layout: LayoutKind): string {
   const e = edgesOf(g);
-  const [outside, inside] = [edgeLabel('outside', layout), edgeLabel('inside', layout)];
+  const { outside, inside } = TERMS[layout].edges;
   const f = u.format;
   return `Top ${f(e.top)} · ${outside} ${f(e.outside)} · Bottom ${f(e.bottom)} · ${inside} ${f(e.inside)} ${u.suffix}`;
 }
@@ -357,7 +364,6 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
     .sort((a, b) => b.box.w * b.box.h - a.box.w * a.box.h);
   // Print: the photo's pixels per inch. Digital: how much it's enlarged, if it is.
   const where = side === 'whole' ? 'frame' : 'page';
-  const num = { suffix: units.suffix, step: units.fieldStep, format: units.format };
   const ppi = photo && sheet.layout === 'print' ? Math.round(photo.pxW / item.w) : null;
   const enlarged = photo && sheet.layout === 'digital' ? item.w / photo.pxW : null;
 
@@ -371,25 +377,34 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
       </div>
       <div className="grid2">
         <NumberField
-          {...num}
+          units={units}
           label="X"
           value={item.x - page.x}
-          onCommit={(n) => onChange({ x: page.x + n }, key('x'))}
+          onCommit={(n) => onChange({ x: page.x + units.round(n) }, key('x'))}
         />
-        <NumberField {...num} label="Y" value={item.y} onCommit={(n) => onChange({ y: n }, key('y'))} />
         <NumberField
-          {...num}
+          units={units}
+          label="Y"
+          value={item.y}
+          onCommit={(n) => onChange({ y: units.round(n) }, key('y'))}
+        />
+        <NumberField
+          units={units}
           label="W"
-          min={units.minSize / 10}
+          min={units.minPhoto}
           value={item.w}
-          onCommit={(n) => onChange(lock ? { w: n, h: n / aspect } : { w: n }, key('w'))}
+          onCommit={(n) =>
+            onChange(lock ? { w: units.round(n), h: units.round(n / aspect) } : { w: units.round(n) }, key('w'))
+          }
         />
         <NumberField
-          {...num}
+          units={units}
           label="H"
-          min={units.minSize / 10}
+          min={units.minPhoto}
           value={item.h}
-          onCommit={(n) => onChange(lock ? { h: n, w: n * aspect } : { h: n }, key('h'))}
+          onCommit={(n) =>
+            onChange(lock ? { h: units.round(n), w: units.round(n * aspect) } : { h: units.round(n) }, key('h'))
+          }
         />
       </div>
       <label className="check">
@@ -460,7 +475,7 @@ function PileStrip({ spreadId }: { spreadId: SpreadId }) {
           const spread = findSpread(projectStore.project, spreadId);
           if (!spread) return;
           const sheet = sheetOf(projectStore.project);
-          const side: PageSide = spread.kind === 'frame' ? 'whole' : spread.kind === 'first' ? 'right' : 'left';
+          const side = pageSides(spread.kind)[0]!;
           const taken = spread.items.some((i) => sideAt(sheet, i.x + i.w / 2) === side);
           const pick = spread.kind === 'middle' && taken ? 'right' : side;
           projectStore.apply((d) => putOnPage(d, [p.photoId], spreadId, pick));
@@ -486,7 +501,7 @@ function PileStrip({ spreadId }: { spreadId: SpreadId }) {
               style={{ width: (56 * p.w) / p.h }}
               onPointerDown={(e) => onDown(e, p)}
               onContextMenu={(e) => openPhotoMenu(e, p.photoId)}
-              title="Drag onto a page, or click to add"
+              title={`Drag onto the ${TERMS[project.layout.kind].page}, or click to add`}
             >
               <PhotoImg id={p.photoId} />
             </div>

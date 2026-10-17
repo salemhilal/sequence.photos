@@ -1,6 +1,9 @@
 import type { GuideId, PhotoId, SpreadId } from './ids';
 
-/** All positions and sizes are in inches. */
+/**
+ * Positions and sizes on pages are in the layout's units (inches in print, pixels in
+ * digital; see units.ts). The desk is always in inches.
+ */
 
 export interface PhotoMeta {
   id: PhotoId;
@@ -96,7 +99,8 @@ export type BorderGuide = { id: GuideId } & ({ kind: 'even'; inset: number } | (
 
 /**
  * A straight guide across every page, mirrored on facing pages. A vertical guide's `at`
- * is inches from the page's outside edge; a horizontal guide's, from its top.
+ * is its distance from the page's outside edge (a frame's left); a horizontal guide's,
+ * from its top.
  */
 export interface LineGuide {
   id: GuideId;

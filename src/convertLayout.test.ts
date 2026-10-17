@@ -62,7 +62,7 @@ describe('print to digital', () => {
   it('converts guides in proportion to the page width, and takes the frame size', () => {
     const d = convertLayout(book(), 'digital');
     const s = sheetOf(d);
-    expect([s.pageW, s.pageH]).toEqual([1080, 1440]);
+    expect([s.pageW, s.pageH]).toEqual([1080, 1350]);
     expect(s.borders.map((b) => b.kind === 'even' && b.inset)).toEqual([54, 135]);
     expect(s.lines.map((l) => l.at)).toEqual([216]);
     // The book's size is remembered for coming back.
@@ -128,6 +128,17 @@ describe('switchLayout', () => {
     expect(projectStore.project).toBe(p);
   });
 
+  it('switches at a size of its own in the same step, remembering it', () => {
+    const p = book();
+    projectStore.reset(p);
+    switchLayout('digital', { w: 1080, h: 1080 });
+    const s = sheetOf(projectStore.project);
+    expect([s.layout, s.pageW, s.pageH]).toEqual(['digital', 1080, 1080]);
+    expect(projectStore.project.settings.sizes.digital).toEqual({ w: 1080, h: 1080 });
+    projectStore.undo();
+    expect(projectStore.project).toBe(p);
+  });
+
   it('converts afresh after any other change', () => {
     projectStore.reset(book(true));
     switchLayout('digital');
@@ -143,13 +154,13 @@ describe('frames', () => {
   it('are one page, measured from the left', () => {
     expect(sideAt(s, -50)).toBe('whole');
     expect(sideAt(s, 900)).toBe('whole');
-    expect(pageRect('whole', s)).toEqual({ x: 0, y: 0, w: 1080, h: 1440 });
+    expect(pageRect('whole', s)).toEqual({ x: 0, y: 0, w: 1080, h: 1350 });
     expect(linePosition('whole', s, s.lines[0]!)).toBe(216);
     expect(lineAt('whole', s, 'vertical', 216)).toBe(216);
   });
 
   it('put a border guide’s outside distance on the left', () => {
     const g = { id: toGuideId('g'), kind: 'edges', top: 10, bottom: 20, outside: 30, inside: 40 } as const;
-    expect(borderBox('whole', s, g)).toEqual({ x: 30, y: 10, w: 1080 - 70, h: 1440 - 30 });
+    expect(borderBox('whole', s, g)).toEqual({ x: 30, y: 10, w: 1080 - 70, h: 1350 - 30 });
   });
 });

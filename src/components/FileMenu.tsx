@@ -7,6 +7,8 @@ export interface MenuItem {
   icon: ReactNode;
   onSelect: () => void;
   disabled?: boolean;
+  /** A line under the label: e.g. why it's disabled. */
+  note?: string;
   /** Draw a divider above this item. */
   separatorBefore?: boolean;
 }
@@ -62,7 +64,7 @@ export function FileMenu({ items }: { items: MenuItem[] }) {
             item.separatorBefore && <div key={`${item.label}-sep`} className="menu-separator" />,
             <button
               key={item.label}
-              className="menu-item"
+              className={`menu-item${item.note ? ' has-note' : ''}`}
               role="menuitem"
               disabled={item.disabled}
               onClick={() => {
@@ -71,7 +73,10 @@ export function FileMenu({ items }: { items: MenuItem[] }) {
               }}
             >
               {item.icon}
-              <span className="menu-label">{item.label}</span>
+              <span className="menu-label">
+                <span className="menu-text">{item.label}</span>
+                {item.note && <span className="menu-note">{item.note}</span>}
+              </span>
               {item.shortcut && <kbd className="menu-shortcut">{item.shortcut}</kbd>}
             </button>,
           ])}

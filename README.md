@@ -13,7 +13,7 @@ On a new machine, see [docs/setup.md](docs/setup.md).
 ```bash
 nvm use        # Node 24 (needs ≥ 20.19)
 npm install
-npm run dev    # → http://localhost:5173
+npm run dev    # → http://localhost:5175
 ```
 
 The site has four pages: the landing page (`index.html`, at `/`), the app
@@ -27,6 +27,9 @@ npm test             # run once
 npm run test:watch   # re-run on save
 npm run test:app     # Mac app, end to end: open, Save, Save As, relaunch (needs Rust)
 ```
+
+Before a release, go through [docs/testing.md](docs/testing.md): the automated checks and a
+pass through the app by hand.
 
 `test:app` builds a test version of the Mac app and runs it on fixture projects (its
 window shows for a few seconds), then checks the saved files from outside the app. Its
@@ -52,7 +55,7 @@ Netlify runs `npm test && npm run build` for production, pull-request previews, 
 | Import project      | ⌘O      | Ctrl+O          |
 | Export              | ⌘S      | Ctrl+S          |
 | Save PDF            | ⇧⌘P     | Ctrl+Shift+P    |
-| Save images         | ⇧⌘E     | Ctrl+Shift+E    |
+| Export frames       | ⇧⌘E     | Ctrl+Shift+E    |
 | Show/hide spreads   | ⌘B      | Ctrl+B          |
 | Copy / paste photos | ⌘C / ⌘V | Ctrl+C / Ctrl+V |
 | Duplicate photos    | ⌘D      | Ctrl+D          |
@@ -66,7 +69,7 @@ Right-click the desk to tidy photos into a grid or change the desk color.
 
 **Print or digital.** A project is a print book (spreads of facing pages, sized in
 inches) or a digital sequence (single frames, sized in pixels, like an Instagram
-carousel; 1080 × 1440 px by default, with Instagram's sizes as presets). Choose in
+carousel; 1080 × 1350 px (4:5) by default, with Instagram's sizes as presets). Choose in
 **Layout** (in the toolbar). Switching breaks a book's spreads into frames, each photo going with
 the page that holds its center; going back, frame 1 becomes the first page and the rest
 pair into spreads. Guides and photos convert in proportion to the page width.
@@ -152,7 +155,7 @@ Drop a project on the desk to open it. Plain `.zip` files with the same contents
 
 ## Images
 
-For a digital sequence, File → Save images saves a ZIP of JPEGs, one per frame at its
+For a digital sequence, File → Export frames as images saves a ZIP of JPEGs, one per frame at its
 pixel size (`01.jpg`, `02.jpg`, …, in order), drawn from the original photos.
 
 ## InDesign

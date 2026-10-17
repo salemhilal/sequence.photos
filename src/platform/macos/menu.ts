@@ -1,17 +1,17 @@
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { REPO_URL } from '../../config';
 import { commandTitle, runFromMenu, shortcutAccelerator, type CommandId } from '../../commands';
 import { isTextField } from '../../input';
 import { projectStore } from '../../store';
 import { ui } from '../../ui';
+import { TERMS } from '../../units';
 import { quit } from './documents';
 
 /**
  * The Mac app's menu bar, built from the command table (so it always matches the
  * shortcuts), with the standard macOS items around it.
  */
-
-const REPO = 'https://github.com/salemhilal/sequence.photos';
 
 /** Menu bar items are in title case ("Add Photos…"); commands are named in sentence case. */
 const SMALL_WORDS = new Set(['a', 'an', 'and', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
@@ -46,7 +46,7 @@ export async function setUpMenu(): Promise<void> {
   const guides = await command('toggleGuides', undefined, 'Hide Guides');
   // For print books and digital sequences respectively (see sync below).
   const indesign = await command('exportIndesign');
-  const images = await command('saveImages');
+  const images = await command('exportFrames');
 
   const menu = await Menu.new({
     items: [
@@ -120,7 +120,7 @@ export async function setUpMenu(): Promise<void> {
         text: 'Help',
         items: [
           await command('tour'),
-          await MenuItem.new({ text: 'Sequence on GitHub', action: () => void openUrl(REPO) }),
+          await MenuItem.new({ text: 'Sequence on GitHub', action: () => void openUrl(REPO_URL) }),
         ],
       }),
     ],
@@ -134,23 +134,23 @@ export async function setUpMenu(): Promise<void> {
     const { canUndo, canRedo } = projectStore.getSnapshot();
     const typing = isTextField(document.activeElement);
     const { sidebarOpen, guidesHidden } = ui.get();
-    const print = projectStore.project.layout.kind === 'print';
+    const layout = projectStore.project.layout.kind;
     const state = {
       undo: canUndo || typing,
       redo: canRedo || typing,
       sidebar: sidebarOpen,
       guides: !guidesHidden,
-      print,
+      layout,
     };
     const key = JSON.stringify(state);
     if (key === shown) return;
     shown = key;
     void undo.setEnabled(state.undo);
     void redo.setEnabled(state.redo);
-    void sidebar.setText(`${state.sidebar ? 'Hide' : 'Show'} ${state.print ? 'Spreads' : 'Frames'}`);
+    void sidebar.setText(`${state.sidebar ? 'Hide' : 'Show'} ${TERMS[state.layout].Spreads}`);
     void guides.setText(state.guides ? 'Hide Guides' : 'Show Guides');
-    void indesign.setEnabled(state.print);
-    void images.setEnabled(!state.print);
+    void indesign.setEnabled(state.layout === 'print');
+    void images.setEnabled(state.layout === 'digital');
   };
   sync();
   projectStore.subscribe(sync);

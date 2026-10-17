@@ -7,15 +7,14 @@ import { clearGhost, startDrag, trackGhost } from '../drag';
 import { intersects, resizeRect, type Corner, type Rect } from '../geometry';
 import { projectStore, useProject } from '../store';
 import type { Placement } from '../types';
-import { DESK_PPI, deskGeometry } from '../deskGeometry';
+import { TERMS } from '../units';
+import { DESK_PPI, deskGeometry, MAX_ZOOM, MIN_ZOOM } from '../deskGeometry';
 import { isTyping } from '../input';
 import { deskCovered, openPhotoMenu, openModal, openQuickLook, ui } from '../ui';
 import { PageSizeFields } from './PageSizeFields';
 import { PhotoImg } from './PhotoImg';
 
 const CORNERS: Corner[] = ['nw', 'ne', 'sw', 'se'];
-const MIN_ZOOM = 0.2;
-const MAX_ZOOM = 5;
 const GHOST_MAX = 140;
 /** When moving photos on the desk, the drop border fades in within this distance of its edge. */
 const EDGE_FADE_PX = 120;
@@ -54,6 +53,10 @@ export function Desk() {
       const v = ui.get().view;
       const k = DESK_PPI * v.zoom;
       return { x: -v.panX / k, y: -v.panY / k, w: (r?.width ?? 800) / k, h: (r?.height ?? 600) / k };
+    };
+    deskGeometry.size = () => {
+      const r = ref.current?.getBoundingClientRect();
+      return { w: r?.width ?? 800, h: r?.height ?? 600 };
     };
   }, []);
 
@@ -340,7 +343,7 @@ export function Desk() {
           <p>
             Add or drop photos or exported projects here.
             <br />
-            They land on this desk, where you can drag them onto pages.
+            They land on this desk, where you can drag them onto {TERMS[project.layout.kind].pages}.
           </p>
           <button className="btn primary" onPointerDown={(e) => e.stopPropagation()} onClick={addPhotos}>
             Add photos

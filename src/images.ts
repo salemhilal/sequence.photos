@@ -1,9 +1,11 @@
 import { useSyncExternalStore } from 'react';
 import { getImage, putImage } from './db';
 import type { PhotoMeta } from './types';
+import { DESK_PHOTO_PX } from './geometry';
 import { newPhotoId } from './ids';
 
-const THUMB_MAX = 1400;
+/** The preview's longest side: also a desk photo's size at 100% (see DESK_PHOTO_PX). */
+const THUMB_MAX = DESK_PHOTO_PX;
 
 const urls = new Map<string, string>();
 const loading = new Set<string>();

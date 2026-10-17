@@ -10,6 +10,18 @@ let documents: Documents | null = null;
 const loadDocuments = async (): Promise<Documents> => (documents ??= await import('./documents'));
 
 /**
+ * An export's name in the save panel: after the document, as Mac apps do ("Trip.pdf",
+ * "Trip (InDesign).zip", "Trip (images).zip"), or the given dated name for an untitled one.
+ */
+function suggestedName(filename: string): string {
+  const named = documents?.documentName();
+  if (!named) return filename;
+  if (filename.endsWith('-indesign.zip')) return `${named} (InDesign).zip`;
+  if (filename.endsWith('.zip')) return `${named} (images).zip`;
+  return `${named}${filename.slice(filename.lastIndexOf('.'))}`;
+}
+
+/**
  * The Mac app. Projects are documents: saved to .photo-sequence files, which open with
  * a double-click (see ./documents.ts). There's a menu bar (./menu.ts), and files are
  * written through the app's Rust side (./files.ts, src-tauri/src/lib.rs).
@@ -34,7 +46,7 @@ export const platform: Platform = {
   },
 
   async saveFile(filename, make) {
-    const path = await chooseSaveLocation(filename);
+    const path = await chooseSaveLocation(suggestedName(filename));
     if (!path) return false;
     const blob = await make();
     const busy = ui.get().busy;

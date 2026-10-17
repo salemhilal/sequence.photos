@@ -2,8 +2,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { getImage } from '../../db';
 import { projectLoaded } from '../../persistence';
 import { tourSeenPref } from '../../prefs';
+import { putOnPage } from '../../actions';
+import { renderFrames } from '../../frames';
+import { toPhotoId } from '../../ids';
 import { newProject } from '../../project';
-import { setLayoutSize } from '../../pageSize';
+import { setLayoutSize, switchLayout } from '../../pageSize';
 import { sheetOf } from '../../spreads';
 import { projectStore } from '../../store';
 import { endTour } from '../../tour';
@@ -116,6 +119,41 @@ async function scenarios(dir: string): Promise<void> {
   ui.set({ importing: null });
   await waiting;
   check('then opens it', title()?.name === 'Fixture A' && photoCount() === 3);
+
+  // A digital sequence: switched to, saved and reopened as one, and rendered as images
+  // in the app's WebKit (OffscreenCanvas, createImageBitmap).
+  switchLayout('digital');
+  const layout = projectStore.project.layout;
+  const frame = layout.kind === 'digital' ? layout.frames[0] : undefined;
+  check('switches to a digital sequence', layout.kind === 'digital' && !!frame);
+  if (layout.kind === 'digital' && frame) {
+    projectStore.apply((d) => putOnPage(d, [toPhotoId('p0')], frame.id, 'whole'));
+    const digital = `${dir}/Digital.photo-sequence`;
+    check('saves a digital sequence', await saveAs(digital), ui.get().notice ?? '');
+    const saved = await savedProject(digital);
+    check(
+      'the file is a digital sequence, at its size',
+      saved.layout.kind === 'digital' && sheetOf(saved).pageW === layout.frame.w,
+      saved.layout.kind,
+    );
+    const placed = projectStore.project.layout.kind === 'digital' ? projectStore.project.layout.frames : [];
+    const { files, missing } = await renderFrames(placed, layout.frame.w, layout.frame.h, () => undefined);
+    const first = files[0] && (await createImageBitmap(files[0].data).catch(() => null));
+    check(
+      'renders frames as JPEGs at the frame size',
+      missing === 0 &&
+        files.length === placed.length &&
+        first?.width === layout.frame.w &&
+        first.height === layout.frame.h,
+      `${files.length} files, ${missing} missing, ${first?.width}×${first?.height}`,
+    );
+    await openPath(a);
+    await openPath(digital);
+    check(
+      'reopens a digital sequence',
+      title()?.name === 'Digital' && projectStore.project.layout.kind === 'digital' && !title()?.edited,
+    );
+  }
 
   // New Project starts fresh history, so undo can't bring back a project without its file.
   await newProject();

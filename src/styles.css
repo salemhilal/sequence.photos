@@ -128,6 +128,21 @@ button {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+/* A note under a control (after .data, so a .help.data note keeps this size). */
+.help {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.help.warn {
+  color: var(--warn);
+}
+/* Controls in a row. */
+.inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 /* Page numbers, set like a book's folios. */
 .folio {
   font-family: var(--mono);
@@ -301,6 +316,27 @@ button {
 .menu-label {
   flex: 1;
 }
+/* An item with a note under its label (e.g. why it's disabled): the note stays readable. */
+.menu-item.has-note {
+  height: auto;
+  min-height: 30px;
+  padding: 5px 8px;
+}
+.menu-note {
+  display: block;
+  max-width: 220px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.menu-item.has-note:disabled {
+  opacity: 1;
+}
+.menu-item.has-note:disabled .lucide,
+.menu-item.has-note:disabled .menu-text,
+.menu-item.has-note:disabled .menu-shortcut {
+  opacity: 0.4;
+}
 .menu-shortcut {
   font: 11px var(--mono);
   color: var(--muted);
@@ -461,6 +497,12 @@ button {
   user-select: none;
 }
 .status {
+  /* Long messages ("Rendering frame 12 of 30…") end in "…" rather than running under the
+     Mac app's centered window title. */
+  max-width: 26vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
   font-family: var(--mono);
   font-size: 11px;
@@ -732,17 +774,13 @@ button {
   pointer-events: auto;
 }
 .setup-card .inline {
-  display: flex;
-  align-items: center;
   gap: 14px;
 }
 .setup-card .num-field input {
   width: 64px;
 }
 .setup-card .help {
-  margin: 0;
   font: 12px/1.5 var(--font);
-  color: var(--muted);
 }
 /* A button that reads as an inline link. */
 .link {
@@ -1116,7 +1154,7 @@ body.col-resizing * {
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
-.guides-canvas {
+.layout-canvas {
   position: absolute;
 }
 /* A guide from the rulers: a 1px line in a wider band, easy to grab. */
@@ -1179,23 +1217,9 @@ body.col-resizing * {
   pointer-events: none;
   white-space: nowrap;
 }
-/* .inspector (below) sets these too. */
-.inspector.guides-panel {
+/* The Layout view's panel (.inspector.sectioned, below). */
+.inspector.layout-panel {
   width: 270px;
-  gap: 0;
-  padding: 0;
-}
-.guides-panel section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  border-bottom: 1px solid var(--border);
-}
-.guides-panel h3 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 500;
 }
 .section-head {
   display: flex;
@@ -1243,42 +1267,32 @@ body.col-resizing * {
 .section-head .btn {
   color: var(--muted);
 }
-.guides-panel .help {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted);
-}
-.guides-note {
+.layout-note {
   padding: 14px;
 }
-.guides-panel .inline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.guides-panel .num-field {
+.layout-panel .num-field {
   min-width: 0;
 }
-.guides-panel .num-field input {
+.layout-panel .num-field input {
   flex: 1;
   width: auto;
 }
-.guides-panel .guide-row .num-field {
+.layout-panel .guide-row .num-field {
   flex: 1;
 }
 /* Rows that match a guide on the page: selecting either highlights both. */
-.guides-panel .pick {
+.layout-panel .pick {
   margin: 0 -6px;
   padding: 4px 6px;
   border-radius: var(--radius);
 }
-.guides-panel .pick.selected {
+.layout-panel .pick.selected {
   background: var(--accent-soft);
   transition: background-color 120ms ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
   .line-guide.selected::after,
-  .guides-panel .pick.selected {
+  .layout-panel .pick.selected {
     transition: none;
   }
 }
@@ -1290,9 +1304,6 @@ body.col-resizing * {
 .border-guide .num-field {
   flex-direction: column;
   align-items: stretch;
-  gap: 2px;
-}
-.border-tools {
   gap: 2px;
 }
 /* Which border guide dropped photos fit: one is on; the others can be picked. */
@@ -1419,6 +1430,23 @@ body.col-resizing * {
   flex-direction: column;
   gap: 6px;
   margin-top: 6px;
+}
+/* A side panel in sections, each under a heading (the Layout and Instagram panels). */
+.inspector.sectioned {
+  gap: 0;
+  padding: 0;
+}
+.sectioned section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sectioned h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
 }
 .grid2 {
   display: grid;
@@ -1570,20 +1598,7 @@ body.col-resizing * {
   min-width: 0;
 }
 .setting .inline {
-  display: flex;
-  align-items: center;
   gap: 14px;
-}
-.setting .num-field input {
-  width: 64px;
-}
-.setting .help {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted);
-}
-.setting .check {
-  gap: 8px;
 }
 /*
  * Tooltips: `data-tip` on an element shows its text on hover or keyboard focus.
@@ -1723,7 +1738,7 @@ body.col-resizing * {
   outline-offset: 1px;
 }
 
-/* Layout and size (Settings, and a new project's desk) */
+/* Layout and size (the Layout view, and a new project's desk) */
 .layout-fields,
 .size-form {
   display: flex;
@@ -1756,19 +1771,221 @@ body.col-resizing * {
   color: var(--muted);
 }
 /* In the Layout panel, the size form fills its width. */
-.guides-panel .layout-fields,
-.guides-panel .size-form {
+.layout-panel .layout-fields,
+.layout-panel .size-form {
   align-items: stretch;
 }
-.guides-panel .size-form select {
+.layout-panel .size-form select {
   width: 100%;
 }
-.guides-panel .size-form .num-field {
+.layout-panel .size-form .num-field {
   flex: 1;
 }
 .size-form select:focus-visible {
   outline: none;
   border-color: var(--accent);
+}
+
+/* Post to Instagram */
+.inspector.instagram-panel {
+  width: 300px;
+}
+.instagram-panel .segmented {
+  display: grid;
+}
+/* The last section: nothing below it to divide from. */
+.instagram-panel .instagram-actions {
+  border-bottom: 0;
+}
+.instagram-actions .btn {
+  justify-content: center;
+}
+.instagram-done {
+  margin: 0;
+  font-weight: 500;
+}
+.text-area {
+  width: 100%;
+  resize: vertical;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--fill);
+  color: inherit;
+  font: 13px/1.45 var(--font);
+}
+.text-area:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.instagram-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* The preview mimics Instagram's own look, light whatever the app's theme. */
+.ig-card {
+  overflow: hidden;
+  border-radius: 10px;
+  background: #fff;
+  color: #000;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+  font:
+    14px/1.4 -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+.ig-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.ig-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #f9ce34, #ee2a7b, #6228d7);
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+}
+.ig-user {
+  font-weight: 600;
+  font-size: 14px;
+}
+.ig-media,
+.ig-story {
+  position: relative;
+  overflow: hidden;
+}
+.ig-track {
+  display: flex;
+  height: 100%;
+  transition: transform 250ms ease-out;
+}
+.ig-slide {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+}
+.ig-image {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+}
+/* Frames are posted on white, whatever the app's page color. */
+.ig-image .page {
+  background: #fff;
+  box-shadow: none;
+}
+.ig-count {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 12px;
+}
+.ig-arrow {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: -14px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  color: #000;
+  cursor: pointer;
+}
+.ig-arrow .lucide {
+  width: 16px;
+  height: 16px;
+}
+.ig-arrow.prev {
+  left: 10px;
+}
+.ig-arrow.next {
+  right: 10px;
+}
+.ig-dots {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 0 2px;
+}
+.ig-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c7c7c7;
+}
+.ig-dots span.on {
+  background: #0095f6;
+}
+.ig-caption {
+  margin: 0;
+  padding: 8px 12px 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.ig-tag {
+  color: #00376b;
+}
+.ig-story {
+  border-radius: 12px;
+  background: #111;
+  color: #fff;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+  font:
+    14px/1.4 -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+.ig-story .ig-head {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.ig-progress {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  gap: 3px;
+}
+.ig-progress span {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.35);
+}
+.ig-progress span.seen {
+  background: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ig-track {
+    transition: none;
+  }
 }
 
 /* Preview */

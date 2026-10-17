@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import {
   Download,
   FilePlus,
@@ -16,6 +16,7 @@ import {
   X,
   Ruler,
   Images,
+  Send,
 } from 'lucide-react';
 import { usePasteHandler } from './clipboard';
 import { platform } from '#platform';
@@ -26,6 +27,7 @@ import { ContextMenus } from './components/ContextMenu';
 import { Desk } from './components/Desk';
 import { FileMenu } from './components/FileMenu';
 import { LayoutEditor } from './components/LayoutEditor';
+import { useInstagram } from './instagram';
 import { PhotoImg } from './components/PhotoImg';
 import { Preview } from './components/Preview';
 import { QuickLook } from './components/QuickLook';
@@ -40,7 +42,11 @@ import { projectStore, useProject } from './store';
 import { openModal, toggleSidebar, ui } from './ui';
 import { takeOver } from './tabLock';
 import { checkForUpdate, reloadToUpdate } from './update';
-import { allSpreads } from './spreads';
+import { allSpreads, findSpread } from './spreads';
+import { TERMS } from './units';
+
+// Loaded when opened: it's the website's only (the Mac app doesn't post to Instagram).
+const InstagramPost = lazy(() => import('./components/InstagramPost').then((m) => ({ default: m.InstagramPost })));
 
 const NOTICE_MS = 6000;
 
@@ -56,6 +62,21 @@ function onTouchDevice(): boolean {
 export default function App() {
   const { project, canUndo, canRedo } = useProject();
   const digital = project.layout.kind === 'digital';
+  const terms = TERMS[project.layout.kind];
+  const instagram = useInstagram();
+  // Why File → Post to Instagram is disabled, if it is.
+  // (An expired token is caught when posting, which says to reconnect.)
+  const instagramReady = instagram !== null && !instagram.needsReconnect;
+  const instagramBlocked =
+    !digital && !instagramReady
+      ? 'Needs a digital project (Layout) and Instagram connected (Settings).'
+      : !digital
+        ? 'Needs a digital project: switch in Layout.'
+        : instagram === null
+          ? 'Connect Instagram in Settings first.'
+          : !instagramReady
+            ? 'Reconnect Instagram in Settings first.'
+            : null;
   // Dismissed for this visit only: a reload shows it again.
   const [mobileNotice, setMobileNotice] = useState(onTouchDevice);
   const editing = ui.use((s) => s.editingSpreadId);
@@ -73,6 +94,12 @@ export default function App() {
   useCommandShortcuts();
   usePasteHandler();
 
+  // The open spread or frame went away (undo, a layout switch): close the editor, so it
+  // doesn't stay open, invisible, holding the desk's shortcuts.
+  useEffect(() => {
+    if (editing && !findSpread(project, editing)) ui.set({ editingSpreadId: null });
+  }, [project, editing]);
+
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => ui.set({ notice: null }), NOTICE_MS);
@@ -88,7 +115,7 @@ export default function App() {
   if (blocked === 'elsewhere') return <ElsewhereScreen />;
   if (blocked === 'outdated') return <OutdatedScreen />;
   if (mobileNotice) return <MobileNotice onContinue={() => setMobileNotice(false)} />;
-  if (!loaded) return <div className="loading">Opening your book…</div>;
+  if (!loaded) return <div className="loading">Opening your project…</div>;
 
   const working = importing !== null || busy !== null;
   const placed = allSpreads(project).reduce((n, s) => n + s.items.length, 0);
@@ -125,7 +152,11 @@ export default function App() {
                 fileItem('importProject', <FolderOpen />),
                 fileItem('exportProject', <Download />),
                 fileItem('savePdf', <FileText />),
-                digital ? fileItem('saveImages', <Images />) : fileItem('exportIndesign', <Package />),
+                digital ? fileItem('exportFrames', <Images />) : fileItem('exportIndesign', <Package />),
+                {
+                  ...fileItem('postToInstagram', <Send />, working || instagramBlocked !== null),
+                  note: instagramBlocked ?? undefined,
+                },
                 { ...fileItem('tour', <Compass />), separatorBefore: true },
                 fileItem('about', <Info />, false),
               ]}
@@ -161,7 +192,7 @@ export default function App() {
           className="btn ghost"
           data-tour="layout"
           onClick={() => openModal('layout')}
-          title="Layout: page size and guides"
+          title="Layout: size and guides"
         >
           <Ruler />
           Layout
@@ -172,15 +203,15 @@ export default function App() {
           onClick={() => openModal('preview')}
           title={`Preview (${shortcutLabel('preview')})`}
         >
-          {digital ? 'Preview' : 'Preview book'}
+          {terms.preview}
           <ShortcutHint label={shortcutLabel('preview')} />
         </button>
         <button
           className={`btn ghost icon has-hint${sidebarOpen ? '' : ' active'}`}
-          aria-label={sidebarOpen ? 'Hide spreads' : 'Show spreads'}
+          aria-label={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads}`}
           aria-pressed={!sidebarOpen}
           onClick={toggleSidebar}
-          title={`${sidebarOpen ? 'Hide' : 'Show'} spreads (${shortcutLabel('toggleSidebar')})`}
+          title={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads} (${shortcutLabel('toggleSidebar')})`}
         >
           {sidebarOpen ? <PanelRightClose /> : <PanelRightOpen />}
           <ShortcutHint label={shortcutLabel('toggleSidebar')} />
@@ -204,6 +235,11 @@ export default function App() {
       {modal === 'about' && <AboutDialog />}
       {modal === 'preview' && <Preview />}
       {modal === 'layout' && <LayoutEditor />}
+      {modal === 'instagram' && (
+        <Suspense fallback={null}>
+          <InstagramPost />
+        </Suspense>
+      )}
       <QuickLook />
       <Tour />
       <ConfirmDialog />
@@ -211,9 +247,11 @@ export default function App() {
       <DragGhost />
       {saveFailed && (
         <div className="save-failed" role="alert">
-          Couldn't save your work. Your browser's storage may be full.
+          {platform.kind === 'macos'
+            ? 'Couldn’t keep a copy of your work in the app’s storage.'
+            : 'Couldn’t save your work. Your browser’s storage may be full.'}
           <button className="btn primary" onClick={() => runCommand('exportProject')}>
-            Export a copy
+            {platform.kind === 'macos' ? 'Save to a file' : 'Export a copy'}
           </button>
         </div>
       )}
@@ -270,10 +308,17 @@ function OutdatedScreen() {
     <div className="screen-message" role="alert">
       <span className="wordmark">SEQUENCE</span>
       <h1>This project was saved by a newer version of Sequence.</h1>
-      <p>Reload to update. Your saved project hasn't been changed.</p>
-      <button className="btn primary" onClick={reloadToUpdate}>
-        Reload
-      </button>
+      {platform.kind === 'macos' ? (
+        // The Mac app updates through the App Store, not by reloading.
+        <p>Update Sequence from the App Store to open it. Your saved project hasn't been changed.</p>
+      ) : (
+        <>
+          <p>Reload to update. Your saved project hasn't been changed.</p>
+          <button className="btn primary" onClick={reloadToUpdate}>
+            Reload
+          </button>
+        </>
+      )}
     </div>
   );
 }
