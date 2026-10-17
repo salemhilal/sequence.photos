@@ -1,7 +1,8 @@
 /**
- * Tooltips: `data-tip` on an element shows its text right away on hover or keyboard focus
- * (the browser's own `title` tips wait about a second). One tip element, fixed to the
- * window, so it's never clipped by a scrolling panel and always fits on screen.
+ * Tooltips: `data-tip` on an element shows its text after a second's hover (then at once
+ * for the next for a second after, as you move along a toolbar), or at once on keyboard
+ * focus. One tip element, fixed to the window, so it's never clipped by a scrolling panel
+ * and always fits on screen.
  */
 
 interface Box {
@@ -10,6 +11,9 @@ interface Box {
   width: number;
   height: number;
 }
+
+/** How long a hover waits before its tip shows, and how long after a tip goes the next shows at once. */
+export const TIP_DELAY_MS = 1000;
 
 /** Room kept between a tip and the window's edges, and between a tip and its element. */
 const MARGIN = 8;
@@ -35,6 +39,9 @@ export function installTooltips(): void {
   tip.hidden = true;
   document.body.append(tip);
   let shown: Element | null = null;
+  // A hover waiting out the delay, and when a tip last went (the next within the delay shows at once).
+  let waiting: { el: Element; timer: number } | null = null;
+  let lastHidden = -Infinity;
 
   /**
    * While a tip shows, its element is watched: a change to its text (a toggle) shows the
@@ -66,20 +73,41 @@ export function installTooltips(): void {
     tip.style.left = `${left}px`;
     tip.style.top = `${top}px`;
   };
+  const cancelWait = () => {
+    if (waiting) clearTimeout(waiting.timer);
+    waiting = null;
+  };
   const hide = () => {
+    cancelWait();
     if (!shown) return;
     shown = null;
     tip.hidden = true;
     watch.disconnect();
+    lastHidden = performance.now();
+  };
+  /** A hover's tip: at once while tips are showing (or just were), else after the delay. */
+  const hover = (el: Element) => {
+    if (shown || performance.now() - lastHidden < TIP_DELAY_MS) {
+      cancelWait();
+      return show(el);
+    }
+    if (waiting?.el === el) return;
+    cancelWait();
+    waiting = {
+      el,
+      timer: window.setTimeout(() => {
+        waiting = null;
+        if (el.isConnected) show(el);
+      }, TIP_DELAY_MS),
+    };
   };
   const tipped = (t: EventTarget | null) => (t instanceof Element ? t.closest('[data-tip]') : null);
 
   document.addEventListener('pointerover', (e) => {
     const el = tipped(e.target);
-    if (el !== shown) {
-      if (el) show(el);
-      else hide();
-    }
+    if (el === shown) return;
+    if (el) hover(el);
+    else hide();
   });
   // Leaving the window: pointerout with nowhere it went to.
   document.addEventListener('pointerout', (e) => {

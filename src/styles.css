@@ -206,6 +206,14 @@ button {
 .btn.ghost {
   background: transparent;
 }
+/* Filled like the undo and redo pair (Layout, in the toolbar). */
+.btn.filled {
+  background: var(--fill);
+}
+/* The hover's wash over the fill, as on the undo and redo pair. */
+.btn.filled:hover:not(:disabled) {
+  background: linear-gradient(var(--hover), var(--hover)), var(--fill);
+}
 .btn.ghost:hover:not(:disabled) {
   background: var(--hover);
 }
@@ -797,10 +805,6 @@ button {
 .zoom .btn {
   background: var(--panel);
   box-shadow: var(--shadow);
-}
-.zoom-level {
-  min-width: 52px;
-  font: 11px var(--mono);
 }
 
 /* Sidebar */

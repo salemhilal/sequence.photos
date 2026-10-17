@@ -45,6 +45,20 @@ function deskGrid(
  * New photos land on the desk at full size (as large as their preview stays sharp at
  * 100%), in rows of six below anything already there, and the view zooms to fit them.
  */
+/** Zoom the desk to show every photo on it (or reset it, with none). */
+export function fitDesk(): void {
+  const { pile } = projectStore.project;
+  if (!pile.length) {
+    ui.set({ view: { panX: 40, panY: 40, zoom: 1 } });
+    return;
+  }
+  const x = Math.min(...pile.map((p) => p.x));
+  const y = Math.min(...pile.map((p) => p.y));
+  const w = Math.max(...pile.map((p) => p.x + p.w)) - x;
+  const h = Math.max(...pile.map((p) => p.y + p.h)) - y;
+  ui.set({ view: viewToFit({ x, y, w, h }, deskGeometry.size()) });
+}
+
 export function addPhotosToPile(photos: PhotoMeta[]): void {
   if (!photos.length) return;
   const sizes = photos.map(pileSize);

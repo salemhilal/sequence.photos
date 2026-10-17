@@ -40,7 +40,7 @@ import { projectStore, useProject } from './store';
 import { openModal, toggleSidebar, ui } from './ui';
 import { takeOver } from './tabLock';
 import { checkForUpdate, reloadToUpdate } from './update';
-import { allSpreads, findSpread } from './spreads';
+import { findSpread } from './spreads';
 import { TERMS } from './units';
 
 const NOTICE_MS = 6000;
@@ -98,10 +98,10 @@ export default function App() {
   if (mobileNotice) return <MobileNotice onContinue={() => setMobileNotice(false)} />;
   if (!loaded) return <div className="loading">Opening your project…</div>;
 
-  const placed = allSpreads(project).reduce((n, s) => n + s.items.length, 0);
+  // Only while something's under way.
   const status = importing?.total
     ? `Importing ${importing.done} of ${importing.total}…`
-    : (busy ?? (importing ? 'Importing…' : `${project.pile.length} on desk · ${placed} placed`));
+    : (busy ?? (importing ? 'Importing…' : null));
 
   return (
     <div className="app">
@@ -156,7 +156,7 @@ export default function App() {
           {status}
         </span>
         <button
-          className="btn ghost"
+          className="btn filled"
           data-tour="layout"
           onClick={() => openModal('layout')}
           data-tip="Layout: size and guides"
