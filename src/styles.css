@@ -871,6 +871,8 @@ body.col-resizing * {
 .spread-cell {
   position: relative;
   min-width: 0;
+  /* Gliding into new columns scales from here (see Sidebar). */
+  transform-origin: top left;
 }
 .insert-gap.vertical {
   position: absolute;

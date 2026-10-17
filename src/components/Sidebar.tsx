@@ -20,6 +20,13 @@ import { allSpreads, sheetOf } from '../spreads';
 const GHOST_MAX = 140;
 /** The narrowest a spread's (or frame's) picture gets: columns beyond that don't fit. */
 const MIN_THUMB: Record<Arrangement, number> = { spreads: 120, frames: 60 };
+/** How long spreads take to glide into new columns. */
+const REFLOW_MS = 150;
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 /** How long the count stays after scrolling stops. */
 const COUNT_MS = 1000;
 /** Space between grid columns; the vertical insert gaps live here. */
@@ -86,6 +93,33 @@ export function Sidebar() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // When the columns change, each spread glides from where it was to where it is now
+  // (positions are kept relative to the list, so scrolling between doesn't count).
+  const placed = useRef<{ cols: number; at: Map<string, { x: number; y: number; w: number }> } | null>(null);
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const origin = list.getBoundingClientRect();
+    const at = new Map<string, { x: number; y: number; w: number }>();
+    const glide = placed.current !== null && placed.current.cols !== cols && !prefersReducedMotion();
+    for (const cell of list.querySelectorAll<HTMLElement>('[data-spread-id]')) {
+      const id = cell.dataset.spreadId ?? '';
+      const r = cell.getBoundingClientRect();
+      const now = { x: r.left - origin.left, y: r.top - origin.top + list.scrollTop, w: r.width };
+      at.set(id, now);
+      const was = glide ? placed.current?.at.get(id) : undefined;
+      if (!was || now.w === 0) continue;
+      cell.animate(
+        [
+          { transform: `translate(${was.x - now.x}px, ${was.y - now.y}px) scale(${was.w / now.w})` },
+          { transform: 'none' },
+        ],
+        { duration: REFLOW_MS, easing: 'ease-out' },
+      );
+    }
+    placed.current = { cols, at };
+  });
 
   const onResizeDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
@@ -233,7 +267,7 @@ export function Sidebar() {
         onPointerDown={(e) => e.target === e.currentTarget && ui.set({ spreadSelection: [] })}
       >
         {spreads.map((spread, i) => (
-          <div key={spread.id} className="spread-cell">
+          <div key={spread.id} className="spread-cell" data-spread-id={spread.id}>
             {/* A book's first and last spreads stay put; frames can go anywhere. */}
             {(i > 0 || !book) && (
               <InsertGap index={i} active={reorder?.dropIndex === i} vertical={grid} noun={terms.spread} />
