@@ -234,7 +234,11 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Settings
 
-- [ ] ⌘, opens on General; Advanced shows Server; tabs switch.
+- [ ] ⌘, opens on General; Advanced shows Server and Test images; tabs switch.
+- [ ] Advanced → Test images: a count (1–50, 6 to start) and Add test images. It closes
+      Settings, says "Making test images…", then imports like Add photos: "Gradient 01.jpg"…
+      on the desk, in film colors that blend cleanly (no gray middles), about 3000 × 2000 px
+      (portrait, landscape, or square). One undo removes them.
 - [ ] Appearance: System, Light, Dark apply at once and survive a reload.
 - [ ] Desk color: the swatches match the desk's menu and survive a reload.
 - [ ] Storage (web): usage and Protected or not; Protect storage asks the browser.

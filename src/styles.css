@@ -2458,3 +2458,6 @@ body.col-resizing * {
 .export-panel .dpi .num-field {
   flex: 0 0 80px;
 }
+.text-field.test-images-count {
+  width: 72px;
+}

@@ -7,6 +7,7 @@ import { DeskColorPicker } from './DeskColorPicker';
 import { Segmented } from './Segmented';
 import { InstagramSetting } from './settings/InstagramSetting';
 import { ServerSetting } from './settings/ServerSetting';
+import { TestImagesSetting } from './settings/TestImagesSetting';
 import { StorageRow } from './settings/StorageRow';
 
 const THEMES: { value: ThemePref; label: string }[] = [
@@ -63,11 +64,18 @@ export function SettingsDialog() {
 
 function AdvancedSettings() {
   const heading = useId();
+  const testImages = useId();
   return (
-    <section className="setting">
-      <h3 id={heading}>Server</h3>
-      <ServerSetting labelledBy={heading} />
-    </section>
+    <>
+      <section className="setting">
+        <h3 id={heading}>Server</h3>
+        <ServerSetting labelledBy={heading} />
+      </section>
+      <section className="setting">
+        <h3 id={testImages}>Test images</h3>
+        <TestImagesSetting labelledBy={testImages} />
+      </section>
+    </>
   );
 }
 
