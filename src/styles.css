@@ -2817,29 +2817,30 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
   margin: 0;
   padding: 0 1px;
   border-radius: 999px;
-  background: var(--fill);
+  background: var(--inset);
   box-shadow: inset 0 0 0 1px var(--border);
 }
+/* A raised pill, like the other sliders' knob. */
 .columns-slider::-webkit-slider-thumb {
   appearance: none;
   width: 16px;
   height: 8px;
   border: 0;
   border-radius: 999px;
-  background: var(--muted);
+  background: var(--knob);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.35);
 }
 .columns-slider::-moz-range-thumb {
   width: 16px;
   height: 8px;
   border: 0;
   border-radius: 999px;
-  background: var(--muted);
-}
-.columns-slider:hover::-webkit-slider-thumb {
-  background: var(--text);
-}
-.columns-slider:hover::-moz-range-thumb {
-  background: var(--text);
+  background: var(--knob);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.35);
 }
 .columns-slider:focus-visible {
   outline: 2px solid var(--accent);
