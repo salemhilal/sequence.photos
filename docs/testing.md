@@ -327,7 +327,11 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Settings
 
-- [ ] ⌘, opens on General; Advanced shows Server and Test images; tabs switch.
+- [ ] ⌘, opens on General: Theme, Desk color, Status bar (Show the status bar), and
+      Shortcuts (Show shortcuts while ⌘ is held). "Instagram & storage" ("Instagram" in the Mac
+      app) has Instagram, and Storage on the website. Advanced shows Server and Test images.
+- [ ] Unchecking Show the status bar hides it (and its hints) at once; both settings survive
+      a reload.
 - [ ] Advanced → Test images: a count (1–50, 6 to start) and Add test images. It closes
       Settings, the status bar counts "Making test images", then "Adding photos", then it imports like Add photos: "Gradient 01.jpg"…
       on the desk, in film colors that blend cleanly (no gray middles), about 3000 × 2000 px
@@ -410,8 +414,11 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 ## Shortcuts and hints
 
-- [ ] Hold ⌘ (Ctrl) for a moment: badges on Undo, Redo, the sidebar toggle, Settings;
-      releasing hides them.
+- [ ] Hold ⌘ (Ctrl) for a moment: a badge below each button with a ⌘ shortcut, over
+      everything (nothing covers them, the spread editor and Settings included): Undo, Redo,
+      the four page buttons (⌥⌘1–⌥⌘4), the sidebar toggle, Settings, the editor's guides eye,
+      and the empty desk's Add photos. A disabled button's badge is dimmed; releasing hides
+      them. Off in Settings → General → Shortcuts, none show.
 - [ ] ⌘I add, ⌘O open, ⌘S export/save, ⌘⇧E export, ⌘P preview, ⌘; guides, ⌘,
       settings, ⌘B sidebar.
 - [ ] Desk shortcuts (⌘A, ⌘C, ⌘D, Delete, arrows, Escape) do nothing on another page, or while

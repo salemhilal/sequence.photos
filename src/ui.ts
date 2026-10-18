@@ -2,7 +2,14 @@ import { applyDeskColor } from './deskColor';
 import type { DropTarget } from './drag';
 import type { Destination } from './exportOptions';
 import type { PhotoId, SpreadId } from './ids';
-import { deskColorPref, sidebarOpenPref, sidebarWidthPref, themePref } from './prefs';
+import {
+  deskColorPref,
+  shortcutBadgesPref,
+  sidebarOpenPref,
+  sidebarWidthPref,
+  statusBarPref,
+  themePref,
+} from './prefs';
 import { createStore } from './store';
 import { applyTheme, type ThemePref } from './theme';
 
@@ -79,6 +86,10 @@ export interface UiState {
   /** True while the shortcut modifier is held, to reveal shortcut hints. */
   hints: boolean;
   theme: ThemePref;
+  /** Whether the status bar shows (a setting). */
+  statusBar: boolean;
+  /** Whether holding the shortcut modifier shows each button's shortcut (a setting). */
+  shortcutBadges: boolean;
   sidebarOpen: boolean;
   /** Guides hidden for now (not saved): pages show without them, and photos snap only to page edges. */
   guidesHidden: boolean;
@@ -131,6 +142,8 @@ export const ui = createStore<UiState>({
   notice: null,
   hints: false,
   theme: themePref.load(),
+  statusBar: statusBarPref.load(),
+  shortcutBadges: shortcutBadgesPref.load(),
   sidebarOpen: sidebarOpenPref.load(),
   guidesHidden: false,
   sidebarWidth: sidebarWidthPref.load(),
@@ -279,6 +292,16 @@ export function setDeskColor(color: string): void {
 export function setSidebarWidth(width: number, persist: boolean): void {
   ui.set({ sidebarWidth: width });
   if (persist) sidebarWidthPref.save(Math.round(width));
+}
+
+export function setStatusBar(shown: boolean): void {
+  ui.set({ statusBar: shown });
+  statusBarPref.save(shown);
+}
+
+export function setShortcutBadges(shown: boolean): void {
+  ui.set({ shortcutBadges: shown, hints: false });
+  shortcutBadgesPref.save(shown);
 }
 
 export function toggleSidebar(): void {

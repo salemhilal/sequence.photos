@@ -285,6 +285,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
             aria-label={guidesHidden ? 'Show guides' : 'Hide guides'}
             aria-pressed={guidesHidden}
             data-tip={`${guidesHidden ? 'Show' : 'Hide'} guides (${shortcutLabel('toggleGuides')})`}
+            data-shortcut={shortcutLabel('toggleGuides')}
             onClick={toggleGuides}
           >
             {guidesHidden ? <EyeOff /> : <Eye />}

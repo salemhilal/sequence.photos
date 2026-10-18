@@ -22,6 +22,7 @@ export function PageSwitcher() {
             aria-current={page === p.page ? 'page' : undefined}
             data-tour={p.page === 'desk' ? undefined : p.page}
             data-tip={key ? `${p.tip} (${key})` : p.tip}
+            data-shortcut={key || undefined}
             onClick={() => goToPage(p.page)}
           >
             {p.label}

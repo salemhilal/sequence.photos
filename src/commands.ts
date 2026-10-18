@@ -287,7 +287,8 @@ export function useCommandShortcuts(): void {
       if (e.key === modKey) {
         if (!e.repeat) {
           clearTimeout(timer);
-          timer = setTimeout(() => ui.set({ hints: true }), HINT_DELAY);
+          // Not when the badges are turned off in Settings.
+          if (ui.get().shortcutBadges) timer = setTimeout(() => ui.set({ hints: true }), HINT_DELAY);
         }
         return;
       }

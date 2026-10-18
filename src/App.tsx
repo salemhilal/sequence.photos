@@ -23,6 +23,7 @@ import { ContextMenus } from './components/ContextMenu';
 import { Desk } from './components/Desk';
 import { Menu } from './components/Menu';
 import { PageSwitcher } from './components/PageSwitcher';
+import { ShortcutBadges } from './components/ShortcutBadges';
 import { StatusBar } from './components/StatusBar';
 import { useCommandItem } from './components/commandItem';
 import { LayoutEditor } from './components/LayoutEditor';
@@ -64,6 +65,7 @@ export default function App() {
   const editing = ui.use((s) => s.editingSpreadId);
   const modal = ui.use((s) => s.modal);
   const page = ui.use((s) => s.page);
+  const statusBar = ui.use((s) => s.statusBar);
   const importing = ui.use((s) => s.importing);
   const notice = ui.use((s) => s.notice);
   const sidebarOpen = ui.use((s) => s.sidebarOpen);
@@ -125,11 +127,12 @@ export default function App() {
                 fileItem('about', <Info />, false),
               ]}
             />
-            <div className="btn-joined has-hint">
+            <div className="btn-joined">
               <button
                 className="btn ghost icon"
                 aria-label="Undo"
                 data-tip={`Undo (${shortcutLabel('undo')})`}
+                data-shortcut={shortcutLabel('undo')}
                 disabled={!canUndo}
                 onClick={() => projectStore.undo()}
               >
@@ -139,12 +142,12 @@ export default function App() {
                 className="btn ghost icon"
                 aria-label="Redo"
                 data-tip={`Redo (${shortcutLabel('redo')})`}
+                data-shortcut={shortcutLabel('redo')}
                 disabled={!canRedo}
                 onClick={() => projectStore.redo()}
               >
                 <Redo2 />
               </button>
-              <ShortcutHint label={`${shortcutLabel('undo')} · ${shortcutLabel('redo')}`} below />
             </div>
           </>
         )}
@@ -152,24 +155,24 @@ export default function App() {
         <span className="spacer" data-tauri-drag-region />
         {page === 'desk' && (
           <button
-            className={`btn ghost icon has-hint${sidebarOpen ? '' : ' active'}`}
+            className={`btn ghost icon${sidebarOpen ? '' : ' active'}`}
             aria-label={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads}`}
             aria-pressed={!sidebarOpen}
             onClick={toggleSidebar}
             data-tip={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads} (${shortcutLabel('toggleSidebar')})`}
+            data-shortcut={shortcutLabel('toggleSidebar')}
           >
             {sidebarOpen ? <PanelRightClose /> : <PanelRightOpen />}
-            <ShortcutHint label={shortcutLabel('toggleSidebar')} />
           </button>
         )}
         <button
-          className="btn ghost icon has-hint"
+          className="btn ghost icon"
           aria-label="Settings"
           onClick={() => openModal('settings')}
           data-tip={`Settings (${shortcutLabel('settings')})`}
+          data-shortcut={shortcutLabel('settings')}
         >
           <Settings />
-          <ShortcutHint label={shortcutLabel('settings')} />
         </button>
       </header>
       <main className="main">
@@ -186,7 +189,8 @@ export default function App() {
         {/* Over the page, as the spread editor is: the toolbar and status bar stay in view. */}
         {modal === 'settings' && <SettingsDialog />}
       </main>
-      <StatusBar />
+      {statusBar && <StatusBar />}
+      <ShortcutBadges />
       {modal === 'about' && <AboutDialog />}
       <QuickLook />
       <Tour />
@@ -220,17 +224,6 @@ export default function App() {
         </div>
       )}
     </div>
-  );
-}
-
-/** A shortcut badge shown over (or `below`) its button while the modifier key is held. */
-function ShortcutHint({ label, below }: { label: string; below?: boolean }) {
-  const show = ui.use((s) => s.hints);
-  if (!show) return null;
-  return (
-    <kbd className={`shortcut-hint${below ? ' below' : ''}`} aria-hidden="true">
-      {label}
-    </kbd>
   );
 }
 

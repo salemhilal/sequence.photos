@@ -1,6 +1,6 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { bump, dropPhotos, importPhotos, raise } from '../actions';
-import { addPhotos } from '../commands';
+import { addPhotos, shortcutLabel } from '../commands';
 import { isProjectFile, openProjectFile } from '../project';
 import { clearGhost, startDrag, trackGhost } from '../drag';
 import { intersects, resizeRect, type Corner, type Rect } from '../geometry';
@@ -345,7 +345,12 @@ export function Desk() {
             <br />
             They land on this desk, where you can drag them onto {TERMS[project.layout.kind].pages}.
           </p>
-          <button className="btn primary" onPointerDown={(e) => e.stopPropagation()} onClick={addPhotos}>
+          <button
+            className="btn primary"
+            data-shortcut={shortcutLabel('addPhotos')}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={addPhotos}
+          >
             Add photos
           </button>
           {Object.keys(project.photos).length === 0 && (

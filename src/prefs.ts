@@ -58,6 +58,22 @@ export const sidebarOpenPref = createPref(
   (open) => (open ? 'open' : 'closed'),
 );
 
+/** Whether the status bar shows along the window's foot. */
+export const statusBarPref = createPref(
+  'photobook-status-bar',
+  true,
+  (raw) => raw !== 'hidden',
+  (shown) => (shown ? 'shown' : 'hidden'),
+);
+
+/** Whether holding ⌘ (Ctrl) shows each button's shortcut. */
+export const shortcutBadgesPref = createPref(
+  'photobook-shortcut-badges',
+  true,
+  (raw) => raw !== 'hidden',
+  (shown) => (shown ? 'shown' : 'hidden'),
+);
+
 export const sidebarWidthPref = createPref('photobook-sidebar-width', SIDEBAR_DEFAULT_WIDTH, (raw) => {
   const n = Number(raw);
   return Number.isFinite(n) && n >= SIDEBAR_MIN_WIDTH ? n : undefined;

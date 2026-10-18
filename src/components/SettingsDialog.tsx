@@ -2,7 +2,8 @@ import { useId, useState } from 'react';
 import { platform } from '#platform';
 import { Dialog } from './Dialog';
 import type { ThemePref } from '../theme';
-import { setTheme, closeModal, ui } from '../ui';
+import { closeModal, setShortcutBadges, setStatusBar, setTheme, ui } from '../ui';
+import { isMac } from '../input';
 import { DeskColorPicker } from './DeskColorPicker';
 import { Segmented } from './Segmented';
 import { Tabs } from './Tabs';
@@ -22,9 +23,11 @@ function ThemePicker({ labelledBy }: { labelledBy: string }) {
   return <Segmented labelledBy={labelledBy} options={THEMES} value={theme} onChange={setTheme} />;
 }
 
-type Tab = 'general' | 'advanced';
+type Tab = 'general' | 'accounts' | 'advanced';
 const TABS: { value: Tab; label: string }[] = [
   { value: 'general', label: 'General' },
+  // Instagram, and on the website, the browser's storage.
+  { value: 'accounts', label: platform.kind === 'browser' ? 'Instagram & storage' : 'Instagram' },
   { value: 'advanced', label: 'Advanced' },
 ];
 
@@ -35,7 +38,7 @@ export function SettingsDialog() {
     <Dialog title="Settings" onClose={closeModal} className="settings">
       <Tabs id="settings" label="Settings" options={TABS} value={tab} onChange={setTab} />
       <div className="settings-body" id="settings-panel" role="tabpanel" aria-labelledby={`settings-tab-${tab}`}>
-        {tab === 'general' ? <GeneralSettings /> : <AdvancedSettings />}
+        {tab === 'general' ? <GeneralSettings /> : tab === 'accounts' ? <AccountSettings /> : <AdvancedSettings />}
       </div>
     </Dialog>
   );
@@ -58,27 +61,59 @@ function AdvancedSettings() {
   );
 }
 
+/** How the app looks: its theme, the desk's color, and the status bar and shortcut badges. */
 function GeneralSettings() {
-  const appearance = useId();
+  const theme = useId();
+  const statusBar = ui.use((s) => s.statusBar);
+  const badges = ui.use((s) => s.shortcutBadges);
+  return (
+    <>
+      <section className="setting">
+        <h3 id={theme}>Theme</h3>
+        <div className="setting-controls">
+          <ThemePicker labelledBy={theme} />
+        </div>
+      </section>
+
+      <section className="setting">
+        <h3>Desk color</h3>
+        <div className="setting-controls">
+          <DeskColorPicker />
+          <p className="help">Also in the desk's right-click menu.</p>
+        </div>
+      </section>
+
+      <section className="setting">
+        <h3>Status bar</h3>
+        <div className="setting-controls">
+          <label className="check">
+            <input type="checkbox" checked={statusBar} onChange={(e) => setStatusBar(e.target.checked)} />
+            Show the status bar
+          </label>
+          <p className="help">Along the window's foot: hints, what's selected, progress, and zoom.</p>
+        </div>
+      </section>
+
+      <section className="setting">
+        <h3>Shortcuts</h3>
+        <div className="setting-controls">
+          <label className="check">
+            <input type="checkbox" checked={badges} onChange={(e) => setShortcutBadges(e.target.checked)} />
+            Show shortcuts while {isMac ? '⌘' : 'Ctrl'} is held
+          </label>
+        </div>
+      </section>
+    </>
+  );
+}
+
+/** Instagram, and on the website, how the browser keeps the project. */
+function AccountSettings() {
   return (
     <>
       <section className="setting">
         <h3>Instagram</h3>
         <InstagramSetting />
-      </section>
-      <section className="setting">
-        <h3 id={appearance}>Appearance</h3>
-        <div className="setting-controls">
-          <ThemePicker labelledBy={appearance} />
-        </div>
-      </section>
-
-      <section className="setting">
-        <h3>Desk</h3>
-        <div className="setting-controls">
-          <DeskColorPicker />
-          <p className="help">Also in the desk's right-click menu.</p>
-        </div>
       </section>
 
       {/* A browser concern: the Mac app's storage isn't the browser's. */}
