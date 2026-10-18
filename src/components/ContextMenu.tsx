@@ -88,7 +88,7 @@ function DeskItems({ onClose }: { onClose: () => void }) {
       </button>
       <div className="menu-separator" />
       <div className="menu-section">
-        <span className="caps muted">Desk color</span>
+        <span className="section-label muted">Desk color</span>
         <DeskColorPicker />
       </div>
     </>

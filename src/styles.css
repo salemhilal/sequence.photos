@@ -44,9 +44,12 @@
   color-scheme: light dark;
   accent-color: var(--accent);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text);
   background: var(--bg);
+  /* Inspector rows: a label column, then the control. */
+  --label-col: 76px;
+  --knob: #ffffff;
 }
 
 /* Theme: <html data-theme="light|dark"> forces a theme; without it, follow the system. */
@@ -61,6 +64,7 @@
   --inset: #181818;
   --divider: #0e0e0e;
   --raise: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --knob: #cfcfcf;
   --text: #e6e6e6;
   --muted: #8e8e8e;
   --hover: rgba(255, 255, 255, 0.07);
@@ -84,6 +88,7 @@
     --inset: #181818;
     --divider: #0e0e0e;
     --raise: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --knob: #cfcfcf;
     --text: #e6e6e6;
     --muted: #8e8e8e;
     --hover: rgba(255, 255, 255, 0.07);
@@ -163,26 +168,23 @@ button {
  *   IBM Plex Mono — data and labels: numbers, units, measurements, counts,
  *   page numbers, shortcuts, file names, and field and section labels.
  * Exception: the empty desk's heading is set in mono, as a label on the desk itself.
- * Mono sizes: 10.5px uppercase labels (.caps, tags), 11px data (.data),
- * 12px input fields, shortcut badges, and settings titles; 13px page numbers
- * in headings.
+ * Labels (section and field) are sans, in the muted color, not mono capitals.
+ * Chrome text is 12px; mono 11px for data (.data) and 12px in fields.
  */
 .data {
   font-family: var(--mono);
   font-size: 11px;
 }
-/* Small monospace caps, for section labels. */
-.caps {
-  font-family: var(--mono);
-  font-size: 10.5px;
+/* A small label for a group of controls. */
+.section-label {
+  font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--muted);
 }
 /* A note under a control (after .data, so a .help.data note keeps this size). */
 .help {
   margin: 0;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--muted);
 }
 .help.warn {
@@ -243,7 +245,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 28px;
+  height: 26px;
   padding: 0 10px;
   border: 1px solid transparent;
   border-radius: var(--radius);
@@ -284,12 +286,21 @@ button {
 .btn:disabled .shortcut-hint {
   opacity: 0.55;
 }
+.inspector .btn,
+.sidebar .btn,
+.settings .btn {
+  height: 24px;
+}
+.inspector .btn.icon,
+.sidebar .btn.icon {
+  width: 24px;
+}
 .btn.icon.small {
   width: 24px;
   height: 24px;
 }
 .btn.icon {
-  width: 28px;
+  width: 26px;
   padding: 0;
   font-size: 18px;
   line-height: 1;
@@ -346,7 +357,7 @@ button {
   border: 0;
   border-radius: var(--radius);
   background: none;
-  font-size: 13px;
+  font-size: 12px;
   text-align: left;
 }
 .menu-item:hover:not(:disabled),
@@ -823,11 +834,10 @@ button {
   box-shadow: var(--shadow);
   pointer-events: auto;
 }
-.setup-card .inline {
-  gap: 14px;
-}
-.setup-card .num-field input {
-  width: 64px;
+/* Its form reads left to right, as in the Layout panel. */
+.setup-card .page-settings {
+  align-self: stretch;
+  text-align: left;
 }
 .setup-card .help {
   font: 12px/1.5 var(--font);
@@ -843,7 +853,7 @@ button {
   text-underline-offset: 2px;
   cursor: pointer;
 }
-.desk-empty .btn {
+.desk-empty > .btn {
   margin-top: 12px;
   pointer-events: auto;
 }
@@ -935,12 +945,22 @@ body.col-resizing * {
   cursor: col-resize !important;
   user-select: none;
 }
-.sidebar-head {
+/* A panel's header bar: its title, then its actions. */
+.panel-header {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 10px 16px 4px 20px;
+  gap: 2px;
+  height: 28px;
+  padding: 0 6px 0 10px;
+  background: var(--header);
+  border-bottom: 1px solid var(--divider);
 }
+.panel-title {
+  font-weight: 500;
+  margin-right: 4px;
+}
+
 .sidebar-list {
   flex: 1;
   overflow-y: auto;
@@ -1313,7 +1333,7 @@ body.col-resizing * {
 }
 /* The Layout view's panel (.inspector.sectioned, below). */
 .inspector.layout-panel {
-  width: 270px;
+  width: 300px;
 }
 .section-head {
   display: flex;
@@ -1329,8 +1349,8 @@ body.col-resizing * {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin: -4px 0 -4px -6px;
-  padding: 4px 6px 4px 2px;
+  margin: 0 0 0 -6px;
+  padding: 0 6px 0 2px;
   border: 0;
   border-radius: var(--radius);
   background: none;
@@ -1361,7 +1381,7 @@ body.col-resizing * {
   color: var(--muted);
 }
 .layout-note {
-  padding: 14px;
+  padding: 12px 10px;
 }
 .layout-panel .num-field {
   min-width: 0;
@@ -1394,10 +1414,10 @@ body.col-resizing * {
   flex-direction: column;
   gap: 6px;
 }
-.border-guide .num-field {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
+/* Each edge's name inside its field, in words. */
+.border-guide .num-label {
+  min-width: 44px;
+  font-family: var(--font);
 }
 /* Which border guide dropped photos fit: one is on; the others can be picked. */
 .drop-toggle {
@@ -1406,9 +1426,8 @@ body.col-resizing * {
   border-radius: 3px;
   background: none;
   color: var(--muted);
-  font: 500 10.5px var(--mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 500;
   white-space: nowrap;
 }
 .drop-toggle:hover {
@@ -1528,15 +1547,23 @@ body.col-resizing * {
 .sectioned section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px;
+  gap: 6px;
+  padding: 0 10px 12px;
   border-bottom: 1px solid var(--border);
 }
+
 .sectioned h3 {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
 }
+.sectioned section.collapsed {
+  padding-bottom: 0;
+}
+
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1546,36 +1573,64 @@ body.col-resizing * {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--radius);
+  background: var(--inset);
+  box-shadow: inset 0 0 0 1px var(--border);
   font-size: 12px;
 }
-.num-label {
-  color: var(--muted);
-  font: 11px var(--mono);
-  min-width: 12px;
+.num-field:focus-within {
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
-.num-field input {
-  width: 100%;
-  min-width: 0;
-  height: 26px;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: var(--fill);
-  font: 12px var(--mono);
+.num-field.disabled {
+  opacity: 0.5;
 }
-.num-field input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
+
+/* Drag on a field's label or units to scrub its value. */
+.num-label,
 .num-suffix {
   color: var(--muted);
   font: 11px var(--mono);
+  cursor: ew-resize;
 }
+.num-label {
+  min-width: 12px;
+}
+.num-field.disabled .num-label,
+.num-field.disabled .num-suffix {
+  cursor: default;
+}
+
+.num-field input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: 12px var(--mono);
+  appearance: textfield;
+}
+.num-field input::-webkit-inner-spin-button,
+.num-field input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.num-field input:focus,
+.num-field input:focus-visible {
+  outline: none;
+}
+
 .check {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 12px;
 }
 .strip {
   display: flex;
@@ -1616,21 +1671,27 @@ body.col-resizing * {
   width: 460px;
 }
 .tabs {
+  flex: none;
   display: flex;
-  gap: 4px;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--border);
+  align-items: stretch;
+  gap: 2px;
+  height: 28px;
+  padding: 0 6px;
+  background: var(--header);
+  border-bottom: 1px solid var(--divider);
 }
+
 .tabs button {
   margin-bottom: -1px;
-  padding: 8px 10px;
+  padding: 0 8px;
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
 }
+
 .tabs button:hover {
   color: inherit;
 }
@@ -1644,18 +1705,21 @@ body.col-resizing * {
 }
 .text-field {
   width: 100%;
-  height: 28px;
+  height: 24px;
   padding: 0 8px;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--radius);
-  background: var(--fill);
+  background: var(--inset);
   color: inherit;
   font: 12px var(--mono);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
+
 .text-field:focus {
   outline: none;
-  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
+
 .settings-body {
   padding: 4px 20px 16px;
   overflow-y: auto;
@@ -1672,12 +1736,10 @@ body.col-resizing * {
 }
 .setting h3 {
   margin: 5px 0 0;
-  font-family: var(--mono);
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
+
 .setting-controls {
   display: flex;
   flex-direction: column;
@@ -1795,10 +1857,12 @@ body.col-resizing * {
   gap: 2px;
 }
 .segmented label {
-  padding: 4px 14px;
+  padding: 3px 10px;
   border-radius: 2px;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 16px;
 }
+
 .segmented label {
   color: var(--muted);
 }
@@ -1817,26 +1881,109 @@ body.col-resizing * {
   outline-offset: 1px;
 }
 
-/* Layout and size (the Layout view, and a new project's desk) */
-.layout-fields,
-.size-form {
+/* Inspector rows: a label in the label column, the control (and any note) beside it. */
+.field-row {
+  display: grid;
+  grid-template-columns: var(--label-col) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 6px;
+  min-width: 0;
+  min-height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.field-row > * {
+  grid-column: 2;
+}
+.field-row > .field-label {
+  grid-column: 1;
+  color: var(--muted);
+}
+.field-row > .segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+.field-row > .segmented label {
+  text-align: center;
+}
+.size-fields {
+  gap: 4px;
+}
+.size-fields .num-field {
+  flex: 1;
+}
+.page-content-choices {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: 4px;
+}
+
+/* Sliders: a thin track and a small knob, as in desktop apps. */
+input[type='range']:not(.columns-slider) {
+  appearance: none;
+  min-width: 0;
+  height: 16px;
+  margin: 0;
+  background: none;
+}
+input[type='range']:not(.columns-slider)::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border-strong);
+}
+input[type='range']:not(.columns-slider)::-moz-range-track {
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border-strong);
+}
+input[type='range']:not(.columns-slider)::-webkit-slider-thumb {
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--knob);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+}
+input[type='range']:not(.columns-slider)::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--knob);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.slider-control {
   gap: 8px;
 }
-.size-form .inline {
-  gap: 10px;
+.slider-control input {
+  flex: 1;
 }
-.size-form select {
-  height: 26px;
+
+/* Layout and size (the Layout view, and a new project's desk) */
+.layout-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.select {
+  height: 24px;
   padding: 0 6px;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--radius);
-  background: var(--fill);
+  background: var(--inset);
   color: inherit;
   font: 12px var(--font);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
+
 /* Two choices, each half the toggle. */
 .segmented.halves {
   display: inline-grid;
@@ -1845,49 +1992,17 @@ body.col-resizing * {
 .segmented.halves label {
   text-align: center;
 }
-.layout-fields .field-label {
-  font-size: 12px;
-  color: var(--muted);
-}
-/* In the Layout panel, the size form fills its width. */
-.layout-panel .layout-fields,
-.layout-panel .size-form {
-  align-items: stretch;
-}
-.layout-panel .size-form select {
-  width: 100%;
-}
-.layout-panel .size-form .num-field {
-  flex: 1;
-}
-.size-form select:focus-visible {
+.select:focus-visible {
   outline: none;
-  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 /* The Layout view's tabs, and the Page tab's form and preview. */
 /* Layout's Page and Guides tabs, at the top of its panel. */
 .layout-panel .tabs {
   flex-shrink: 0;
-  padding: 0 14px;
 }
-.size-form .inline select,
-.layout-panel .size-form .inline select {
-  width: auto;
-  flex: none;
-}
-.page-content {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.page-content legend {
-  padding: 0;
-  margin-bottom: 4px;
-}
+
 .page-content:disabled .check {
   opacity: 0.5;
 }
@@ -1912,9 +2027,6 @@ body.col-resizing * {
   border-radius: var(--radius);
   background: var(--panel);
   box-shadow: var(--shadow);
-}
-.layout-panel .size-form .dpi .num-field {
-  flex: 0 0 90px;
 }
 .page-preview-footer {
   margin: 0;
@@ -2001,16 +2113,19 @@ body.col-resizing * {
   width: 100%;
   resize: vertical;
   padding: 8px;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--radius);
-  background: var(--fill);
+  background: var(--inset);
   color: inherit;
   font: 13px/1.45 var(--font);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
+
 .text-area:focus {
   outline: none;
-  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
+
 .instagram-stage {
   display: flex;
   align-items: center;
@@ -2047,7 +2162,7 @@ body.col-resizing * {
   background: linear-gradient(45deg, #f9ce34, #ee2a7b, #6228d7);
   color: #fff;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
 }
 .ig-user {
   font-weight: 600;
@@ -2510,7 +2625,7 @@ body.col-resizing * {
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
 }
 .export-destination:hover:not(:disabled) {
   background: var(--fill);
@@ -2536,7 +2651,7 @@ body.col-resizing * {
   padding: 9px 10px;
   border-radius: var(--radius);
   background: var(--fill);
-  font-size: 12.5px;
+  font-size: 12px;
 }
 .export-note p {
   margin: 0;
@@ -2547,13 +2662,6 @@ body.col-resizing * {
   height: 13px;
   vertical-align: -2px;
 }
-.export-panel .dpi {
-  align-items: center;
-  gap: 8px;
-}
-.export-panel .dpi .num-field {
-  flex: 0 0 80px;
-}
 .text-field.test-images-count {
   width: 72px;
 }
@@ -2562,9 +2670,10 @@ body.col-resizing * {
 .page-settings-body {
   display: flex;
   flex-direction: column;
-  align-items: inherit;
+  align-items: stretch;
   gap: 8px;
 }
+
 .layout-panel.page-tab {
   overflow: hidden;
 }
@@ -2582,22 +2691,13 @@ body.col-resizing * {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 14px;
+  padding: 10px;
 }
+
 .layout-panel .page-settings-actions {
   flex-shrink: 0;
-  padding: 12px 14px;
+  padding: 10px;
   border-top: 1px solid var(--border);
-}
-.export-quality {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-}
-.export-quality input {
-  flex: 1;
-  accent-color: var(--accent);
 }
 
 /* The sidebar's column count, in its header: a slim track with a pill that sits inside it. */

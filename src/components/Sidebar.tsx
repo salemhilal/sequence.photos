@@ -232,8 +232,8 @@ export function Sidebar() {
         onPointerDown={onResizeDown}
         onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH, true)}
       />
-      <div className="sidebar-head">
-        <span className="caps">{terms.Spreads}</span>
+      <div className="sidebar-head panel-header">
+        <span className="panel-title">{terms.Spreads}</span>
         <button
           className="btn ghost icon small"
           aria-label={`Add ${terms.spread} at the end`}

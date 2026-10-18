@@ -355,7 +355,7 @@ export function Desk() {
               onPointerDown={(e) => e.stopPropagation()}
               onContextMenu={(e) => e.stopPropagation()}
             >
-              <span className="caps muted">Page</span>
+              <span className="section-label muted">Page</span>
               <OwnPageSettings />
               <p className="help">
                 You can change this anytime in{' '}

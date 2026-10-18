@@ -489,7 +489,7 @@ function PileStrip({ spreadId }: { spreadId: SpreadId }) {
 
   return (
     <div className={`strip${hover ? ' drop-hover' : ''}`} data-drop="strip">
-      <div className="strip-label caps">Desk · {pile.length}</div>
+      <div className="strip-label section-label">Desk · {pile.length}</div>
       <div className="strip-items">
         {pile.length === 0 ? (
           <span className="muted small">Empty. Drag a photo here to send it back to the desk.</span>

@@ -40,6 +40,10 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       active toggles (an amber icon), drop targets, progress, and links. The toolbar's
       wordmark is plain text; Preview is an ordinary button; selected segments, tabs, and
       Export's destination are gray. About keeps its amber wordmark.
+- [ ] Panel headers (the sidebar's, tabs in Layout and Settings) are 28 px bars a step
+      lighter than their panel, divided by a dark line. Section titles and labels are sans,
+      not mono capitals; chrome text is 12 px. Buttons are 26 px (24 px in panels);
+      segmented controls 24 px; Export's Quality slider is a thin track with a small knob.
 - [ ] Icons are drawn with a fine (1.5) stroke. Scrollbars are thin and in the theme's colors
       in browsers that draw their own.
 
@@ -176,13 +180,19 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] The pager says only "1 / 6". Apply and Revert stay at the panel's foot while the settings
       above scroll (a short window).
 - [ ] The swap button between W and H swaps them (in the draft).
+- [ ] The tab's rows line up: labels (Pages, Size, Unit, Preset, Resolution, Content) in a
+      column at the left, controls beside them. Fields are inset wells with the unit
+      inside (W 10 in, 300 dpi), no spinner arrows.
+- [ ] Dragging left or right on a field's label or unit (W, H, in, dpi, a border guide's Top)
+      scrubs the value; Shift steps by ten, Option by a tenth; a click there still lets you
+      type. The new-project card's fields apply when the drag ends.
 - [ ] **[S→F]** Frames, Apply: each page becomes a frame in book order (a photo across the
       gutter goes with the page holding its center), same size and unit. One ⌘Z undoes it.
 - [ ] **[F→S]** Switching straight back restores the book exactly. After editing: frame 1 is
       the first page, the rest pair into spreads, a leftover becomes the last page.
-- [ ] **[in→px]** Picking px fills the size converted at the dpi (10 × 8 in at 300 → 3000 ×
+- [ ] **[in→px]** Picking Pixels (Unit) fills the size converted at the dpi (10 × 8 in at 300 → 3000 ×
       2400); Apply as is converts, and photos keep their resolution. Resolution shows 1×.
-- [ ] **[px→in]** Picking in shows "Print at 300 dpi" and the size in inches (1080 px → 3.6 in);
+- [ ] **[px→in]** Picking Inches (Unit) shows "Print at 300 dpi" and the size in inches (1080 px → 3.6 in);
       changing the dpi changes the size, until the size is edited.
 - [ ] Content is enabled only when the size changes beyond converting. Rescale with layout:
       photos move and scale with the guides (book → Instagram 4:5 gives 54 px margins).

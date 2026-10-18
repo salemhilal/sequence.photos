@@ -23,6 +23,11 @@ import { PRESETS, UNITS } from '../units';
 import { NumberField } from './NumberField';
 import { Segmented } from './Segmented';
 
+const UNIT_CHOICES: { value: Unit; label: string }[] = [
+  { value: 'in', label: 'Inches' },
+  { value: 'px', label: 'Pixels' },
+];
+
 const ARRANGEMENTS: { value: Arrangement; label: string }[] = [
   { value: 'spreads', label: 'Spreads' },
   { value: 'frames', label: 'Frames' },
@@ -89,7 +94,6 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
       label={label}
       units={units}
       min={units.minSize}
-      suffix={false}
       value={draft.page[dim]}
       // Applied as it's made: once the number is typed, not at every keystroke.
       commitOnBlur={immediate}
@@ -111,21 +115,23 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
     >
       {/* The settings scroll; Apply and Revert stay below them. */}
       <div className="page-settings-body">
-        <span className="field-label" id={`${id}-pages`}>
-          Pages
-        </span>
-        <Segmented
-          halves
-          labelledBy={`${id}-pages`}
-          options={ARRANGEMENTS}
-          value={draft.arrangement}
-          onChange={(arrangement) => onChange({ ...draft, arrangement })}
-        />
-        {note && <p className="help">{note}</p>}
+        <div className="field-row">
+          <span className="field-label" id={`${id}-pages`}>
+            Pages
+          </span>
+          <Segmented
+            halves
+            labelledBy={`${id}-pages`}
+            options={ARRANGEMENTS}
+            value={draft.arrangement}
+            onChange={(arrangement) => onChange({ ...draft, arrangement })}
+          />
+          {note && <p className="help">{note}</p>}
+        </div>
 
-        <span className="field-label">Size</span>
-        <div className="size-form">
-          <div className="inline">
+        <div className="field-row">
+          <span className="field-label">Size</span>
+          <div className="inline size-fields">
             {field('w', 'W')}
             <button
               type="button"
@@ -137,13 +143,29 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
               <ArrowLeftRight />
             </button>
             {field('h', 'H')}
-            <select aria-label="Unit" value={draft.page.unit} onChange={(e) => setUnit(e.target.value as Unit)}>
-              <option value="in">in</option>
-              <option value="px">px</option>
-            </select>
           </div>
+        </div>
+
+        <div className="field-row">
+          <span className="field-label" id={`${id}-unit`}>
+            Unit
+          </span>
+          <Segmented
+            halves
+            labelledBy={`${id}-unit`}
+            options={UNIT_CHOICES}
+            value={draft.page.unit}
+            onChange={setUnit}
+          />
+        </div>
+
+        <div className="field-row">
+          <span className="field-label" id={`${id}-preset`}>
+            Preset
+          </span>
           <select
-            aria-label="Preset"
+            className="select"
+            aria-labelledby={`${id}-preset`}
             value={preset?.label ?? ''}
             onChange={(e) => {
               const p = PRESETS.find((x) => x.label === e.target.value);
@@ -159,24 +181,21 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
           </select>
         </div>
 
-        <span className="field-label">{printAt ? 'Print at' : 'Resolution'}</span>
-        <div className="size-form">
+        <div className="field-row">
+          <span className="field-label">{printAt ? 'Print at' : 'Resolution'}</span>
           {draft.page.unit === 'in' ? (
-            <div className="inline dpi">
-              <NumberField
-                units={UNITS.px}
-                min={1}
-                suffix={false}
-                value={draft.page.pxPerUnit}
-                ariaLabel={printAt ? 'Print at, in dpi' : 'Resolution, in dpi'}
-                commitOnBlur={immediate}
-                onCommit={(n) => setDpi(Math.max(1, Math.round(n)))}
-              />
-              <span className="muted data">dpi</span>
-            </div>
+            <NumberField
+              units={UNITS.px}
+              min={1}
+              suffixText="dpi"
+              value={draft.page.pxPerUnit}
+              ariaLabel={printAt ? 'Print at, in dpi' : 'Resolution, in dpi'}
+              commitOnBlur={immediate}
+              onCommit={(n) => setDpi(Math.max(1, Math.round(n)))}
+            />
           ) : (
             <span
-              className="muted data"
+              className="data"
               data-tip="Pixel density"
               role="img"
               aria-label={`Pixel density ${draft.page.pxPerUnit}×`}
@@ -187,19 +206,24 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
         </div>
 
         {showContent && (
-          <fieldset className="page-content" disabled={!contentMatters}>
-            <legend className="field-label">Content</legend>
-            {CONTENT.map((c) => (
-              <label key={c.value} className="check">
-                <input
-                  type="radio"
-                  name={`${id}-content`}
-                  checked={draft.content === c.value}
-                  onChange={() => onChange({ ...draft, content: c.value })}
-                />
-                {c.label}
-              </label>
-            ))}
+          // A label, not a legend: a legend can't sit in the row's label column.
+          <fieldset className="field-row page-content" disabled={!contentMatters} aria-labelledby={`${id}-content`}>
+            <span className="field-label" id={`${id}-content`}>
+              Content
+            </span>
+            <div className="page-content-choices">
+              {CONTENT.map((c) => (
+                <label key={c.value} className="check">
+                  <input
+                    type="radio"
+                    name={`${id}-content`}
+                    checked={draft.content === c.value}
+                    onChange={() => onChange({ ...draft, content: c.value })}
+                  />
+                  {c.label}
+                </label>
+              ))}
+            </div>
             {contentMatters && draft.content === 'fixed' && (
               <>
                 <span className="field-label" id={`${id}-anchor`}>

@@ -193,17 +193,16 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
     </section>
   );
   const dpiField = (label: string, value: number, onCommit: (n: number) => void) => (
-    <div className="inline dpi">
-      <span>{label}</span>
+    <div className="field-row">
+      <span className="field-label">{label}</span>
       <NumberField
         units={UNITS.px}
         min={1}
-        suffix={false}
+        suffixText="dpi"
         ariaLabel={`${label}, in dpi`}
         value={value}
         onCommit={onCommit}
       />
-      <span className="muted data">dpi</span>
     </div>
   );
 
@@ -269,18 +268,20 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
               disabled={busy !== null}
             />
             {options.format === 'jpeg' ? (
-              <label className="export-quality">
-                <span>Quality</span>
-                <input
-                  type="range"
-                  min={50}
-                  max={100}
-                  step={1}
-                  value={Math.round(options.quality * 100)}
-                  disabled={busy !== null}
-                  onChange={(e) => set({ quality: e.target.valueAsNumber / 100 })}
-                />
-                <span className="data">{Math.round(options.quality * 100)}%</span>
+              <label className="field-row export-quality">
+                <span className="field-label">Quality</span>
+                <span className="inline slider-control">
+                  <input
+                    type="range"
+                    min={50}
+                    max={100}
+                    step={1}
+                    value={Math.round(options.quality * 100)}
+                    disabled={busy !== null}
+                    onChange={(e) => set({ quality: e.target.valueAsNumber / 100 })}
+                  />
+                  <span className="data">{Math.round(options.quality * 100)}%</span>
+                </span>
               </label>
             ) : (
               <p className="help">Lossless, so larger.</p>
