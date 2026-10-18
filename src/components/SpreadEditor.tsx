@@ -425,7 +425,7 @@ function PhotoSettings({ project, item, onChange, onHoverBox }: InspectorProps &
 
   return (
     <>
-      <div className="inspector-name" title={photo?.name}>
+      <div className="inspector-name" data-tip={photo?.name}>
         {photo?.name}
       </div>
       <div className="muted small">

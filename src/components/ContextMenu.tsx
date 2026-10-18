@@ -101,7 +101,7 @@ function PhotoItems({ menu, onClose }: { menu: Extract<ContextMenuState, { kind:
   const onPage = locate(project, menu.photoId)?.where === 'spread';
   return (
     <>
-      <div className="menu-caption data muted" title={name}>
+      <div className="menu-caption data muted" data-tip={name}>
         {name}
       </div>
       <button className="menu-item" role="menuitem" onClick={() => openQuickLook([menu.photoId])}>
