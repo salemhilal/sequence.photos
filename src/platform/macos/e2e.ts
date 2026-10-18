@@ -249,8 +249,8 @@ async function heard(event: string, ms = 10_000): Promise<boolean> {
 }
 
 /**
- * Settings opens in a window of its own (one, however often it's asked for), and a setting
- * changed there reaches the main window.
+ * Settings opens in a window of its own (one, however often it's asked for); a setting
+ * changed there reaches the main window, and test images asked for there land on its desk.
  */
 async function settingsWindow(): Promise<void> {
   const ready = heard('e2e-settings-ready');
@@ -264,6 +264,16 @@ async function settingsWindow(): Promise<void> {
   await emitTo('settings', 'e2e-settings-act');
   for (const start = Date.now(); ui.get().statusBar && Date.now() - start < 5000;) await pause(100);
   check('a setting changed in the Settings window reaches the main window', !ui.get().statusBar);
+  const before = projectStore.project.pile.length;
+  await emitTo('settings', 'e2e-settings-add-images');
+  await until(() => projectStore.project.pile.length > before, 30_000);
+  check(
+    'Add test images in the Settings window adds them to the main window’s desk',
+    projectStore.project.pile.length === before + 1,
+    `${before} → ${projectStore.project.pile.length}`,
+  );
+  // Back as saved, so New Project (next) doesn't ask.
+  projectStore.undo();
   // As it was: shown, and the window closed.
   setStatusBar(true);
   await settings[0]?.close();

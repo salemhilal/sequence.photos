@@ -48,9 +48,10 @@ export const platform: Platform = {
       void loadDocuments().then((m) => m.startDocuments());
       if (__E2E__) void import('./e2e').then((m) => m.runE2E());
     } else if (__E2E__) {
-      // The end-to-end test's hooks in the Settings window: say it's up, and change a setting
-      // when asked (to check the main window follows).
+      // The end-to-end test's hooks in the Settings window: say it's up, and when asked, change
+      // a setting or ask for test images (to check the main window follows).
       void listen('e2e-settings-act', () => setStatusBar(false));
+      void listen('e2e-settings-add-images', () => platform.sendToMain?.({ kind: 'addTestImages', count: 1 }));
       void emit('e2e-settings-ready');
     }
 
