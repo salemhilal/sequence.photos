@@ -85,7 +85,6 @@ export function ExportView() {
   }, [status]);
   useEffect(() => () => ui.set({ pageStatus: null }), []);
 
-
   const picker = (locked: boolean) => (
     <section>
       <h3>Destination</h3>
