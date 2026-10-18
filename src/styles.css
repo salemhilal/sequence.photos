@@ -11,6 +11,8 @@
   --header: #e8e8e8;
   --control: #fbfbfb;
   --inset: #e6e6e6;
+  /* Segmented controls' tracks: a step darker than whatever they sit on. */
+  --track: rgba(0, 0, 0, 0.08);
   --divider: #c6c6c6;
   /* A raised control's edge: a hairline and a soft drop in light, a top highlight in dark. */
   --raise: 0 0 0 0.5px rgba(0, 0, 0, 0.18), 0 1px 1px rgba(0, 0, 0, 0.06);
@@ -63,6 +65,7 @@
   --header: #2c2c2c;
   --control: #333333;
   --inset: #181818;
+  --track: #181818;
   --divider: #0e0e0e;
   --raise: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --knob: #cfcfcf;
@@ -87,6 +90,7 @@
     --header: #2c2c2c;
     --control: #333333;
     --inset: #181818;
+    --track: #181818;
     --divider: #0e0e0e;
     --raise: inset 0 1px 0 rgba(255, 255, 255, 0.05);
     --knob: #cfcfcf;
@@ -538,7 +542,7 @@ button {
   gap: 2px;
   padding: 2px;
   border-radius: 4px;
-  background: var(--inset);
+  background: var(--track);
 }
 .page-switcher button {
   height: 22px;
@@ -1919,7 +1923,7 @@ body.col-resizing * {
 .segmented {
   display: inline-flex;
   padding: 2px;
-  background: var(--inset);
+  background: var(--track);
   border: 0;
   border-radius: var(--radius);
   gap: 2px;
@@ -2794,7 +2798,7 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
   margin: 0;
   padding: 0 1px;
   border-radius: 999px;
-  background: var(--inset);
+  background: var(--track);
   box-shadow: inset 0 0 0 1px var(--border);
 }
 /* A raised pill, like the other sliders' knob. */
