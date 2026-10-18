@@ -4,12 +4,20 @@
  * selection and actions; non-photo blue marks guides, as in print production.
  */
 :root {
-  --bg: #f2f1ee;
-  --panel: #fafaf8;
+  /* Surfaces, in steps: the window (toolbar, gaps), panels, panel headers, raised
+     controls, and inset wells. Panels are divided by --divider, darker than both sides. */
+  --bg: #e3e3e3;
+  --panel: #f0f0f0;
+  --header: #e8e8e8;
+  --control: #fbfbfb;
+  --inset: #e6e6e6;
+  --divider: #c6c6c6;
+  /* A raised control's edge: a hairline and a soft drop in light, a top highlight in dark. */
+  --raise: 0 0 0 0.5px rgba(0, 0, 0, 0.18), 0 1px 1px rgba(0, 0, 0, 0.06);
   --desk: #787876;
   --stage: #787876;
-  --text: #1b1a18;
-  --muted: #6b6862;
+  --text: #1c1c1c;
+  --muted: #6b6b6b;
   --hover: rgba(0, 0, 0, 0.06);
   --fill: rgba(0, 0, 0, 0.05);
   --border: rgba(0, 0, 0, 0.09);
@@ -27,7 +35,10 @@
   --warn: #a8620a;
   --danger: #c2412d;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 3px 10px rgba(0, 0, 0, 0.12);
-  --radius: 5px;
+  /* Radii: 3 px controls, 5 px menus and popovers, 8 px dialogs; tiled panels have none. */
+  --radius: 3px;
+  --radius-pop: 5px;
+  --radius-dialog: 8px;
   --font: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   color-scheme: light dark;
@@ -43,10 +54,15 @@
   color-scheme: light;
 }
 :root[data-theme='dark'] {
-  --bg: #151514;
-  --panel: #1c1c1a;
-  --text: #e9e6df;
-  --muted: #8d8a83;
+  --bg: #1b1b1b;
+  --panel: #242424;
+  --header: #2c2c2c;
+  --control: #333333;
+  --inset: #181818;
+  --divider: #0e0e0e;
+  --raise: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --text: #e6e6e6;
+  --muted: #8e8e8e;
   --hover: rgba(255, 255, 255, 0.07);
   --fill: rgba(255, 255, 255, 0.06);
   --border: rgba(255, 255, 255, 0.08);
@@ -61,10 +77,15 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #151514;
-    --panel: #1c1c1a;
-    --text: #e9e6df;
-    --muted: #8d8a83;
+    --bg: #1b1b1b;
+    --panel: #242424;
+    --header: #2c2c2c;
+    --control: #333333;
+    --inset: #181818;
+    --divider: #0e0e0e;
+    --raise: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --text: #e6e6e6;
+    --muted: #8e8e8e;
     --hover: rgba(255, 255, 255, 0.07);
     --fill: rgba(255, 255, 255, 0.06);
     --border: rgba(255, 255, 255, 0.08);
@@ -226,15 +247,18 @@ button {
   padding: 0 10px;
   border: 1px solid transparent;
   border-radius: var(--radius);
-  background: var(--fill);
+  background: var(--control);
   white-space: nowrap;
+  box-shadow: var(--raise);
 }
+
 /* Filled buttons answer a press, as native ones do; only ghost buttons light on hover. */
 .btn:active:not(:disabled) {
   background: var(--border-strong);
 }
 .btn.ghost {
   background: transparent;
+  box-shadow: none;
 }
 .btn.ghost:hover:not(:disabled) {
   background: var(--hover);
@@ -244,18 +268,10 @@ button {
 }
 /* Filled like the undo and redo pair (Layout, in the toolbar). */
 .btn.filled {
-  background: var(--fill);
+  background: var(--control);
 }
 .btn.filled:active:not(:disabled) {
   background: var(--border-strong);
-}
-.btn.accent {
-  background: transparent;
-  border-color: var(--accent);
-  color: var(--accent-ink);
-}
-.btn.accent:active:not(:disabled) {
-  background: var(--accent-soft);
 }
 .btn:disabled {
   color: color-mix(in srgb, currentColor 35%, transparent);
@@ -303,8 +319,9 @@ button {
   position: relative;
 }
 .btn.active {
-  background: var(--accent-soft);
+  color: var(--accent-ink);
 }
+
 .menu-list {
   position: absolute;
   top: calc(100% + 4px);
@@ -313,7 +330,7 @@ button {
   min-width: 220px;
   padding: 4px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-pop);
   background: var(--panel);
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.18),
@@ -327,7 +344,7 @@ button {
   height: 30px;
   padding: 0 8px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius);
   background: none;
   font-size: 13px;
   text-align: left;
@@ -444,7 +461,7 @@ button {
   transform: translate(-50%, -50%);
   z-index: 1;
   padding: 3px 9px;
-  border-radius: 5px;
+  border-radius: var(--radius);
   background: var(--text);
   color: var(--bg);
   font: 500 12px/1.4 var(--mono);
@@ -461,7 +478,8 @@ button {
   position: relative;
   display: inline-flex;
   border-radius: var(--radius);
-  background: var(--fill);
+  background: var(--control);
+  box-shadow: var(--raise);
 }
 .btn-joined .btn {
   border-radius: 0;
@@ -486,9 +504,16 @@ button {
   gap: 6px;
   height: 42px;
   padding: 0 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
+  border-bottom: 1px solid var(--divider);
+  background: var(--bg);
   flex-shrink: 0;
+}
+.toolbar .wordmark {
+  padding-left: 0;
+  padding-right: 0;
+  margin-right: 10px;
+  background: none;
+  color: var(--text);
 }
 /* Mac app: the toolbar is the title bar, with the traffic lights at its left. */
 .native-app .toolbar {
@@ -791,7 +816,7 @@ button {
   max-width: 320px;
   margin-top: 28px;
   padding: 14px 18px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-dialog);
   background: var(--panel);
   color: var(--text);
   text-shadow: none;
@@ -843,7 +868,7 @@ button {
   gap: 6px;
   width: 200px;
   padding: 8px 10px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-pop);
   background: var(--panel);
   box-shadow: var(--shadow);
   font-size: 12px;
@@ -875,7 +900,7 @@ button {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--divider);
   background: var(--panel);
   user-select: none;
 }
@@ -1067,9 +1092,9 @@ body.col-resizing * {
 .insert-btn {
   position: relative;
   z-index: 1;
-  border: 1px solid var(--accent);
-  background: var(--panel);
-  color: var(--accent-ink);
+  border: 1px solid var(--border-strong);
+  background: var(--control);
+  color: var(--muted);
   border-radius: 999px;
   font-size: 12px;
   padding: 1px 10px;
@@ -1422,7 +1447,7 @@ body.col-resizing * {
   display: flex;
   flex-direction: column;
   background: var(--panel);
-  border-radius: 10px;
+  border-radius: var(--radius-dialog);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   max-width: 100%;
   max-height: 100%;
@@ -1433,8 +1458,10 @@ body.col-resizing * {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--divider);
+  background: var(--bg);
 }
+
 .modal-title {
   display: flex;
   align-items: baseline;
@@ -1472,7 +1499,7 @@ body.col-resizing * {
   width: 230px;
   flex-shrink: 0;
   padding: 14px;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--divider);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1554,7 +1581,7 @@ body.col-resizing * {
   display: flex;
   flex-direction: column;
   height: 96px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--divider);
   flex-shrink: 0;
   user-select: none;
 }
@@ -1608,7 +1635,7 @@ body.col-resizing * {
   color: inherit;
 }
 .tabs button.on {
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--text);
   color: inherit;
 }
 .tabs button:focus-visible {
@@ -1668,7 +1695,7 @@ body.col-resizing * {
   width: max-content;
   max-width: 240px;
   padding: 6px 9px;
-  border-radius: 6px;
+  border-radius: var(--radius-pop);
   background: var(--text);
   color: var(--bg);
   box-shadow: var(--shadow);
@@ -1762,22 +1789,23 @@ body.col-resizing * {
 .segmented {
   display: inline-flex;
   padding: 2px;
-  background: var(--fill);
+  background: var(--inset);
   border: 0;
   border-radius: var(--radius);
   gap: 2px;
 }
 .segmented label {
   padding: 4px 14px;
-  border-radius: 4px;
+  border-radius: 2px;
   font-size: 13px;
 }
-.segmented label:hover {
-  background: var(--accent-soft);
+.segmented label {
+  color: var(--muted);
 }
 .segmented label.on {
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--control);
+  box-shadow: var(--raise);
+  color: var(--text);
 }
 .segmented input {
   position: absolute;
@@ -2366,7 +2394,7 @@ body.col-resizing * {
   width: 340px;
   max-width: calc(100vw - 32px);
   padding: 18px 18px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-dialog);
   background: var(--panel);
   color: var(--text);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
@@ -2426,7 +2454,7 @@ body.col-resizing * {
   gap: 12px;
   padding: 8px 8px 8px 14px;
   border: 1px solid var(--danger);
-  border-radius: 8px;
+  border-radius: var(--radius-pop);
   background: var(--panel);
   color: var(--text);
   box-shadow: var(--shadow);
@@ -2441,7 +2469,7 @@ body.col-resizing * {
   gap: 12px;
   padding: 8px 8px 8px 14px;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-pop);
   background: var(--panel);
   box-shadow: var(--shadow);
 }
@@ -2455,7 +2483,7 @@ body.col-resizing * {
   align-items: center;
   gap: 10px;
   padding: 8px 8px 8px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-pop);
   background: var(--text);
   color: var(--bg);
   max-width: min(560px, calc(100vw - 32px));
@@ -2488,8 +2516,9 @@ body.col-resizing * {
   background: var(--fill);
 }
 .export-destination.on {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  border-color: transparent;
+  background: var(--control);
+  box-shadow: var(--raise);
 }
 .export-destination:disabled {
   opacity: 0.5;

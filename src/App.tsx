@@ -163,7 +163,7 @@ export default function App() {
           Layout
         </button>
         <button
-          className="btn accent has-hint"
+          className="btn has-hint"
           data-tour="preview"
           onClick={() => openModal('preview')}
           data-tip={`Preview (${shortcutLabel('preview')})`}
