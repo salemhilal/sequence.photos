@@ -130,23 +130,6 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
         </div>
 
         <div className="field-row">
-          <span className="field-label">Size</span>
-          <div className="inline size-fields">
-            {field('w', 'W')}
-            <button
-              type="button"
-              className="btn ghost icon small"
-              aria-label="Swap width and height"
-              data-tip="Swap width and height"
-              onClick={() => onChange({ ...draft, page: { ...draft.page, w: draft.page.h, h: draft.page.w } })}
-            >
-              <ArrowLeftRight />
-            </button>
-            {field('h', 'H')}
-          </div>
-        </div>
-
-        <div className="field-row">
           <span className="field-label" id={`${id}-unit`}>
             Unit
           </span>
@@ -179,6 +162,23 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
             ))}
             {!preset && <option value="">Custom</option>}
           </select>
+        </div>
+
+        <div className="field-row">
+          <span className="field-label">Size</span>
+          <div className="inline size-fields">
+            {field('w', 'W')}
+            <button
+              type="button"
+              className="btn ghost icon small"
+              aria-label="Swap width and height"
+              data-tip="Swap width and height"
+              onClick={() => onChange({ ...draft, page: { ...draft.page, w: draft.page.h, h: draft.page.w } })}
+            >
+              <ArrowLeftRight />
+            </button>
+            {field('h', 'H')}
+          </div>
         </div>
 
         <div className="field-row">
