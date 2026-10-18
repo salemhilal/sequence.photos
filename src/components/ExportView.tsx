@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, FileText, Images, Info, Package, TriangleAlert } from 'lucide-react';
+import { FileText, Images, Info, Package, TriangleAlert } from 'lucide-react';
 import {
   converts,
   defaultOptions,
@@ -23,6 +23,7 @@ import type { Project, Sheet } from '../types';
 import { goToPage, ui } from '../ui';
 import { TERMS, UNITS } from '../units';
 import { NumberField } from './NumberField';
+import { Pager } from './Pager';
 import { Segmented } from './Segmented';
 import { PageCanvas } from './SpreadCanvas';
 
@@ -430,17 +431,7 @@ function OutputPreview({
   return (
     <div className="editor-stage page-preview" ref={stageRef}>
       <PageCanvas page={page} sheet={sheet} scale={scale} />
-      <div className="page-preview-controls">
-        <button className="btn ghost icon" aria-label="Previous" disabled={at === 0} onClick={() => go(-1)}>
-          <ChevronLeft />
-        </button>
-        <span className="muted data">
-          {at + 1} / {pages.length} · {size}
-        </span>
-        <button className="btn ghost icon" aria-label="Next" disabled={at === pages.length - 1} onClick={() => go(1)}>
-          <ChevronRight />
-        </button>
-      </div>
+      <Pager at={at} count={pages.length} go={go} noun="page" extra={` · ${size}`} />
     </div>
   );
 }

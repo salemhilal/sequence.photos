@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, X } from 'lucide-react';
+import { Eye, EyeOff, X } from 'lucide-react';
 import { bump, dropPhotos, putInPile, putOnPage, raise } from '../actions';
 import { clearGhost, startDrag, trackGhost } from '../drag';
 import {
@@ -30,6 +30,7 @@ import { useElementSize, usePageStatus, useWindowEvent } from '../hooks';
 import { nextSoftPhoto, placedSoft, resolutionNote } from '../resolution';
 import { clamp } from '../deskZoom';
 import { NumberField } from './NumberField';
+import { Pager } from './Pager';
 import { SoftBadge } from './SoftBadge';
 import { PhotoImg } from './PhotoImg';
 import { SpreadCanvas } from './SpreadCanvas';
@@ -323,27 +324,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
               />
             </div>
             {/* Which spread of how many, below it, as elsewhere. */}
-            <div className="page-preview-controls editor-pager">
-              <button
-                className="btn ghost icon"
-                aria-label={`Previous ${noun}`}
-                disabled={index === 0}
-                onClick={() => go(-1)}
-              >
-                <ChevronLeft />
-              </button>
-              <span className="muted data">
-                {index + 1} / {book.length}
-              </span>
-              <button
-                className="btn ghost icon"
-                aria-label={`Next ${noun}`}
-                disabled={index === book.length - 1}
-                onClick={() => go(1)}
-              >
-                <ChevronRight />
-              </button>
-            </div>
+            <Pager at={index} count={book.length} go={go} noun={noun} className="editor-pager" />
           </div>
           <Inspector
             project={project}

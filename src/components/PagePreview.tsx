@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { sheetExtent } from '../geometry';
 import { useElementSize, usePager } from '../hooks';
 import { draftOf, previewPageSetup, sameDraft, type PageDraft } from '../pageSetup';
@@ -7,6 +6,7 @@ import { allSpreads, sheetOf } from '../spreads';
 import { useProject } from '../store';
 import { TERMS } from '../units';
 import { placedSoft, resolutionNote, softPhotos, softSentence } from '../resolution';
+import { Pager } from './Pager';
 import { PhotoImg } from './PhotoImg';
 import { SoftBadge } from './SoftBadge';
 import { SpreadCanvas } from './SpreadCanvas';
@@ -67,27 +67,7 @@ export function PagePreview({ draft }: Props) {
           />
         </div>
       )}
-      <div className="page-preview-controls">
-        <button
-          className="btn ghost icon"
-          aria-label={`Previous ${terms.spread}`}
-          disabled={at === 0}
-          onClick={() => go(-1)}
-        >
-          <ChevronLeft />
-        </button>
-        <span className="muted data">
-          {at + 1} / {spreads.length}
-        </span>
-        <button
-          className="btn ghost icon"
-          aria-label={`Next ${terms.spread}`}
-          disabled={at === spreads.length - 1}
-          onClick={() => go(1)}
-        >
-          <ChevronRight />
-        </button>
-      </div>
+      <Pager at={at} count={spreads.length} go={go} noun={terms.spread} />
       {soft > 0 && <p className="page-preview-footer warn">{softSentence(soft, sheet, changed)}</p>}
     </div>
   );
