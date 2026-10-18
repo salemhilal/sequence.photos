@@ -252,7 +252,10 @@ export function shortcutAccelerator(id: CommandId): string | undefined {
 }
 
 /** Whether a key event is a binding's combination (exported for tests). */
-export function matches(b: Binding, e: Pick<KeyboardEvent, 'key' | 'code' | 'altKey' | 'shiftKey' | 'metaKey' | 'ctrlKey'>): boolean {
+export function matches(
+  b: Binding,
+  e: Pick<KeyboardEvent, 'key' | 'code' | 'altKey' | 'shiftKey' | 'metaKey' | 'ctrlKey'>,
+): boolean {
   if (e.altKey !== Boolean(b.alt)) return false;
   const key = b.alt && /^Digit\d$/.test(e.code) ? e.code.slice(5) : e.key.toLowerCase();
   if (key !== b.key) return false;
