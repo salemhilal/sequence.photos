@@ -194,7 +194,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       the rest of the status bar, in place of the counts; moving off brings the counts back.
 - [ ] Icon-only buttons (Settings, the sidebar toggle, ×, pencil, add) also float their hint
       beside them after a second's hover, then at once for the next for a second after.
-      Text buttons and labeled controls float nothing.
+      Text buttons, labeled controls, and things that aren't buttons (the sidebar's resize
+      edge, its column slider, a missing photo's mark, the editor strip's photos) float
+      nothing.
 - [ ] In Settings, About, and confirmations (over the status bar), hints float as before.
 - [ ] Tab to a control: its hint shows at once (floating too, for an icon button).
 
