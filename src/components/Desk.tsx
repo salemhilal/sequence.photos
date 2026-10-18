@@ -10,7 +10,7 @@ import { TERMS } from '../units';
 import { DESK_PPI, deskGeometry, MAX_ZOOM, MIN_ZOOM } from '../deskGeometry';
 import { clamp, zoomAround } from '../deskZoom';
 import { isTyping } from '../input';
-import { deskCovered, openPhotoMenu, openModal, openQuickLook, ui } from '../ui';
+import { deskCovered, goToPage, openPhotoMenu, openQuickLook, ui } from '../ui';
 import { OwnPageSettings } from './PageSettings';
 import { PhotoImg } from './PhotoImg';
 
@@ -359,7 +359,7 @@ export function Desk() {
               <OwnPageSettings />
               <p className="help">
                 You can change this anytime in{' '}
-                <button className="link" onClick={() => openModal('layout')}>
+                <button className="link" onClick={() => goToPage('layout')}>
                   Layout
                 </button>
                 , along with the guides photos fit and snap to.

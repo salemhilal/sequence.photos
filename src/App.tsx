@@ -12,7 +12,6 @@ import {
   Settings,
   Undo2,
   X,
-  Ruler,
   Upload,
 } from 'lucide-react';
 import { usePasteHandler } from './clipboard';
@@ -23,6 +22,7 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { ContextMenus } from './components/ContextMenu';
 import { Desk } from './components/Desk';
 import { Menu } from './components/Menu';
+import { PageSwitcher } from './components/PageSwitcher';
 import { StatusBar } from './components/StatusBar';
 import { useCommandItem } from './components/commandItem';
 import { LayoutEditor } from './components/LayoutEditor';
@@ -63,6 +63,7 @@ export default function App() {
   const [mobileNotice, setMobileNotice] = useState(onTouchDevice);
   const editing = ui.use((s) => s.editingSpreadId);
   const modal = ui.use((s) => s.modal);
+  const page = ui.use((s) => s.page);
   const importing = ui.use((s) => s.importing);
   const notice = ui.use((s) => s.notice);
   const sidebarOpen = ui.use((s) => s.sidebarOpen);
@@ -147,35 +148,20 @@ export default function App() {
             </div>
           </>
         )}
+        <PageSwitcher />
         <span className="spacer" data-tauri-drag-region />
-        <button
-          className="btn filled"
-          data-tour="layout"
-          onClick={() => openModal('layout')}
-          data-tip="Layout: size and guides"
-        >
-          <Ruler />
-          Layout
-        </button>
-        <button
-          className="btn has-hint"
-          data-tour="preview"
-          onClick={() => openModal('preview')}
-          data-tip={`Preview (${shortcutLabel('preview')})`}
-        >
-          {terms.preview}
-          <ShortcutHint label={shortcutLabel('preview')} />
-        </button>
-        <button
-          className={`btn ghost icon has-hint${sidebarOpen ? '' : ' active'}`}
-          aria-label={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads}`}
-          aria-pressed={!sidebarOpen}
-          onClick={toggleSidebar}
-          data-tip={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads} (${shortcutLabel('toggleSidebar')})`}
-        >
-          {sidebarOpen ? <PanelRightClose /> : <PanelRightOpen />}
-          <ShortcutHint label={shortcutLabel('toggleSidebar')} />
-        </button>
+        {page === 'desk' && (
+          <button
+            className={`btn ghost icon has-hint${sidebarOpen ? '' : ' active'}`}
+            aria-label={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads}`}
+            aria-pressed={!sidebarOpen}
+            onClick={toggleSidebar}
+            data-tip={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads} (${shortcutLabel('toggleSidebar')})`}
+          >
+            {sidebarOpen ? <PanelRightClose /> : <PanelRightOpen />}
+            <ShortcutHint label={shortcutLabel('toggleSidebar')} />
+          </button>
+        )}
         <button
           className="btn ghost icon has-hint"
           aria-label="Settings"
@@ -187,16 +173,20 @@ export default function App() {
         </button>
       </header>
       <main className="main">
-        <Desk />
-        {sidebarOpen && <Sidebar />}
-        {editing && <SpreadEditor spreadId={editing} />}
+        {page === 'desk' && (
+          <>
+            <Desk />
+            {sidebarOpen && <Sidebar />}
+            {editing && <SpreadEditor spreadId={editing} />}
+          </>
+        )}
+        {page === 'layout' && <LayoutEditor />}
+        {page === 'preview' && <Preview />}
+        {page === 'export' && <ExportView />}
       </main>
       <StatusBar />
       {modal === 'settings' && <SettingsDialog />}
       {modal === 'about' && <AboutDialog />}
-      {modal === 'preview' && <Preview />}
-      {modal === 'layout' && <LayoutEditor />}
-      {modal === 'export' && <ExportView />}
       <QuickLook />
       <Tour />
       <ConfirmDialog />

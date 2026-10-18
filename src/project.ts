@@ -249,6 +249,6 @@ export async function newProject(): Promise<void> {
   if (modalLocked()) return;
   if (!(await confirmReplace('Start a new project?', 'A new, empty project', 'New project'))) return;
   projectStore.replace(emptyProject());
-  ui.set({ selection: [], editingSpreadId: null, modal: null });
+  ui.set({ selection: [], editingSpreadId: null, page: 'desk', modal: null });
   platform.projectReplaced();
 }

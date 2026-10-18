@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
-import { X } from 'lucide-react';
 import { startDrag } from '../drag';
 import {
   edgesOf,
@@ -19,7 +18,7 @@ import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { Arrangement, LineGuide, PageSide, Spread } from '../types';
 import { TERMS, UNITS } from '../units';
-import { ask, closeModal, setCloseGuard, ui, type LayoutTab } from '../ui';
+import { ask, goToPage, setPageGuard, ui, type LayoutTab } from '../ui';
 import { applyPageSetup, draftOf, sameDraft } from '../pageSetup';
 import { usePageDraft } from './pageDraft';
 import { PagePreview } from './PagePreview';
@@ -106,17 +105,17 @@ export function LayoutEditor() {
     if (answer === 'discard') setDraft(draftOf(projectStore.project));
     return answer === 'apply' || answer === 'discard';
   };
-  // Closing or replacing Layout (here, or by a shortcut or menu) asks first.
+  // Leaving Layout (Esc, the switcher, a shortcut or menu) asks first.
   useEffect(() => {
     if (!pending) return;
-    setCloseGuard(settlePage);
-    return () => setCloseGuard(null);
+    setPageGuard(settlePage);
+    return () => setPageGuard(null);
   });
   const goToTab = (t: LayoutTab) => {
     if (t === 'page') return ui.set({ layoutTab: t });
     void settlePage().then((ok) => ok && ui.set({ layoutTab: t }));
   };
-  const close = closeModal;
+  const close = () => goToPage('desk');
 
   useWindowEvent('keydown', (e) => {
     if (isTyping(e) || e.metaKey || e.ctrlKey || ui.get().confirm) return;
@@ -128,6 +127,15 @@ export function LayoutEditor() {
       remove(selected);
     }
   });
+
+  // Its size, and while previewing, how to flip through, in the status bar.
+  const status = `${units.format(s.pageW)} × ${units.format(s.pageH)} ${units.suffix}${
+    previewing ? `${pending ? ' · Preview of the changes' : ''} · ← → to flip through` : ''
+  }`;
+  useEffect(() => {
+    ui.set({ pageStatus: status });
+  }, [status]);
+  useEffect(() => () => ui.set({ pageStatus: null }), []);
 
   // Where the spread sits in the stage: centered in the space beside the rulers.
   const scale = Math.min((stage.w - RULER) / (across + 2 * PAD), (stage.h - RULER) / (s.pageH + 2 * PAD));
@@ -245,74 +253,56 @@ export function LayoutEditor() {
   }
 
   return (
-    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="modal editor layout-editor" data-modal>
-        <header className="modal-head">
-          <div className="modal-title">
-            <span className="folio">Layout</span>
-            <span className="muted data">
-              {units.format(s.pageW)} × {units.format(s.pageH)} {units.suffix}
-            </span>
-          </div>
-          <span className="spacer" />
-          {/* Guides are explained in their panel's note. */}
-          {previewing && (
-            <span className="hint">{`${pending ? 'Preview of the changes · ' : ''}← → to flip through`}</span>
-          )}
-          <button className="btn ghost icon" aria-label="Close" onClick={close}>
-            <X />
-          </button>
-        </header>
-        <div className="editor-body">
-          {previewing && <PagePreview draft={draft} />}
-          <div className="editor-stage" ref={stageRef} hidden={previewing}>
-            <Ruler
-              axis="horizontal"
-              length={stage.w}
-              origin={gutterX}
-              scale={scale}
-              size={s.pageW}
-              unit={s.unit}
-              mirrored={s.arrangement === 'spreads'}
-              onPointerDown={(e) => dragGuide(e, 'horizontal', null)}
-            />
-            <Ruler
-              axis="vertical"
-              length={stage.h}
-              origin={pageTop}
-              scale={scale}
-              size={s.pageH}
-              unit={s.unit}
-              onPointerDown={(e) => dragGuide(e, 'vertical', null)}
-            />
-            <div className="ruler-corner" />
-            <div className="layout-canvas" style={{ left, top }}>
-              <SpreadCanvas
-                spread={sample}
-                sheet={s}
-                scale={scale}
-                pad={PAD}
-                overlay={guides}
-                onPointerDown={() => setSelected(null)}
-              />
-            </div>
-            {dragLabel && (
-              <div className="guide-drag-label data" style={{ left: dragLabel.x + 14, top: dragLabel.y + 14 }}>
-                {dragLabel.text}
-              </div>
-            )}
-          </div>
-          <LayoutPanel
-            s={s}
-            tab={tab}
-            draft={draft}
-            onDraft={setDraft}
-            onTab={goToTab}
-            selected={selected}
-            onSelect={setSelected}
-            onRemove={remove}
+    <div className="page-view layout-editor">
+      <div className="editor-body">
+        {previewing && <PagePreview draft={draft} />}
+        <div className="editor-stage" ref={stageRef} hidden={previewing}>
+          <Ruler
+            axis="horizontal"
+            length={stage.w}
+            origin={gutterX}
+            scale={scale}
+            size={s.pageW}
+            unit={s.unit}
+            mirrored={s.arrangement === 'spreads'}
+            onPointerDown={(e) => dragGuide(e, 'horizontal', null)}
           />
+          <Ruler
+            axis="vertical"
+            length={stage.h}
+            origin={pageTop}
+            scale={scale}
+            size={s.pageH}
+            unit={s.unit}
+            onPointerDown={(e) => dragGuide(e, 'vertical', null)}
+          />
+          <div className="ruler-corner" />
+          <div className="layout-canvas" style={{ left, top }}>
+            <SpreadCanvas
+              spread={sample}
+              sheet={s}
+              scale={scale}
+              pad={PAD}
+              overlay={guides}
+              onPointerDown={() => setSelected(null)}
+            />
+          </div>
+          {dragLabel && (
+            <div className="guide-drag-label data" style={{ left: dragLabel.x + 14, top: dragLabel.y + 14 }}>
+              {dragLabel.text}
+            </div>
+          )}
         </div>
+        <LayoutPanel
+          s={s}
+          tab={tab}
+          draft={draft}
+          onDraft={setDraft}
+          onTab={goToTab}
+          selected={selected}
+          onSelect={setSelected}
+          onRemove={remove}
+        />
       </div>
     </div>
   );

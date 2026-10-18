@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { ui } from '../../ui';
 import type { Platform } from '../types';
@@ -83,5 +84,16 @@ export const platform: Platform = {
     };
     void listen('opened-links', () => void take());
     void take();
+  },
+
+  setFullscreen(on) {
+    void getCurrentWindow().setFullscreen(on);
+  },
+
+  watchFullscreen(change) {
+    const win = getCurrentWindow();
+    // Going in or out of fullscreen resizes the window.
+    const stop = win.onResized(() => void win.isFullscreen().then(change));
+    return () => void stop.then((f) => f());
   },
 };

@@ -21,7 +21,7 @@ import { firstNonEmpty, outputPages, slideKey } from '../renderPlan';
 import { sheetOf } from '../spreads';
 import { useProject } from '../store';
 import type { Sheet } from '../types';
-import { closeModal, lockModal } from '../ui';
+import { goToPage, lockModal } from '../ui';
 import { Segmented } from './Segmented';
 import { PageCanvas } from './SpreadCanvas';
 
@@ -307,7 +307,7 @@ export function InstagramPost({ head }: Props) {
                   View on Instagram
                 </a>
               )}
-              <button className="btn ghost" onClick={closeModal}>
+              <button className="btn ghost" onClick={() => goToPage('desk')}>
                 Done
               </button>
             </>

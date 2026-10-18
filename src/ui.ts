@@ -46,7 +46,10 @@ export interface ConfirmRequest {
   choose: (index: number | null) => void;
 }
 
-export type Modal = 'settings' | 'about' | 'preview' | 'layout' | 'export';
+export type Modal = 'settings' | 'about';
+
+/** The window's pages, switched from the toolbar: the desk, and the Layout, Preview, and Export views. */
+export type Page = 'desk' | 'layout' | 'preview' | 'export';
 
 /** The Layout view's tabs: the page's settings (applied together), or the guides (applied at once). */
 export type LayoutTab = 'page' | 'guides';
@@ -54,7 +57,11 @@ export type LayoutTab = 'page' | 'guides';
 export interface UiState {
   selection: PhotoId[];
   editingSpreadId: SpreadId | null;
-  /** The open full-window dialog, if any. (The spread editor is tracked by editingSpreadId.) */
+  /** The page shown under the toolbar. */
+  page: Page;
+  /** The preview, fullscreen: the toolbar and status bar hide. */
+  presenting: boolean;
+  /** The open dialog, if any. (The spread editor is tracked by editingSpreadId.) */
   modal: Modal | null;
   view: DeskView;
   ghost: Ghost | null;
@@ -64,6 +71,8 @@ export interface UiState {
   importing: { done: number; total: number; label?: string } | null;
   /** Status text for long-running work like exporting. */
   busy: string | null;
+  /** What the page other than the desk says in the status bar (its size, which page is shown). */
+  pageStatus: string | null;
   notice: string | null;
   /** True while the shortcut modifier is held, to reveal shortcut hints. */
   hints: boolean;
@@ -107,12 +116,15 @@ export interface UiState {
 export const ui = createStore<UiState>({
   selection: [],
   editingSpreadId: null,
+  page: 'desk',
+  presenting: false,
   modal: null,
   view: { panX: 40, panY: 40, zoom: 1 },
   ghost: null,
   hover: null,
   importing: null,
   busy: null,
+  pageStatus: null,
   notice: null,
   hints: false,
   theme: themePref.load(),
@@ -145,8 +157,8 @@ ui.subscribe(() => {
 });
 
 /**
- * While set, the open dialog stays open: nothing (shortcuts, menus, a new project) can
- * close or replace it. For work that mustn't be hidden midway, like posting to Instagram.
+ * While set, the page and dialog stay as they are: nothing (shortcuts, menus, a new project)
+ * can leave or replace them. For work that mustn't be hidden midway, like posting to Instagram.
  */
 let modalLock = false;
 
@@ -159,43 +171,48 @@ export function modalLocked(): boolean {
 }
 
 /**
- * Asked before the open dialog closes or is replaced, by whatever does it (its own close
- * button, a shortcut, a menu): resolves whether to go on. Layout sets it while page changes
- * wait for Apply.
+ * Asked before the page is left, by whatever leaves it (Esc, the switcher, a shortcut, a
+ * menu): resolves whether to go on. Layout sets it while page changes wait for Apply.
  */
-let closeGuard: (() => Promise<boolean>) | null = null;
+let pageGuard: (() => Promise<boolean>) | null = null;
 
-export function setCloseGuard(guard: (() => Promise<boolean>) | null): void {
-  closeGuard = guard;
+export function setPageGuard(guard: (() => Promise<boolean>) | null): void {
+  pageGuard = guard;
 }
 
-/** Change the open dialog, once its close guard (if any) agrees. */
-function leaveTo(modal: (open: Modal | null) => Modal | null): void {
-  if (modalLock) return;
-  const next = modal(ui.get().modal);
-  if (next === ui.get().modal) return;
-  if (!closeGuard) return ui.set({ modal: next });
-  void closeGuard().then((ok) => {
-    if (ok && !modalLock) ui.set({ modal: next });
+/** Go to a page (closing any dialog), once the page being left agrees. */
+export function goToPage(page: Page): void {
+  if (modalLock || page === ui.get().page) return;
+  if (!pageGuard) return ui.set({ page, modal: null });
+  void pageGuard().then((ok) => {
+    if (ok && !modalLock) ui.set({ page, modal: null });
   });
 }
 
+/** Go to a page, or back to the desk from it. */
+export function togglePage(page: Page): void {
+  goToPage(ui.get().page === page ? 'desk' : page);
+}
+
 export function openModal(modal: Modal): void {
-  leaveTo(() => modal);
+  if (!modalLock) ui.set({ modal });
 }
 
 export function closeModal(): void {
-  leaveTo(() => null);
+  if (!modalLock) ui.set({ modal: null });
 }
 
 export function toggleModal(modal: Modal): void {
-  leaveTo((open) => (open === modal ? null : modal));
+  if (!modalLock) ui.set({ modal: ui.get().modal === modal ? null : modal });
 }
 
-/** Whether something covers the desk (a dialog, the spread editor, Quick Look, or the tour), pausing desk shortcuts. */
+/**
+ * Whether the desk is out of reach (another page, a dialog, the spread editor, Quick Look,
+ * or the tour), pausing desk shortcuts.
+ */
 export function deskCovered(): boolean {
   const s = ui.get();
-  return s.modal !== null || s.editingSpreadId !== null || s.quickLook !== null || s.tour !== null;
+  return s.page !== 'desk' || s.modal !== null || s.editingSpreadId !== null || s.quickLook !== null || s.tour !== null;
 }
 
 /** Show photos full-size, starting with the first. */

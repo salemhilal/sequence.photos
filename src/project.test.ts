@@ -171,18 +171,18 @@ describe('project files', () => {
     expect(Object.keys(projectStore.project.photos)).toHaveLength(2);
   });
 
-  it('starts no new project while a dialog is locked open', async () => {
+  it('starts no new project while a page is locked open', async () => {
     projectStore.reset(sampleProject());
-    ui.set({ modal: 'export' });
+    ui.set({ page: 'export' });
     lockModal(true);
     try {
       await newProject();
       expect(ui.get().confirm).toBeNull();
-      expect(ui.get().modal).toBe('export');
+      expect(ui.get().page).toBe('export');
       expect(Object.keys(projectStore.project.photos)).toHaveLength(2);
     } finally {
       lockModal(false);
-      ui.set({ modal: null });
+      ui.set({ page: 'desk' });
     }
   });
 });

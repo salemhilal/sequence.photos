@@ -60,6 +60,18 @@ export const platform: Platform = {
     history.replaceState(history.state, '', location.pathname + location.search);
     finish(hash);
   },
+
+  setFullscreen(on) {
+    // Refused (an embedded page, say), it stays a full-window preview.
+    if (on) void document.documentElement.requestFullscreen?.().catch(() => {});
+    else if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+  },
+
+  watchFullscreen(change) {
+    const onChange = () => change(document.fullscreenElement !== null);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  },
 };
 
 /** Once the project has photos, ask (once) for the browser not to clear its storage. */

@@ -44,4 +44,13 @@ export interface Platform {
    * startup, from the address (the website), or whenever the app's link arrives (the Mac app).
    */
   onSignInReturn(finish: (fragment: string) => void): void;
+
+  /**
+   * Make the window fullscreen, or not, to present the preview: the browser's Fullscreen API
+   * on the website, the window's own fullscreen in the Mac app.
+   */
+  setFullscreen(on: boolean): void;
+
+  /** Call `change` when the window goes in or out of fullscreen (also by other means: the browser's Esc, the green button); returns a stop. */
+  watchFullscreen(change: (on: boolean) => void): () => void;
 }

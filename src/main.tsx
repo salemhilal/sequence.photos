@@ -20,7 +20,7 @@ installTooltips();
 platform.onSignInReturn((fragment) => {
   void finishSignIn(fragment).then((notice) => {
     if (notice) ui.set({ notice });
-    if (takeReturnToExport()) ui.set({ modal: 'export', exportTo: 'instagram' });
+    if (takeReturnToExport()) ui.set({ page: 'export', exportTo: 'instagram' });
   });
 });
 

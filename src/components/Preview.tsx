@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { platform } from '#platform';
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import { folioLabel } from '../actions';
 import { useElementSize, useWindowEvent } from '../hooks';
 import { useProject } from '../store';
-import { closeModal, openModal, ui } from '../ui';
+import { goToPage, ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
 import { sheetExtent } from '../geometry';
 import { TERMS } from '../units';
@@ -61,13 +62,26 @@ export function Preview() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 900, h: 600 });
   const busy = ui.use((s) => s.busy);
+  const presenting = ui.use((s) => s.presenting);
   const sheet = sheetOf(project);
-  // Saving (a PDF or images) shows its progress in the header: keep it up until that's done.
-  const idle = useIdle(rootRef, busy !== null);
+  // Fullscreen, the controls fade while the pointer rests (not while saving shows its progress).
+  const idle = useIdle(rootRef, busy !== null || !presenting);
   const spreads = allSpreads(project);
   const spread = spreads[Math.min(index, spreads.length - 1)];
 
-  const close = closeModal;
+  const present = (on: boolean) => {
+    ui.set({ presenting: on });
+    platform.setFullscreen(on);
+  };
+  // Leaving fullscreen some other way (the browser's Esc, the green button) stops presenting;
+  // so does leaving the page.
+  useEffect(() => {
+    const stop = platform.watchFullscreen((on) => !on && ui.set({ presenting: false }));
+    return () => {
+      stop();
+      if (ui.get().presenting) present(false);
+    };
+  }, []);
   const go = (d: number) => {
     setDir(d > 0 ? 'next' : 'prev');
     setIndex((i) => Math.min(spreads.length - 1, Math.max(0, i + d)));
@@ -76,7 +90,12 @@ export function Preview() {
   useWindowEvent(
     'keydown',
     (e) => {
-      if (e.key === 'Escape') close();
+      if (ui.get().modal || ui.get().confirm) return;
+      // Esc leaves fullscreen first, then the page.
+      if (e.key === 'Escape') {
+        if (ui.get().presenting) present(false);
+        else goToPage('desk');
+      } else if (e.key === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey) present(!ui.get().presenting);
       else if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') go(1);
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(-1);
       else if (e.key === 'Home') go(-spreads.length);
@@ -96,23 +115,20 @@ export function Preview() {
   const terms = TERMS[sheet.arrangement];
 
   return (
-    <div className={`preview${idle ? ' idle' : ''}`} data-modal ref={rootRef}>
+    <div className={`preview${idle ? ' idle' : ''}${presenting ? ' presenting' : ''}`} ref={rootRef}>
       <header className="preview-head">
         <span className="folio">{label}</span>
         <span className="muted data">
           {index + 1} / {spreads.length}
         </span>
         <span className="spacer" />
-        <span className="hint">← → to {terms.turn} · Esc to exit</span>
-        {busy !== null ? (
-          <span className="muted">{busy}</span>
-        ) : (
-          <button className="btn" onClick={() => openModal('export')}>
-            Export…
-          </button>
-        )}
-        <button className="btn" onClick={close}>
-          Exit preview
+        <span className="hint">
+          ← → to {terms.turn} · {presenting ? 'Esc to leave fullscreen' : 'F for fullscreen'}
+        </span>
+        {presenting && busy !== null && <span className="muted">{busy}</span>}
+        <button className="btn" onClick={() => present(!presenting)}>
+          {presenting ? <Minimize2 /> : <Maximize2 />}
+          {presenting ? 'Exit fullscreen' : 'Fullscreen'}
         </button>
       </header>
       <div className="preview-stage" ref={stageRef}>

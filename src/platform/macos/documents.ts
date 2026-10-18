@@ -203,7 +203,7 @@ async function open(target: string, launching: boolean): Promise<void> {
     projectStore.reset(projectStore.project);
     await attach(target, projectStore.project);
     // The title bar names the file; the import's "undo to go back" no longer applies.
-    ui.set({ selection: [], editingSpreadId: null, modal: null, notice: null });
+    ui.set({ selection: [], editingSpreadId: null, page: 'desk', modal: null, notice: null });
     showState();
     remember();
   } catch (e) {

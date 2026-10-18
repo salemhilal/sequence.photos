@@ -11,8 +11,9 @@ const ZOOM_STEP = 1.25;
 const ZOOM_LEVELS = [0.5, 1, 2];
 
 /**
- * The window's bottom line, as in desktop apps: what's selected (or, with nothing selected,
- * how many photos are on the desk and placed), progress (adding photos, exporting), and
+ * The window's bottom line, as in desktop apps: on the desk, what's selected (or, with
+ * nothing selected, how many photos are on the desk and placed); on another page, what it
+ * says (its size, how to flip through); then progress (adding photos, exporting), and
  * the desk's zoom.
  */
 export function StatusBar() {
@@ -22,21 +23,25 @@ export function StatusBar() {
   const photosSelected = ui.use((s) => s.selection.length);
   const spreadsSelected = ui.use((s) => s.spreadSelection.length);
   const zoom = ui.use((s) => s.view.zoom);
+  const page = ui.use((s) => s.page);
+  const pageStatus = ui.use((s) => s.pageStatus);
   // The zoom is the desk's; the editor over it has its own view.
-  const onDesk = ui.use((s) => s.editingSpreadId === null);
+  const onDesk = ui.use((s) => s.page === 'desk' && s.editingSpreadId === null);
   const sheet = sheetOf(project);
   const placed = new Set(allSpreads(project).flatMap((s) => s.items.map((i) => i.photoId))).size;
   const terms = TERMS[sheet.arrangement];
   const counts =
-    photosSelected > 0
-      ? `${photosSelected} ${photosSelected === 1 ? 'photo' : 'photos'} selected`
-      : spreadsSelected > 0
-        ? `${spreadsSelected} ${spreadsSelected === 1 ? terms.spread : terms.spreads} selected`
-        : `${project.pile.length} on desk, ${placed} placed`;
+    page !== 'desk'
+      ? pageStatus
+      : photosSelected > 0
+        ? `${photosSelected} ${photosSelected === 1 ? 'photo' : 'photos'} selected`
+        : spreadsSelected > 0
+          ? `${spreadsSelected} ${spreadsSelected === 1 ? terms.spread : terms.spreads} selected`
+          : `${project.pile.length} on desk, ${placed} placed`;
 
   return (
     <footer className="statusbar">
-      <span>{counts}</span>
+      {counts && <span>{counts}</span>}
       {importing ? (
         <span className="status-progress" role="status">
           {importing.label ?? 'Adding photos'}

@@ -9,7 +9,7 @@ import { pickFiles } from './files';
 import { newProject } from './project';
 import { projectStore } from './store';
 import { startTour } from './tour';
-import { deskCovered, openModal, toggleGuides, toggleModal, toggleSidebar, ui } from './ui';
+import { deskCovered, goToPage, openModal, toggleGuides, toggleModal, toggleSidebar, ui } from './ui';
 
 /**
  * Every command in one table. Each has its name, bindings, when it applies, and what
@@ -84,6 +84,11 @@ const withSelection = (fn: (ids: PhotoId[]) => void) => (): void | false => {
   fn(ids);
 };
 
+/** ⌘1–⌘4 for the pages, in the Mac app only: browsers keep those keys for their tabs. */
+function pageKey(key: string): Binding[] {
+  return platform.kind === 'macos' ? [{ key, mod: true }] : [];
+}
+
 export const commands = {
   // No shortcut: browsers reserve ⌘N / Ctrl+N for a new window.
   newProject: { title: 'New project…', bindings: [], scope: 'app', run: () => void newProject() },
@@ -116,28 +121,25 @@ export const commands = {
     inFields: true,
     run: () => void platform.keepProjectAs?.(),
   },
-  // PDF, images, InDesign, or Instagram, chosen in the Export view.
+  // PDF, images, InDesign, or Instagram, chosen on the Export page.
   export: {
     title: { browser: 'Export…', macos: 'Export…' },
     bindings: [{ key: 'e', mod: true, shift: true }],
     scope: 'app',
     inFields: true,
-    run: () => openModal('export'),
+    run: () => goToPage('export'),
   },
+  // The pages, as the toolbar's switcher has them.
+  showDesk: { title: 'Desk', bindings: pageKey('1'), scope: 'app', inFields: true, run: () => goToPage('desk') },
+  layout: { title: 'Layout', bindings: pageKey('2'), scope: 'app', inFields: true, run: () => goToPage('layout') },
   preview: {
-    // The toolbar says "Preview book" for a book; menus just "Preview".
     title: 'Preview',
-    bindings: [{ key: 'p', mod: true }],
+    bindings: [...pageKey('3'), { key: 'p', mod: true }],
     scope: 'app',
     inFields: true,
-    run: () => toggleModal('preview'),
+    run: () => goToPage('preview'),
   },
-  layout: {
-    title: { browser: 'Layout', macos: 'Layout…' },
-    bindings: [],
-    scope: 'app',
-    run: () => toggleModal('layout'),
-  },
+  showExport: { title: 'Export', bindings: pageKey('4'), scope: 'app', inFields: true, run: () => goToPage('export') },
   // ⌘; as in InDesign and Photoshop.
   toggleGuides: { bindings: [{ key: ';', mod: true }], scope: 'app', inFields: true, run: toggleGuides },
   settings: {

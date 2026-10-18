@@ -81,10 +81,15 @@ describe('softPhotos', () => {
 });
 
 describe('showPhoto', () => {
-  it('opens the photo in the editor, selected, closing what was open', () => {
+  it('opens the photo in the editor on the desk, selected, leaving the page it was shown from', () => {
     const p = book();
-    ui.set({ modal: 'export', editingSpreadId: null, editorSelect: null });
+    ui.set({ page: 'export', editingSpreadId: null, editorSelect: null });
     showPhoto({ photoId: B, spreadId: allSpreads(p)[2]!.id });
-    expect(ui.get()).toMatchObject({ modal: null, editingSpreadId: allSpreads(p)[2]!.id, editorSelect: B });
+    expect(ui.get()).toMatchObject({
+      page: 'desk',
+      modal: null,
+      editingSpreadId: allSpreads(p)[2]!.id,
+      editorSelect: B,
+    });
   });
 });

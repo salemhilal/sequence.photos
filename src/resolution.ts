@@ -78,7 +78,7 @@ export function softSentence(count: number, sheet: Pick<Sheet, 'unit' | 'pxPerUn
   return sheet.unit === 'in' ? `${photos} ${verb} below ${sheet.pxPerUnit} dpi.` : `${photos} ${verb} enlarged.`;
 }
 
-/** Open a placed photo in the spread editor, selected (closing what's open over it). */
+/** Open a placed photo in the spread editor on the desk, selected (leaving the page or dialog it's shown from). */
 export function showPhoto(at: { photoId: PhotoId; spreadId: SpreadId }): void {
-  ui.set({ modal: null, editingSpreadId: at.spreadId, editorSelect: at.photoId });
+  ui.set({ page: 'desk', modal: null, editingSpreadId: at.spreadId, editorSelect: at.photoId });
 }

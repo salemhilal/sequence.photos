@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, FileText, Images, Info, Package, TriangleAlert, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Images, Info, Package, TriangleAlert } from 'lucide-react';
 import {
   converts,
   defaultOptions,
@@ -19,7 +19,7 @@ import { showPhoto, softPhotos, softSentence } from '../resolution';
 import { sheetOf } from '../spreads';
 import { useProject } from '../store';
 import type { Project, Sheet } from '../types';
-import { closeModal, modalLocked, ui } from '../ui';
+import { goToPage, ui } from '../ui';
 import { TERMS, UNITS } from '../units';
 import { NumberField } from './NumberField';
 import { Segmented } from './Segmented';
@@ -74,11 +74,21 @@ export function ExportView() {
     });
   const busy = ui.use((s) => s.busy);
 
-  const close = () => {
-    if (!modalLocked()) closeModal();
-  };
+  // What's exported, in the status bar.
+  const units = UNITS[sheet.unit];
+  const status = `${units.format(sheet.pageW)} × ${units.format(sheet.pageH)} ${units.suffix} ${
+    TERMS[sheet.arrangement].spreads
+  }${sheet.unit === 'in' ? ` · ${sheet.pxPerUnit} dpi` : ''}`;
+  useEffect(() => {
+    ui.set({ pageStatus: status });
+  }, [status]);
+  useEffect(() => () => ui.set({ pageStatus: null }), []);
+
+  // Esc goes back to the desk (not while posting: goToPage waits for the lock).
   useWindowEvent('keydown', (e) => {
-    if (e.key === 'Escape' && !(e.target instanceof HTMLTextAreaElement)) close();
+    if (e.key !== 'Escape' || e.target instanceof HTMLTextAreaElement) return;
+    if (ui.get().modal || ui.get().confirm) return;
+    goToPage('desk');
   });
 
   const picker = (locked: boolean) => (
@@ -102,39 +112,22 @@ export function ExportView() {
     </section>
   );
 
-  const units = UNITS[sheet.unit];
   return (
-    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="modal editor export-view" data-modal>
-        <header className="modal-head">
-          <div className="modal-title">
-            <span className="folio">Export</span>
-            <span className="muted data">
-              {units.format(sheet.pageW)} × {units.format(sheet.pageH)} {units.suffix}{' '}
-              {TERMS[sheet.arrangement].spreads}
-              {sheet.unit === 'in' && ` · ${sheet.pxPerUnit} dpi`}
-            </span>
-          </div>
-          <span className="spacer" />
-          <button className="btn ghost icon" aria-label="Close" onClick={close}>
-            <X />
-          </button>
-        </header>
-        <div className="editor-body">
-          {to === 'instagram' ? (
-            <InstagramDestination sheet={sheet} picker={picker} />
-          ) : (
-            <FileDestination
-              to={to}
-              project={project}
-              sheet={sheet}
-              options={options}
-              set={set}
-              busy={busy}
-              picker={picker(busy !== null)}
-            />
-          )}
-        </div>
+    <div className="page-view export-view">
+      <div className="editor-body">
+        {to === 'instagram' ? (
+          <InstagramDestination sheet={sheet} picker={picker} />
+        ) : (
+          <FileDestination
+            to={to}
+            project={project}
+            sheet={sheet}
+            options={options}
+            set={set}
+            busy={busy}
+            picker={picker(busy !== null)}
+          />
+        )}
       </div>
     </div>
   );
@@ -168,7 +161,7 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
   const run = async () => {
     const saved =
       to === 'pdf' ? await savePdf(options) : to === 'images' ? await exportImages(options) : await exportIndesign();
-    if (saved) closeModal();
+    if (saved) goToPage('desk');
   };
   const action =
     to === 'pdf'

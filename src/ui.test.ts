@@ -1,33 +1,42 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { closeModal, lockModal, modalLocked, openModal, setCloseGuard, toggleModal, ui } from './ui';
+import {
+  closeModal,
+  goToPage,
+  lockModal,
+  modalLocked,
+  openModal,
+  setPageGuard,
+  toggleModal,
+  togglePage,
+  ui,
+} from './ui';
 
 afterEach(() => {
   lockModal(false);
-  ui.set({ modal: null });
+  setPageGuard(null);
+  ui.set({ page: 'desk', modal: null });
 });
 
 describe('lockModal', () => {
-  it('keeps the open dialog open, and nothing else opening, while locked', () => {
-    openModal('export');
+  it('keeps the page and dialog as they are while locked', () => {
+    goToPage('export');
     lockModal(true);
     expect(modalLocked()).toBe(true);
-    closeModal();
-    expect(ui.get().modal).toBe('export');
+    goToPage('desk');
+    togglePage('export');
+    expect(ui.get().page).toBe('export');
     openModal('settings');
-    expect(ui.get().modal).toBe('export');
-    toggleModal('export');
-    expect(ui.get().modal).toBe('export');
     toggleModal('about');
-    expect(ui.get().modal).toBe('export');
+    expect(ui.get().modal).toBeNull();
   });
 
-  it('lets dialogs open and close again once unlocked', () => {
-    openModal('export');
+  it('lets pages change and dialogs open and close again once unlocked', () => {
+    goToPage('export');
     lockModal(true);
     lockModal(false);
     expect(modalLocked()).toBe(false);
-    closeModal();
-    expect(ui.get().modal).toBeNull();
+    togglePage('export');
+    expect(ui.get().page).toBe('desk');
     openModal('settings');
     expect(ui.get().modal).toBe('settings');
     toggleModal('settings');
@@ -36,21 +45,31 @@ describe('lockModal', () => {
     expect(ui.get().modal).toBe('about');
     toggleModal('settings');
     expect(ui.get().modal).toBe('settings');
+    closeModal();
+    expect(ui.get().modal).toBeNull();
   });
 });
 
-describe('close guard', () => {
-  it('asks before the open dialog closes or is replaced, and goes on only when told to', async () => {
-    ui.set({ modal: 'layout' });
+describe('pages', () => {
+  it('close any dialog when going to another page', () => {
+    openModal('settings');
+    goToPage('layout');
+    expect(ui.get()).toMatchObject({ page: 'layout', modal: null });
+  });
+
+  it('ask the page being left first, and go on only when told to', async () => {
+    goToPage('layout');
     let answer = false;
-    setCloseGuard(async () => answer);
-    openModal('export');
+    setPageGuard(async () => answer);
+    goToPage('export');
     await Promise.resolve();
-    expect(ui.get().modal).toBe('layout');
+    expect(ui.get().page).toBe('layout');
+    // A dialog over the page doesn't leave it, so it doesn't ask.
+    openModal('settings');
+    expect(ui.get().modal).toBe('settings');
     answer = true;
-    closeModal();
+    goToPage('desk');
     await Promise.resolve();
-    expect(ui.get().modal).toBeNull();
-    setCloseGuard(null);
+    expect(ui.get().page).toBe('desk');
   });
 });

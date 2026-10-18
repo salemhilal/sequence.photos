@@ -10,7 +10,7 @@ import { isMac } from './input';
 import { tourSeenPref } from './prefs';
 import { projectStore, emptyProject } from './store';
 import type { Project, PhotoMeta } from './types';
-import { ui, type Modal, type UiState } from './ui';
+import { ui, type Modal, type Page, type UiState } from './ui';
 import taxi from './tour/taxi.jpg';
 import spire from './tour/spire.jpg';
 import reflections from './tour/reflections.jpg';
@@ -31,6 +31,8 @@ export interface TourStep {
   target?: string;
   /** Open the spread editor on the sample spread. */
   editor?: boolean;
+  /** Go to a page (the desk otherwise). */
+  page?: Page;
   modal?: Modal;
 }
 
@@ -46,7 +48,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Spreads',
-    body: 'Drag photos from the desk onto a page; they’re sized to fit its guides. Drag a spread’s handle to reorder it, or click “+” to add one.',
+    body: 'Drag photos from the desk onto a page; they’re sized to fit its guides. Drag a spread to reorder it, or click “+” to add one.',
     target: '.sidebar',
   },
   {
@@ -58,8 +60,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     title: 'Layout',
     body: 'On the Page tab, choose spreads or frames, inches or pixels, and the size. On the Guides tab, set the border guides photos fit to when you drop them on a page, and drag guides out of the rulers. They apply to every spread, mirrored on facing pages.',
-    target: '.modal.layout-editor',
-    modal: 'layout',
+    target: '.layout-editor',
+    page: 'layout',
   },
   {
     title: 'Settings',
@@ -138,6 +140,7 @@ export function startTour(): void {
   ui.set({
     tour: 0,
     selection: [],
+    page: 'desk',
     modal: null,
     editingSpreadId: null,
     quickLook: null,
@@ -153,16 +156,17 @@ export function goToStep(index: number): void {
   if (!step) return endTour();
   ui.set({
     tour: index,
+    page: step.page ?? 'desk',
     modal: step.modal ?? null,
     // The Layout step shows the guides, which the sample book has.
-    ...(step.modal === 'layout' && { layoutTab: 'guides' as const }),
+    ...(step.page === 'layout' && { layoutTab: 'guides' as const }),
     editingSpreadId: step.editor ? (allSpreads(projectStore.project)[1]?.id ?? null) : null,
   });
 }
 
 export function endTour(): void {
   if (ui.get().tour === null) return;
-  ui.set({ modal: null, editingSpreadId: null, selection: [], ...before });
+  ui.set({ page: 'desk', modal: null, editingSpreadId: null, selection: [], ...before });
   restoreProject?.();
   restoreProject = null;
   // Saving resumes only once the user's project is back.
