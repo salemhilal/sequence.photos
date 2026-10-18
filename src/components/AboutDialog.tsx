@@ -10,7 +10,7 @@ export function AboutDialog() {
         <h2 className="wordmark" aria-label="Sequence">
           SEQUENCE
         </h2>
-        <p className="about-version data muted">Version {__APP_VERSION__}</p>
+        <p className="about-version data muted selectable">Version {__APP_VERSION__}</p>
         <p className="about-tagline">A tool for playing with photo sequences.</p>
         <div className="about-links">
           <a href="https://salem.io" target="_blank" rel="noopener noreferrer">

@@ -89,6 +89,36 @@ body,
   height: 100%;
   overflow: hidden;
 }
+/*
+ * Desktop conventions: the arrow cursor (the hand is only for links that open a web
+ * page), UI text that can't be selected by accident, images that don't drag out as
+ * files, thin scrollbars in the theme's colors, and icons drawn with a fine stroke.
+ */
+body {
+  cursor: default;
+  -webkit-user-select: none;
+  user-select: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+input,
+textarea,
+[contenteditable='true'],
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+input:is([type='text'], [type='number'], [type='search'], :not([type])),
+textarea,
+[contenteditable='true'] {
+  cursor: text;
+}
+img {
+  -webkit-user-drag: none;
+}
+.lucide {
+  stroke-width: 1.5;
+}
 button {
   font: inherit;
   color: inherit;
@@ -197,32 +227,34 @@ button {
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: var(--fill);
-  cursor: pointer;
   white-space: nowrap;
 }
-.btn:hover:not(:disabled) {
-  background: var(--hover);
+/* Filled buttons answer a press, as native ones do; only ghost buttons light on hover. */
+.btn:active:not(:disabled) {
+  background: var(--border-strong);
 }
 .btn.ghost {
   background: transparent;
+}
+.btn.ghost:hover:not(:disabled) {
+  background: var(--hover);
+}
+.btn.ghost:active:not(:disabled) {
+  background: var(--border-strong);
 }
 /* Filled like the undo and redo pair (Layout, in the toolbar). */
 .btn.filled {
   background: var(--fill);
 }
-/* The hover's wash over the fill, as on the undo and redo pair. */
-.btn.filled:hover:not(:disabled) {
-  background: linear-gradient(var(--hover), var(--hover)), var(--fill);
-}
-.btn.ghost:hover:not(:disabled) {
-  background: var(--hover);
+.btn.filled:active:not(:disabled) {
+  background: var(--border-strong);
 }
 .btn.accent {
   background: transparent;
   border-color: var(--accent);
   color: var(--accent-ink);
 }
-.btn.accent:hover:not(:disabled) {
+.btn.accent:active:not(:disabled) {
   background: var(--accent-soft);
 }
 .btn:disabled {
@@ -251,7 +283,6 @@ button {
 .grip .lucide {
   width: 16px;
   height: 16px;
-  stroke-width: 1.75;
   flex-shrink: 0;
 }
 .turn .lucide {
@@ -264,9 +295,9 @@ button {
   color: var(--on-accent);
   font-weight: 500;
 }
-.btn.primary:hover:not(:disabled) {
+.btn.primary:active:not(:disabled) {
   background: var(--accent);
-  filter: brightness(1.08);
+  filter: brightness(0.9);
 }
 .menu {
   position: relative;
@@ -300,7 +331,6 @@ button {
   background: none;
   font-size: 13px;
   text-align: left;
-  cursor: pointer;
 }
 .menu-item:hover:not(:disabled),
 .menu-item:focus-visible {
@@ -318,7 +348,6 @@ button {
 .menu-item .lucide {
   width: 16px;
   height: 16px;
-  stroke-width: 1.75;
   color: var(--muted);
 }
 .menu-label {
@@ -386,7 +415,6 @@ button {
   padding: 0;
   border: 1px solid var(--border-strong);
   border-radius: 50%;
-  cursor: pointer;
 }
 .swatch.on {
   box-shadow:
@@ -405,7 +433,6 @@ button {
   position: absolute;
   inset: 0;
   opacity: 0;
-  cursor: pointer;
 }
 .btn.has-hint {
   position: relative;
@@ -988,7 +1015,6 @@ body.col-resizing * {
   background: none;
   color: var(--muted);
   font-size: 16px;
-  cursor: pointer;
   opacity: 0;
   padding: 0 4px;
 }
@@ -1047,7 +1073,6 @@ body.col-resizing * {
   border-radius: 999px;
   font-size: 12px;
   padding: 1px 10px;
-  cursor: pointer;
   opacity: 0;
 }
 .insert-gap:hover .insert-btn,
@@ -1081,7 +1106,6 @@ body.col-resizing * {
   flex-shrink: 0;
 }
 .spread-canvas.thumb {
-  cursor: pointer;
 }
 .page {
   position: absolute;
@@ -1214,7 +1238,6 @@ body.col-resizing * {
   background: var(--guide-hit);
 }
 .line-guide.fixed {
-  cursor: pointer;
 }
 .line-guide.fixed::after {
   background: var(--guide);
@@ -1288,7 +1311,6 @@ body.col-resizing * {
   background: none;
   color: inherit;
   text-align: left;
-  cursor: pointer;
 }
 .section-toggle:hover {
   background: var(--fill);
@@ -1362,7 +1384,6 @@ body.col-resizing * {
   font: 500 10.5px var(--mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  cursor: pointer;
   white-space: nowrap;
 }
 .drop-toggle:hover {
@@ -1582,7 +1603,6 @@ body.col-resizing * {
   color: var(--muted);
   font: inherit;
   font-size: 13px;
-  cursor: pointer;
 }
 .tabs button:hover {
   color: inherit;
@@ -1750,7 +1770,6 @@ body.col-resizing * {
 .segmented label {
   padding: 4px 14px;
   border-radius: 4px;
-  cursor: pointer;
   font-size: 13px;
 }
 .segmented label:hover {
@@ -1919,7 +1938,6 @@ body.col-resizing * {
   flex-direction: column;
   gap: 4px;
   font-size: 11px;
-  cursor: pointer;
 }
 .slide-pick .page-canvas {
   outline: 1px solid var(--border);
@@ -2054,7 +2072,6 @@ body.col-resizing * {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.85);
   color: #000;
-  cursor: pointer;
 }
 .ig-arrow .lucide {
   width: 16px;
@@ -2180,7 +2197,7 @@ body.col-resizing * {
 .preview .btn {
   background: rgba(255, 255, 255, 0.07);
 }
-.preview .btn:hover:not(:disabled) {
+.preview .btn:active:not(:disabled) {
   background: rgba(255, 255, 255, 0.12);
 }
 .preview-stage {
@@ -2237,7 +2254,6 @@ body.col-resizing * {
   background: rgba(255, 255, 255, 0.08);
   color: #eee;
   font-size: 30px;
-  cursor: pointer;
 }
 .turn:disabled {
   opacity: 0.2;
@@ -2271,7 +2287,7 @@ body.col-resizing * {
 .quick-look .hint {
   color: #8d8a83;
 }
-.quick-look .btn:hover:not(:disabled) {
+.quick-look .btn:active:not(:disabled) {
   background: rgba(255, 255, 255, 0.12);
 }
 .quick-look-head {
@@ -2467,7 +2483,6 @@ body.col-resizing * {
   color: var(--text);
   font: inherit;
   font-size: 12.5px;
-  cursor: pointer;
 }
 .export-destination:hover:not(:disabled) {
   background: var(--fill);
@@ -2566,7 +2581,6 @@ body.col-resizing * {
   border-radius: 999px;
   background: var(--fill);
   box-shadow: inset 0 0 0 1px var(--border);
-  cursor: pointer;
 }
 .columns-slider::-webkit-slider-thumb {
   appearance: none;

@@ -22,6 +22,19 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       sandboxed).
 - [ ] In `server/`: `npm test`, `npm run typecheck`, `npm run lint`, `npm run format:check`.
 
+## Desktop feel
+
+- [ ] The arrow cursor everywhere, including buttons, tabs, swatches, and sidebar cells; the
+      hand only on links that open a web page (About's links, "Layout" in the empty desk).
+      Text fields show the text cursor.
+- [ ] Double-clicking or dragging across labels, headings, or the toolbar selects nothing;
+      text fields, the caption, and About's version can still be selected.
+- [ ] Photos and thumbnails don't drag out as image files.
+- [ ] Filled buttons (Layout, Preview, Export, Apply) don't change on hover and darken while
+      pressed; ghost and icon buttons light on hover.
+- [ ] Icons are drawn with a fine (1.5) stroke. Scrollbars are thin and in the theme's colors
+      in browsers that draw their own.
+
 ## Startup and projects
 
 - [ ] Phone or touch-only browser: "Sequence is made for a computer" appears; Continue anyway
