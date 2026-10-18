@@ -24,11 +24,11 @@ import { TERMS, UNITS, type Units } from '../units';
 import { projectStore, useProject } from '../store';
 import type { Arrangement, BorderGuide, Project, Placement } from '../types';
 import { isMac, isTyping } from '../input';
-import { openPhotoMenu, toggleGuides, ui } from '../ui';
+import { openPhotoMenu, toggleGuides, ui, type DeskView } from '../ui';
 import { shortcutLabel } from '../commands';
 import { useElementSize, usePageStatus, useWindowEvent } from '../hooks';
 import { nextSoftPhoto, placedSoft, resolutionNote } from '../resolution';
-import { clamp } from '../deskZoom';
+import { wheeled } from '../deskZoom';
 import { NumberField } from './NumberField';
 import { Pager } from './Pager';
 import { SoftBadge } from './SoftBadge';
@@ -43,6 +43,8 @@ const PAGER_PX = 52;
 /** How far the stage zooms in and out from fitting the spread. */
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 8;
+/** The stage fitting the spread, unpanned. */
+const FITTED: DeskView = { zoom: 1, panX: 0, panY: 0 };
 const CORNERS: Corner[] = ['nw', 'ne', 'sw', 'se'];
 
 export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
@@ -78,28 +80,22 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
 
   // The stage's zoom (1 fits the spread) and pan, in screen pixels: pinch or ⌘-scroll zooms
   // around the pointer, scroll pans, as on the desk. Another spread starts fitted again.
-  const [view, setView] = useState({ zoom: 1, x: 0, y: 0 });
+  const [view, setView] = useState<DeskView>(FITTED);
   const [viewFor, setViewFor] = useState(spreadId);
   if (viewFor !== spreadId) {
     setViewFor(spreadId);
-    setView({ zoom: 1, x: 0, y: 0 });
+    setView(FITTED);
   }
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      if (e.ctrlKey || e.metaKey) {
-        const r = el.getBoundingClientRect();
-        // The pointer, from where the spread's center sits before panning.
-        const sx = e.clientX - r.left - r.width / 2;
-        const sy = e.clientY - r.top - (r.height - PAGER_PX) / 2;
-        setView((v) => {
-          const zoom = clamp(v.zoom * Math.exp(-e.deltaY * 0.01), MIN_ZOOM, MAX_ZOOM);
-          const f = zoom / v.zoom;
-          return { zoom, x: sx - (sx - v.x) * f, y: sy - (sy - v.y) * f };
-        });
-      } else setView((v) => ({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY }));
+      const r = el.getBoundingClientRect();
+      // The pointer, from where the spread's center sits before panning.
+      const sx = e.clientX - r.left - r.width / 2;
+      const sy = e.clientY - r.top - (r.height - PAGER_PX) / 2;
+      setView((v) => wheeled(v, e, sx, sy, MIN_ZOOM, MAX_ZOOM));
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
@@ -296,7 +292,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
           <div className="editor-stage" ref={stageRef}>
             <div
               className="stage-center"
-              style={{ bottom: PAGER_PX, transform: `translate(${view.x}px, ${view.y}px)` }}
+              style={{ bottom: PAGER_PX, transform: `translate(${view.panX}px, ${view.panY}px)` }}
             >
               <SpreadCanvas
                 spread={spread}

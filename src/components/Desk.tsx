@@ -7,8 +7,8 @@ import { intersects, resizeRect, type Corner, type Rect } from '../geometry';
 import { projectStore, useProject } from '../store';
 import type { Placement } from '../types';
 import { TERMS } from '../units';
-import { DESK_PPI, deskGeometry, MAX_ZOOM, MIN_ZOOM } from '../deskGeometry';
-import { clamp, zoomAround } from '../deskZoom';
+import { DESK_PPI, deskGeometry } from '../deskGeometry';
+import { wheeled } from '../deskZoom';
 import { isTyping } from '../input';
 import { deskCovered, goToPage, openPhotoMenu, openQuickLook, ui } from '../ui';
 import { OwnPageSettings } from './PageSettings';
@@ -66,14 +66,8 @@ export function Desk() {
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const v = ui.get().view;
-      if (e.ctrlKey || e.metaKey) {
-        const r = el.getBoundingClientRect();
-        const zoom = clamp(v.zoom * Math.exp(-e.deltaY * 0.01), MIN_ZOOM, MAX_ZOOM);
-        zoomAround(zoom, e.clientX - r.left, e.clientY - r.top);
-      } else {
-        ui.set({ view: { ...v, panX: v.panX - e.deltaX, panY: v.panY - e.deltaY } });
-      }
+      const r = el.getBoundingClientRect();
+      ui.set({ view: wheeled(ui.get().view, e, e.clientX - r.left, e.clientY - r.top) });
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
