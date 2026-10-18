@@ -3,7 +3,7 @@
 export const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 /** The platform's shortcut modifier: Cmd on macOS, Ctrl elsewhere. */
-export function hasMod(e: KeyboardEvent): boolean {
+export function hasMod(e: Pick<KeyboardEvent, 'metaKey' | 'ctrlKey'>): boolean {
   return isMac ? e.metaKey : e.ctrlKey;
 }
 

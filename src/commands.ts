@@ -19,7 +19,7 @@ import { deskCovered, goToPage, openModal, toggleGuides, toggleModal, toggleSide
  * (The spread editor, preview, and open menus handle their own keys while they're open.)
  */
 
-interface Binding {
+export interface Binding {
   /** `KeyboardEvent.key`, lowercased. */
   key: string;
   /** Requires the platform modifier (⌘ on macOS, Ctrl elsewhere). */
@@ -251,7 +251,8 @@ export function shortcutAccelerator(id: CommandId): string | undefined {
     .join('+');
 }
 
-function matches(b: Binding, e: KeyboardEvent): boolean {
+/** Whether a key event is a binding's combination (exported for tests). */
+export function matches(b: Binding, e: Pick<KeyboardEvent, 'key' | 'code' | 'altKey' | 'shiftKey' | 'metaKey' | 'ctrlKey'>): boolean {
   if (e.altKey !== Boolean(b.alt)) return false;
   const key = b.alt && /^Digit\d$/.test(e.code) ? e.code.slice(5) : e.key.toLowerCase();
   if (key !== b.key) return false;
