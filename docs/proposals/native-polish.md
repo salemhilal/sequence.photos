@@ -142,6 +142,12 @@ Export already have a stage and an inspector, so they fit this shape. Settings s
 dialog on the web and becomes its own window in the Mac app (a second Tauri window), as
 Mac apps do.
 
+With the pages, hover hints move to the status bar: they show there at once, in place of
+the desk's counts. The floating tooltip stays only on icon-only buttons (still after a
+delay, since the status bar is far from the toolbar's icons); text buttons and controls
+whose labels say what they do stop popping one up. Long hints need a shorter status-bar
+form. Settings and Preview still cover the status bar, so their icon buttons keep tooltips.
+
 ### 10. Icons
 
 Lucide at `strokeWidth={1.5}` and 15–16 px, set once (a wrapper or CSS
