@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { platform } from '#platform';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
-import { folioLabel } from '../actions';
 import { useElementSize, useWindowEvent } from '../hooks';
 import { useProject } from '../store';
 import { goToPage, ui } from '../ui';
@@ -107,24 +106,25 @@ export function Preview() {
     true,
   );
 
-  if (!spread) return null;
-  // A book shows both pages' width (single pages on their side); a frame, its own.
-  const across = sheetExtent(sheet).width;
-  const scale = Math.min((stage.w - 40) / across, (stage.h - 40) / sheet.pageH);
-  const label = folioLabel(index, spreads.length, sheet.arrangement);
   const terms = TERMS[sheet.arrangement];
+  // How to use it, in the status bar (fullscreen hides that, so its header says it instead).
+  const keys = `← → to ${terms.turn}`;
+  useEffect(() => {
+    ui.set({ pageStatus: `${keys} · F for fullscreen` });
+    return () => ui.set({ pageStatus: null });
+  }, [keys]);
+
+  if (!spread) return null;
+  // A book shows both pages' width (single pages on their side); a frame, its own. Room
+  // below for the count.
+  const across = sheetExtent(sheet).width;
+  const scale = Math.min((stage.w - 40) / across, (stage.h - 72) / sheet.pageH);
 
   return (
     <div className={`preview${idle ? ' idle' : ''}${presenting ? ' presenting' : ''}`} ref={rootRef}>
       <header className="preview-head">
-        <span className="folio">{label}</span>
-        <span className="muted data">
-          {index + 1} / {spreads.length}
-        </span>
         <span className="spacer" />
-        <span className="hint">
-          ← → to {terms.turn} · {presenting ? 'Esc to leave fullscreen' : 'F for fullscreen'}
-        </span>
+        {presenting && <span className="hint">{keys} · Esc to leave fullscreen</span>}
         {presenting && busy !== null && <span className="muted">{busy}</span>}
         <button className="btn" onClick={() => present(!presenting)}>
           {presenting ? <Minimize2 /> : <Maximize2 />}
@@ -140,8 +140,14 @@ export function Preview() {
         >
           <ChevronLeft />
         </button>
-        <div key={spread.id} className={`preview-spread turn-${dir}`}>
-          <SpreadCanvas spread={spread} sheet={sheet} scale={scale} clip className="book" />
+        {/* The count, just below the spread. */}
+        <div className="preview-column">
+          <div key={spread.id} className={`preview-spread turn-${dir}`}>
+            <SpreadCanvas spread={spread} sheet={sheet} scale={scale} clip className="book" />
+          </div>
+          <span className="preview-count data">
+            {index + 1} / {spreads.length}
+          </span>
         </div>
         <button
           className="turn next"

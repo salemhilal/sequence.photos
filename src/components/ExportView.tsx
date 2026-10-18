@@ -16,6 +16,7 @@ import { savePdf } from '../pdf';
 import { estimateImagesSize, exportImages, imageNames } from '../rasterExport';
 import { outputPages, pageRegion, type OutputPage } from '../renderPlan';
 import { showPhoto, softPhotos, softSentence } from '../resolution';
+import { sheetExtent } from '../geometry';
 import { sheetOf } from '../spreads';
 import { useProject } from '../store';
 import type { Project, Sheet } from '../types';
@@ -426,8 +427,10 @@ function OutputPreview({
   if (!page) return <div className="editor-stage" ref={stageRef} />;
   const region = pageRegion(page, sheet);
   const pad = sheet.pageW * PAD_SHARE;
-  // Room below for the controls.
-  const scale = Math.max(0, Math.min(stage.w / (region.w + 2 * pad), (stage.h - 56) / (region.h + 2 * pad)));
+  // A book's spreads all show at one scale, a whole spread's: a single first or last page
+  // comes out the size of a page beside it, not enlarged to fill. Room below for the controls.
+  const across = page.part === 'spread' ? sheetExtent(sheet).width : region.w;
+  const scale = Math.max(0, Math.min(stage.w / (across + 2 * pad), (stage.h - 56) / (region.h + 2 * pad)));
   const units = UNITS[sheet.unit];
   const size =
     pxPerUnit !== null

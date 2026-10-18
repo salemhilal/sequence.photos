@@ -167,8 +167,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 ## Pages
 
 - [ ] The toolbar's switcher, centered: Desk · Layout · Preview · Export, the current one
-      lighter. **[Mac]** ⌘1–⌘4 and View → Desk, Layout, Preview, Export go to each; the
-      document's name sits after the traffic lights. Esc goes back to the desk from any page
+      lighter. ⌥⌘1–⌥⌘4 go to each (Ctrl+Alt elsewhere); **[Mac]** so do View → Desk,
+      Layout, Preview, Export, and the document's name sits after the traffic lights. Esc goes back to the desk from any page
       (not from a text field's Escape, a dialog over the page, or while posting).
 - [ ] Each page fills the space under the toolbar, flush (no backdrop, corners, or ×); the
       status bar stays. The sidebar toggle shows only on the desk; zoom only on the desk.
@@ -180,8 +180,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Hints
 
-- [ ] Hovering anything with a hint shows it at once in the status bar's left side, in the
-      sans face, in place of the counts; moving off brings the counts back.
+- [ ] Hovering anything with a hint shows it at once in the status bar's left side, set like
+      the rest of the status bar, in place of the counts; moving off brings the counts back.
 - [ ] Icon-only buttons (Settings, the sidebar toggle, ×, pencil, add) also float their hint
       beside them after a second's hover, then at once for the next for a second after.
       Text buttons and labeled controls float nothing.
@@ -254,20 +254,24 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Preview
 
-- [ ] The switcher or ⌘P (⌘3 in the Mac app): opens on the spread being edited, else the
-      first. The toolbar and status bar stay; the controls don't fade.
+- [ ] The switcher, ⌥⌘3, or ⌘P: opens on the spread being edited, else the first. The
+      toolbar and status bar stay; the controls don't fade. The status bar says "← → to turn
+      pages · F for fullscreen"; "2 / 4" sits just below the spread (no folio).
 - [ ] →, Space, PageDown forward; ←, PageUp back; Home and End; arrow buttons disable at the
       ends. **[S]** Single pages on their side, with gutter shading.
-- [ ] Folio and "n / total" are right.
 - [ ] Fullscreen (or F) covers the window, toolbar and status bar too: the browser goes
       fullscreen on the web, the window in the Mac app. Its controls fade after the pointer
       rests about a second; moving or Tab brings them back; they stay while hovered and
-      while saving. Exit fullscreen, F, or Esc leaves it (Esc again goes to the desk);
+      while saving. Its header says "← → to turn pages · Esc to leave fullscreen".
+      **[Mac]** `npm run test:app` checks F, Esc, the green button, and Esc again. Exit fullscreen, F, or Esc leaves it (Esc again goes to the desk);
       leaving fullscreen with the browser's own Esc or the green button does too.
 
 ## Exports and project files
 
-- [ ] File → Export… (⌘⇧E), or the switcher, opens the Export page: a preview of what it makes on the left,
+- [ ] Layout's and Export's stages are the desk's color (change it in the desk's menu).
+- [ ] **[S]** Export's preview, one per spread: the first and last single pages show at the
+      size of a page in a spread, not enlarged to fill.
+- [ ] File → Export… (⌘⇧E), the switcher, or ⌥⌘4 opens the Export page: a preview of what it makes on the left,
       with ‹ › and ←/→, and the destination and its options on the right. Destinations: PDF,
       Images, InDesign, and Instagram. It opens on PDF for inches, Instagram for
       1080 px frames, else Images; then on the last one picked, with the last choices

@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getImage } from '../../db';
 import { projectLoaded } from '../../persistence';
 import { tourSeenPref } from '../../prefs';
@@ -186,6 +187,8 @@ async function scenarios(dir: string): Promise<void> {
     projectStore.undo();
   }
 
+  await fullscreen();
+
   // New Project starts fresh history, so undo can't bring back a project without its file.
   await newProject();
   check('New Project starts an untitled, empty project', title()?.name === 'Untitled' && photoCount() === 0);
@@ -194,6 +197,42 @@ async function scenarios(dir: string): Promise<void> {
   // Leave the state the relaunch expects: Fixture B, with an unsaved change.
   await openPath(b);
   setWidth(9);
+}
+
+const press = (key: string) => window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+
+/**
+ * Preview's fullscreen: F makes the window fullscreen (macOS animates it, so each step
+ * waits), Esc leaves it and then the page, and leaving it some other way (the green
+ * button, here the window's own call) stops presenting.
+ */
+async function fullscreen(): Promise<void> {
+  const win = getCurrentWindow();
+  const isFull = () => win.isFullscreen();
+  const settle = async (want: boolean) => {
+    for (const start = Date.now(); (await isFull()) !== want && Date.now() - start < 5000;) await pause(100);
+    // The resize that reports it can come a moment after.
+    await pause(300);
+  };
+  ui.set({ page: 'preview' });
+  await pause(200);
+  press('f');
+  await settle(true);
+  check('Preview: F makes the window fullscreen', (await isFull()) && ui.get().presenting);
+  press('Escape');
+  await settle(false);
+  check(
+    'Preview: Esc leaves fullscreen, staying on the page',
+    !(await isFull()) && !ui.get().presenting && ui.get().page === 'preview',
+  );
+  press('f');
+  await settle(true);
+  await win.setFullscreen(false);
+  await settle(false);
+  check('Preview: leaving fullscreen another way stops presenting', !ui.get().presenting);
+  press('Escape');
+  await pause(200);
+  check('Preview: Esc again goes back to the desk', ui.get().page === 'desk');
 }
 
 /** The second run, after quitting: the last project should come back as it was left. */

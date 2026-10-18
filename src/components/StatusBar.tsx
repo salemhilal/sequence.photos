@@ -43,7 +43,7 @@ export function StatusBar() {
 
   return (
     <footer className="statusbar">
-      {text && <span className={`status-text${hint ? ' hint' : ''}`}>{text}</span>}
+      {text && <span className="status-text">{text}</span>}
       {importing ? (
         <span className="status-progress" role="status">
           {importing.label ?? 'Adding photos'}

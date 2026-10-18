@@ -15,7 +15,8 @@
   /* A raised control's edge: a hairline and a soft drop in light, a top highlight in dark. */
   --raise: 0 0 0 0.5px rgba(0, 0, 0, 0.18), 0 1px 1px rgba(0, 0, 0, 0.06);
   --desk: #787876;
-  --stage: #787876;
+  /* The Layout and Export stages: the desk's color, whatever it's set to. */
+  --stage: var(--desk);
   --text: #1c1c1c;
   --muted: #6b6b6b;
   --hover: rgba(0, 0, 0, 0.06);
@@ -908,11 +909,6 @@ button {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-/* A hint is words, not data: in the sans face, a little brighter. */
-.status-text.hint {
-  color: var(--text);
-  font-family: var(--font);
 }
 .status-progress {
   display: flex;
@@ -2413,6 +2409,15 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
 }
 .preview .btn:active:not(:disabled) {
   background: rgba(255, 255, 255, 0.12);
+}
+.preview-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.preview-count {
+  color: #8d8a83;
 }
 .preview-stage {
   position: relative;

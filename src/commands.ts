@@ -26,6 +26,8 @@ interface Binding {
   mod?: boolean;
   /** `true` requires Shift, `false` (default) forbids it, `'any'` allows either. */
   shift?: boolean | 'any';
+  /** Requires Option (Alt). Digits then match by key position, since Option changes the character. */
+  alt?: boolean;
 }
 
 interface Command {
@@ -84,9 +86,9 @@ const withSelection = (fn: (ids: PhotoId[]) => void) => (): void | false => {
   fn(ids);
 };
 
-/** ⌘1–⌘4 for the pages, in the Mac app only: browsers keep those keys for their tabs. */
+/** ⌥⌘1–⌥⌘4 for the pages (⌘1–⌘4 alone are the browser's, for its tabs). */
 function pageKey(key: string): Binding[] {
-  return platform.kind === 'macos' ? [{ key, mod: true }] : [];
+  return [{ key, mod: true, alt: true }];
 }
 
 export const commands = {
@@ -243,13 +245,15 @@ export function shortcutAccelerator(id: CommandId): string | undefined {
   const b = (commands[id] as Command).bindings[0];
   // Menus would take plain keys (Delete, Escape, arrows) away from text fields.
   if (!b?.mod) return undefined;
-  return ['CmdOrCtrl', b.shift === true && 'Shift', b.key.length === 1 ? b.key.toUpperCase() : b.key]
+  return ['CmdOrCtrl', b.alt && 'Alt', b.shift === true && 'Shift', b.key.length === 1 ? b.key.toUpperCase() : b.key]
     .filter(Boolean)
     .join('+');
 }
 
 function matches(b: Binding, e: KeyboardEvent): boolean {
-  if (e.key.toLowerCase() !== b.key || e.altKey) return false;
+  if (e.altKey !== Boolean(b.alt)) return false;
+  const key = b.alt && /^Digit\d$/.test(e.code) ? e.code.slice(5) : e.key.toLowerCase();
+  if (key !== b.key) return false;
   if (hasMod(e) !== Boolean(b.mod)) return false;
   return b.shift === 'any' || e.shiftKey === Boolean(b.shift);
 }
@@ -262,8 +266,8 @@ export function shortcutLabel(id: CommandId): string {
   if (!b) return '';
   const key = b.key.length === 1 ? b.key.toUpperCase() : b.key;
   if (!b.mod) return key;
-  if (isMac) return `${b.shift === true ? '⇧' : ''}⌘${key}`;
-  return `${MOD_LABEL}${b.shift === true ? 'Shift+' : ''}${key}`;
+  if (isMac) return `${b.alt ? '⌥' : ''}${b.shift === true ? '⇧' : ''}⌘${key}`;
+  return `${MOD_LABEL}${b.alt ? 'Alt+' : ''}${b.shift === true ? 'Shift+' : ''}${key}`;
 }
 
 /** How long the modifier must be held before shortcut hints appear. */
