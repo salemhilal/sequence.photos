@@ -90,8 +90,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       Delete ("Deleted … Undo to bring it back").
 - [ ] With every photo placed: "Every photo is placed".
 - [ ] The status bar along the window's foot: what's selected ("2 photos selected", "1
-      spread selected" / "1 frame selected"), else "4 on desk · 2 placed"; the page ("10 × 8 in ·
-      300 dpi", or "1080 × 1350 px"), and while it's under way, progress: "Adding photos 3/12"
+      spread selected" / "1 frame selected"), else "4 on desk, 2 placed"; and while it's under way,
+      progress: "Adding photos 3/12"
       with a bar (opening a project, making test images, too) or an export's "Rendering …".
       The toolbar shows no status of its own.
 

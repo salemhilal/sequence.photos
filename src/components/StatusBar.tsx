@@ -3,7 +3,7 @@ import { fitDesk } from '../actions';
 import { allSpreads, sheetOf } from '../spreads';
 import { useProject } from '../store';
 import { ui } from '../ui';
-import { TERMS, UNITS } from '../units';
+import { TERMS } from '../units';
 import { zoomBy, zoomTo } from '../deskZoom';
 import { Menu } from './Menu';
 
@@ -12,7 +12,8 @@ const ZOOM_LEVELS = [0.5, 1, 2];
 
 /**
  * The window's bottom line, as in desktop apps: what's selected (or, with nothing selected,
- * how many photos are on the desk and placed), the page size, progress (adding photos, exporting), and the desk's zoom.
+ * how many photos are on the desk and placed), progress (adding photos, exporting), and
+ * the desk's zoom.
  */
 export function StatusBar() {
   const { project } = useProject();
@@ -24,7 +25,6 @@ export function StatusBar() {
   // The zoom is the desk's; the editor over it has its own view.
   const onDesk = ui.use((s) => s.editingSpreadId === null);
   const sheet = sheetOf(project);
-  const units = UNITS[sheet.unit];
   const placed = new Set(allSpreads(project).flatMap((s) => s.items.map((i) => i.photoId))).size;
   const terms = TERMS[sheet.arrangement];
   const counts =
@@ -32,15 +32,11 @@ export function StatusBar() {
       ? `${photosSelected} ${photosSelected === 1 ? 'photo' : 'photos'} selected`
       : spreadsSelected > 0
         ? `${spreadsSelected} ${spreadsSelected === 1 ? terms.spread : terms.spreads} selected`
-        : `${project.pile.length} on desk · ${placed} placed`;
+        : `${project.pile.length} on desk, ${placed} placed`;
 
   return (
     <footer className="statusbar">
       <span>{counts}</span>
-      <span>
-        {units.format(sheet.pageW)} × {units.format(sheet.pageH)} {units.suffix}
-        {sheet.unit === 'in' && ` · ${sheet.pxPerUnit} dpi`}
-      </span>
       {importing ? (
         <span className="status-progress" role="status">
           {importing.label ?? 'Adding photos'}
