@@ -1,29 +1,18 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  closeModal,
-  goToPage,
-  lockModal,
-  modalLocked,
-  openModal,
-  setPageGuard,
-  toggleModal,
-  togglePage,
-  ui,
-} from './ui';
+import { closeModal, goToPage, lockPage, pageLocked, openModal, setPageGuard, toggleModal, ui } from './ui';
 
 afterEach(() => {
-  lockModal(false);
+  lockPage(false);
   setPageGuard(null);
   ui.set({ page: 'desk', modal: null });
 });
 
-describe('lockModal', () => {
+describe('lockPage', () => {
   it('keeps the page and dialog as they are while locked', () => {
     goToPage('export');
-    lockModal(true);
-    expect(modalLocked()).toBe(true);
+    lockPage(true);
+    expect(pageLocked()).toBe(true);
     goToPage('desk');
-    togglePage('export');
     expect(ui.get().page).toBe('export');
     openModal('settings');
     toggleModal('about');
@@ -32,10 +21,10 @@ describe('lockModal', () => {
 
   it('lets pages change and dialogs open and close again once unlocked', () => {
     goToPage('export');
-    lockModal(true);
-    lockModal(false);
-    expect(modalLocked()).toBe(false);
-    togglePage('export');
+    lockPage(true);
+    lockPage(false);
+    expect(pageLocked()).toBe(false);
+    goToPage('desk');
     expect(ui.get().page).toBe('desk');
     openModal('settings');
     expect(ui.get().modal).toBe('settings');

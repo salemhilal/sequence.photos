@@ -21,7 +21,7 @@ import { firstNonEmpty, outputPages, slideKey } from '../renderPlan';
 import { sheetOf } from '../spreads';
 import { useProject } from '../store';
 import type { Sheet } from '../types';
-import { goToPage, lockModal } from '../ui';
+import { goToPage, lockPage } from '../ui';
 import { Segmented } from './Segmented';
 import { PageCanvas } from './SpreadCanvas';
 
@@ -117,8 +117,8 @@ export function InstagramPost({ head }: Props) {
   // Posting can't be hidden midway: nothing else can close or replace this pane meanwhile.
   // Should it go anyway (the app closing), the post is cancelled.
   useEffect(() => {
-    lockModal(posting);
-    return () => lockModal(false);
+    lockPage(posting);
+    return () => lockPage(false);
   }, [posting]);
   useEffect(() => () => abort.current?.abort(), []);
   // Cancelling stops before anything is published.

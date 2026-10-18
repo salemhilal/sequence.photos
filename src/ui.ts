@@ -176,19 +176,19 @@ ui.subscribe(() => {
  * While set, the page and dialog stay as they are: nothing (shortcuts, menus, a new project)
  * can leave or replace them. For work that mustn't be hidden midway, like posting to Instagram.
  */
-let modalLock = false;
+let pageLock = false;
 
-export function lockModal(locked: boolean): void {
-  modalLock = locked;
+export function lockPage(locked: boolean): void {
+  pageLock = locked;
 }
 
-export function modalLocked(): boolean {
-  return modalLock;
+export function pageLocked(): boolean {
+  return pageLock;
 }
 
 /**
- * Asked before the page is left, by whatever leaves it (Esc, the switcher, a shortcut, a
- * menu): resolves whether to go on. Layout sets it while page changes wait for Apply.
+ * Asked before the page is left, by whatever leaves it (the switcher, a shortcut, a menu):
+ * resolves whether to go on. Layout sets it while page changes wait for Apply.
  */
 let pageGuard: (() => Promise<boolean>) | null = null;
 
@@ -198,28 +198,23 @@ export function setPageGuard(guard: (() => Promise<boolean>) | null): void {
 
 /** Go to a page (closing any dialog), once the page being left agrees. */
 export function goToPage(page: Page): void {
-  if (modalLock || page === ui.get().page) return;
+  if (pageLock || page === ui.get().page) return;
   if (!pageGuard) return ui.set({ page, modal: null });
   void pageGuard().then((ok) => {
-    if (ok && !modalLock) ui.set({ page, modal: null });
+    if (ok && !pageLock) ui.set({ page, modal: null });
   });
 }
 
-/** Go to a page, or back to the desk from it. */
-export function togglePage(page: Page): void {
-  goToPage(ui.get().page === page ? 'desk' : page);
-}
-
 export function openModal(modal: Modal): void {
-  if (!modalLock) ui.set({ modal });
+  if (!pageLock) ui.set({ modal });
 }
 
 export function closeModal(): void {
-  if (!modalLock) ui.set({ modal: null });
+  if (!pageLock) ui.set({ modal: null });
 }
 
 export function toggleModal(modal: Modal): void {
-  if (!modalLock) ui.set({ modal: ui.get().modal === modal ? null : modal });
+  if (!pageLock) ui.set({ modal: ui.get().modal === modal ? null : modal });
 }
 
 /**

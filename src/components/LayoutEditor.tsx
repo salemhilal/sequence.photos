@@ -105,7 +105,7 @@ export function LayoutEditor() {
     if (answer === 'discard') setDraft(draftOf(projectStore.project));
     return answer === 'apply' || answer === 'discard';
   };
-  // Leaving Layout (Esc, the switcher, a shortcut or menu) asks first.
+  // Leaving Layout (the switcher, a shortcut or menu) asks first.
   useEffect(() => {
     if (!pending) return;
     setPageGuard(settlePage);
