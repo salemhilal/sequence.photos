@@ -133,8 +133,12 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Spread and frame editor
 
-- [ ] The header shows the folio (frame 3 is "03") and the size in in **[in]** or px **[px]**.
-- [ ] ‹ › (and ←/→ with nothing selected) go back and forth, disabled at the ends.
+- [ ] The header has only the guides toggle and ×; the status bar says "Shift: free resize ·
+      Option: no snapping · Arrows nudge".
+- [ ] Under the spread, ‹ "2 / 4" › (its place among all spreads or frames, not its page
+      numbers); ‹ › (and ←/→ with nothing selected) go back and forth, disabled at the ends.
+- [ ] Pinch or ⌘-scroll zooms around the pointer; scrolling pans; dragging, snapping, and
+      dropping still land where they should when zoomed. Another spread opens fitted again.
 - [ ] Click a strip photo: **[S]** placed on the first empty page, else the right; **[F]**
       placed on the frame.
 - [ ] Drag a strip photo onto the page or frame: placed. Drag a placed photo onto the strip:
@@ -152,11 +156,16 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Keep proportions on: changing W changes H and back; off: independent.
 - [ ] After clicking Keep proportions (or any checkbox), Escape, Delete, and the arrows still
       work.
-- [ ] Quality: "N ppi" **[in]**, and "N ppi · below 300 dpi · may look soft" in orange when
-      the photo has fewer pixels than the page's dpi asks for (lowering the dpi in Layout clears
-      it); "Enlarged N% · may look soft" only when enlarged **[px]**. A photo stretched with
-      Shift counts its thinner side.
-- [ ] A photo below the page's resolution has a warning mark on it in the editor, and its
+- [ ] Quality, as a sentence in the default face: "This image is N dpi." **[in]**, and "This
+      image is 171 dpi, which is below the project's 300 dpi." in orange when the photo has
+      fewer pixels than the page's dpi asks for (lowering the dpi in Layout clears it); "This
+      image is enlarged N%." only when enlarged **[px]**. A photo stretched with Shift counts
+      its thinner side.
+- [ ] At the panel's foot: Return to desk (with a photo selected), and above it Go to next
+      error, which selects the next photo below the resolution in book order (opening its
+      spread; after the last, the first). It's gone when there's no other.
+- [ ] A photo below the page's resolution has a warning mark (amber, on a rounded square) on
+      it in the editor, and its
       spread's row in the sidebar has one, titled "N photos below 300 dpi" (or "enlarged").
 - [ ] Center on page/frame and Fit page/frame work. "Fit … guide" buttons, largest first;
       hovering one makes its box glow; per-edge guides show a range and a tooltip.

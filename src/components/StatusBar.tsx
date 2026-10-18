@@ -12,9 +12,9 @@ const ZOOM_LEVELS = [0.5, 1, 2];
 
 /**
  * The window's bottom line, as in desktop apps: the hint for what's under the pointer, or
- * else, on the desk, what's selected (with nothing selected, how many photos are on the desk
- * and placed), and on another page, what it says (its size, how to flip through); then
- * progress (adding photos, exporting), and the desk's zoom.
+ * else what the open page or the spread editor says (its size, how to use it), or else, on
+ * the desk, what's selected (with nothing selected, how many photos are on the desk and
+ * placed); then progress (adding photos, exporting), and the desk's zoom.
  */
 export function StatusBar() {
   const { project } = useProject();
@@ -31,9 +31,10 @@ export function StatusBar() {
   const sheet = sheetOf(project);
   const placed = new Set(allSpreads(project).flatMap((s) => s.items.map((i) => i.photoId))).size;
   const terms = TERMS[sheet.arrangement];
+  // A hint, else what the open page or editor says, else the desk's selection or counts.
   const text = hint
     ? hint
-    : page !== 'desk'
+    : pageStatus || page !== 'desk'
       ? pageStatus
       : photosSelected > 0
         ? `${photosSelected} ${photosSelected === 1 ? 'photo' : 'photos'} selected`

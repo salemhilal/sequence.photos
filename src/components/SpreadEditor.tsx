@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, X } from 'lucide-react';
-import { bump, dropPhotos, folioLabel, putInPile, putOnPage, raise } from '../actions';
+import { bump, dropPhotos, putInPile, putOnPage, raise } from '../actions';
 import { clearGhost, startDrag, trackGhost } from '../drag';
 import {
   borderBox,
@@ -27,7 +27,8 @@ import { isMac, isTyping } from '../input';
 import { openPhotoMenu, toggleGuides, ui } from '../ui';
 import { shortcutLabel } from '../commands';
 import { useElementSize, useWindowEvent } from '../hooks';
-import { placedSoft, resolutionNote } from '../resolution';
+import { nextSoftPhoto, placedSoft, resolutionNote } from '../resolution';
+import { clamp } from '../deskZoom';
 import { NumberField } from './NumberField';
 import { SoftBadge } from './SoftBadge';
 import { PhotoImg } from './PhotoImg';
@@ -36,6 +37,11 @@ import { SpreadCanvas } from './SpreadCanvas';
 /** Room around the spread, as a share of its width (0.75 in on a 10 in book page). */
 const PAD_SHARE = 0.075;
 const SNAP_PX = 8;
+/** Room under the spread for its pager. */
+const PAGER_PX = 52;
+/** How far the stage zooms in and out from fitting the spread. */
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 8;
 const CORNERS: Corner[] = ['nw', 'ne', 'sw', 'se'];
 
 export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
@@ -69,7 +75,42 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const glow = hovered && hovered.photoId === selected ? hovered.box : null;
   const guidesHidden = ui.use((s) => s.guidesHidden);
 
-  const scale = Math.min(stage.w / (across + 2 * PAD), stage.h / (sheet.pageH + 2 * PAD));
+  // The stage's zoom (1 fits the spread) and pan, in screen pixels: pinch or ⌘-scroll zooms
+  // around the pointer, scroll pans, as on the desk. Another spread starts fitted again.
+  const [view, setView] = useState({ zoom: 1, x: 0, y: 0 });
+  const [viewFor, setViewFor] = useState(spreadId);
+  if (viewFor !== spreadId) {
+    setViewFor(spreadId);
+    setView({ zoom: 1, x: 0, y: 0 });
+  }
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        const r = el.getBoundingClientRect();
+        // The pointer, from where the spread's center sits before panning.
+        const sx = e.clientX - r.left - r.width / 2;
+        const sy = e.clientY - r.top - (r.height - PAGER_PX) / 2;
+        setView((v) => {
+          const zoom = clamp(v.zoom * Math.exp(-e.deltaY * 0.01), MIN_ZOOM, MAX_ZOOM);
+          const f = zoom / v.zoom;
+          return { zoom, x: sx - (sx - v.x) * f, y: sy - (sy - v.y) * f };
+        });
+      } else setView((v) => ({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY }));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [stageRef]);
+  const fitScale = Math.min(stage.w / (across + 2 * PAD), (stage.h - PAGER_PX) / (sheet.pageH + 2 * PAD));
+  const scale = fitScale * view.zoom;
+
+  // How to move and resize, in the status bar.
+  useEffect(() => {
+    ui.set({ pageStatus: `Shift: free resize · ${isMac ? 'Option' : 'Alt'}: no snapping · Arrows nudge` });
+    return () => ui.set({ pageStatus: null });
+  }, []);
 
   const selectedItem = spread?.items.find((i) => i.photoId === selected) ?? null;
 
@@ -231,37 +272,14 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
     const photo = project.photos[p.photoId];
     return (photo && resolutionNote(photo, p, sheet)?.text) ?? '';
   };
-  const label = folioLabel(index, book.length, sheet.arrangement);
   const noun = TERMS[sheet.arrangement].spread;
+  const nextError = nextSoftPhoto(project, selected);
 
   return (
     <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
       <div className="modal editor" data-modal>
         <header className="modal-head">
-          <button
-            className="btn ghost icon"
-            aria-label={`Previous ${noun}`}
-            disabled={index === 0}
-            onClick={() => go(-1)}
-          >
-            <ChevronLeft />
-          </button>
-          <div className="modal-title">
-            <span className="folio">{label}</span>
-            <span className="muted data">
-              {units.format(sheet.pageW)} × {units.format(sheet.pageH)} {units.suffix}
-            </span>
-          </div>
-          <button
-            className="btn ghost icon"
-            aria-label={`Next ${noun}`}
-            disabled={index === book.length - 1}
-            onClick={() => go(1)}
-          >
-            <ChevronRight />
-          </button>
           <span className="spacer" />
-          <span className="hint">Shift: free resize · {isMac ? 'Option' : 'Alt'}: no snapping · Arrows nudge</span>
           <button
             className={`btn ghost icon${guidesHidden ? ' active' : ''}`}
             aria-label={guidesHidden ? 'Show guides' : 'Hide guides'}
@@ -277,7 +295,10 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
         </header>
         <div className="editor-body">
           <div className="editor-stage" ref={stageRef}>
-            <div className="stage-center">
+            <div
+              className="stage-center"
+              style={{ bottom: PAGER_PX, transform: `translate(${view.x}px, ${view.y}px)` }}
+            >
               <SpreadCanvas
                 spread={spread}
                 sheet={sheet}
@@ -303,6 +324,28 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
                 onPointerDown={() => setSelected(null)}
               />
             </div>
+            {/* Which spread of how many, below it, as elsewhere. */}
+            <div className="page-preview-controls editor-pager">
+              <button
+                className="btn ghost icon"
+                aria-label={`Previous ${noun}`}
+                disabled={index === 0}
+                onClick={() => go(-1)}
+              >
+                <ChevronLeft />
+              </button>
+              <span className="muted data">
+                {index + 1} / {book.length}
+              </span>
+              <button
+                className="btn ghost icon"
+                aria-label={`Next ${noun}`}
+                disabled={index === book.length - 1}
+                onClick={() => go(1)}
+              >
+                <ChevronRight />
+              </button>
+            </div>
           </div>
           <Inspector
             project={project}
@@ -310,6 +353,9 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
             onChange={(patch, key) => selectedItem && updateItem(selectedItem.photoId, patch, key)}
             onToPile={() => selectedItem && toPile(selectedItem.photoId)}
             onHoverBox={(box) => setHovered(box && selectedItem ? { photoId: selectedItem.photoId, box } : null)}
+            onNextError={
+              nextError && (() => ui.set({ editingSpreadId: nextError.spreadId, editorSelect: nextError.photoId }))
+            }
           />
         </div>
         <PileStrip spreadId={spreadId} />
@@ -344,20 +390,50 @@ interface InspectorProps {
   onToPile: () => void;
   /** A Fit button's box while it's hovered (null when it isn't), to show which guide it means. */
   onHoverBox: (box: Rect | null) => void;
+  /** Select the next photo below the page's resolution (on any spread); null if there's no other. */
+  onNextError: (() => void) | null;
 }
 
-function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorProps) {
+function Inspector(props: InspectorProps) {
+  const { item, onToPile, onNextError } = props;
+  return (
+    <aside className="inspector editor-inspector">
+      <div className="inspector-body">
+        {item ? (
+          <PhotoSettings {...props} item={item} />
+        ) : (
+          <>
+            <p className="muted">Select a photo to adjust its position and size.</p>
+            <p className="muted">
+              Drag photos in from the desk strip below, or drag one onto the strip to send it back.
+            </p>
+          </>
+        )}
+      </div>
+      {/* Kept at the panel's foot, as Layout's Apply is. */}
+      {(onNextError || item) && (
+        <div className="inspector-foot">
+          {onNextError && (
+            <button className="btn" onClick={onNextError}>
+              Go to next error
+            </button>
+          )}
+          {item && (
+            <button className="btn" onClick={onToPile}>
+              Return to desk
+            </button>
+          )}
+        </div>
+      )}
+    </aside>
+  );
+}
+
+/** A selected photo's position, size, resolution, and fitting. */
+function PhotoSettings({ project, item, onChange, onHoverBox }: InspectorProps & { item: Placement }) {
   const [lock, setLock] = useState(true);
   const sheet = sheetOf(project);
   const units = UNITS[sheet.unit];
-  if (!item) {
-    return (
-      <aside className="inspector">
-        <p className="muted">Select a photo to adjust its position and size.</p>
-        <p className="muted">Drag photos in from the desk strip below, or drag one onto the strip to send it back.</p>
-      </aside>
-    );
-  }
   const side = sideAt(sheet, item.x + item.w / 2);
   const page = pageRect(side, sheet);
   const photo = project.photos[item.photoId];
@@ -373,7 +449,7 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
   const quality = photo ? resolutionNote(photo, item, sheet) : null;
 
   return (
-    <aside className="inspector">
+    <>
       <div className="inspector-name" title={photo?.name}>
         {photo?.name}
       </div>
@@ -415,12 +491,7 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
       <label className="check">
         <input type="checkbox" checked={lock} onChange={(e) => setLock(e.target.checked)} /> Keep proportions
       </label>
-      {quality && (
-        <div className={`small ${quality.soft ? 'warn' : 'muted'}`}>
-          <span className="data">{quality.text}</span>
-          {quality.soft && ' · may look soft'}
-        </div>
-      )}
+      {quality && <p className={`help${quality.soft ? ' warn' : ''}`}>{quality.text}</p>}
       <div className="inspector-actions">
         <button
           className="btn"
@@ -448,11 +519,8 @@ function Inspector({ project, item, onChange, onToPile, onHoverBox }: InspectorP
             {guideLabel(g, units)}
           </button>
         ))}
-        <button className="btn" onClick={onToPile}>
-          Return to desk
-        </button>
       </div>
-    </aside>
+    </>
   );
 }
 

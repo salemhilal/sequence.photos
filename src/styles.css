@@ -492,6 +492,11 @@ button {
   background: var(--control);
   box-shadow: var(--raise);
 }
+/* The toolbar's undo and redo: as tall as the pages' switcher buttons. */
+.toolbar .btn-joined .btn {
+  width: 24px;
+  height: 22px;
+}
 .btn-joined .btn {
   border-radius: 0;
 }
@@ -1595,6 +1600,36 @@ body.col-resizing * {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The spread editor's panel: its settings scroll; the buttons at its foot stay put. */
+.inspector.editor-inspector {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.inspector-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  overflow-y: auto;
+}
+.inspector-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+/* Which spread is open, under it. */
+.editor-stage .editor-pager {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+}
 .inspector-actions {
   display: flex;
   flex-direction: column;
@@ -2106,14 +2141,16 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--warn);
   box-shadow: var(--shadow);
 }
+/* The warning's own color, as its text; a heavier stroke so it reads at this size. */
 .soft-badge svg {
   width: 12px;
   height: 12px;
+  stroke-width: 2.25;
 }
 .item .soft-badge {
   position: absolute;

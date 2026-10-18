@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { toPhotoId } from './ids';
-import { coverage, isSoft, resolutionNote, softLabel, softPhotos, softSentence, showPhoto } from './resolution';
+import { coverage, isSoft, nextSoftPhoto, resolutionNote, softLabel, softPhotos, softSentence, showPhoto } from './resolution';
 import { allSpreads } from './spreads';
 import { emptyProject } from './store';
 import type { Project } from './types';
@@ -49,13 +49,16 @@ describe('resolutionNote', () => {
   const photo = { id: A, name: '', pxW: 1500, pxH: 1000 };
   const at = (w: number) => ({ photoId: A, x: 0, y: 0, w, h: (w * 2) / 3, z: 1 });
 
-  it('gives inches’ ppi, saying when it’s below the dpi', () => {
-    expect(resolutionNote(photo, at(6), sheet)).toEqual({ text: '250 ppi · below 300 dpi', soft: true });
-    expect(resolutionNote(photo, at(5), sheet)).toEqual({ text: '300 ppi', soft: false });
+  it('gives inches’ dpi in a sentence, saying when it’s below the project’s', () => {
+    expect(resolutionNote(photo, at(6), sheet)).toEqual({
+      text: 'This image is 250 dpi, which is below the project’s 300 dpi.',
+      soft: true,
+    });
+    expect(resolutionNote(photo, at(5), sheet)).toEqual({ text: 'This image is 300 dpi.', soft: false });
   });
 
   it('gives pixels’ enlargement, only when enlarged', () => {
-    expect(resolutionNote(photo, at(1800), pixels)).toEqual({ text: 'Enlarged 120%', soft: true });
+    expect(resolutionNote(photo, at(1800), pixels)).toEqual({ text: 'This image is enlarged 120%.', soft: true });
     expect(resolutionNote(photo, at(1500), pixels)).toBeNull();
   });
 
@@ -77,6 +80,23 @@ describe('softPhotos', () => {
 
   it('checks against an export’s resolution when given one', () => {
     expect(softPhotos(book(), 250)).toEqual([]);
+  });
+});
+
+describe('nextSoftPhoto', () => {
+  it('goes to the next soft photo in book order, around to the first, and to none without another', () => {
+    const p = book();
+    const second = allSpreads(p)[2]!.id;
+    // One soft photo: from nothing, it; from it, nothing else.
+    expect(nextSoftPhoto(p, null)).toEqual({ photoId: B, spreadId: second });
+    expect(nextSoftPhoto(p, B)).toBeNull();
+    // Enlarge A (on the spread before B's) so it's soft too: A, then B, then around to A.
+    const first = allSpreads(p)[1]!;
+    Object.assign(first.items[0]!, { w: 15, h: 10 });
+    expect(nextSoftPhoto(p, null)).toEqual({ photoId: A, spreadId: first.id });
+    expect(nextSoftPhoto(p, A)).toEqual({ photoId: B, spreadId: second });
+    expect(nextSoftPhoto(p, B)).toEqual({ photoId: A, spreadId: first.id });
+    expect(nextSoftPhoto({ ...p, page: { ...p.page, pxPerUnit: 100 } }, null)).toBeNull();
   });
 });
 
