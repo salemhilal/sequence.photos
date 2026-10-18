@@ -371,7 +371,7 @@ function guideLabel(g: BorderGuide, u: Units): string {
   return `Fit ${u.format(Math.min(...d))}–${u.format(Math.max(...d))} ${u.suffix} guide`;
 }
 
-/** A border guide's distances, for a tooltip: top, outside (left, in a frame), bottom, inside. */
+/** A border guide's distances, for its hint: top, outside (left, in a frame), bottom, inside. */
 function guideSummary(g: BorderGuide, u: Units, arrangement: Arrangement): string {
   const e = edgesOf(g);
   const { outside, inside } = TERMS[arrangement].edges;

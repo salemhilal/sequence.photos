@@ -183,9 +183,10 @@ export default function App() {
         {page === 'layout' && <LayoutEditor />}
         {page === 'preview' && <Preview />}
         {page === 'export' && <ExportView />}
+        {/* Over the page, as the spread editor is: the toolbar and status bar stay in view. */}
+        {modal === 'settings' && <SettingsDialog />}
       </main>
       <StatusBar />
-      {modal === 'settings' && <SettingsDialog />}
       {modal === 'about' && <AboutDialog />}
       <QuickLook />
       <Tour />

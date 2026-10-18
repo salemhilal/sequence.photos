@@ -10,11 +10,11 @@ import { applyDeskColor } from './deskColor';
 import { finishSignIn, takeReturnToExport } from './instagram';
 import { ui } from './ui';
 import { platform } from '#platform';
-import { installTooltips } from './tooltip';
+import { installHints } from './hints';
 
 applyDeskColor(ui.get().deskColor);
 platform.start();
-installTooltips();
+installHints();
 // Coming back from connecting Instagram: finish it, say how it went, and go back to Export
 // if that's where it started.
 platform.onSignInReturn((fragment) => {

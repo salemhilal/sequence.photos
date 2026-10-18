@@ -1841,26 +1841,6 @@ body.col-resizing * {
 .setting .inline {
   gap: 14px;
 }
-/* Tooltips: `data-tip` on an element shows its text (see tooltip.ts). */
-.tooltip {
-  position: fixed;
-  z-index: 100;
-  width: max-content;
-  max-width: 240px;
-  padding: 6px 9px;
-  border-radius: var(--radius-pop);
-  background: var(--text);
-  color: var(--bg);
-  box-shadow: var(--shadow);
-  font: 400 12px/1.4 var(--font);
-  letter-spacing: normal;
-  text-transform: none;
-  white-space: normal;
-  pointer-events: none;
-}
-.tooltip[hidden] {
-  display: none;
-}
 
 /* Confirmation */
 .app > .modal-backdrop:has(.confirm) {

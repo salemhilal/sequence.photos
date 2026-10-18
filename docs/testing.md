@@ -183,8 +183,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Leaving Layout with unapplied page changes asks Apply / Discard / Cancel, however it's
       left (switcher, ⌥⌘1, a menu); Cancel stays.
 - [ ] Settings or About over a page close when going to another page.
-- [ ] Alert marks (a photo below the resolution) say their note only in the status bar, with
-      no floating tip. No grab or help cursors over photos or marks: the arrow throughout.
+- [ ] No grab or help cursors over photos or marks: the arrow throughout.
 - [ ] A soft photo's "Show me" (Layout, Export) goes to the desk with it open in the editor.
 - [ ] The tour's Layout step shows the Layout page; its Preview step points at the switcher.
 
@@ -192,13 +191,10 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 - [ ] Hovering anything with a hint shows it at once in the status bar's left side, set like
       the rest of the status bar, in place of the counts; moving off brings the counts back.
-- [ ] Icon-only buttons (Settings, the sidebar toggle, ×, pencil, add) also float their hint
-      beside them after a second's hover, then at once for the next for a second after.
-      Text buttons, labeled controls, and things that aren't buttons (the sidebar's resize
-      edge, its column slider, a missing photo's mark, the editor strip's photos) float
-      nothing.
-- [ ] In Settings, About, and confirmations (over the status bar), hints float as before.
-- [ ] Tab to a control: its hint shows at once (floating too, for an icon button).
+      Nothing floats beside the pointer, anywhere.
+- [ ] Tab to a control: its hint shows at once in the status bar.
+- [ ] Settings opens over the page as the spread editor does: the toolbar and status bar stay
+      in view, and its hints (the desk swatches) show there.
 
 ## Layout
 
