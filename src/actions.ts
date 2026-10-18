@@ -452,12 +452,20 @@ export function spreadLabel(index: number, total: number, arrangement: Arrangeme
   return `${left}–${left + 1}`;
 }
 
+/** Said when the browser won't store photos at all, as in Safari's Private Browsing. */
+export const STORAGE_REFUSED =
+  'This browser won’t store photos here (as in a private window), so they couldn’t be added. Open Sequence in a regular window.';
+
 export async function importPhotos(files: File[]): Promise<void> {
   if (ui.get().importing) return;
   try {
-    const { photos, failed } = await importFiles(files, (done, total) => ui.set({ importing: { done, total } }));
+    const { photos, failed, storageRefused } = await importFiles(files, (done, total) =>
+      ui.set({ importing: { done, total } }),
+    );
     addPhotosToPile(photos);
-    if (failed.length) {
+    if (storageRefused) {
+      ui.set({ notice: STORAGE_REFUSED });
+    } else if (failed.length) {
       ui.set({
         notice: `Couldn't read ${failed.length} file${failed.length > 1 ? 's' : ''}: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '…' : ''}`,
       });

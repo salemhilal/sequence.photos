@@ -67,7 +67,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 - [ ] Add photos (⌘I or the button): progress in the status bar, then the photos at full size
       (sharp at 100% zoom), in rows of six below anything already on the desk, with the view
-      zoomed to fit them. An unreadable file: "Couldn't read N files".
+      zoomed to fit them. An unreadable file: "Couldn't read N files". In a private Safari window (where the browser won't store photos): "This browser won't store photos here…".
 - [ ] Drop image files from the Finder: "Drop to add photos", then they're added.
 - [ ] Drop a `.photo-sequence` file: "Drop to open project", then it opens after a confirm.
 - [ ] Paste an image copied in another app (⌘V): added as "Pasted image HH.MM.png".
