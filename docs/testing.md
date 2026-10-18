@@ -18,8 +18,16 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       Sequence's servers and a `sha256-` hash for the app page's inline script.
 - [ ] `npm run build:web-ui-for-app`, then `node scripts/check-app-bundle.mjs`: the Mac app's
       build has none of the website's pages.
+- [ ] `npm run test:e2e`: the web app's interaction tests pass in Chromium and WebKit (the
+      Mac app's engine): pages and their shortcuts, Esc staying on a page, Layout's
+      unapplied-changes prompt, Preview's fullscreen option, the status bar (counts, selection,
+      hints, page text, zoom), Settings (tabs, persisted toggles), shortcut badges, the spread
+      editor (pager, zoom and pan, strip, Go to next error, Return to desk), scrubbing number
+      fields, test images, and the private-window notice. CI runs them on every pull request.
+      Items below marked _(e2e)_ are among them; check the rest by hand.
 - [ ] `npm run test:app`: the Mac app end-to-end test passes (open, Save, Save As, relaunch,
-      sandboxed).
+      sandboxed, Preview's fullscreen, the Settings window and its sync with the main window).
+      CI runs it on pull requests that touch the Mac side, and before App Store uploads.
 - [ ] In `server/`: `npm test`, `npm run typecheck`, `npm run lint`, `npm run format:check`.
 
 ## Desktop feel
@@ -71,7 +79,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Drop image files from the Finder: "Drop to add photos", then they're added.
 - [ ] Drop a `.photo-sequence` file: "Drop to open project", then it opens after a confirm.
 - [ ] Paste an image copied in another app (⌘V): added as "Pasted image HH.MM.png".
-- [ ] Scroll or Space-drag pans; pinch or ⌘-scroll zooms around the cursor; the status bar's
+- [ ] _(e2e)_ Scroll or Space-drag pans; pinch or ⌘-scroll zooms around the cursor; the status bar's
       − and + zoom around the center; its percentage follows the zoom, and its menu has Show
       all photos, 50%, 100%, and 200%. The zoom controls hide while the editor is open.
 - [ ] Click selects; Shift- or ⌘-click adds or removes; drag on empty desk to marquee-select;
@@ -89,7 +97,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Right-click a photo: Quick Look, Copy image, Duplicate, Return to desk (placed photos),
       Delete ("Deleted … Undo to bring it back").
 - [ ] With every photo placed: "Every photo is placed".
-- [ ] The status bar along the window's foot: what's selected ("2 photos selected", "1
+- [ ] _(e2e)_ The status bar along the window's foot: what's selected ("2 photos selected", "1
       spread selected" / "1 frame selected"), else "4 on desk, 2 placed"; and while it's under way,
       progress: "Adding photos 3/12"
       with a bar (opening a project, making test images, too) or an export's "Rendering …".
@@ -135,9 +143,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 - [ ] The header has only the guides toggle and ×; the status bar says "Shift: free resize ·
       Option: no snapping · Arrows nudge".
-- [ ] Under the spread, ‹ "2 / 4" › (its place among all spreads or frames, not its page
+- [ ] _(e2e)_ Under the spread, ‹ "2 / 4" › (its place among all spreads or frames, not its page
       numbers); ‹ › (and ←/→ with nothing selected) go back and forth, disabled at the ends.
-- [ ] Pinch or ⌘-scroll zooms around the pointer; scrolling pans; dragging, snapping, and
+- [ ] _(e2e)_ Pinch or ⌘-scroll zooms around the pointer; scrolling pans; dragging, snapping, and
       dropping still land where they should when zoomed. Another spread opens fitted again.
 - [ ] Click a strip photo: **[S]** placed on the first empty page, else the right; **[F]**
       placed on the frame.
@@ -156,12 +164,12 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Keep proportions on: changing W changes H and back; off: independent.
 - [ ] After clicking Keep proportions (or any checkbox), Escape, Delete, and the arrows still
       work.
-- [ ] Quality, as a sentence in the default face: "This image is N dpi." **[in]**, and "This
+- [ ] _(e2e)_ Quality, as a sentence in the default face: "This image is N dpi." **[in]**, and "This
       image is 171 dpi, which is below the project's 300 dpi." in orange when the photo has
       fewer pixels than the page's dpi asks for (lowering the dpi in Layout clears it); "This
       image is enlarged N%." only when enlarged **[px]**. A photo stretched with Shift counts
       its thinner side.
-- [ ] At the panel's foot: Return to desk (with a photo selected), and above it Go to next
+- [ ] _(e2e)_ At the panel's foot: Return to desk (with a photo selected), and above it Go to next
       error, which selects the next photo below the resolution in book order (opening its
       spread; after the last, the first). It's gone when there's no other.
 - [ ] A photo below the page's resolution has a warning mark (amber, on a rounded square) on
@@ -175,12 +183,12 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Pages
 
-- [ ] The toolbar's switcher, centered: Desk · Layout · Preview · Export, the current one
+- [ ] _(e2e)_ The toolbar's switcher, centered: Desk · Layout · Preview · Export, the current one
       lighter. ⌥⌘1–⌥⌘4 go to each (Ctrl+Alt elsewhere); **[Mac]** so do View → Desk,
       Layout, Preview, Export, and the document's name sits after the traffic lights. Esc doesn't leave a page (pages aren't dismissed; the switcher changes them).
 - [ ] Each page fills the space under the toolbar, flush (no backdrop, corners, or ×); the
       status bar stays. The sidebar toggle shows only on the desk; zoom only on the desk.
-- [ ] Leaving Layout with unapplied page changes asks Apply / Discard / Cancel, however it's
+- [ ] _(e2e)_ Leaving Layout with unapplied page changes asks Apply / Discard / Cancel, however it's
       left (switcher, ⌥⌘1, a menu); Cancel stays.
 - [ ] Settings or About over a page close when going to another page.
 - [ ] No grab or help cursors over photos or marks: the arrow throughout.
@@ -189,11 +197,11 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Hints
 
-- [ ] Hovering anything with a hint shows it at once in the status bar's left side, set like
+- [ ] _(e2e)_ Hovering anything with a hint shows it at once in the status bar's left side, set like
       the rest of the status bar, in place of the counts; moving off brings the counts back.
       Nothing floats beside the pointer, anywhere.
 - [ ] Tab to a control: its hint shows at once in the status bar.
-- [ ] Settings opens over the page as the spread editor does: the toolbar and status bar stay
+- [ ] _(e2e)_ Settings opens over the page as the spread editor does: the toolbar and status bar stay
       in view, and its hints (the desk swatches) show there.
 
 ## Layout
@@ -218,7 +226,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] The tab's rows line up: labels (Pages, Unit, Preset, Size, Resolution, Content) in a
       column at the left, controls beside them. Fields are inset wells with the unit
       inside (W 10 in, 300 dpi), no spinner arrows.
-- [ ] Dragging left or right on a field's label or unit (W, H, in, dpi, a border guide's Top)
+- [ ] _(e2e)_ Dragging left or right on a field's label or unit (W, H, in, dpi, a border guide's Top)
       scrubs the value; Shift steps by ten, Option by a tenth; a click there still lets you
       type. The new-project card's fields apply when the drag ends.
 - [ ] **[S→F]** Frames, Apply: each page becomes a frame in book order (a photo across the
@@ -262,12 +270,12 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Preview
 
-- [ ] The switcher, ⌥⌘3, or ⌘P: opens on the spread being edited, else the first. The
+- [ ] _(e2e)_ The switcher, ⌥⌘3, or ⌘P: opens on the spread being edited, else the first. The
       toolbar and status bar stay; the controls don't fade. The status bar says "← → to turn
       pages · F for fullscreen"; "2 / 4" sits just below the spread (no folio).
 - [ ] →, Space, PageDown forward; ←, PageUp back; Home and End; arrow buttons disable at the
       ends. **[S]** Single pages on their side, with gutter shading.
-- [ ] Fullscreen (or F) covers the window, toolbar and status bar too: the browser goes
+- [ ] _(e2e)_ Fullscreen (or F) covers the window, toolbar and status bar too: the browser goes
       fullscreen on the web, the window in the Mac app. Its controls fade after the pointer
       rests about a second; moving or Tab brings them back; they stay while hovered and
       while saving. Its header says "← → to turn pages · Esc to leave fullscreen".
@@ -327,10 +335,10 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Settings
 
-- [ ] ⌘, opens on General: Theme, Desk color, Status bar (Show the status bar), and
+- [ ] _(e2e)_ ⌘, opens on General: Theme, Desk color, Status bar (Show the status bar), and
       Shortcuts (Show shortcuts while ⌘ is held). "Instagram & storage" ("Instagram" in the Mac
       app) has Instagram, and Storage on the website. Advanced shows Server and Test images.
-- [ ] Unchecking Show the status bar hides it (and its hints) at once; both settings survive
+- [ ] _(e2e)_ Unchecking Show the status bar hides it (and its hints) at once; both settings survive
       a reload.
 - [ ] **[Mac]** Settings (⌘, or the toolbar's gear) opens in a window of its own, titled
       Settings, not a dialog; asking again brings that one forward. ⌘W closes it. A line at its
@@ -422,7 +430,7 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 ## Shortcuts and hints
 
-- [ ] Hold ⌘ (Ctrl) for a moment: a badge below each button with a ⌘ shortcut, over
+- [ ] _(e2e)_ Hold ⌘ (Ctrl) for a moment: a badge below each button with a ⌘ shortcut, over
       everything (nothing covers them, the spread editor and Settings included): Undo, Redo,
       the four page buttons (⌥⌘1–⌥⌘4), the sidebar toggle, Settings, the editor's guides eye,
       and the empty desk's Add photos. A disabled button's badge is dimmed; releasing hides
