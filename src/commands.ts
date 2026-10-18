@@ -149,7 +149,8 @@ export const commands = {
     bindings: [{ key: ',', mod: true }],
     scope: 'app',
     inFields: true,
-    run: () => toggleModal('settings'),
+    // Its own window in the Mac app; a dialog on the website.
+    run: () => (platform.openSettings ? platform.openSettings() : toggleModal('settings')),
   },
   toggleSidebar: { bindings: [{ key: 'b', mod: true }], scope: 'app', inFields: true, run: toggleSidebar },
   undo: { title: 'Undo', bindings: [{ key: 'z', mod: true }], scope: 'app', run: () => projectStore.undo() },

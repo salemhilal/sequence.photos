@@ -107,6 +107,13 @@ function set(connection: InstagramConnection | null): void {
     // Not kept past this session.
   }
   notify();
+  platform.prefsChanged();
+}
+
+/** Load the connection again, changed in another window (the Mac app's Settings). */
+export function reloadInstagram(): void {
+  current = load();
+  notify();
 }
 
 // Another tab connected, disconnected, or refreshed: follow it, so this one never writes
@@ -291,6 +298,15 @@ export function parseSignInReturn(hash: string): SignInReturn | null {
     return { kind: 'error', error: known ?? 'exchange_failed', state };
   }
   return null;
+}
+
+/** Whether this window started a sign-in that hasn't come back (it holds what finishing it needs). */
+export function hasPendingSignIn(): boolean {
+  try {
+    return sessionStorage.getItem(PENDING_KEY) !== null;
+  } catch {
+    return false;
+  }
 }
 
 function takePending(): Pending | null {

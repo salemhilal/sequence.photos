@@ -1762,6 +1762,30 @@ body.col-resizing * {
 .settings {
   width: 460px;
 }
+/* The Mac app's Settings window: the same tabs and settings, filling the window. */
+.settings-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--panel);
+}
+.settings-window .settings-body {
+  flex: 1;
+  min-height: 0;
+}
+.settings-notice {
+  flex: none;
+  height: 24px;
+  margin: 0;
+  padding: 0 10px;
+  border-top: 1px solid var(--divider);
+  background: var(--bg);
+  color: var(--muted);
+  font: 11px/24px var(--mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .tabs {
   flex: none;
   display: flex;

@@ -332,6 +332,14 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       app) has Instagram, and Storage on the website. Advanced shows Server and Test images.
 - [ ] Unchecking Show the status bar hides it (and its hints) at once; both settings survive
       a reload.
+- [ ] **[Mac]** Settings (⌘, or the toolbar's gear) opens in a window of its own, titled
+      Settings, not a dialog; asking again brings that one forward. ⌘W closes it. A line at its
+      foot shows hints (a swatch's name). Changing the theme, desk color, status bar, or
+      shortcuts there changes the main window at once; so does connecting or disconnecting
+      Instagram. Advanced → Add test images adds them to the main window's desk.
+      `npm run test:app` checks it opens once and that a setting reaches the main window.
+- [ ] **[Mac]** Connecting Instagram from the Settings window: the browser opens; coming back
+      connects, shown in the Settings window (and Export in the main window).
 - [ ] Advanced → Test images: a count (1–50, 6 to start) and Add test images. It closes
       Settings, the status bar counts "Making test images", then "Adding photos", then it imports like Add photos: "Gradient 01.jpg"…
       on the desk, in film colors that blend cleanly (no gray middles), about 3000 × 2000 px

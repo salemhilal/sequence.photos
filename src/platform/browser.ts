@@ -61,6 +61,13 @@ export const platform: Platform = {
     finish(hash);
   },
 
+  // Other tabs see localStorage change on their own.
+  prefsChanged() {},
+
+  onPrefsChanged(reload) {
+    window.addEventListener('storage', reload);
+  },
+
   setFullscreen(on) {
     // Refused (an embedded page, say), it stays a full-window preview.
     if (on) void document.documentElement.requestFullscreen?.().catch(() => {});

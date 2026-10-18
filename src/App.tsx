@@ -39,7 +39,7 @@ import { usePersistence } from './persistence';
 import { tourSeenPref } from './prefs';
 import { startTour } from './tour';
 import { projectStore, useProject } from './store';
-import { openModal, toggleSidebar, ui } from './ui';
+import { toggleSidebar, ui } from './ui';
 import { takeOver } from './tabLock';
 import { checkForUpdate, reloadToUpdate } from './update';
 import { findSpread } from './spreads';
@@ -168,7 +168,7 @@ export default function App() {
         <button
           className="btn ghost icon"
           aria-label="Settings"
-          onClick={() => openModal('settings')}
+          onClick={() => runCommand('settings')}
           data-tip={`Settings (${shortcutLabel('settings')})`}
           data-shortcut={shortcutLabel('settings')}
         >

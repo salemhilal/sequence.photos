@@ -276,16 +276,33 @@ export function openPhotoMenu(
   ui.set({ contextMenu: { kind: 'photo', x: e.clientX, y: e.clientY, photoId } });
 }
 
+/** Told when a setting is saved, to tell the app's other windows (see main.tsx). */
+let saved: () => void = () => {};
+export function onSettingSaved(tell: () => void): void {
+  saved = tell;
+}
+
+/** Load the settings again, changed in another window or tab. */
+export function reloadSettings(): void {
+  const theme = themePref.load();
+  const deskColor = deskColorPref.load();
+  ui.set({ theme, deskColor, statusBar: statusBarPref.load(), shortcutBadges: shortcutBadgesPref.load() });
+  applyTheme(theme);
+  applyDeskColor(deskColor);
+}
+
 export function setTheme(theme: ThemePref): void {
   ui.set({ theme });
   applyTheme(theme);
   themePref.save(theme);
+  saved();
 }
 
 export function setDeskColor(color: string): void {
   ui.set({ deskColor: color });
   applyDeskColor(color);
   deskColorPref.save(color);
+  saved();
 }
 
 /** Set the sidebar width; `persist` saves it (at the end of a resize drag). */
@@ -297,11 +314,13 @@ export function setSidebarWidth(width: number, persist: boolean): void {
 export function setStatusBar(shown: boolean): void {
   ui.set({ statusBar: shown });
   statusBarPref.save(shown);
+  saved();
 }
 
 export function setShortcutBadges(shown: boolean): void {
   ui.set({ shortcutBadges: shown, hints: false });
   shortcutBadgesPref.save(shown);
+  saved();
 }
 
 export function toggleSidebar(): void {

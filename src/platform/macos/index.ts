@@ -1,9 +1,11 @@
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { emit, emitTo, listen } from '@tauri-apps/api/event';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { ui } from '../../ui';
-import type { Platform } from '../types';
+import { setStatusBar, ui } from '../../ui';
+import { isSettingsWindow } from '../../windowKind';
+import type { MainRequest, Platform } from '../types';
 import { chooseSaveLocation, writeFile } from './files';
 
 // Documents and the menu bar build on the shared modules (projects, commands), which
@@ -24,6 +26,11 @@ function suggestedName(filename: string): string {
   return `${named}${filename.slice(filename.lastIndexOf('.'))}`;
 }
 
+/** The Settings window's label, and the events between the app's windows. */
+const SETTINGS = 'settings';
+const PREFS_CHANGED = 'prefs-changed';
+const MAIN_REQUEST = 'main-request';
+
 /**
  * The Mac app. Projects are documents: saved to .photo-sequence files, which open with
  * a double-click (see ./documents.ts). There's a menu bar (./menu.ts), and files are
@@ -33,11 +40,19 @@ export const platform: Platform = {
   kind: 'macos',
 
   start() {
-    // Room for the traffic lights in the toolbar, which is also the title bar.
-    document.documentElement.classList.add('native-app');
-    void import('./menu').then((m) => m.setUpMenu());
-    void loadDocuments().then((m) => m.startDocuments());
-    if (__E2E__) void import('./e2e').then((m) => m.runE2E());
+    // The Settings window is only Settings: no documents, menu bar, or toolbar of its own.
+    if (!isSettingsWindow) {
+      // Room for the traffic lights in the toolbar, which is also the title bar.
+      document.documentElement.classList.add('native-app');
+      void import('./menu').then((m) => m.setUpMenu());
+      void loadDocuments().then((m) => m.startDocuments());
+      if (__E2E__) void import('./e2e').then((m) => m.runE2E());
+    } else if (__E2E__) {
+      // The end-to-end test's hooks in the Settings window: say it's up, and change a setting
+      // when asked (to check the main window follows).
+      void listen('e2e-settings-act', () => setStatusBar(false));
+      void emit('e2e-settings-ready');
+    }
 
     // Links to websites and email open in the user's browser and mail app, not in the app's window.
     document.addEventListener('click', (e) => {
@@ -73,10 +88,12 @@ export const platform: Platform = {
     return 'browser';
   },
 
-  onSignInReturn(finish) {
+  onSignInReturn(finish, waiting) {
     // The app's links macOS has handed it (src-tauri/src/lib.rs), including one that came
-    // before the page was ready.
+    // before the page was ready. Taken only by the window waiting for one (the main window,
+    // or Settings), which holds what finishing it needs.
     const take = async () => {
+      if (waiting && !waiting()) return;
       for (const link of await invoke<string[]>('take_opened_links')) {
         const url = new URL(link);
         if (url.protocol === 'sequence-photos:' && url.host === 'instagram') finish(url.hash);
@@ -84,6 +101,39 @@ export const platform: Platform = {
     };
     void listen('opened-links', () => void take());
     void take();
+  },
+
+  prefsChanged() {
+    void emit(PREFS_CHANGED);
+  },
+
+  onPrefsChanged(reload) {
+    void listen(PREFS_CHANGED, reload);
+  },
+
+  openSettings() {
+    void (async () => {
+      const open = await WebviewWindow.getByLabel(SETTINGS);
+      if (open) return void open.setFocus();
+      new WebviewWindow(SETTINGS, {
+        url: 'app/index.html?window=settings',
+        title: 'Settings',
+        width: 560,
+        height: 540,
+        minWidth: 480,
+        minHeight: 360,
+        center: true,
+        dragDropEnabled: false,
+      });
+    })();
+  },
+
+  sendToMain(request) {
+    void emitTo('main', MAIN_REQUEST, request);
+  },
+
+  onMainRequest(handle) {
+    void listen<MainRequest>(MAIN_REQUEST, (e) => handle(e.payload));
   },
 
   setFullscreen(on) {

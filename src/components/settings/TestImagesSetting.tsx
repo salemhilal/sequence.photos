@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { importPhotos } from '../../actions';
-import { makeTestImages } from '../../testImages';
+import { platform } from '#platform';
+import { addTestImages } from '../../testImages';
 import { closeModal, ui } from '../../ui';
+import { isSettingsWindow } from '../../windowKind';
 
 const MAX = 50;
 
@@ -14,19 +15,13 @@ export function TestImagesSetting({ labelledBy }: { labelledBy: string }) {
   const working = ui.use((s) => s.importing !== null || s.busy !== null);
   const valid = Number.isInteger(count) && count >= 1 && count <= MAX;
 
-  const add = async () => {
+  const add = () => {
     if (!valid || working) return;
-    // Back to the desk, where the photos land and its toast shows the progress.
+    // The Settings window asks the main window, which holds the project.
+    if (isSettingsWindow) return platform.sendToMain?.({ kind: 'addTestImages', count });
+    // Back to the desk, where the photos land and the status bar shows the progress.
     closeModal();
-    const label = 'Making test images';
-    ui.set({ importing: { done: 0, total: count, label } });
-    let files: File[];
-    try {
-      files = await makeTestImages(count, (done) => ui.set({ importing: { done, total: count, label } }));
-    } finally {
-      ui.set({ importing: null });
-    }
-    await importPhotos(files);
+    void addTestImages(count);
   };
 
   return (
@@ -35,7 +30,7 @@ export function TestImagesSetting({ labelledBy }: { labelledBy: string }) {
         className="inline"
         onSubmit={(e) => {
           e.preventDefault();
-          void add();
+          add();
         }}
       >
         <input

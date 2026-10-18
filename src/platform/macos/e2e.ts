@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { emitTo, listen } from '@tauri-apps/api/event';
+import { getCurrentWindow, Window } from '@tauri-apps/api/window';
+import { platform } from './index';
 import { getImage } from '../../db';
 import { projectLoaded } from '../../persistence';
 import { tourSeenPref } from '../../prefs';
@@ -16,7 +18,7 @@ import { sheetOf } from '../../spreads';
 import { projectStore } from '../../store';
 import { endTour } from '../../tour';
 import type { Project } from '../../types';
-import { ui } from '../../ui';
+import { setStatusBar, ui } from '../../ui';
 import { readZip } from '../../zip';
 import { openPath, save, saveAs } from './documents';
 
@@ -188,6 +190,7 @@ async function scenarios(dir: string): Promise<void> {
   }
 
   await fullscreen();
+  await settingsWindow();
 
   // New Project starts fresh history, so undo can't bring back a project without its file.
   await newProject();
@@ -234,6 +237,36 @@ async function fullscreen(): Promise<void> {
   await pause(200);
   check('Preview: Esc again stays on the page', ui.get().page === 'preview');
   ui.set({ page: 'desk' });
+}
+
+/** Waits for an event from another window, up to `ms`; whether it came. */
+async function heard(event: string, ms = 10_000): Promise<boolean> {
+  let came = false;
+  const stop = await listen(event, () => (came = true));
+  for (const start = Date.now(); !came && Date.now() - start < ms;) await pause(100);
+  stop();
+  return came;
+}
+
+/**
+ * Settings opens in a window of its own (one, however often it's asked for), and a setting
+ * changed there reaches the main window.
+ */
+async function settingsWindow(): Promise<void> {
+  const ready = heard('e2e-settings-ready');
+  platform.openSettings?.();
+  check('Settings opens in its own window', await ready);
+  platform.openSettings?.();
+  await pause(500);
+  const settings = (await Window.getAll()).filter((w) => w.label === 'settings');
+  check('asking again opens no second Settings window', settings.length === 1, `${settings.length}`);
+  check('the status bar shows to start', ui.get().statusBar);
+  await emitTo('settings', 'e2e-settings-act');
+  for (const start = Date.now(); ui.get().statusBar && Date.now() - start < 5000;) await pause(100);
+  check('a setting changed in the Settings window reaches the main window', !ui.get().statusBar);
+  // As it was: shown, and the window closed.
+  setStatusBar(true);
+  await settings[0]?.close();
 }
 
 /** The second run, after quitting: the last project should come back as it was left. */

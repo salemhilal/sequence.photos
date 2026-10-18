@@ -31,16 +31,49 @@ const TABS: { value: Tab; label: string }[] = [
   { value: 'advanced', label: 'Advanced' },
 ];
 
-/** The app's own preferences; the project's page setup is in Layout. */
+/** The app's own preferences, as a dialog (the website); the project's page setup is in Layout. */
 export function SettingsDialog() {
-  const [tab, setTab] = useState<Tab>('general');
   return (
     <Dialog title="Settings" onClose={closeModal} className="settings">
+      <SettingsPanel />
+    </Dialog>
+  );
+}
+
+/** The app's own preferences in a window of their own (the Mac app's Settings window). */
+export function SettingsWindow() {
+  return (
+    <div className="settings-window">
+      <SettingsPanel />
+      <Notice />
+    </div>
+  );
+}
+
+/**
+ * The window's foot, as the main window's status bar: the hint for what's under the pointer
+ * (a swatch's name), or a word from finishing an Instagram sign-in started here.
+ */
+function Notice() {
+  const notice = ui.use((s) => s.notice);
+  const hint = ui.use((s) => s.hint);
+  return (
+    <p className="settings-notice" role="status">
+      {hint ?? notice}
+    </p>
+  );
+}
+
+/** Settings' tabs and what's on each. */
+function SettingsPanel() {
+  const [tab, setTab] = useState<Tab>('general');
+  return (
+    <>
       <Tabs id="settings" label="Settings" options={TABS} value={tab} onChange={setTab} />
       <div className="settings-body" id="settings-panel" role="tabpanel" aria-labelledby={`settings-tab-${tab}`}>
         {tab === 'general' ? <GeneralSettings /> : tab === 'accounts' ? <AccountSettings /> : <AdvancedSettings />}
       </div>
-    </Dialog>
+    </>
   );
 }
 

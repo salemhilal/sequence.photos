@@ -3,6 +3,8 @@
  * (saturated, warm and cool, never pure black or white), with a little grain. They're made
  * as JPEG files and added like any others (see importPhotos).
  */
+import { importPhotos } from './actions';
+import { ui } from './ui';
 
 /**
  * Colors like Kodachrome's: deep reds, cobalt and sky blues, golden yellows, with a few
@@ -125,4 +127,17 @@ export async function makeTestImages(count: number, onProgress: (done: number) =
     onProgress(i);
   }
   return files;
+}
+
+/** Make `count` test images and add them to the desk, with progress in the status bar. */
+export async function addTestImages(count: number): Promise<void> {
+  const label = 'Making test images';
+  ui.set({ importing: { done: 0, total: count, label } });
+  let files: File[];
+  try {
+    files = await makeTestImages(count, (done) => ui.set({ importing: { done, total: count, label } }));
+  } finally {
+    ui.set({ importing: null });
+  }
+  await importPhotos(files);
 }
