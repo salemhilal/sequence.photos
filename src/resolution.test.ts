@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { toPhotoId } from './ids';
-import { coverage, isSoft, nextSoftPhoto, resolutionNote, softLabel, softPhotos, softSentence, showPhoto } from './resolution';
+import {
+  coverage,
+  isSoft,
+  nextSoftPhoto,
+  resolutionNote,
+  softLabel,
+  softPhotos,
+  softSentence,
+  showPhoto,
+} from './resolution';
 import { allSpreads } from './spreads';
 import { emptyProject } from './store';
 import type { Project } from './types';
