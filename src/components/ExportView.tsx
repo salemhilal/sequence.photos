@@ -10,7 +10,7 @@ import {
   type ExportOptions,
   type Per,
 } from '../exportOptions';
-import { useElementSize, usePager } from '../hooks';
+import { useElementSize, usePageStatus, usePager } from '../hooks';
 import { exportIndesign } from '../indesign';
 import { savePdf } from '../pdf';
 import { estimateImagesSize, exportImages, imageNames } from '../rasterExport';
@@ -80,10 +80,7 @@ export function ExportView() {
   const status = `${units.format(sheet.pageW)} × ${units.format(sheet.pageH)} ${units.suffix} ${
     TERMS[sheet.arrangement].spreads
   }${sheet.unit === 'in' ? ` · ${sheet.pxPerUnit} dpi` : ''}`;
-  useEffect(() => {
-    ui.set({ pageStatus: status });
-  }, [status]);
-  useEffect(() => () => ui.set({ pageStatus: null }), []);
+  usePageStatus(status);
 
   const picker = (locked: boolean) => (
     <section>

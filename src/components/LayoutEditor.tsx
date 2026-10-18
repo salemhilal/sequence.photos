@@ -11,7 +11,7 @@ import {
   spreadLeft,
   spreadWidth,
 } from '../geometry';
-import { useElementSize, useWindowEvent } from '../hooks';
+import { useElementSize, usePageStatus, useWindowEvent } from '../hooks';
 import { isTyping } from '../input';
 import { newGuideId, toSpreadId, type GuideId } from '../ids';
 import { sheetOf } from '../spreads';
@@ -130,10 +130,7 @@ export function LayoutEditor() {
   const status = `${units.format(s.pageW)} × ${units.format(s.pageH)} ${units.suffix}${
     previewing ? `${pending ? ' · Preview of the changes' : ''} · ← → to flip through` : ''
   }`;
-  useEffect(() => {
-    ui.set({ pageStatus: status });
-  }, [status]);
-  useEffect(() => () => ui.set({ pageStatus: null }), []);
+  usePageStatus(status);
 
   // Where the spread sits in the stage: centered in the space beside the rulers.
   const scale = Math.min((stage.w - RULER) / (across + 2 * PAD), (stage.h - RULER) / (s.pageH + 2 * PAD));

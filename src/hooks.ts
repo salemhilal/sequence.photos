@@ -65,3 +65,14 @@ export function usePager(count: number): { at: number; go: (step: number) => voi
   });
   return { at, go };
 }
+
+/**
+ * What a page (or the spread editor over the desk) says in the status bar while it's open:
+ * its size, how to use it (see statusText).
+ */
+export function usePageStatus(text: string | null): void {
+  useEffect(() => {
+    ui.set({ pageStatus: text });
+  }, [text]);
+  useEffect(() => () => ui.set({ pageStatus: null }), []);
+}

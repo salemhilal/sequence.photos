@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { platform } from '#platform';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
-import { useElementSize, useWindowEvent } from '../hooks';
+import { useElementSize, usePageStatus, useWindowEvent } from '../hooks';
 import { useProject } from '../store';
 import { ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
@@ -109,10 +109,7 @@ export function Preview() {
   const terms = TERMS[sheet.arrangement];
   // How to use it, in the status bar (fullscreen hides that, so its header says it instead).
   const keys = `← → to ${terms.turn}`;
-  useEffect(() => {
-    ui.set({ pageStatus: `${keys} · F for fullscreen` });
-    return () => ui.set({ pageStatus: null });
-  }, [keys]);
+  usePageStatus(`${keys} · F for fullscreen`);
 
   if (!spread) return null;
   // A book shows both pages' width (single pages on their side); a frame, its own. Room

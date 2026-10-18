@@ -26,7 +26,7 @@ import type { Arrangement, BorderGuide, Project, Placement } from '../types';
 import { isMac, isTyping } from '../input';
 import { openPhotoMenu, toggleGuides, ui } from '../ui';
 import { shortcutLabel } from '../commands';
-import { useElementSize, useWindowEvent } from '../hooks';
+import { useElementSize, usePageStatus, useWindowEvent } from '../hooks';
 import { nextSoftPhoto, placedSoft, resolutionNote } from '../resolution';
 import { clamp } from '../deskZoom';
 import { NumberField } from './NumberField';
@@ -107,10 +107,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const scale = fitScale * view.zoom;
 
   // How to move and resize, in the status bar.
-  useEffect(() => {
-    ui.set({ pageStatus: `Shift: free resize · ${isMac ? 'Option' : 'Alt'}: no snapping · Arrows nudge` });
-    return () => ui.set({ pageStatus: null });
-  }, []);
+  usePageStatus(`Shift: free resize · ${isMac ? 'Option' : 'Alt'}: no snapping · Arrows nudge`);
 
   const selectedItem = spread?.items.find((i) => i.photoId === selected) ?? null;
 
