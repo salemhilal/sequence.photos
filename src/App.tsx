@@ -22,7 +22,8 @@ import { AboutDialog } from './components/AboutDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ContextMenus } from './components/ContextMenu';
 import { Desk } from './components/Desk';
-import { FileMenu } from './components/FileMenu';
+import { Menu } from './components/Menu';
+import { StatusBar } from './components/StatusBar';
 import { useCommandItem } from './components/commandItem';
 import { LayoutEditor } from './components/LayoutEditor';
 import { PhotoImg } from './components/PhotoImg';
@@ -64,7 +65,6 @@ export default function App() {
   const modal = ui.use((s) => s.modal);
   const importing = ui.use((s) => s.importing);
   const notice = ui.use((s) => s.notice);
-  const busy = ui.use((s) => s.busy);
   const sidebarOpen = ui.use((s) => s.sidebarOpen);
   const blocked = ui.use((s) => s.blocked);
   const updateReady = ui.use((s) => s.updateReady);
@@ -98,9 +98,6 @@ export default function App() {
   if (mobileNotice) return <MobileNotice onContinue={() => setMobileNotice(false)} />;
   if (!loaded) return <div className="loading">Opening your project…</div>;
 
-  // Only while something's under way; adding photos shows on the desk instead (ImportToast).
-  const status = importing ? null : busy;
-
   return (
     <div className="app">
       {/* In the Mac app this is also the window's title bar: drag it to move the window. */}
@@ -115,7 +112,8 @@ export default function App() {
         {platform.kind === 'browser' && (
           <>
             <span className="wordmark">SEQUENCE</span>
-            <FileMenu
+            <Menu
+              label="File"
               items={[
                 fileItem('newProject', <FilePlus />),
                 fileItem('importProject', <FolderOpen />),
@@ -150,9 +148,6 @@ export default function App() {
           </>
         )}
         <span className="spacer" data-tauri-drag-region />
-        <span className="status" data-tauri-drag-region>
-          {status}
-        </span>
         <button
           className="btn filled"
           data-tour="layout"
@@ -196,6 +191,7 @@ export default function App() {
         {sidebarOpen && <Sidebar />}
         {editing && <SpreadEditor spreadId={editing} />}
       </main>
+      <StatusBar />
       {modal === 'settings' && <SettingsDialog />}
       {modal === 'about' && <AboutDialog />}
       {modal === 'preview' && <Preview />}

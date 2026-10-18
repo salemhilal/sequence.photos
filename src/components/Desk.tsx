@@ -1,6 +1,5 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Minus, Plus, Scan } from 'lucide-react';
-import { bump, dropPhotos, fitDesk, importPhotos, raise } from '../actions';
+import { bump, dropPhotos, importPhotos, raise } from '../actions';
 import { addPhotos } from '../commands';
 import { isProjectFile, openProjectFile } from '../project';
 import { clearGhost, startDrag, trackGhost } from '../drag';
@@ -9,6 +8,7 @@ import { projectStore, useProject } from '../store';
 import type { Placement } from '../types';
 import { TERMS } from '../units';
 import { DESK_PPI, deskGeometry, MAX_ZOOM, MIN_ZOOM } from '../deskGeometry';
+import { clamp, zoomAround } from '../deskZoom';
 import { isTyping } from '../input';
 import { deskCovered, openPhotoMenu, openModal, openQuickLook, ui } from '../ui';
 import { OwnPageSettings } from './PageSettings';
@@ -296,7 +296,7 @@ export function Desk() {
       data-drop="desk"
       onPointerDown={onBackgroundDown}
       onContextMenu={(e) => {
-        if ((e.target as HTMLElement).closest('.zoom, .desk-empty .btn')) return;
+        if ((e.target as HTMLElement).closest('.desk-empty .btn')) return;
         e.preventDefault();
         ui.set({ contextMenu: { kind: 'desk', x: e.clientX, y: e.clientY } });
       }}
@@ -373,24 +373,6 @@ export function Desk() {
           <span>{fileDrop === 'project' ? 'Drop to open project' : 'Drop to add photos'}</span>
         </div>
       )}
-      <ZoomControls />
-      <ImportToast />
-    </div>
-  );
-}
-
-/** Progress while photos are added, in the desk's bottom-right corner (it follows the sidebar). */
-function ImportToast() {
-  const importing = ui.use((s) => s.importing);
-  if (!importing) return null;
-  const { done, total, label = 'Adding photos' } = importing;
-  return (
-    <div className="import-toast" role="status" onPointerDown={(e) => e.stopPropagation()}>
-      <span>
-        {label}
-        {total ? ` · ${done} of ${total}` : '…'}
-      </span>
-      <progress max={total || undefined} value={total ? done : undefined} aria-label={label} />
     </div>
   );
 }
@@ -457,37 +439,4 @@ function SelectionFrames({
       })}
     </div>
   );
-}
-
-function ZoomControls() {
-  const zoom = ui.use((s) => s.view.zoom);
-  const step = (f: number) => {
-    const el = document.querySelector('.desk');
-    const r = el?.getBoundingClientRect();
-    zoomAround(clamp(zoom * f, MIN_ZOOM, MAX_ZOOM), (r?.width ?? 0) / 2, (r?.height ?? 0) / 2);
-  };
-  return (
-    <div className="zoom" onPointerDown={(e) => e.stopPropagation()}>
-      <button className="btn icon" aria-label="Zoom out" onClick={() => step(1 / 1.25)}>
-        <Minus />
-      </button>
-      <button className="btn icon" onClick={fitDesk} data-tip="Show all photos" aria-label="Show all photos">
-        <Scan />
-      </button>
-      <button className="btn icon" aria-label="Zoom in" onClick={() => step(1.25)}>
-        <Plus />
-      </button>
-    </div>
-  );
-}
-
-/** Set zoom keeping the desk point under (sx, sy) — desk-relative pixels — fixed. */
-function zoomAround(zoom: number, sx: number, sy: number): void {
-  const v = ui.get().view;
-  const f = zoom / v.zoom;
-  ui.set({ view: { zoom, panX: sx - (sx - v.panX) * f, panY: sy - (sy - v.panY) * f } });
-}
-
-function clamp(n: number, lo: number, hi: number): number {
-  return Math.min(hi, Math.max(lo, n));
 }

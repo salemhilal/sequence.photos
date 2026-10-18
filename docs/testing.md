@@ -35,7 +35,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Surfaces step in neutral grays, in both themes: the toolbar and view headers darkest
       (lightest gray in light), panels a step up, buttons raised a step more; panels meet
       the desk and each other at a dark hairline, with no rounded corners or shadows.
-      Shadows only on things that float: menus, tooltips, toasts, dialogs, the zoom buttons.
+      Shadows only on things that float: menus, tooltips, toasts, and dialogs.
 - [ ] Amber only for selection (desk, sidebar, guides), the primary button (Export, Apply),
       active toggles (an amber icon), drop targets, progress, and links. The toolbar's
       wordmark is plain text; Preview is an ordinary button; selected segments, tabs, and
@@ -71,8 +71,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Drop image files from the Finder: "Drop to add photos", then they're added.
 - [ ] Drop a `.photo-sequence` file: "Drop to open project", then it opens after a confirm.
 - [ ] Paste an image copied in another app (⌘V): added as "Pasted image HH.MM.png".
-- [ ] Scroll or Space-drag pans; pinch or ⌘-scroll zooms around the cursor; the zoom buttons
-      zoom around the center; the middle one (no percentage) zooms to show every photo.
+- [ ] Scroll or Space-drag pans; pinch or ⌘-scroll zooms around the cursor; the status bar's
+      − and + zoom around the center; its percentage follows the zoom, and its menu has Show
+      all photos, 50%, 100%, and 200%. The zoom controls hide while the editor is open.
 - [ ] Click selects; Shift- or ⌘-click adds or removes; drag on empty desk to marquee-select;
       clicking empty desk clears.
 - [ ] Dragging selected photos moves them together and brings them forward; one ⌘Z undoes it.
@@ -87,11 +88,11 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       swatches change it at once.
 - [ ] Right-click a photo: Quick Look, Copy image, Duplicate, Return to desk (placed photos),
       Delete ("Deleted … Undo to bring it back").
-- [ ] With every photo placed: "Every photo is placed". The toolbar shows no counts, only
-      progress while exporting.
-- [ ] Adding photos (or opening a project) shows a toast with "Adding photos · 3 of 12" and a
-      bar in the desk's bottom-right corner, beside the sidebar; with the sidebar hidden, at
-      the window's corner. It goes when they're in.
+- [ ] With every photo placed: "Every photo is placed".
+- [ ] The status bar along the window's foot: "4 on desk · 2 placed", the page ("10 × 8 in ·
+      300 dpi", or "1080 × 1350 px"), and while it's under way, progress: "Adding photos 3/12"
+      with a bar (opening a project, making test images, too) or an export's "Rendering …".
+      The toolbar shows no status of its own.
 
 ## Sidebar (spreads and frames)
 
@@ -100,8 +101,10 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] One column to start; the header's slider sets 1–4 columns (as many as fit), and it
       survives a reload.
 - [ ] **[S≠F]** Labels: 01, 02–03, …, the last single page [S]; 01, 02, 03… [F].
-- [ ] **[S]** The first and last spreads have a locked grip ("The first and last pages stay in
-      place") and no delete button.
+- [ ] Each cell is its thumbnail in a dark well with its number below; no grip dots (the whole
+      cell drags). A selected cell is lighter, with a thin amber outline.
+- [ ] **[S]** The first and last spreads don't drag ("The first and last pages stay in place"
+      over their number) and have no delete button.
 - [ ] **[F]** A sequence's only frame can't be deleted or dragged; with more, any can.
 - [ ] **[S≠F]** The header's +: a spread before the back page [S]; a frame at the end [F].
 - [ ] Hover a gap and click "+ Add spread" / "+ Add frame": a new empty one appears there.
@@ -289,7 +292,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Tooltips show after a second's hover; moving straight to another shows its tip at once.
 - [ ] ⌘, opens on General; Advanced shows Server and Test images; tabs switch.
 - [ ] Advanced → Test images: a count (1–50, 6 to start) and Add test images. It closes
-      Settings, the desk's toast counts "Making test images", then "Adding photos", then it imports like Add photos: "Gradient 01.jpg"…
+      Settings, the status bar counts "Making test images", then "Adding photos", then it imports like Add photos: "Gradient 01.jpg"…
       on the desk, in film colors that blend cleanly (no gray middles), about 3000 × 2000 px
       (portrait, landscape, or square), with no ring in the glow or vignette. One undo removes them.
 - [ ] Appearance: System, Light, Dark apply at once and survive a reload.

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { GripVertical, Pencil, Plus, X } from 'lucide-react';
+import { Pencil, Plus, X } from 'lucide-react';
 import { deleteSpread, dropPhotos, folioLabel, insertSpread, isMovable, moveSpreads } from '../actions';
 import { clearGhost, sameTarget, startDrag, trackGhost } from '../drag';
 import { projectStore, useProject } from '../store';
@@ -30,15 +30,15 @@ function prefersReducedMotion(): boolean {
 /** How long the count stays after scrolling stops. */
 const COUNT_MS = 1000;
 /** Space between grid columns; the vertical insert gaps live here. */
-const GRID_GAP_X = 20;
-/** Horizontal padding inside each spread row. */
-const ROW_PAD_X = 8;
+const GRID_GAP_X = 12;
+/** Horizontal padding inside each spread cell: its own, and the thumbnail well's. */
+const ROW_PAD_X = 24;
 /** The desk keeps at least this much room when the sidebar is widened. */
 const MIN_DESK_WIDTH = 160;
 
 /** The list's side padding, as in styles.css: one column, and the grid (roomier). */
-const LIST_PAD_X = 16;
-const GRID_PAD_X = 24;
+const LIST_PAD_X = 10;
+const GRID_PAD_X = 10;
 
 /**
  * The columns asked for (the header's slider), as many as fit. Worked out from the list's
@@ -409,13 +409,22 @@ function SpreadRow({ spread, index, total, sheet, thumbW, soft, selected, draggi
       onPointerDown={(e) => onRowDown(e, spread)}
       onDoubleClick={open}
     >
+      {/* The thumbnail in a dark well; its number and actions below. The whole cell drags. */}
+      <div className="thumb-well">
+        <SpreadCanvas
+          spread={spread}
+          sheet={sheet}
+          scale={scale}
+          clip
+          droppable
+          renderItem={renderItem}
+          className="thumb"
+        />
+      </div>
       <div
-        className="spread-row-head"
+        className="spread-row-foot"
         data-tip={movable || spread.kind === 'frame' ? undefined : 'The first and last pages stay in place'}
       >
-        <span className={`grip${movable ? '' : ' locked'}`} aria-hidden="true">
-          <GripVertical />
-        </span>
         <span className="spread-label">{label}</span>
         {soft > 0 && <SoftBadge note={softLabel(soft, sheet)} />}
         <span className="spacer" />
@@ -440,15 +449,6 @@ function SpreadRow({ spread, index, total, sheet, thumbW, soft, selected, draggi
           </button>
         )}
       </div>
-      <SpreadCanvas
-        spread={spread}
-        sheet={sheet}
-        scale={scale}
-        clip
-        droppable
-        renderItem={renderItem}
-        className="thumb"
-      />
     </div>
   );
 }
