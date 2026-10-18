@@ -43,8 +43,9 @@ function iconOnly(el: Element): boolean {
   return true;
 }
 
-/** Whether an element's hint also floats beside it (see above). */
+/** Whether an element's hint also floats beside it (see above); `data-tip-quiet` keeps it to the status bar. */
 function floats(el: Element): boolean {
+  if (el.hasAttribute('data-tip-quiet')) return false;
   return iconOnly(el) || el.closest('[role="dialog"], [role="alertdialog"]') !== null;
 }
 

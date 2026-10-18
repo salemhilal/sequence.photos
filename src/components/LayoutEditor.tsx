@@ -18,7 +18,7 @@ import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { Arrangement, LineGuide, PageSide, Spread } from '../types';
 import { TERMS, UNITS } from '../units';
-import { ask, goToPage, setPageGuard, ui, type LayoutTab } from '../ui';
+import { ask, setPageGuard, ui, type LayoutTab } from '../ui';
 import { applyPageSetup, draftOf, sameDraft } from '../pageSetup';
 import { usePageDraft } from './pageDraft';
 import { PagePreview } from './PagePreview';
@@ -115,13 +115,11 @@ export function LayoutEditor() {
     if (t === 'page') return ui.set({ layoutTab: t });
     void settlePage().then((ok) => ok && ui.set({ layoutTab: t }));
   };
-  const close = () => goToPage('desk');
 
   useWindowEvent('keydown', (e) => {
     if (isTyping(e) || e.metaKey || e.ctrlKey || ui.get().confirm) return;
     if (e.key === 'Escape') {
       if (selected) setSelected(null);
-      else close();
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected) {
       e.preventDefault();
       remove(selected);

@@ -10,7 +10,7 @@ import {
   type ExportOptions,
   type Per,
 } from '../exportOptions';
-import { useElementSize, usePager, useWindowEvent } from '../hooks';
+import { useElementSize, usePager } from '../hooks';
 import { exportIndesign } from '../indesign';
 import { savePdf } from '../pdf';
 import { estimateImagesSize, exportImages, imageNames } from '../rasterExport';
@@ -85,12 +85,6 @@ export function ExportView() {
   }, [status]);
   useEffect(() => () => ui.set({ pageStatus: null }), []);
 
-  // Esc goes back to the desk (not while posting: goToPage waits for the lock).
-  useWindowEvent('keydown', (e) => {
-    if (e.key !== 'Escape' || e.target instanceof HTMLTextAreaElement) return;
-    if (ui.get().modal || ui.get().confirm) return;
-    goToPage('desk');
-  });
 
   const picker = (locked: boolean) => (
     <section>

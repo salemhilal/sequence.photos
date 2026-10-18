@@ -669,7 +669,6 @@ button {
 .item {
   position: absolute;
   box-shadow: var(--shadow);
-  cursor: grab;
   touch-action: none;
 }
 /*
@@ -751,7 +750,6 @@ button {
   color: var(--text);
   opacity: 0.7;
   pointer-events: auto;
-  cursor: help;
   /* On the desk, counter its zoom so the icon stays one size. */
   transform: scale(var(--inv, 1));
 }
@@ -1226,9 +1224,6 @@ body.col-resizing * {
 }
 .spread-items .item {
   box-shadow: none;
-}
-.thumb .item {
-  cursor: grab;
 }
 .offpage-mask {
   position: absolute;
@@ -1758,7 +1753,6 @@ body.col-resizing * {
 .strip-item {
   height: 56px;
   flex-shrink: 0;
-  cursor: grab;
   box-shadow: var(--shadow);
   touch-action: none;
 }
@@ -2157,7 +2151,6 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
   top: 4px;
   left: 4px;
   pointer-events: auto;
-  cursor: help;
 }
 
 /* One page of a spread, clipped to it (Instagram's slides). */
@@ -2424,11 +2417,13 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
  * player's, leaving just the book; they come back quickly when it moves.
  */
 .preview-head,
-.preview .turn {
+.preview .turn,
+.preview-count {
   transition: opacity 150ms ease-out;
 }
 .preview.presenting.idle .preview-head,
-.preview.presenting.idle .turn {
+.preview.presenting.idle .turn,
+.preview.presenting.idle .preview-count {
   opacity: 0;
   transition-duration: 600ms;
 }
@@ -2437,7 +2432,8 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
 }
 @media (prefers-reduced-motion: reduce) {
   .preview-head,
-  .preview .turn {
+  .preview .turn,
+  .preview-count {
     transition: none;
   }
 }

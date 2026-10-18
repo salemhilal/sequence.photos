@@ -148,8 +148,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Corner resize keeps proportions and snaps; Shift resizes freely; Alt doesn't snap.
       **[px]** Resizing stops at 10 px.
 - [ ] Arrows nudge 1/16 in (Shift ½ in) **[in]** or 1 px (Shift 10 px) **[px]**.
-- [ ] Delete returns the selected photo to the desk; Escape deselects, then closes; clicking
-      the backdrop closes.
+- [ ] Delete returns the selected photo to the desk; Escape deselects, then closes the editor;
+      clicking the backdrop closes it.
 - [ ] Hide guides (eye button or ⌘;): guides disappear; photos still snap to edges.
 - [ ] **[S≠F]** Inspector: "Left page"/"Right page" [S] or "Frame" [F]; X/Y/W/H in inches
       **[in]** or whole px **[px]**, X from that page's left edge.
@@ -177,13 +177,14 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 - [ ] The toolbar's switcher, centered: Desk · Layout · Preview · Export, the current one
       lighter. ⌥⌘1–⌥⌘4 go to each (Ctrl+Alt elsewhere); **[Mac]** so do View → Desk,
-      Layout, Preview, Export, and the document's name sits after the traffic lights. Esc goes back to the desk from any page
-      (not from a text field's Escape, a dialog over the page, or while posting).
+      Layout, Preview, Export, and the document's name sits after the traffic lights. Esc doesn't leave a page (pages aren't dismissed; the switcher changes them).
 - [ ] Each page fills the space under the toolbar, flush (no backdrop, corners, or ×); the
       status bar stays. The sidebar toggle shows only on the desk; zoom only on the desk.
 - [ ] Leaving Layout with unapplied page changes asks Apply / Discard / Cancel, however it's
-      left (switcher, Esc, ⌘1, a menu); Cancel stays.
+      left (switcher, ⌥⌘1, a menu); Cancel stays.
 - [ ] Settings or About over a page close when going to another page.
+- [ ] Alert marks (a photo below the resolution) say their note only in the status bar, with
+      no floating tip. No grab or help cursors over photos or marks: the arrow throughout.
 - [ ] A soft photo's "Show me" (Layout, Export) goes to the desk with it open in the editor.
 - [ ] The tour's Layout step shows the Layout page; its Preview step points at the switcher.
 
@@ -209,7 +210,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       The stage always shows the real spreads or frames, with ‹ › and ←/→ through them: as
       they are, or as they'd be after Apply once something changes, without the view
       switching. Revert drops the draft. The draft survives switching to Guides and back.
-      Closing Layout (Escape, ×, or outside it) with changes waiting asks: Cancel, Discard, or
+      Leaving Layout (the switcher, ⌥⌘ shortcuts, a menu) with changes waiting asks: Cancel, Discard, or
       Apply.
 - [ ] With changes waiting, the Guides tab asks first, as closing does: Cancel stays on Page,
       Discard drops them, Apply applies them, then Guides opens.
@@ -272,7 +273,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       fullscreen on the web, the window in the Mac app. Its controls fade after the pointer
       rests about a second; moving or Tab brings them back; they stay while hovered and
       while saving. Its header says "← → to turn pages · Esc to leave fullscreen".
-      **[Mac]** `npm run test:app` checks F, Esc, the green button, and Esc again. Exit fullscreen, F, or Esc leaves it (Esc again goes to the desk);
+      The count under the spread fades too. **[Mac]** `npm run test:app` checks F, Esc, the
+      green button, and Esc again. Exit fullscreen, F, or Esc leaves it (Esc again does nothing);
       leaving fullscreen with the browser's own Esc or the green button does too.
 
 ## Exports and project files

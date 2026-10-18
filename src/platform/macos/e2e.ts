@@ -203,8 +203,8 @@ const press = (key: string) => window.dispatchEvent(new KeyboardEvent('keydown',
 
 /**
  * Preview's fullscreen: F makes the window fullscreen (macOS animates it, so each step
- * waits), Esc leaves it and then the page, and leaving it some other way (the green
- * button, here the window's own call) stops presenting.
+ * waits), Esc leaves it (and only it: pages aren't dismissed), and leaving it some other way
+ * (the green button, here the window's own call) stops presenting.
  */
 async function fullscreen(): Promise<void> {
   const win = getCurrentWindow();
@@ -232,7 +232,8 @@ async function fullscreen(): Promise<void> {
   check('Preview: leaving fullscreen another way stops presenting', !ui.get().presenting);
   press('Escape');
   await pause(200);
-  check('Preview: Esc again goes back to the desk', ui.get().page === 'desk');
+  check('Preview: Esc again stays on the page', ui.get().page === 'preview');
+  ui.set({ page: 'desk' });
 }
 
 /** The second run, after quitting: the last project should come back as it was left. */

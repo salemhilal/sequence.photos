@@ -3,7 +3,7 @@ import { platform } from '#platform';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import { useElementSize, useWindowEvent } from '../hooks';
 import { useProject } from '../store';
-import { goToPage, ui } from '../ui';
+import { ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
 import { sheetExtent } from '../geometry';
 import { TERMS } from '../units';
@@ -90,10 +90,10 @@ export function Preview() {
     'keydown',
     (e) => {
       if (ui.get().modal || ui.get().confirm) return;
-      // Esc leaves fullscreen first, then the page.
+      // Esc leaves fullscreen (pages aren't dismissed: the switcher changes them).
       if (e.key === 'Escape') {
-        if (ui.get().presenting) present(false);
-        else goToPage('desk');
+        if (!ui.get().presenting) return;
+        present(false);
       } else if (e.key === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey) present(!ui.get().presenting);
       else if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') go(1);
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(-1);
