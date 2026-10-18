@@ -164,10 +164,33 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       width (0.25 in on a 10 in page, about 27 px on a 1,080 px frame).
 - [ ] Add a frame, open it, ⌘Z: the editor closes cleanly and desk shortcuts work.
 
+## Pages
+
+- [ ] The toolbar's switcher, centered: Desk · Layout · Preview · Export, the current one
+      lighter. **[Mac]** ⌘1–⌘4 and View → Desk, Layout, Preview, Export go to each; the
+      document's name sits after the traffic lights. Esc goes back to the desk from any page
+      (not from a text field's Escape, a dialog over the page, or while posting).
+- [ ] Each page fills the space under the toolbar, flush (no backdrop, corners, or ×); the
+      status bar stays. The sidebar toggle shows only on the desk; zoom only on the desk.
+- [ ] Leaving Layout with unapplied page changes asks Apply / Discard / Cancel, however it's
+      left (switcher, Esc, ⌘1, a menu); Cancel stays.
+- [ ] Settings or About over a page close when going to another page.
+- [ ] A soft photo's "Show me" (Layout, Export) goes to the desk with it open in the editor.
+- [ ] The tour's Layout step shows the Layout page; its Preview step points at the switcher.
+
+## Hints
+
+- [ ] Hovering anything with a hint shows it at once in the status bar's left side, in the
+      sans face, in place of the counts; moving off brings the counts back.
+- [ ] Icon-only buttons (Settings, the sidebar toggle, ×, pencil, add) also float their hint
+      beside them after a second's hover, then at once for the next for a second after.
+      Text buttons and labeled controls float nothing.
+- [ ] In Settings, About, and confirmations (over the status bar), hints float as before.
+- [ ] Tab to a control: its hint shows at once (floating too, for an icon button).
+
 ## Layout
 
-- [ ] Opens from the toolbar's Layout button (Mac: View → Layout…). Escape, ×, or the
-      backdrop close it, including right after clicking a toggle or a checkbox.
+- [ ] Opens from the switcher, or the empty desk's "Layout" link.
 - [ ] Two tabs (underlined, like Settings'), Page and Guides; the tab is kept while the app is
       open.
 
@@ -231,19 +254,20 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Preview
 
-- [ ] ⌘P or the toolbar: opens on the spread being edited, else the first. **[S≠F]** The
-      button says "Preview book" [S] or "Preview" [F].
+- [ ] The switcher or ⌘P (⌘3 in the Mac app): opens on the spread being edited, else the
+      first. The toolbar and status bar stay; the controls don't fade.
 - [ ] →, Space, PageDown forward; ←, PageUp back; Home and End; arrow buttons disable at the
       ends. **[S]** Single pages on their side, with gutter shading.
 - [ ] Folio and "n / total" are right.
-- [ ] Controls fade after the pointer rests about a second; moving or Tab brings them back;
-      they stay while hovered and while saving.
-- [ ] The header's Export… opens the Export view.
-- [ ] Escape, Exit preview, or ⌘P closes.
+- [ ] Fullscreen (or F) covers the window, toolbar and status bar too: the browser goes
+      fullscreen on the web, the window in the Mac app. Its controls fade after the pointer
+      rests about a second; moving or Tab brings them back; they stay while hovered and
+      while saving. Exit fullscreen, F, or Esc leaves it (Esc again goes to the desk);
+      leaving fullscreen with the browser's own Esc or the green button does too.
 
 ## Exports and project files
 
-- [ ] File → Export… (⌘⇧E) opens the Export view: a preview of what it makes on the left,
+- [ ] File → Export… (⌘⇧E), or the switcher, opens the Export page: a preview of what it makes on the left,
       with ‹ › and ←/→, and the destination and its options on the right. Destinations: PDF,
       Images, InDesign, and Instagram. It opens on PDF for inches, Instagram for
       1080 px frames, else Images; then on the last one picked, with the last choices
@@ -290,7 +314,6 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Settings
 
-- [ ] Tooltips show after a second's hover; moving straight to another shows its tip at once.
 - [ ] ⌘, opens on General; Advanced shows Server and Test images; tabs switch.
 - [ ] Advanced → Test images: a count (1–50, 6 to start) and Add test images. It closes
       Settings, the status bar counts "Making test images", then "Adding photos", then it imports like Add photos: "Gradient 01.jpg"…
@@ -354,8 +377,8 @@ Posts made while testing are real and public. Use a test account, or delete them
       Stories say they have no captions.
 - [ ] Post: Preparing and Uploading slide n of N, Instagram processing, Publishing. Cancel
       until publishing: "Cancelled. Nothing was posted." and nothing appears on Instagram.
-- [ ] While posting, Escape, ×, the backdrop, ⌘P, ⌘, and New project don't close or replace
-      the pane.
+- [ ] While posting, Escape, the switcher, ⌘P, ⌘, and New project don't leave the page or
+      replace the pane.
 - [ ] Done: "Posted to Instagram.", View on Instagram opens the post, Done closes. A failure
       shows its message and Post can be tried again.
 - [ ] On Instagram: a carousel's slides are in order and cropped or expanded as chosen;
@@ -374,12 +397,12 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 ## Shortcuts and hints
 
-- [ ] Hold ⌘ (Ctrl) for a moment: badges on Undo, Redo, Preview, the sidebar toggle,
-      Settings; releasing hides them.
+- [ ] Hold ⌘ (Ctrl) for a moment: badges on Undo, Redo, the sidebar toggle, Settings;
+      releasing hides them.
 - [ ] ⌘I add, ⌘O open, ⌘S export/save, ⌘⇧E export, ⌘P preview, ⌘; guides, ⌘,
       settings, ⌘B sidebar.
-- [ ] Desk shortcuts (⌘A, ⌘C, ⌘D, Delete, arrows, Escape) do nothing while a dialog or the
-      editor is open.
+- [ ] Desk shortcuts (⌘A, ⌘C, ⌘D, Delete, arrows, Escape) do nothing on another page, or while
+      a dialog or the editor is open.
 
 ## Tour
 

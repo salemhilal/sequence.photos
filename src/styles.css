@@ -904,6 +904,16 @@ button {
 .statusbar .btn:hover:not(:disabled) {
   color: var(--text);
 }
+.status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A hint is words, not data: in the sans face, a little brighter. */
+.status-text.hint {
+  color: var(--text);
+  font-family: var(--font);
+}
 .status-progress {
   display: flex;
   align-items: center;

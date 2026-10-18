@@ -71,6 +71,8 @@ export interface UiState {
   importing: { done: number; total: number; label?: string } | null;
   /** Status text for long-running work like exporting. */
   busy: string | null;
+  /** The hint for what's under the pointer (its `data-tip`), shown in the status bar. */
+  hint: string | null;
   /** What the page other than the desk says in the status bar (its size, which page is shown). */
   pageStatus: string | null;
   notice: string | null;
@@ -125,6 +127,7 @@ export const ui = createStore<UiState>({
   importing: null,
   busy: null,
   pageStatus: null,
+  hint: null,
   notice: null,
   hints: false,
   theme: themePref.load(),

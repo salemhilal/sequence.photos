@@ -1,9 +1,12 @@
 /**
- * Tooltips: `data-tip` on an element shows its text after a second's hover (then at once
- * for the next for a second after, as you move along a toolbar), or at once on keyboard
- * focus. One tip element, fixed to the window, so it's never clipped by a scrolling panel
- * and always fits on screen.
+ * Hints: `data-tip` on an element shows its text in the status bar at once, on hover or
+ * keyboard focus, as desktop apps do. A floating tip shows too, where the status bar
+ * doesn't serve: on icon-only buttons (the hint is far from the icon) and in dialogs over
+ * the status bar. It waits a second's hover (then shows at once for the next, for a second
+ * after, as you move along a toolbar), or shows at once on keyboard focus. One tip element,
+ * fixed to the window, so it's never clipped by a scrolling panel and always fits on screen.
  */
+import { ui } from './ui';
 
 interface Box {
   left: number;
@@ -31,7 +34,21 @@ export function placeTip(anchor: Box, tip: { width: number; height: number }, vi
   return { left, top };
 }
 
-/** Show tips for every `data-tip` element in the page, now and later. Call once. */
+/** Whether an element shows only an icon: no words of its own (a shortcut badge doesn't count). */
+function iconOnly(el: Element): boolean {
+  for (const n of el.childNodes) {
+    if (n.nodeType === Node.TEXT_NODE && n.textContent?.trim()) return false;
+    if (n instanceof Element && !n.matches('svg, .shortcut-hint') && n.textContent?.trim()) return false;
+  }
+  return true;
+}
+
+/** Whether an element's hint also floats beside it (see above). */
+function floats(el: Element): boolean {
+  return iconOnly(el) || el.closest('[role="dialog"], [role="alertdialog"]') !== null;
+}
+
+/** Show hints for every `data-tip` element in the page, now and later. Call once. */
 export function installTooltips(): void {
   const tip = document.createElement('div');
   tip.className = 'tooltip';
@@ -42,6 +59,13 @@ export function installTooltips(): void {
   // A hover waiting out the delay, and when a tip last went (the next within the delay shows at once).
   let waiting: { el: Element; timer: number } | null = null;
   let lastHidden = -Infinity;
+  // The element whose hint the status bar shows.
+  let hinted: Element | null = null;
+  const setHint = (el: Element | null) => {
+    hinted = el;
+    const hint = el?.getAttribute('data-tip') || null;
+    if (ui.get().hint !== hint) ui.set({ hint });
+  };
 
   /**
    * While a tip shows, its element is watched: a change to its text (a toggle) shows the
@@ -49,20 +73,23 @@ export function installTooltips(): void {
    * changed. Nothing is watched while no tip shows.
    */
   const watch = new MutationObserver(() => {
+    if (hinted && !hinted.isConnected) setHint(null);
+    else if (hinted) setHint(hinted);
     if (!shown) return;
     if (!shown.isConnected) hide();
     else if (shown.getAttribute('data-tip') !== tip.textContent) show(shown);
   });
+  const follow = (el: Element) => {
+    watch.disconnect();
+    watch.observe(el, { attributes: true, attributeFilter: ['data-tip'] });
+    // It can go with any ancestor (a dialog closing): checking costs no layout.
+    watch.observe(document.body, { childList: true, subtree: true });
+  };
 
   const show = (el: Element) => {
     const text = el.getAttribute('data-tip');
     if (!text) return hide();
-    if (shown !== el) {
-      watch.disconnect();
-      watch.observe(el, { attributes: true, attributeFilter: ['data-tip'] });
-      // It can go with any ancestor (a dialog closing): checking costs no layout.
-      watch.observe(document.body, { childList: true, subtree: true });
-    }
+    if (shown !== el && hinted !== el) follow(el);
     shown = el;
     tip.textContent = text;
     tip.hidden = false;
@@ -82,8 +109,18 @@ export function installTooltips(): void {
     if (!shown) return;
     shown = null;
     tip.hidden = true;
-    watch.disconnect();
+    if (!hinted) watch.disconnect();
     lastHidden = performance.now();
+  };
+  /** The status bar's hint, and the floating tip's if it floats. */
+  const point = (el: Element | null) => {
+    if (el !== hinted) {
+      if (el && el !== shown) follow(el);
+      setHint(el);
+      if (!el && !shown) watch.disconnect();
+    }
+    if (el && floats(el)) hover(el);
+    else hide();
   };
   /** A hover's tip: at once while tips are showing (or just were), else after the delay. */
   const hover = (el: Element) => {
@@ -105,23 +142,27 @@ export function installTooltips(): void {
 
   document.addEventListener('pointerover', (e) => {
     const el = tipped(e.target);
-    if (el === shown) return;
-    if (el) hover(el);
-    else hide();
+    if (el === hinted && (el === shown || !el || !floats(el))) return;
+    point(el);
   });
   // Leaving the window: pointerout with nowhere it went to.
   document.addEventListener('pointerout', (e) => {
-    if (!e.relatedTarget) hide();
+    if (!e.relatedTarget) point(null);
   });
   document.addEventListener('focusin', (e) => {
     const el = tipped(e.target);
     // Only for keyboard focus, as :focus-visible: a click shouldn't leave a tip behind.
-    if (el && e.target instanceof HTMLElement && e.target.matches(':focus-visible')) show(el);
+    if (!el || !(e.target instanceof HTMLElement) || !e.target.matches(':focus-visible')) return;
+    setHint(el);
+    if (floats(el)) show(el);
   });
-  document.addEventListener('focusout', hide);
+  document.addEventListener('focusout', () => {
+    hide();
+    setHint(null);
+  });
   // Pressing, scrolling, or typing moves things on; the tip would be in the way, or stale.
   for (const type of ['pointerdown', 'wheel', 'keydown'] as const) {
     document.addEventListener(type, hide, { capture: true, passive: true });
   }
-  window.addEventListener('blur', hide);
+  window.addEventListener('blur', () => point(null));
 }

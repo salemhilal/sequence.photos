@@ -11,10 +11,10 @@ const ZOOM_STEP = 1.25;
 const ZOOM_LEVELS = [0.5, 1, 2];
 
 /**
- * The window's bottom line, as in desktop apps: on the desk, what's selected (or, with
- * nothing selected, how many photos are on the desk and placed); on another page, what it
- * says (its size, how to flip through); then progress (adding photos, exporting), and
- * the desk's zoom.
+ * The window's bottom line, as in desktop apps: the hint for what's under the pointer, or
+ * else, on the desk, what's selected (with nothing selected, how many photos are on the desk
+ * and placed), and on another page, what it says (its size, how to flip through); then
+ * progress (adding photos, exporting), and the desk's zoom.
  */
 export function StatusBar() {
   const { project } = useProject();
@@ -25,13 +25,15 @@ export function StatusBar() {
   const zoom = ui.use((s) => s.view.zoom);
   const page = ui.use((s) => s.page);
   const pageStatus = ui.use((s) => s.pageStatus);
+  const hint = ui.use((s) => s.hint);
   // The zoom is the desk's; the editor over it has its own view.
   const onDesk = ui.use((s) => s.page === 'desk' && s.editingSpreadId === null);
   const sheet = sheetOf(project);
   const placed = new Set(allSpreads(project).flatMap((s) => s.items.map((i) => i.photoId))).size;
   const terms = TERMS[sheet.arrangement];
-  const counts =
-    page !== 'desk'
+  const text = hint
+    ? hint
+    : page !== 'desk'
       ? pageStatus
       : photosSelected > 0
         ? `${photosSelected} ${photosSelected === 1 ? 'photo' : 'photos'} selected`
@@ -41,7 +43,7 @@ export function StatusBar() {
 
   return (
     <footer className="statusbar">
-      {counts && <span>{counts}</span>}
+      {text && <span className={`status-text${hint ? ' hint' : ''}`}>{text}</span>}
       {importing ? (
         <span className="status-progress" role="status">
           {importing.label ?? 'Adding photos'}
