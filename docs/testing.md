@@ -223,7 +223,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] The pager says only "1 / 6". Apply and Revert stay at the panel's foot while the settings
       above scroll (a short window).
 - [ ] The swap button between W and H swaps them (in the draft).
-- [ ] The tab's rows line up: labels (Pages, Unit, Preset, Size, Resolution, Content) in a
+- [ ] The tab's rows line up: labels (Pages, Preset, Unit, Size, Resolution, Content) in a
       column at the left, controls beside them. Fields are inset wells with the unit
       inside (W 10 in, 300 dpi), no spinner arrows.
 - [ ] _(e2e)_ Dragging left or right on a field's label or unit (W, H, in, dpi, a border guide's Top)

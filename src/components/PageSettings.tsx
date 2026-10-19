@@ -130,19 +130,6 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
         </div>
 
         <div className="field-row">
-          <span className="field-label" id={`${id}-unit`}>
-            Unit
-          </span>
-          <Segmented
-            halves
-            labelledBy={`${id}-unit`}
-            options={UNIT_CHOICES}
-            value={draft.page.unit}
-            onChange={setUnit}
-          />
-        </div>
-
-        <div className="field-row">
           <span className="field-label" id={`${id}-preset`}>
             Preset
           </span>
@@ -162,6 +149,19 @@ export function PageSettings({ draft, onChange: change, showContent, immediate =
             ))}
             {!preset && <option value="">Custom</option>}
           </select>
+        </div>
+
+        <div className="field-row">
+          <span className="field-label" id={`${id}-unit`}>
+            Unit
+          </span>
+          <Segmented
+            halves
+            labelledBy={`${id}-unit`}
+            options={UNIT_CHOICES}
+            value={draft.page.unit}
+            onChange={setUnit}
+          />
         </div>
 
         <div className="field-row">
