@@ -1641,6 +1641,10 @@ body.col-resizing * {
 .sectioned section.collapsed {
   padding-bottom: 0;
 }
+/* A section with no title row (a note, the actions) keeps the same room above as below. */
+.sectioned section:not(:has(> h3, > .section-head)) {
+  padding-top: 12px;
+}
 
 .grid2 {
   display: grid;

@@ -290,11 +290,7 @@ export function InstagramPost({ head }: Props) {
               {tags > 0 && ` · ${tags} / ${LIMITS.hashtags} hashtags`}
             </p>
           </section>
-        ) : (
-          <section>
-            <p className="help">Stories don’t have captions.</p>
-          </section>
-        )}
+        ) : null}
 
         <section className="export-actions">
           {status.kind === 'done' ? (
