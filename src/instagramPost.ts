@@ -1,4 +1,4 @@
-import type { UploadBatch, UploadsRequest } from '../server/src/api';
+import type { PostResult, UploadBatch, UploadsRequest } from '../server/src/api';
 import { INSTAGRAM } from './config';
 import { isRecord } from './guards';
 import { freshConnection, markNeedsReconnect, RECONNECT, SERVER_ERROR, type InstagramConnection } from './instagram';
@@ -275,6 +275,8 @@ export async function postToInstagram(options: PostOptions): Promise<string | nu
 
   check(signal);
   const batch = await startUpload(connection, images.length, signal);
+  // Sent with the delete, so the server can count posts.
+  let result: PostResult = 'failed';
   try {
     for (const [i, image] of images.entries()) {
       check(signal);
@@ -309,6 +311,7 @@ export async function postToInstagram(options: PostOptions): Promise<string | nu
       onStep({ step: 'publishing', done: i, total: toPublish.length });
       try {
         published.push(idOf(await graph(token, 'POST', `${user}/media_publish`, { creation_id: container })));
+        result = 'posted';
       } catch (error) {
         if (published.length === 0) throw error;
         const why = error instanceof Error ? ` ${error.message}` : '';
@@ -323,8 +326,13 @@ export async function postToInstagram(options: PostOptions): Promise<string | nu
     } catch {
       return null;
     }
+  } catch (error) {
+    if (error instanceof CancelledError) result = 'cancelled';
+    throw error;
   } finally {
     // The server deletes them within the hour anyway; this is sooner.
-    void fetch(batch.delete, { method: 'DELETE' }).catch(() => undefined);
+    const url = new URL(batch.delete);
+    url.searchParams.set('result', result);
+    void fetch(url, { method: 'DELETE' }).catch(() => undefined);
   }
 }

@@ -36,6 +36,7 @@ import {
   unseal,
 } from './keys';
 import { Tag, type Outcome } from './log';
+import { record } from './metrics';
 import type { Handler, RequestContext } from './router';
 
 interface OAuthState {
@@ -185,7 +186,9 @@ export const redeem: Handler = async (ctx) => {
   if (!timingSafeEqualStrings(await sha256Base64Url(body.verifier), handoff.challenge)) {
     throw new HttpError(400, 'bad_request');
   }
-  ctx.log.user = await Tag.user(ctx.keys.log, handoff.connection.userId);
+  const user = await Tag.user(ctx.keys.log, handoff.connection.userId);
+  ctx.log.user = user;
+  record(ctx.env.METRICS, { event: 'connect', user });
   return jsonResponse(handoff.connection);
 };
 
@@ -202,5 +205,6 @@ export const renew: Handler = async (ctx) => {
   });
 
   const response: RenewResponse = { enrollment: await makeEnrollment(ctx.keys, userId, ctx.now) };
+  record(ctx.env.METRICS, { event: 'renew', user: await Tag.user(ctx.keys.log, userId) });
   return jsonResponse(response);
 };

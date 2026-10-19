@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --env dev",
+    "metrics": "node --env-file-if-exists=.env.metrics scripts/metrics.ts",
     "test": "vitest run",
-    "typecheck": "wrangler types --strict-vars=false --check && tsc --noEmit",
+    "typecheck": "wrangler types --strict-vars=false --check && tsc --noEmit && tsc --noEmit -p scripts",
     "types": "wrangler types --strict-vars=false",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
@@ -15,6 +16,7 @@
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.4.0",
     "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
     "eslint": "^10.12.0",
     "prettier": "^3.9.10",
     "typescript": "^6.0.3",

@@ -416,6 +416,9 @@ Posts made while testing are real and public. Use a test account, or delete them
       shows its message and Post can be tried again.
 - [ ] On Instagram: a carousel's slides are in order and cropped or expanded as chosen;
       stories in order.
+- [ ] Against the dev server, after a post, a failure, and a cancel: in `server/`,
+      `npm run metrics -- --dev` counts them this week as Posted, Failed, and Cancelled, with
+      the uploads, images, and users.
 
 ## Undo and redo
 

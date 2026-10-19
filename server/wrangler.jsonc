@@ -13,6 +13,10 @@
   // by the owner) as a backstop to the sweep below.
   "r2_buckets": [{ "binding": "FRAMES", "bucket_name": "sequence-frames" }],
 
+  // Usage metrics (README "Metrics"): one data point per sign-in, renewal, upload, and
+  // post result, kept 3 months and read with `npm run metrics`.
+  "analytics_engine_datasets": [{ "binding": "METRICS", "dataset": "sequence_metrics" }],
+
   // The sweep: delete frames over an hour old.
   "triggers": { "crons": ["*/15 * * * *"] },
 
@@ -57,6 +61,7 @@
     "dev": {
       "name": "sequence-server-dev",
       "r2_buckets": [{ "binding": "FRAMES", "bucket_name": "sequence-frames-dev" }],
+      "analytics_engine_datasets": [{ "binding": "METRICS", "dataset": "sequence_metrics_dev" }],
       "triggers": { "crons": ["*/15 * * * *"] },
       "ratelimits": [
         {
