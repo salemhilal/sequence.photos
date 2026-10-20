@@ -1,16 +1,15 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { bump, dropPhotos, importPhotos, raise } from '../actions';
-import { addPhotos, shortcutLabel } from '../commands';
+import { addPhotos, runCommand, shortcutLabel } from '../commands';
 import { isProjectFile, openProjectFile } from '../project';
 import { clearGhost, startDrag, trackGhost } from '../drag';
 import { intersects, resizeRect, type Corner, type Rect } from '../geometry';
 import { projectStore, useProject } from '../store';
 import type { Placement } from '../types';
-import { TERMS } from '../units';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
 import { wheeled } from '../deskZoom';
 import { isTyping } from '../input';
-import { deskCovered, goToPage, openPhotoMenu, openQuickLook, ui } from '../ui';
+import { deskCovered, openPhotoMenu, openQuickLook, ui } from '../ui';
 import { OwnPageSettings } from './PageSettings';
 import { PhotoImg } from './PhotoImg';
 
@@ -331,22 +330,19 @@ export function Desk() {
       )}
       {project.pile.length === 0 && (
         <div className="desk-empty">
-          <p className="desk-empty-title">
-            {Object.keys(project.photos).length ? 'Every photo is placed' : 'Start by adding photos'}
+          {Object.keys(project.photos).length > 0 && <p>Every photo is placed.</p>}
+          <p className="desk-empty-add">
+            Drop photos here, or{' '}
+            <button
+              className="link"
+              data-shortcut={shortcutLabel('addPhotos')}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={addPhotos}
+            >
+              add them
+            </button>
+            .
           </p>
-          <p>
-            Add or drop photos or saved projects here.
-            <br />
-            They land on this desk, where you can drag them onto {TERMS[project.layout.kind].pages}.
-          </p>
-          <button
-            className="btn primary"
-            data-shortcut={shortcutLabel('addPhotos')}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={addPhotos}
-          >
-            Add photos
-          </button>
           {Object.keys(project.photos).length === 0 && (
             // A new project: set the page size before placing anything.
             <div
@@ -358,7 +354,7 @@ export function Desk() {
               <OwnPageSettings />
               <p className="help">
                 You can change this anytime in{' '}
-                <button className="link" onClick={() => goToPage('layout')}>
+                <button className="link" onClick={() => runCommand('layout')}>
                   Layout
                 </button>
                 , along with the guides photos fit and snap to.

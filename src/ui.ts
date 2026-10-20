@@ -53,10 +53,11 @@ export interface ConfirmRequest {
   choose: (index: number | null) => void;
 }
 
-export type Modal = 'settings' | 'about';
+/** The dialogs over a page: Settings and Layout (each its own window in the Mac app), and About. */
+export type Modal = 'settings' | 'about' | 'layout';
 
-/** The window's pages, switched from the toolbar: the desk, and the Layout, Preview, and Export views. */
-export type Page = 'desk' | 'layout' | 'preview' | 'export';
+/** The window's pages, switched from the toolbar: the desk, Preview, and Export. */
+export type Page = 'desk' | 'preview' | 'export';
 
 /** The Layout view's tabs: the page's settings (applied together), or the guides (applied at once). */
 export type LayoutTab = 'page' | 'guides';
@@ -187,34 +188,46 @@ export function pageLocked(): boolean {
 }
 
 /**
- * Asked before the page is left, by whatever leaves it (the switcher, a shortcut, a menu):
- * resolves whether to go on. Layout sets it while page changes wait for Apply.
+ * Asked before the open dialog closes or is replaced, by whatever does it (its ×, Esc, a page
+ * switch, a shortcut, a menu): resolves whether to go on. Layout sets it while page changes
+ * wait for Apply.
  */
-let pageGuard: (() => Promise<boolean>) | null = null;
+let closeGuard: (() => Promise<boolean>) | null = null;
 
-export function setPageGuard(guard: (() => Promise<boolean>) | null): void {
-  pageGuard = guard;
+export function setCloseGuard(guard: (() => Promise<boolean>) | null): void {
+  closeGuard = guard;
 }
 
-/** Go to a page (closing any dialog), once the page being left agrees. */
-export function goToPage(page: Page): void {
-  if (pageLock || page === ui.get().page) return;
-  if (!pageGuard) return ui.set({ page, modal: null });
-  void pageGuard().then((ok) => {
-    if (ok && !pageLock) ui.set({ page, modal: null });
+/** Whether the open dialog (or the window holding it) may close: asks, if it has a guard. */
+export function mayClose(): Promise<boolean> {
+  return closeGuard ? closeGuard() : Promise.resolve(true);
+}
+
+/** Change the page and dialog, once the dialog being closed agrees (and not while locked). */
+function change(next: Pick<UiState, 'page' | 'modal'>): void {
+  const s = ui.get();
+  if (pageLock || (next.page === s.page && next.modal === s.modal)) return;
+  if (!closeGuard || next.modal === s.modal) return ui.set(next);
+  void closeGuard().then((ok) => {
+    if (ok && !pageLock) ui.set(next);
   });
 }
 
+/** Go to a page, closing any dialog. */
+export function goToPage(page: Page): void {
+  change({ page, modal: null });
+}
+
 export function openModal(modal: Modal): void {
-  if (!pageLock) ui.set({ modal });
+  change({ page: ui.get().page, modal });
 }
 
 export function closeModal(): void {
-  if (!pageLock) ui.set({ modal: null });
+  change({ page: ui.get().page, modal: null });
 }
 
 export function toggleModal(modal: Modal): void {
-  if (!pageLock) ui.set({ modal: ui.get().modal === modal ? null : modal });
+  change({ page: ui.get().page, modal: ui.get().modal === modal ? null : modal });
 }
 
 /**

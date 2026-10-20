@@ -37,7 +37,7 @@ test.describe('status bar', () => {
     await zoom.click();
     await page.getByRole('menuitem', { name: '50%' }).click();
     await expect(zoom).toHaveText('50%');
-    await goTo(page, 'Layout');
+    await goTo(page, 'Export');
     await expect(page.locator('.status-zoom')).toHaveCount(0);
   });
 });

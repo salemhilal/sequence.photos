@@ -99,10 +99,10 @@ export async function setUpMenu(): Promise<void> {
         text: 'View',
         items: [
           await command('showDesk'),
-          await command('layout'),
           await command('preview'),
           await command('showExport'),
           await separator(),
+          await command('layout'),
           guides,
           sidebar,
           await separator(),

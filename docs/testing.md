@@ -69,7 +69,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       size).
 - [ ] File → New project… with photos: Cancel / Save first / New project. New
       project empties everything; ⌘Z brings the old one back.
-- [ ] A new project's empty desk: "Start by adding photos", Add photos, and a Page card with
+- [ ] A new project's empty desk: "Drop photos here, or add them." ("add them" opens the
+      picker), in the default face, and a Page card with
       the same settings as Layout's Page tab (no Content), applied as they're picked (no Apply):
       picking Frames or a preset, then adding photos, keeps the choice. **[F]** It says to drag photos onto
       frames.
@@ -99,7 +100,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       swatches change it at once.
 - [ ] Right-click a photo: Quick Look, Copy image, Duplicate, Return to desk (placed photos),
       Delete ("Deleted … Undo to bring it back").
-- [ ] With every photo placed: "Every photo is placed".
+- [ ] With every photo placed: "Every photo is placed." above the same line.
 - [ ] _(e2e)_ The status bar along the window's foot: what's selected ("2 photos selected", "1
       spread selected" / "1 frame selected"), else "4 on desk, 2 placed"; and while it's under way,
       progress: "Adding photos 3/12"
@@ -186,17 +187,19 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Pages
 
-- [ ] _(e2e)_ The toolbar's switcher, centered: Desk · Layout · Preview · Export, the current one
-      lighter. ⌥⌘1–⌥⌘4 go to each (Ctrl+Alt elsewhere); **[Mac]** so do View → Desk,
-      Layout, Preview, Export, and the document's name sits after the traffic lights. Esc doesn't leave a page (pages aren't dismissed; the switcher changes them).
-- [ ] Each page fills the space under the toolbar, flush (no backdrop, corners, or ×); the
+- [ ] _(e2e)_ The toolbar's switcher, centered: Desk · Preview · Export, the current one
+      lighter. ⌥⌘1–⌥⌘3 go to each (Ctrl+Alt elsewhere); **[Mac]** so do View → Desk,
+      Preview, Export, and the document's name sits after the traffic lights. Esc doesn't leave
+      a page (pages aren't dismissed; the switcher changes them).
+- [ ] Preview and Export fill the space under the toolbar, flush (no backdrop, corners, or ×); the
       status bar stays. The sidebar toggle shows only on the desk; zoom only on the desk.
-- [ ] _(e2e)_ Leaving Layout with unapplied page changes asks Apply / Discard / Cancel, however it's
-      left (switcher, ⌥⌘1, a menu); Cancel stays.
+- [ ] _(e2e)_ Closing Layout with unapplied page changes asks Apply / Discard / Cancel, however
+      it's closed (×, Esc, ⌥⌘P, a page switch, a menu; **[Mac]** its window's close button);
+      Cancel stays.
 - [ ] Settings or About over a page close when going to another page.
 - [ ] No grab or help cursors over photos or marks: the arrow throughout.
 - [ ] A soft photo's "Show me" (Layout, Export) goes to the desk with it open in the editor.
-- [ ] The tour's Layout step shows the Layout page; its Preview step points at the switcher.
+- [ ] The tour's Layout step shows the Layout dialog; its Preview step points at the switcher.
 
 ## Hints
 
@@ -209,7 +212,13 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Layout
 
-- [ ] Opens from the switcher, or the empty desk's "Layout" link.
+- [ ] _(e2e)_ Opens from the toolbar's ruler icon (right, beside Settings), ⌥⌘P, or the empty
+      desk's "Layout" link: a dialog over the page on the website (toolbar and status bar in
+      view; ×, Esc, or ⌥⌘P closes it). **[Mac]** Its own window, titled Layout (asking again
+      brings it forward; View → Layout…), editing the main window's project: a change there
+      shows in the main window at once and is undone there with ⌘Z, and a change in the main
+      window (or an undo) shows in Layout. A line at its foot shows hints and the page size.
+      `npm run test:app` checks both directions and the undo.
 - [ ] Two tabs (underlined, like Settings'), Page and Guides; the tab is kept while the app is
       open.
 
@@ -273,7 +282,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Preview
 
-- [ ] _(e2e)_ The switcher, ⌥⌘3, or ⌘P: opens on the spread being edited, else the first. The
+- [ ] _(e2e)_ The switcher, ⌥⌘2, or ⌘P: opens on the spread being edited, else the first. The
       toolbar and status bar stay; the controls don't fade. The status bar says "← → to turn
       pages · F for fullscreen"; "2 / 4" sits just below the spread (no folio).
 - [ ] →, Space, PageDown forward; ←, PageUp back; Home and End; arrow buttons disable at the
@@ -291,7 +300,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Layout's and Export's stages are the desk's color (change it in the desk's menu).
 - [ ] **[S]** Export's preview, one per spread: the first and last single pages show at the
       size of a page in a spread, not enlarged to fill.
-- [ ] File → Export… (⌘⇧E), the switcher, or ⌥⌘4 opens the Export page: a preview of what it makes on the left,
+- [ ] File → Export… (⌘⇧E), the switcher, or ⌥⌘3 opens the Export page: a preview of what it makes on the left,
       with ‹ › and ←/→, and the destination and its options on the right. Destinations: PDF,
       Images, InDesign, and Instagram. It opens on PDF for inches, Instagram for
       1080 px frames, else Images; then on the last one picked, with the last choices
@@ -438,7 +447,7 @@ Posts made while testing are real and public. Use a test account, or delete them
 
 - [ ] _(e2e)_ Hold ⌘ (Ctrl) for a moment: a badge below each button with a ⌘ shortcut, over
       everything (nothing covers them, the spread editor and Settings included): Undo, Redo,
-      the four page buttons (⌥⌘1–⌥⌘4), the sidebar toggle, Settings, the editor's guides eye,
+      the three page buttons (⌥⌘1–⌥⌘3), Layout (⌥⌘P), the sidebar toggle, Settings, the editor's guides eye,
       and the empty desk's Add photos. A disabled button's badge is dimmed; releasing hides
       them. Off in Settings → General → Shortcuts, none show.
 - [ ] ⌘I add, ⌘O open, ⌘S export/save, ⌘⇧E export, ⌘P preview, ⌘; guides, ⌘,

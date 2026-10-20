@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { closeModal, goToPage, lockPage, pageLocked, openModal, setPageGuard, toggleModal, ui } from './ui';
+import { closeModal, goToPage, lockPage, pageLocked, openModal, setCloseGuard, toggleModal, ui } from './ui';
 
 afterEach(() => {
   lockPage(false);
-  setPageGuard(null);
+  setCloseGuard(null);
   ui.set({ page: 'desk', modal: null });
 });
 
@@ -39,26 +39,26 @@ describe('lockPage', () => {
   });
 });
 
-describe('pages', () => {
+describe('pages and dialogs', () => {
   it('close any dialog when going to another page', () => {
     openModal('settings');
-    goToPage('layout');
-    expect(ui.get()).toMatchObject({ page: 'layout', modal: null });
+    goToPage('export');
+    expect(ui.get()).toMatchObject({ page: 'export', modal: null });
   });
 
-  it('ask the page being left first, and go on only when told to', async () => {
-    goToPage('layout');
+  it('ask the dialog being closed or replaced first, and go on only when told to', async () => {
+    openModal('layout');
     let answer = false;
-    setPageGuard(async () => answer);
+    setCloseGuard(async () => answer);
     goToPage('export');
     await Promise.resolve();
-    expect(ui.get().page).toBe('layout');
-    // A dialog over the page doesn't leave it, so it doesn't ask.
+    expect(ui.get()).toMatchObject({ page: 'desk', modal: 'layout' });
     openModal('settings');
-    expect(ui.get().modal).toBe('settings');
-    answer = true;
-    goToPage('desk');
     await Promise.resolve();
-    expect(ui.get().page).toBe('desk');
+    expect(ui.get().modal).toBe('layout');
+    answer = true;
+    closeModal();
+    await Promise.resolve();
+    expect(ui.get().modal).toBeNull();
   });
 });

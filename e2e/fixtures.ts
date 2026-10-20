@@ -37,9 +37,16 @@ export const MOD = 'ControlOrMeta';
 export const statusText = (page: Page) => page.locator('.statusbar .status-text');
 
 /** Go to a page with the toolbar's switcher, then move the pointer off it (its hint would show). */
-export async function goTo(page: Page, name: 'Desk' | 'Layout' | 'Preview' | 'Export') {
+export async function goTo(page: Page, name: 'Desk' | 'Preview' | 'Export') {
   await page.locator('.page-switcher button', { hasText: name }).click();
   await expect(page.locator('.page-switcher button.on')).toHaveText(name);
+  await page.mouse.move(4, 300);
+}
+
+/** Open Layout (a dialog on the website) from the toolbar. */
+export async function openLayout(page: Page) {
+  await page.locator('.toolbar').getByRole('button', { name: 'Layout', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Layout' })).toBeVisible();
   await page.mouse.move(4, 300);
 }
 

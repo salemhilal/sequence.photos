@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { X } from 'lucide-react';
 import { startDrag } from '../drag';
 import {
   edgesOf,
@@ -18,7 +19,7 @@ import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { Arrangement, LineGuide, PageSide, Spread } from '../types';
 import { TERMS, UNITS } from '../units';
-import { ask, setPageGuard, ui, type LayoutTab } from '../ui';
+import { ask, closeModal, setCloseGuard, ui, type LayoutTab } from '../ui';
 import { applyPageSetup, draftOf, sameDraft } from '../pageSetup';
 import { usePageDraft } from './pageDraft';
 import { PagePreview } from './PagePreview';
@@ -43,7 +44,11 @@ const SAMPLES: Record<Arrangement, Spread> = {
   frames: { id: toSpreadId('layout'), kind: 'frame', items: [] },
 };
 
-export function LayoutEditor() {
+/**
+ * The Layout view: the page's settings and guides, over the page as a dialog, or (`inWindow`)
+ * filling a window of its own (the Mac app's).
+ */
+export function LayoutEditor({ inWindow = false }: { inWindow?: boolean }) {
   const { project } = useProject();
   const s = sheetOf(project);
   const units = UNITS[s.unit];
@@ -105,11 +110,11 @@ export function LayoutEditor() {
     if (answer === 'discard') setDraft(draftOf(projectStore.project));
     return answer === 'apply' || answer === 'discard';
   };
-  // Leaving Layout (the switcher, a shortcut or menu) asks first.
+  // Closing Layout (its ×, Esc, a page switch, a shortcut or menu, its window) asks first.
   useEffect(() => {
     if (!pending) return;
-    setPageGuard(settlePage);
-    return () => setPageGuard(null);
+    setCloseGuard(settlePage);
+    return () => setCloseGuard(null);
   });
   const goToTab = (t: LayoutTab) => {
     if (t === 'page') return ui.set({ layoutTab: t });
@@ -119,7 +124,9 @@ export function LayoutEditor() {
   useWindowEvent('keydown', (e) => {
     if (isTyping(e) || e.metaKey || e.ctrlKey || ui.get().confirm) return;
     if (e.key === 'Escape') {
+      // Esc deselects a guide, then closes the dialog (a window stays: Mac windows don't close on Esc).
       if (selected) setSelected(null);
+      else if (!inWindow) closeModal();
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected) {
       e.preventDefault();
       remove(selected);
@@ -247,57 +254,70 @@ export function LayoutEditor() {
     else for (const side of sides) draw(`${l.id}-${side}`, 'vertical', linePosition(side, s, l), sel, side);
   }
 
-  return (
-    <div className="page-view layout-editor">
-      <div className="editor-body">
-        {previewing && <PagePreview draft={draft} />}
-        <div className="editor-stage" ref={stageRef} hidden={previewing}>
-          <Ruler
-            axis="horizontal"
-            length={stage.w}
-            origin={gutterX}
-            scale={scale}
-            size={s.pageW}
-            unit={s.unit}
-            mirrored={s.arrangement === 'spreads'}
-            onPointerDown={(e) => dragGuide(e, 'horizontal', null)}
-          />
-          <Ruler
-            axis="vertical"
-            length={stage.h}
-            origin={pageTop}
-            scale={scale}
-            size={s.pageH}
-            unit={s.unit}
-            onPointerDown={(e) => dragGuide(e, 'vertical', null)}
-          />
-          <div className="ruler-corner" />
-          <div className="layout-canvas" style={{ left, top }}>
-            <SpreadCanvas
-              spread={sample}
-              sheet={s}
-              scale={scale}
-              pad={PAD}
-              overlay={guides}
-              onPointerDown={() => setSelected(null)}
-            />
-          </div>
-          {dragLabel && (
-            <div className="guide-drag-label data" style={{ left: dragLabel.x + 14, top: dragLabel.y + 14 }}>
-              {dragLabel.text}
-            </div>
-          )}
-        </div>
-        <LayoutPanel
-          s={s}
-          tab={tab}
-          draft={draft}
-          onDraft={setDraft}
-          onTab={goToTab}
-          selected={selected}
-          onSelect={setSelected}
-          onRemove={remove}
+  const body = (
+    <div className="editor-body">
+      {previewing && <PagePreview draft={draft} />}
+      <div className="editor-stage" ref={stageRef} hidden={previewing}>
+        <Ruler
+          axis="horizontal"
+          length={stage.w}
+          origin={gutterX}
+          scale={scale}
+          size={s.pageW}
+          unit={s.unit}
+          mirrored={s.arrangement === 'spreads'}
+          onPointerDown={(e) => dragGuide(e, 'horizontal', null)}
         />
+        <Ruler
+          axis="vertical"
+          length={stage.h}
+          origin={pageTop}
+          scale={scale}
+          size={s.pageH}
+          unit={s.unit}
+          onPointerDown={(e) => dragGuide(e, 'vertical', null)}
+        />
+        <div className="ruler-corner" />
+        <div className="layout-canvas" style={{ left, top }}>
+          <SpreadCanvas
+            spread={sample}
+            sheet={s}
+            scale={scale}
+            pad={PAD}
+            overlay={guides}
+            onPointerDown={() => setSelected(null)}
+          />
+        </div>
+        {dragLabel && (
+          <div className="guide-drag-label data" style={{ left: dragLabel.x + 14, top: dragLabel.y + 14 }}>
+            {dragLabel.text}
+          </div>
+        )}
+      </div>
+      <LayoutPanel
+        s={s}
+        tab={tab}
+        draft={draft}
+        onDraft={setDraft}
+        onTab={goToTab}
+        selected={selected}
+        onSelect={setSelected}
+        onRemove={remove}
+      />
+    </div>
+  );
+  if (inWindow) return <div className="page-view layout-editor">{body}</div>;
+  return (
+    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && closeModal()}>
+      <div className="modal editor layout-editor" data-modal role="dialog" aria-label="Layout">
+        <header className="modal-head">
+          <div className="modal-title">Layout</div>
+          <span className="spacer" />
+          <button className="btn ghost icon" aria-label="Close" onClick={closeModal}>
+            <X />
+          </button>
+        </header>
+        {body}
       </div>
     </div>
   );

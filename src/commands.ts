@@ -26,7 +26,7 @@ export interface Binding {
   mod?: boolean;
   /** `true` requires Shift, `false` (default) forbids it, `'any'` allows either. */
   shift?: boolean | 'any';
-  /** Requires Option (Alt). Digits then match by key position, since Option changes the character. */
+  /** Requires Option (Alt). Keys then match by position, since Option changes the character they type. */
   alt?: boolean;
 }
 
@@ -86,7 +86,7 @@ const withSelection = (fn: (ids: PhotoId[]) => void) => (): void | false => {
   fn(ids);
 };
 
-/** ⌥⌘1–⌥⌘4 for the pages (⌘1–⌘4 alone are the browser's, for its tabs). */
+/** ⌥⌘1–⌥⌘3 for the pages (⌘1–⌘3 alone are the browser's, for its tabs). */
 function pageKey(key: string): Binding[] {
   return [{ key, mod: true, alt: true }];
 }
@@ -133,15 +133,22 @@ export const commands = {
   },
   // The pages, as the toolbar's switcher has them.
   showDesk: { title: 'Desk', bindings: pageKey('1'), scope: 'app', inFields: true, run: () => goToPage('desk') },
-  layout: { title: 'Layout', bindings: pageKey('2'), scope: 'app', inFields: true, run: () => goToPage('layout') },
   preview: {
     title: 'Preview',
-    bindings: [...pageKey('3'), { key: 'p', mod: true }],
+    bindings: [...pageKey('2'), { key: 'p', mod: true }],
     scope: 'app',
     inFields: true,
     run: () => goToPage('preview'),
   },
-  showExport: { title: 'Export', bindings: pageKey('4'), scope: 'app', inFields: true, run: () => goToPage('export') },
+  showExport: { title: 'Export', bindings: pageKey('3'), scope: 'app', inFields: true, run: () => goToPage('export') },
+  // The page's size and guides: its own window in the Mac app, a dialog on the website. ⌥⌘P,
+  // as InDesign's Document Setup.
+  layout: {
+    title: { browser: 'Layout', macos: 'Layout…' },
+    bindings: [{ key: 'p', mod: true, alt: true }],
+    scope: 'app',
+    run: () => (platform.openLayout ? platform.openLayout() : toggleModal('layout')),
+  },
   // ⌘; as in InDesign and Photoshop.
   toggleGuides: { bindings: [{ key: ';', mod: true }], scope: 'app', inFields: true, run: toggleGuides },
   settings: {
@@ -257,7 +264,7 @@ export function matches(
   e: Pick<KeyboardEvent, 'key' | 'code' | 'altKey' | 'shiftKey' | 'metaKey' | 'ctrlKey'>,
 ): boolean {
   if (e.altKey !== Boolean(b.alt)) return false;
-  const key = b.alt && /^Digit\d$/.test(e.code) ? e.code.slice(5) : e.key.toLowerCase();
+  const key = b.alt && /^(Digit|Key)\w$/.test(e.code) ? e.code.slice(-1).toLowerCase() : e.key.toLowerCase();
   if (key !== b.key) return false;
   if (hasMod(e) !== Boolean(b.mod)) return false;
   return b.shift === 'any' || e.shiftKey === Boolean(b.shift);

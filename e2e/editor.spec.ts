@@ -1,4 +1,4 @@
-import { addTestImages, expect, goTo, openEditor, statusText, test } from './fixtures';
+import { addTestImages, expect, openEditor, openLayout, statusText, test } from './fixtures';
 
 test.describe('spread editor', () => {
   test('pages through spreads below the spread, with its hint in the status bar', async ({ page }) => {
@@ -32,11 +32,11 @@ test.describe('spread editor', () => {
   test('places photos from the strip, returns them, and goes to each photo below the resolution', async ({ page }) => {
     await addTestImages(page, 2);
     // Every photo falls below the resolution at 1200 dpi.
-    await goTo(page, 'Layout');
+    await openLayout(page);
     const dpi = page.getByLabel('Resolution, in dpi');
     await dpi.fill('1200');
     await page.getByRole('button', { name: 'Apply' }).click();
-    await goTo(page, 'Desk');
+    await page.getByRole('dialog', { name: 'Layout' }).getByRole('button', { name: 'Close' }).click();
 
     await openEditor(page, 1);
     const strip = page.locator('.strip-item');

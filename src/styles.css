@@ -302,9 +302,14 @@ button {
   width: 28px;
   height: 28px;
 }
+/* Raised like the other buttons, no more: a faint light top edge, a hairline, a soft drop. */
 .btn.primary {
+  border-color: transparent;
   background: var(--accent);
-  border-color: var(--accent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 0 0 0.5px rgba(0, 0, 0, 0.25),
+    0 1px 1px rgba(0, 0, 0, 0.12);
   color: var(--on-accent);
   font-weight: 500;
 }
@@ -809,19 +814,18 @@ button {
 }
 .desk-empty p {
   margin: 0;
-  font: 13px/1.5 var(--font);
+  font: 14px/1.5 var(--font);
+}
+.desk-empty .link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  pointer-events: auto;
 }
 :root[data-desk-tone='light'] .desk-empty {
   color: rgba(0, 0, 0, 0.78);
 }
-:root[data-desk-tone='light'] .desk-empty-title {
-  color: #111;
-}
-.desk-empty .desk-empty-title {
-  margin-bottom: 2px;
-  font: 500 15px/1.6 var(--mono);
-  color: #fff;
-}
+
 /* A new project's page-size card, on the empty desk. */
 .setup-card {
   display: flex;
@@ -856,10 +860,6 @@ button {
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
-}
-.desk-empty > .btn {
-  margin-top: 12px;
-  pointer-events: auto;
 }
 
 /* Status bar: counts, the page, progress, and the desk's zoom, along the window's foot. */
@@ -1762,7 +1762,17 @@ body.col-resizing * {
   flex: 1;
   min-height: 0;
 }
-.settings-notice {
+/* The Mac app's Layout window: the view fills it, above its foot. */
+.layout-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.layout-window .page-view {
+  flex: 1;
+  min-height: 0;
+}
+.window-foot {
   flex: none;
   height: 24px;
   margin: 0;

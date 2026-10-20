@@ -3,7 +3,6 @@ import { goToPage, ui, type Page } from '../ui';
 
 const PAGES: { page: Page; label: string; command: CommandId; tip: string }[] = [
   { page: 'desk', label: 'Desk', command: 'showDesk', tip: 'Arrange photos and sequence them' },
-  { page: 'layout', label: 'Layout', command: 'layout', tip: 'The page size and guides' },
   { page: 'preview', label: 'Preview', command: 'preview', tip: 'See it as it will look' },
   { page: 'export', label: 'Export', command: 'showExport', tip: 'Make a PDF, images, an InDesign file, or a post' },
 ];

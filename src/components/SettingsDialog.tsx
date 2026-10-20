@@ -7,6 +7,7 @@ import { isMac } from '../input';
 import { DeskColorPicker } from './DeskColorPicker';
 import { Segmented } from './Segmented';
 import { Tabs } from './Tabs';
+import { WindowFoot } from './WindowFoot';
 import { InstagramSetting } from './settings/InstagramSetting';
 import { ServerSetting } from './settings/ServerSetting';
 import { TestImagesSetting } from './settings/TestImagesSetting';
@@ -45,22 +46,8 @@ export function SettingsWindow() {
   return (
     <div className="settings-window">
       <SettingsPanel />
-      <Notice />
+      <WindowFoot />
     </div>
-  );
-}
-
-/**
- * The window's foot, as the main window's status bar: the hint for what's under the pointer
- * (a swatch's name), or a word from finishing an Instagram sign-in started here.
- */
-function Notice() {
-  const notice = ui.use((s) => s.notice);
-  const hint = ui.use((s) => s.hint);
-  return (
-    <p className="settings-notice" role="status">
-      {hint ?? notice}
-    </p>
   );
 }
 

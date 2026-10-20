@@ -1,10 +1,10 @@
-import { expect, goTo, MOD, statusText, test } from './fixtures';
+import { expect, goTo, MOD, openLayout, statusText, test } from './fixtures';
 
 test.describe('pages', () => {
   test('the switcher goes to each page, and only the desk has the sidebar toggle', async ({ page }) => {
     const toggle = page.getByRole('button', { name: /^(Hide|Show) spreads$/ });
     await expect(toggle).toBeVisible();
-    for (const name of ['Layout', 'Preview', 'Export'] as const) {
+    for (const name of ['Preview', 'Export'] as const) {
       await goTo(page, name);
       await expect(toggle).toHaveCount(0);
     }
@@ -12,20 +12,19 @@ test.describe('pages', () => {
     await expect(page.locator('.desk')).toBeVisible();
   });
 
-  test('⌥⌘1–⌥⌘4 go to the pages', async ({ page }) => {
+  test('⌥⌘1–⌥⌘3 go to the pages', async ({ page }) => {
     const on = page.locator('.page-switcher button.on');
+    await expect(page.locator('.page-switcher button')).toHaveText(['Desk', 'Preview', 'Export']);
     await page.keyboard.press(`${MOD}+Alt+Digit2`);
-    await expect(on).toHaveText('Layout');
-    await page.keyboard.press(`${MOD}+Alt+Digit3`);
     await expect(on).toHaveText('Preview');
-    await page.keyboard.press(`${MOD}+Alt+Digit4`);
+    await page.keyboard.press(`${MOD}+Alt+Digit3`);
     await expect(on).toHaveText('Export');
     await page.keyboard.press(`${MOD}+Alt+Digit1`);
     await expect(on).toHaveText('Desk');
   });
 
   test('Esc doesn’t leave a page', async ({ page }) => {
-    for (const name of ['Layout', 'Preview', 'Export'] as const) {
+    for (const name of ['Preview', 'Export'] as const) {
       await goTo(page, name);
       await page.keyboard.press('Escape');
       await expect(page.locator('.page-switcher button.on')).toHaveText(name);
@@ -34,33 +33,51 @@ test.describe('pages', () => {
 
   test('each page says what it is in the status bar', async ({ page }) => {
     await expect(statusText(page)).toHaveText('0 on desk, 0 placed');
-    await goTo(page, 'Layout');
+    await openLayout(page);
     await expect(statusText(page)).toContainText('10 × 8 in');
+    await page.keyboard.press('Escape');
     await goTo(page, 'Export');
     await expect(statusText(page)).toContainText('10 × 8 in spreads · 300 dpi');
     await goTo(page, 'Preview');
     await expect(statusText(page)).toHaveText('← → to turn pages · F for fullscreen');
   });
 
-  test('leaving Layout with unapplied changes asks first', async ({ page }) => {
-    await goTo(page, 'Layout');
-    const width = page
+  test('⌥⌘P opens and closes Layout', async ({ page }) => {
+    const dialog = page.getByRole('dialog', { name: 'Layout' });
+    await page.keyboard.press(`${MOD}+Alt+KeyP`);
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press(`${MOD}+Alt+KeyP`);
+    await expect(dialog).toHaveCount(0);
+  });
+
+  test('Layout is a dialog from the toolbar, closed by Esc or ×, that asks before dropping changes', async ({
+    page,
+  }) => {
+    await openLayout(page);
+    const dialog = page.getByRole('dialog', { name: 'Layout' });
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+
+    await openLayout(page);
+    const width = dialog
       .locator('label.num-field', { has: page.locator('.num-label', { hasText: /^W$/ }) })
       .locator('input');
     await width.fill('11');
     await width.press('Enter');
-    await expect(page.getByRole('button', { name: 'Apply' })).toBeEnabled();
+    await expect(dialog.getByRole('button', { name: 'Apply' })).toBeEnabled();
 
-    await page.locator('.page-switcher button', { hasText: 'Desk' }).click();
-    const dialog = page.getByRole('alertdialog');
-    await expect(dialog).toContainText('Apply the page changes?');
-    await dialog.getByRole('button', { name: 'Cancel' }).click();
-    await expect(page.locator('.page-switcher button.on')).toHaveText('Layout');
+    // Closing, or going to another page, asks first.
+    await dialog.getByRole('button', { name: 'Close' }).click();
+    const ask = page.getByRole('alertdialog');
+    await expect(ask).toContainText('Apply the page changes?');
+    await ask.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeVisible();
 
-    await page.locator('.page-switcher button', { hasText: 'Desk' }).click();
+    await page.locator('.page-switcher button', { hasText: 'Export' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Discard' }).click();
-    await expect(page.locator('.page-switcher button.on')).toHaveText('Desk');
-    await goTo(page, 'Layout');
+    await expect(dialog).toHaveCount(0);
+    await expect(page.locator('.page-switcher button.on')).toHaveText('Export');
+    await openLayout(page);
     await expect(width).toHaveValue('10');
   });
 });

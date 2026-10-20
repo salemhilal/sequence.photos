@@ -6,12 +6,13 @@ import '@fontsource/ibm-plex-mono/latin-400.css';
 import '@fontsource/ibm-plex-mono/latin-500.css';
 import './styles.css';
 import App from './App.tsx';
+import { LayoutWindow } from './components/LayoutWindow';
 import { SettingsWindow } from './components/SettingsDialog';
 import { applyDeskColor } from './deskColor';
 import { finishSignIn, hasPendingSignIn, reloadInstagram, takeReturnToExport } from './instagram';
 import { addTestImages } from './testImages';
 import { onSettingSaved, reloadSettings, ui } from './ui';
-import { isSettingsWindow } from './windowKind';
+import { isLayoutWindow, isMainWindow, isSettingsWindow } from './windowKind';
 import { platform } from '#platform';
 import { installHints } from './hints';
 
@@ -25,7 +26,7 @@ platform.onPrefsChanged(() => {
   reloadInstagram();
 });
 // The Settings window asks the main window for what needs the project.
-if (!isSettingsWindow)
+if (isMainWindow)
   platform.onMainRequest?.((request) => {
     if (request.kind === 'addTestImages') void addTestImages(request.count);
   });
@@ -41,4 +42,6 @@ platform.onSignInReturn((fragment) => {
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root');
 
-createRoot(root).render(<StrictMode>{isSettingsWindow ? <SettingsWindow /> : <App />}</StrictMode>);
+createRoot(root).render(
+  <StrictMode>{isSettingsWindow ? <SettingsWindow /> : isLayoutWindow ? <LayoutWindow /> : <App />}</StrictMode>,
+);

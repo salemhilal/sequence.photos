@@ -46,13 +46,13 @@ describe('statusText', () => {
 
   it('gives way to what the open page or editor says, and on another page says only that', () => {
     expect(statusText(book(), { ...desk, selection: [A], pageStatus: 'Arrows nudge' })).toBe('Arrows nudge');
-    expect(statusText(book(), { ...desk, page: 'layout', pageStatus: '10 × 8 in' })).toBe('10 × 8 in');
+    expect(statusText(book(), { ...desk, page: 'export', pageStatus: '10 × 8 in' })).toBe('10 × 8 in');
     expect(statusText(book(), { ...desk, page: 'preview' })).toBeNull();
   });
 
   it('puts a hint before everything', () => {
     expect(
-      statusText(book(), { ...desk, page: 'layout', pageStatus: '10 × 8 in', hint: 'Swap width and height' }),
+      statusText(book(), { ...desk, page: 'export', pageStatus: '10 × 8 in', hint: 'Swap width and height' }),
     ).toBe('Swap width and height');
   });
 });

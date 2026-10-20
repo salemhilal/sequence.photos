@@ -52,7 +52,7 @@ describe('commands', () => {
   });
 });
 
-describe('page shortcuts (⌥⌘1–⌥⌘4)', () => {
+describe('page shortcuts (⌥⌘1–⌥⌘3)', () => {
   // The platform modifier: ⌘ on a Mac, Ctrl elsewhere.
   const mod = isMac ? { metaKey: true, ctrlKey: false } : { metaKey: false, ctrlKey: true };
   const press = (key: string, code: string, extra: Partial<KeyboardEvent> = {}) => ({
@@ -63,28 +63,39 @@ describe('page shortcuts (⌥⌘1–⌥⌘4)', () => {
     ...mod,
     ...extra,
   });
-  const layout = commands.layout.bindings[0]!;
+  const preview = commands.preview.bindings[0]!;
 
   it('match by the key’s position, since Option changes the character it types', () => {
-    expect(matches(layout, press('™', 'Digit2'))).toBe(true);
-    expect(matches(layout, press('2', 'Digit2'))).toBe(true);
-    expect(matches(layout, press('¡', 'Digit1'))).toBe(false);
+    expect(matches(preview, press('™', 'Digit2'))).toBe(true);
+    expect(matches(preview, press('2', 'Digit2'))).toBe(true);
+    expect(matches(preview, press('¡', 'Digit1'))).toBe(false);
   });
 
   it('need both Option and the modifier', () => {
-    expect(matches(layout, press('2', 'Digit2', { altKey: false }))).toBe(false);
-    expect(matches(layout, press('™', 'Digit2', { metaKey: false, ctrlKey: false }))).toBe(false);
+    expect(matches(preview, press('2', 'Digit2', { altKey: false }))).toBe(false);
+    expect(matches(preview, press('™', 'Digit2', { metaKey: false, ctrlKey: false }))).toBe(false);
   });
 
-  it('cover the four pages, labeled and in the menus with Option', () => {
-    expect(
-      ['showDesk', 'layout', 'preview', 'showExport'].map((id) => shortcutLabel(id as keyof typeof commands)),
-    ).toEqual(['1', '2', '3', '4'].map((n) => (isMac ? `⌥⌘${n}` : `Ctrl+Alt+${n}`)));
-    expect(shortcutAccelerator('showExport')).toBe('CmdOrCtrl+Alt+4');
+  it('cover the three pages, labeled and in the menus with Option', () => {
+    expect(['showDesk', 'preview', 'showExport'].map((id) => shortcutLabel(id as keyof typeof commands))).toEqual(
+      ['1', '2', '3'].map((n) => (isMac ? `⌥⌘${n}` : `Ctrl+Alt+${n}`)),
+    );
+    expect(shortcutAccelerator('showExport')).toBe('CmdOrCtrl+Alt+3');
   });
 
   it('leave other shortcuts alone when Option is held', () => {
     expect(matches(commands.undo.bindings[0]!, { ...press('z', 'KeyZ'), altKey: true })).toBe(false);
     expect(matches(commands.undo.bindings[0]!, { ...press('z', 'KeyZ'), altKey: false })).toBe(true);
+  });
+});
+
+describe('Layout’s shortcut (⌥⌘P)', () => {
+  it('matches by the key’s position, and isn’t Preview’s ⌘P', () => {
+    const mod = isMac ? { metaKey: true, ctrlKey: false } : { metaKey: false, ctrlKey: true };
+    const layout = commands.layout.bindings[0]!;
+    expect(matches(layout, { key: 'π', code: 'KeyP', altKey: true, shiftKey: false, ...mod })).toBe(true);
+    expect(matches(layout, { key: 'p', code: 'KeyP', altKey: false, shiftKey: false, ...mod })).toBe(false);
+    expect(shortcutLabel('layout')).toBe(isMac ? '⌥⌘P' : 'Ctrl+Alt+P');
+    expect(shortcutAccelerator('layout')).toBe('CmdOrCtrl+Alt+P');
   });
 });

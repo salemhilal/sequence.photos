@@ -11,6 +11,7 @@ import {
   Redo2,
   Settings,
   Undo2,
+  Ruler,
   X,
   Upload,
 } from 'lucide-react';
@@ -167,6 +168,16 @@ export default function App() {
         )}
         <button
           className="btn ghost icon"
+          aria-label="Layout"
+          data-tour="layout"
+          onClick={() => runCommand('layout')}
+          data-tip={`Layout: the page size and guides (${shortcutLabel('layout')})`}
+          data-shortcut={shortcutLabel('layout')}
+        >
+          <Ruler />
+        </button>
+        <button
+          className="btn ghost icon"
           aria-label="Settings"
           onClick={() => runCommand('settings')}
           data-tip={`Settings (${shortcutLabel('settings')})`}
@@ -183,10 +194,10 @@ export default function App() {
             {editing && <SpreadEditor spreadId={editing} />}
           </>
         )}
-        {page === 'layout' && <LayoutEditor />}
         {page === 'preview' && <Preview />}
         {page === 'export' && <ExportView />}
         {/* Over the page, as the spread editor is: the toolbar and status bar stay in view. */}
+        {modal === 'layout' && <LayoutEditor />}
         {modal === 'settings' && <SettingsDialog />}
       </main>
       {statusBar && <StatusBar />}

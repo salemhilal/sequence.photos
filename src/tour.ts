@@ -61,7 +61,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'Layout',
     body: 'On the Page tab, choose spreads or frames, inches or pixels, and the size. On the Guides tab, set the border guides photos fit to when you drop them on a page, and drag guides out of the rulers. They apply to every spread, mirrored on facing pages.',
     target: '.layout-editor',
-    page: 'layout',
+    modal: 'layout',
   },
   {
     title: 'Settings',
@@ -159,7 +159,7 @@ export function goToStep(index: number): void {
     page: step.page ?? 'desk',
     modal: step.modal ?? null,
     // The Layout step shows the guides, which the sample book has.
-    ...(step.page === 'layout' && { layoutTab: 'guides' as const }),
+    ...(step.modal === 'layout' && { layoutTab: 'guides' as const }),
     editingSpreadId: step.editor ? (allSpreads(projectStore.project)[1]?.id ?? null) : null,
   });
 }

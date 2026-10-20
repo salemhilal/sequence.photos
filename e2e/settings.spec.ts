@@ -36,7 +36,7 @@ test.describe('settings', () => {
     await page.keyboard.down(MOD);
     await expect(badges.first()).toBeVisible();
     const labels = await badges.allTextContents();
-    for (const key of ['Z', '1', '2', '3', '4', 'B', ',']) {
+    for (const key of ['Z', '1', '2', '3', 'P', 'B', ',']) {
       expect(labels.some((l) => l.endsWith(key))).toBe(true);
     }
     // Each badge sits below its button.
