@@ -2,8 +2,8 @@ import { folioLabel } from './actions';
 import { getImage, type StoredImage } from './db';
 import type { PhotoId } from './ids';
 import { platform } from '#platform';
-import { exportPxPerUnit, perOf, type ExportOptions } from './exportOptions';
-import { fitPixels, outputPages, planPage, type OutputPage, type PagePlan } from './renderPlan';
+import { DEFAULT_QUALITY, exportPxPerUnit, perOf, type ExportOptions } from './exportOptions';
+import { fitPixels, itemsOn, outputPages, planPage, type OutputPage, type PagePlan } from './renderPlan';
 import { allSpreads, sheetOf } from './spreads';
 import { projectStore } from './store';
 import type { PhotoMeta, Project } from './types';
@@ -11,7 +11,6 @@ import { ui } from './ui';
 import { TERMS } from './units';
 import { createZip, type ZipInput } from './zip';
 
-const QUALITY = 0.92;
 /** Said after an export that had to use some photos' display copies (originals that wouldn't decode here). */
 export const PREVIEWS_NOTICE = "Some photos couldn't be read at full size, so their previews were used.";
 /**
@@ -121,7 +120,11 @@ export async function renderImages(
   pages: readonly OutputPage[],
   project: Project,
   onProgress: (done: number) => void,
-  { format = 'jpeg', pxPerUnit }: { format?: ExportOptions['format']; pxPerUnit?: number } = {},
+  {
+    format = 'jpeg',
+    quality = DEFAULT_QUALITY,
+    pxPerUnit,
+  }: { format?: ExportOptions['format']; quality?: number; pxPerUnit?: number } = {},
 ): Promise<{ files: ZipInput[]; missing: number; previews: number; lowest: number }> {
   const sheet = sheetOf(project);
   const ext = format === 'png' ? 'png' : 'jpg';
@@ -139,7 +142,7 @@ export async function renderImages(
     missing += rendered.missing;
     previews += rendered.previews;
     const data = await rendered.canvas.convertToBlob(
-      format === 'png' ? { type: 'image/png' } : { type: 'image/jpeg', quality: QUALITY },
+      format === 'png' ? { type: 'image/png' } : { type: 'image/jpeg', quality },
     );
     releaseCanvas(rendered.canvas);
     files.push({ name: names[i] ?? `${i + 1}.${ext}`, data });
@@ -153,7 +156,9 @@ export async function renderImages(
  * per page, at the chosen dpi for inches. Reports progress and problems in the UI, and
  * resolves whether it was saved.
  */
-export async function exportImages(options: Pick<ExportOptions, 'per' | 'format' | 'dpi'>): Promise<boolean> {
+export async function exportImages(
+  options: Pick<ExportOptions, 'per' | 'format' | 'quality' | 'dpi'>,
+): Promise<boolean> {
   if (ui.get().busy || ui.get().importing) return false;
   const project = projectStore.project;
   const pages = outputPages(project, perOf(project, options));
@@ -171,7 +176,7 @@ export async function exportImages(options: Pick<ExportOptions, 'per' | 'format'
           pages,
           project,
           (done) => ui.set({ busy: `Rendering image ${done} of ${pages.length}…` }),
-          { format: options.format, pxPerUnit: target },
+          { format: options.format, quality: options.quality, pxPerUnit: target },
         );
         missing = out.missing;
         previews = out.previews;
@@ -197,4 +202,30 @@ export async function exportImages(options: Pick<ExportOptions, 'per' | 'format'
   } finally {
     ui.set({ busy: null });
   }
+}
+
+/** About how many pixels a size estimate renders and encodes, as a sample. */
+const SAMPLE_PIXELS = 500_000;
+
+/**
+ * About how many bytes images would take: one page (the first with photos) rendered small
+ * and encoded as chosen, its bytes per pixel times every page's pixels.
+ */
+export async function estimateImagesSize(
+  pages: readonly OutputPage[],
+  project: Project,
+  { format, quality, pxPerUnit }: { format: ExportOptions['format']; quality: number; pxPerUnit: number },
+): Promise<number> {
+  const sheet = sheetOf(project);
+  const plans = pages.map((p) => planPage(p, sheet, project.photos, pxPerUnit));
+  const total = plans.reduce((n, p) => n + Math.min(p.pxW * p.pxH, MAX_PIXELS), 0);
+  const sample = pages.find((p) => itemsOn(p, sheet).length > 0) ?? pages[0];
+  const plan = sample && plans[pages.indexOf(sample)];
+  if (!sample || !plan) return 0;
+  const k = plan.pxPerUnit * Math.min(1, Math.sqrt(SAMPLE_PIXELS / (plan.pxW * plan.pxH)));
+  const small = planPage(sample, sheet, project.photos, k);
+  const { canvas } = await renderPage(small, project.photos);
+  const blob = await canvas.convertToBlob(format === 'png' ? { type: 'image/png' } : { type: 'image/jpeg', quality });
+  releaseCanvas(canvas);
+  return (blob.size / (small.pxW * small.pxH)) * total;
 }

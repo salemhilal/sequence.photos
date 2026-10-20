@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { commandTitle, runCommand, shortcutLabel, type CommandId } from '../commands';
 import { ui } from '../ui';
-import type { MenuItem } from './FileMenu';
+import type { MenuItem } from './Menu';
 
 /** A menu item running a command, disabled (by default) while the app is busy. */
 export function useCommandItem(): (id: CommandId, icon: ReactNode, disabled?: boolean) => MenuItem {

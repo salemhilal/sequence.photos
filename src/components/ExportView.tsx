@@ -1,28 +1,29 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, FileText, Images, Info, Package, Send, TriangleAlert, X } from 'lucide-react';
-import { platform } from '#platform';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { FileText, Images, Info, Package, TriangleAlert } from 'lucide-react';
 import {
   converts,
   defaultOptions,
-  destinations,
+  DESTINATIONS,
   exportPxPerUnit,
   perOf,
   type Destination,
   type ExportOptions,
   type Per,
 } from '../exportOptions';
-import { useElementSize, usePager, useWindowEvent } from '../hooks';
+import { useElementSize, usePageStatus, usePager } from '../hooks';
 import { exportIndesign } from '../indesign';
 import { savePdf } from '../pdf';
-import { exportImages, imageNames } from '../rasterExport';
+import { estimateImagesSize, exportImages, imageNames } from '../rasterExport';
 import { outputPages, pageRegion, type OutputPage } from '../renderPlan';
 import { showPhoto, softPhotos, softSentence } from '../resolution';
+import { sheetExtent } from '../geometry';
 import { sheetOf } from '../spreads';
 import { useProject } from '../store';
 import type { Project, Sheet } from '../types';
-import { closeModal, modalLocked, ui } from '../ui';
+import { goToPage, ui } from '../ui';
 import { TERMS, UNITS } from '../units';
 import { NumberField } from './NumberField';
+import { Pager } from './Pager';
 import { Segmented } from './Segmented';
 import { PageCanvas } from './SpreadCanvas';
 
@@ -35,11 +36,12 @@ const InstagramPost = lazy(() => import('./InstagramPost').then((m) => ({ defaul
  * how it converts, with the dpi it converts at.
  */
 
-const DESTINATIONS: Record<Destination, { label: string; icon: ReactNode }> = {
+/** How each destination shows in the picker. */
+const LOOKS: Record<Destination, { label: string; icon: ReactNode }> = {
   pdf: { label: 'PDF', icon: <FileText /> },
   images: { label: 'Images', icon: <Images /> },
   indesign: { label: 'InDesign', icon: <Package /> },
-  instagram: { label: 'Instagram', icon: <Send /> },
+  instagram: { label: 'Instagram', icon: <InstagramGlyph /> },
 };
 
 /** The options last chosen, kept while the app is open. */
@@ -49,9 +51,9 @@ let remembered: Partial<Omit<ExportOptions, 'dpi'>> = {};
  * Where Export opens before anything's picked: a book or zine in inches as a PDF; pixel
  * frames at Instagram's width to Instagram (on the web), other pixel frames as images.
  */
-function defaultDestination(sheet: Sheet, available: Destination[]): Destination {
+function defaultDestination(sheet: Sheet): Destination {
   if (sheet.unit === 'in') return 'pdf';
-  if (sheet.arrangement === 'frames' && sheet.pageW === 1080 && available.includes('instagram')) return 'instagram';
+  if (sheet.arrangement === 'frames' && sheet.pageW === 1080) return 'instagram';
   return 'images';
 }
 
@@ -63,31 +65,29 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 export function ExportView() {
   const { project } = useProject();
   const sheet = sheetOf(project);
-  const available = destinations(platform.kind === 'browser');
-  const picked = ui.use((s) => s.exportTo) ?? defaultDestination(sheet, available);
-  const to = available.includes(picked) ? picked : 'pdf';
+  const to = ui.use((s) => s.exportTo) ?? defaultDestination(sheet);
   // The choices made last time, while the app is open. (The dpi starts from the page's.)
   const [options, setOptions] = useState<ExportOptions>(() => ({ ...defaultOptions(sheet), ...remembered }));
   const set = (o: Partial<ExportOptions>) =>
     setOptions((was) => {
       const next = { ...was, ...o };
-      remembered = { per: next.per, format: next.format, printAt: next.printAt };
+      remembered = { per: next.per, format: next.format, quality: next.quality, printAt: next.printAt };
       return next;
     });
   const busy = ui.use((s) => s.busy);
 
-  const close = () => {
-    if (!modalLocked()) closeModal();
-  };
-  useWindowEvent('keydown', (e) => {
-    if (e.key === 'Escape' && !(e.target instanceof HTMLTextAreaElement)) close();
-  });
+  // What's exported, in the status bar.
+  const units = UNITS[sheet.unit];
+  const status = `${units.format(sheet.pageW)} × ${units.format(sheet.pageH)} ${units.suffix} ${
+    TERMS[sheet.arrangement].spreads
+  }${sheet.unit === 'in' ? ` · ${sheet.pxPerUnit} dpi` : ''}`;
+  usePageStatus(status);
 
   const picker = (locked: boolean) => (
     <section>
       <h3>Destination</h3>
       <div className="export-destinations" role="radiogroup" aria-label="Destination">
-        {available.map((d) => (
+        {DESTINATIONS.map((d) => (
           <button
             key={d}
             role="radio"
@@ -96,47 +96,30 @@ export function ExportView() {
             disabled={locked}
             onClick={() => ui.set({ exportTo: d })}
           >
-            {DESTINATIONS[d].icon}
-            {DESTINATIONS[d].label}
+            {LOOKS[d].icon}
+            {LOOKS[d].label}
           </button>
         ))}
       </div>
     </section>
   );
 
-  const units = UNITS[sheet.unit];
   return (
-    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="modal editor export-view" data-modal>
-        <header className="modal-head">
-          <div className="modal-title">
-            <span className="folio">Export</span>
-            <span className="muted data">
-              {units.format(sheet.pageW)} × {units.format(sheet.pageH)} {units.suffix}{' '}
-              {TERMS[sheet.arrangement].spreads}
-              {sheet.unit === 'in' && ` · ${sheet.pxPerUnit} dpi`}
-            </span>
-          </div>
-          <span className="spacer" />
-          <button className="btn ghost icon" aria-label="Close" onClick={close}>
-            <X />
-          </button>
-        </header>
-        <div className="editor-body">
-          {to === 'instagram' ? (
-            <InstagramDestination sheet={sheet} picker={picker} />
-          ) : (
-            <FileDestination
-              to={to}
-              project={project}
-              sheet={sheet}
-              options={options}
-              set={set}
-              busy={busy}
-              picker={picker(busy !== null)}
-            />
-          )}
-        </div>
+    <div className="page-view export-view">
+      <div className="editor-body">
+        {to === 'instagram' ? (
+          <InstagramDestination sheet={sheet} picker={picker} />
+        ) : (
+          <FileDestination
+            to={to}
+            project={project}
+            sheet={sheet}
+            options={options}
+            set={set}
+            busy={busy}
+            picker={picker(busy !== null)}
+          />
+        )}
       </div>
     </div>
   );
@@ -165,10 +148,12 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
   const maxDpi = sheet.unit === 'in' ? sheet.pxPerUnit : 1;
   const setDpi = (n: number) => set({ dpi: Math.min(maxDpi, Math.max(1, Math.round(n))) });
 
+  const estimate = useImagesEstimate(to === 'images', project, per, options.format, options.quality, pxPerUnit);
+
   const run = async () => {
     const saved =
       to === 'pdf' ? await savePdf(options) : to === 'images' ? await exportImages(options) : await exportIndesign();
-    if (saved) closeModal();
+    if (saved) goToPage('desk');
   };
   const action =
     to === 'pdf'
@@ -193,17 +178,16 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
     </section>
   );
   const dpiField = (label: string, value: number, onCommit: (n: number) => void) => (
-    <div className="inline dpi">
-      <span>{label}</span>
+    <div className="field-row">
+      <span className="field-label">{label}</span>
       <NumberField
         units={UNITS.px}
         min={1}
-        suffix={false}
+        suffixText="dpi"
         ariaLabel={`${label}, in dpi`}
         value={value}
         onCommit={onCommit}
       />
-      <span className="muted data">dpi</span>
     </div>
   );
 
@@ -268,12 +252,35 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
               onChange={(format) => set({ format })}
               disabled={busy !== null}
             />
+            {options.format === 'jpeg' ? (
+              <label className="field-row export-quality">
+                <span className="field-label">Quality</span>
+                <span className="inline slider-control">
+                  <input
+                    type="range"
+                    min={50}
+                    max={100}
+                    step={1}
+                    value={Math.round(options.quality * 100)}
+                    disabled={busy !== null}
+                    onChange={(e) => set({ quality: e.target.valueAsNumber / 100 })}
+                  />
+                  <span className="data">{Math.round(options.quality * 100)}%</span>
+                </span>
+              </label>
+            ) : (
+              <p className="help">Lossless, so larger.</p>
+            )}
             <p className="help">
               Saved as a ZIP:{' '}
               {imageNames(project, pages, options.format === 'png' ? 'png' : 'jpg')
                 .slice(0, 2)
                 .join(', ')}
               {pages.length > 2 ? ', …' : ''}
+            </p>
+            <p className="help data">
+              {pages.length} {pages.length === 1 ? 'image' : 'images'}
+              {estimate !== null && `, ~${formatBytes(estimate)} total`}
             </p>
           </section>
         )}
@@ -304,6 +311,61 @@ function FileDestination({ to, project, sheet, options, set, busy, picker }: Fil
         </section>
       </aside>
     </>
+  );
+}
+
+/** The images' total size, estimated a moment after the settings settle (null until then). */
+function useImagesEstimate(
+  active: boolean,
+  project: Project,
+  per: Per,
+  format: ExportOptions['format'],
+  quality: number,
+  pxPerUnit: number,
+): number | null {
+  const [estimate, setEstimate] = useState<{ key: string; bytes: number } | null>(null);
+  const key = JSON.stringify([per, format, quality, pxPerUnit]);
+  useEffect(() => {
+    if (!active) return;
+    let stale = false;
+    const timer = window.setTimeout(() => {
+      const pages = outputPages(project, perOf(project, { per }));
+      void estimateImagesSize(pages, project, { format, quality, pxPerUnit })
+        .then((bytes) => !stale && setEstimate({ key, bytes }))
+        .catch(() => undefined);
+    }, 400);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [active, project, key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return estimate?.key === key ? estimate.bytes : null;
+}
+
+/** "980 KB", "12 MB", "1.4 GB". */
+function formatBytes(n: number): string {
+  if (n < 1e6) return `${Math.max(1, Math.round(n / 1e3))} KB`;
+  if (n < 1e9) return `${Math.round(n / 1e6)} MB`;
+  return `${(n / 1e9).toFixed(1)} GB`;
+}
+
+/** Instagram's glyph (a rounded square, a lens, a flash), drawn like the other icons. */
+function InstagramGlyph() {
+  return (
+    <svg
+      className="lucide"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" />
+    </svg>
   );
 }
 
@@ -349,15 +411,17 @@ function OutputPreview({
   /** Images: the pixels each page becomes, shown in the label. */
   pxPerUnit: number | null;
 }) {
-  const { at, go } = usePager(pages.length);
+  const { at, go } = usePager(pages.length, true);
   const page = pages[at];
   const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 800, h: 500 });
 
   if (!page) return <div className="editor-stage" ref={stageRef} />;
   const region = pageRegion(page, sheet);
   const pad = sheet.pageW * PAD_SHARE;
-  // Room below for the controls.
-  const scale = Math.max(0, Math.min(stage.w / (region.w + 2 * pad), (stage.h - 56) / (region.h + 2 * pad)));
+  // A book's spreads all show at one scale, a whole spread's: a single first or last page
+  // comes out the size of a page beside it, not enlarged to fill. Room below for the controls.
+  const across = page.part === 'spread' ? sheetExtent(sheet).width : region.w;
+  const scale = Math.max(0, Math.min(stage.w / (across + 2 * pad), (stage.h - 56) / (region.h + 2 * pad)));
   const units = UNITS[sheet.unit];
   const size =
     pxPerUnit !== null
@@ -367,17 +431,7 @@ function OutputPreview({
   return (
     <div className="editor-stage page-preview" ref={stageRef}>
       <PageCanvas page={page} sheet={sheet} scale={scale} />
-      <div className="page-preview-controls">
-        <button className="btn ghost icon" aria-label="Previous" disabled={at === 0} onClick={() => go(-1)}>
-          <ChevronLeft />
-        </button>
-        <span className="muted data">
-          {at + 1} / {pages.length} · {size}
-        </span>
-        <button className="btn ghost icon" aria-label="Next" disabled={at === pages.length - 1} onClick={() => go(1)}>
-          <ChevronRight />
-        </button>
-      </div>
+      <Pager at={at} count={pages.length} go={go} noun="page" extra={` · ${size}`} />
     </div>
   );
 }

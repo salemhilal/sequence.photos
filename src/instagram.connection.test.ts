@@ -192,7 +192,7 @@ describe('connectInstagram', () => {
   it('keeps this tab’s sign-in and goes to Instagram', async () => {
     const assign = vi.spyOn(location, 'assign').mockImplementation(() => {});
     const { connectInstagram } = await load(null);
-    expect(await connectInstagram()).toBeNull();
+    expect(await connectInstagram()).toEqual({ opened: 'here' });
     const pending = JSON.parse(sessionStorage.getItem(PENDING_KEY)!) as Record<string, string>;
     expect(pending.server).toBe(SERVER_URL);
     expect(pending.verifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
@@ -205,7 +205,7 @@ describe('connectInstagram', () => {
     setUrl('https://elsewhere.example/');
     const assign = vi.spyOn(location, 'assign').mockImplementation(() => {});
     const { connectInstagram } = await load(null);
-    expect(await connectInstagram()).toMatch(/can’t be connected from this address/);
+    expect(await connectInstagram()).toEqual({ error: expect.stringMatching(/can’t be connected from this address/) });
     expect(assign).not.toHaveBeenCalled();
     expect(sessionStorage.getItem(PENDING_KEY)).toBeNull();
   });
@@ -213,28 +213,23 @@ describe('connectInstagram', () => {
 
 describe('finishSignIn', () => {
   const pending = { state: 'web.nonce.challenge', verifier: 'VERIFIER', server: DEV_SERVER_URL };
-  const returned = (fragment: string) => setUrl(`${SITE_URL}/app/?x=1#${fragment}`);
 
   beforeEach(() => {
     sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
   });
 
   it('does nothing without a sign-in’s return', async () => {
-    const replace = vi.spyOn(history, 'replaceState');
     const { finishSignIn } = await load(null);
-    expect(await finishSignIn()).toBeNull();
-    expect(replace).not.toHaveBeenCalled();
+    expect(await finishSignIn('')).toBeNull();
+    expect(await finishSignIn('#section')).toBeNull();
     expect(sessionStorage.getItem(PENDING_KEY)).not.toBeNull();
   });
 
-  it('ignores a return this tab didn’t start, and strips it from the address', async () => {
+  it('ignores a return this tab didn’t start', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch');
-    const replace = vi.spyOn(history, 'replaceState');
-    returned(`instagram=SEALED&state=web.other.state`);
+    const fragment = `#instagram=SEALED&state=web.other.state`;
     const { finishSignIn, instagramConnection } = await load(null);
-    expect(await finishSignIn()).toMatch(/started in another tab or window/);
-    expect(replace).toHaveBeenCalledWith(history.state, '', '/app/?x=1');
-    expect(location.hash).toBe('');
+    expect(await finishSignIn(fragment)).toMatch(/started in another tab or window/);
     expect(fetch).not.toHaveBeenCalled();
     expect(instagramConnection()).toBeNull();
     expect(stored()).toBeNull();
@@ -245,46 +240,44 @@ describe('finishSignIn', () => {
   it('ignores a return when no sign-in is pending', async () => {
     sessionStorage.clear();
     const fetch = vi.spyOn(globalThis, 'fetch');
-    returned(`instagram=SEALED&state=${pending.state}`);
+    const fragment = `#instagram=SEALED&state=${pending.state}`;
     const { finishSignIn } = await load(null);
-    expect(await finishSignIn()).toMatch(/started in another tab or window/);
+    expect(await finishSignIn(fragment)).toMatch(/started in another tab or window/);
     expect(fetch).not.toHaveBeenCalled();
     expect(stored()).toBeNull();
   });
 
   it('reports an error the server sent back', async () => {
-    returned(`instagram_error=not_professional&state=${pending.state}`);
+    const fragment = `#instagram_error=not_professional&state=${pending.state}`;
     const { finishSignIn } = await load(null);
-    expect(await finishSignIn()).toMatch(/Business or Creator account/);
-    expect(location.hash).toBe('');
+    expect(await finishSignIn(fragment)).toMatch(/Business or Creator account/);
   });
 
   it('says nothing when the user cancelled', async () => {
-    returned(`instagram_error=cancelled&state=${pending.state}`);
+    const fragment = `#instagram_error=cancelled&state=${pending.state}`;
     const { finishSignIn } = await load(null);
-    expect(await finishSignIn()).toBeNull();
+    expect(await finishSignIn(fragment)).toBeNull();
   });
 
   it('redeems the bundle at the server the sign-in started with, and keeps the connection', async () => {
     const { server: _, ...fromServer } = connection;
     const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(fromServer));
-    returned(`instagram=SEALED&state=${pending.state}`);
+    const fragment = `#instagram=SEALED&state=${pending.state}`;
     const { finishSignIn, instagramConnection } = await load(null);
-    expect(await finishSignIn()).toBe('Connected to Instagram as @some.photographer.');
+    expect(await finishSignIn(fragment)).toBe('Connected to Instagram as @some.photographer.');
     const [url, init] = fetch.mock.calls[0]!;
     expect(url).toBe(`${DEV_SERVER_URL}/auth/redeem`);
     expect(init?.method).toBe('POST');
     expect(JSON.parse(String(init?.body))).toEqual({ sealed: 'SEALED', verifier: 'VERIFIER' });
     expect(instagramConnection()).toEqual({ ...fromServer, server: DEV_SERVER_URL });
     expect(stored()).toEqual({ ...fromServer, server: DEV_SERVER_URL });
-    expect(location.hash).toBe('');
   });
 
   it('says the server couldn’t be reached', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
-    returned(`instagram=SEALED&state=${pending.state}`);
+    const fragment = `#instagram=SEALED&state=${pending.state}`;
     const { finishSignIn, SERVER_ERROR } = await load(null);
-    expect(await finishSignIn()).toBe(SERVER_ERROR);
+    expect(await finishSignIn(fragment)).toBe(SERVER_ERROR);
     expect(stored()).toBeNull();
   });
 
@@ -292,9 +285,9 @@ describe('finishSignIn', () => {
     for (const res of [json({ error: 'expired' }, 400), json({ token: 'only' })]) {
       sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(res);
-      returned(`instagram=SEALED&state=${pending.state}`);
+      const fragment = `#instagram=SEALED&state=${pending.state}`;
       const { finishSignIn, ERROR_MESSAGES } = await load(null);
-      expect(await finishSignIn()).toBe(ERROR_MESSAGES.exchange_failed);
+      expect(await finishSignIn(fragment)).toBe(ERROR_MESSAGES.exchange_failed);
       expect(stored()).toBeNull();
     }
   });

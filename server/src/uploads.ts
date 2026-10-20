@@ -17,6 +17,7 @@ import { checkJpeg, MAX_FRAME_BYTES } from './jpeg';
 import { randomBase64Url } from './encoding';
 import { LIFETIME, sign, verify, type Signed } from './keys';
 import { Tag } from './log';
+import { parsePostResult, record } from './metrics';
 import type { Handler, RequestContext } from './router';
 import { batchPrefix, deleteWhere, frameKey } from './storage';
 
@@ -33,14 +34,15 @@ export const createBatch: Handler = async (ctx) => {
   if (token === null) throw new HttpError(401, 'unauthorized');
   const body = await readJson(ctx.request, MAX_JSON_BODY, UploadsBody);
   if (body.count > ctx.config.maxFrames) throw new HttpError(400, 'bad_request');
-  await requireEnrolledUser(ctx, token, body.enrollment, {
+  const userId = await requireEnrolledUser(ctx, token, body.enrollment, {
     // Per user, so after the enrollment names one; before Instagram is called.
     beforeInstagram: (userId) => ctx.rateLimit({ kind: 'user', userId }),
   });
 
   // 128 random bits: 22 base64url characters.
   const id = randomBase64Url(16);
-  ctx.log.batch = await Tag.batch(id);
+  const batchTag = await Tag.batch(id);
+  ctx.log.batch = batchTag;
   const origin = ctx.url.origin;
 
   const frames: UploadBatch['frames'] = [];
@@ -60,6 +62,12 @@ export const createBatch: Handler = async (ctx) => {
     frames,
     delete: `${origin}/uploads/${id}?exp=${deleteExp}&sig=${deleteSig}`,
   };
+  record(ctx.env.METRICS, {
+    event: 'batch',
+    user: await Tag.user(ctx.keys.log, userId),
+    batch: batchTag,
+    frames: body.count,
+  });
   return jsonResponse(batch);
 };
 
@@ -79,7 +87,8 @@ const ONLY_IF_ABSENT = (): Headers => new Headers({ 'If-None-Match': '*' });
 export const putFrame: Handler = async (ctx) => {
   const id = ctx.params.id;
   if (!isBatchId(id)) throw new HttpError(400, 'bad_request');
-  ctx.log.batch = await Tag.batch(id);
+  const batch = await Tag.batch(id);
+  ctx.log.batch = batch;
   const index = parseFrameIndex(ctx.params.i, ctx.config.maxFrames);
   if (index === null) throw new HttpError(400, 'bad_request');
   ctx.log.i = index;
@@ -110,15 +119,26 @@ export const putFrame: Handler = async (ctx) => {
     httpMetadata: { contentType: 'image/jpeg' },
   });
   if (!stored) throw new HttpError(409, 'exists');
+  record(ctx.env.METRICS, { event: 'frame', batch, bytes: body.byteLength });
   return new Response(null, { status: 204 });
 };
 
-/** `DELETE /uploads/:id?exp&sig`: delete a batch's frames (204 even if already gone). */
+/**
+ * `DELETE /uploads/:id?exp&sig[&result]`: delete a batch's frames (204 even if already
+ * gone), counting the post's `result` (outside the signature: the app adds it).
+ */
 export const deleteBatch: Handler = async (ctx) => {
   const id = ctx.params.id;
   if (!isBatchId(id)) throw new HttpError(400, 'bad_request');
-  ctx.log.batch = await Tag.batch(id);
+  const batch = await Tag.batch(id);
+  ctx.log.batch = batch;
   await requireSignature(ctx, (exp) => ({ kind: 'DELETE', id, exp }));
-  await deleteWhere(ctx.env.FRAMES, batchPrefix(id));
+  const { deleted } = await deleteWhere(ctx.env.FRAMES, batchPrefix(id));
+  record(ctx.env.METRICS, {
+    event: 'post',
+    batch,
+    result: parsePostResult(ctx.url.searchParams.get('result')),
+    frames: deleted,
+  });
   return new Response(null, { status: 204 });
 };

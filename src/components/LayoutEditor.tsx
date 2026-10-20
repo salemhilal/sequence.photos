@@ -12,14 +12,14 @@ import {
   spreadLeft,
   spreadWidth,
 } from '../geometry';
-import { useElementSize, useWindowEvent } from '../hooks';
+import { useElementSize, usePageStatus, useWindowEvent } from '../hooks';
 import { isTyping } from '../input';
 import { newGuideId, toSpreadId, type GuideId } from '../ids';
 import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { Arrangement, LineGuide, PageSide, Spread } from '../types';
 import { TERMS, UNITS } from '../units';
-import { ask, closeModal, setCloseGuard, ui } from '../ui';
+import { ask, closeModal, setCloseGuard, ui, type LayoutTab } from '../ui';
 import { applyPageSetup, draftOf, sameDraft } from '../pageSetup';
 import { usePageDraft } from './pageDraft';
 import { PagePreview } from './PagePreview';
@@ -44,6 +44,7 @@ const SAMPLES: Record<Arrangement, Spread> = {
   frames: { id: toSpreadId('layout'), kind: 'frame', items: [] },
 };
 
+/** The Layout view: the page's settings and guides, over the page as the spread editor is. */
 export function LayoutEditor() {
   const { project } = useProject();
   const s = sheetOf(project);
@@ -87,37 +88,53 @@ export function LayoutEditor() {
     setSelected(null);
   };
 
-  // Closing or replacing Layout (here, or by a shortcut or menu) first asks what to do with
-  // page changes that wait for Apply.
+  /**
+   * Page changes waiting for Apply: ask what to do with them before closing Layout or going
+   * to Guides. Resolves whether to go on (applied, or discarded).
+   */
+  const settlePage = async (): Promise<boolean> => {
+    if (!pending) return true;
+    const answer = await ask({
+      title: 'Apply the page changes?',
+      message: 'Your changes on the Page tab haven’t been applied yet.',
+      actions: [
+        { label: 'Cancel', value: 'cancel' },
+        { label: 'Discard', value: 'discard' },
+        { label: 'Apply', value: 'apply', primary: true },
+      ],
+    });
+    if (answer === 'apply') applyPageSetup(draft);
+    if (answer === 'discard') setDraft(draftOf(projectStore.project));
+    return answer === 'apply' || answer === 'discard';
+  };
+  // Closing Layout (its ×, Esc, a page switch, a shortcut or menu, its window) asks first.
   useEffect(() => {
     if (!pending) return;
-    setCloseGuard(async () => {
-      const answer = await ask({
-        title: 'Apply the page changes?',
-        message: 'Your changes on the Page tab haven’t been applied yet.',
-        actions: [
-          { label: 'Cancel', value: 'cancel' },
-          { label: 'Discard', value: 'discard' },
-          { label: 'Apply', value: 'apply', primary: true },
-        ],
-      });
-      if (answer === 'apply') applyPageSetup(draft);
-      return answer === 'apply' || answer === 'discard';
-    });
+    setCloseGuard(settlePage);
     return () => setCloseGuard(null);
-  }, [pending, draft]);
-  const close = closeModal;
+  });
+  const goToTab = (t: LayoutTab) => {
+    if (t === 'page') return ui.set({ layoutTab: t });
+    void settlePage().then((ok) => ok && ui.set({ layoutTab: t }));
+  };
 
   useWindowEvent('keydown', (e) => {
     if (isTyping(e) || e.metaKey || e.ctrlKey || ui.get().confirm) return;
     if (e.key === 'Escape') {
+      // Esc deselects a guide, then closes Layout.
       if (selected) setSelected(null);
-      else close();
+      else closeModal();
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected) {
       e.preventDefault();
       remove(selected);
     }
   });
+
+  // Its size, and while previewing, how to flip through, in the status bar.
+  const status = `${units.format(s.pageW)} × ${units.format(s.pageH)} ${units.suffix}${
+    previewing ? `${pending ? ' · Preview of the changes' : ''} · ← → to flip through` : ''
+  }`;
+  usePageStatus(status);
 
   // Where the spread sits in the stage: centered in the space beside the rulers.
   const scale = Math.min((stage.w - RULER) / (across + 2 * PAD), (stage.h - RULER) / (s.pageH + 2 * PAD));
@@ -234,76 +251,69 @@ export function LayoutEditor() {
     else for (const side of sides) draw(`${l.id}-${side}`, 'vertical', linePosition(side, s, l), sel, side);
   }
 
-  return (
-    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="modal editor layout-editor" data-modal>
-        <header className="modal-head">
-          <div className="modal-title">
-            <span className="folio">Layout</span>
-            <span className="muted data">
-              {units.format(s.pageW)} × {units.format(s.pageH)} {units.suffix}
-            </span>
+  const body = (
+    <div className="editor-body">
+      {previewing && <PagePreview draft={draft} />}
+      <div className="editor-stage" ref={stageRef} hidden={previewing}>
+        <Ruler
+          axis="horizontal"
+          length={stage.w}
+          origin={gutterX}
+          scale={scale}
+          size={s.pageW}
+          unit={s.unit}
+          mirrored={s.arrangement === 'spreads'}
+          onPointerDown={(e) => dragGuide(e, 'horizontal', null)}
+        />
+        <Ruler
+          axis="vertical"
+          length={stage.h}
+          origin={pageTop}
+          scale={scale}
+          size={s.pageH}
+          unit={s.unit}
+          onPointerDown={(e) => dragGuide(e, 'vertical', null)}
+        />
+        <div className="ruler-corner" />
+        <div className="layout-canvas" style={{ left, top }}>
+          <SpreadCanvas
+            spread={sample}
+            sheet={s}
+            scale={scale}
+            pad={PAD}
+            overlay={guides}
+            onPointerDown={() => setSelected(null)}
+          />
+        </div>
+        {dragLabel && (
+          <div className="guide-drag-label data" style={{ left: dragLabel.x + 14, top: dragLabel.y + 14 }}>
+            {dragLabel.text}
           </div>
+        )}
+      </div>
+      <LayoutPanel
+        s={s}
+        tab={tab}
+        draft={draft}
+        onDraft={setDraft}
+        onTab={goToTab}
+        selected={selected}
+        onSelect={setSelected}
+        onRemove={remove}
+      />
+    </div>
+  );
+  return (
+    <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && closeModal()}>
+      <div className="modal editor layout-editor" data-modal role="dialog" aria-label="Layout">
+        <header className="modal-head">
+          <div className="modal-title">Layout</div>
           <span className="spacer" />
-          <span className="hint">
-            {previewing
-              ? `${pending ? 'Preview of the changes · ' : ''}← → to flip through`
-              : `Drag from a ruler to add a guide · Shift: snap to ${units.snapLabel} · Drag off the ${terms.page} to remove`}
-          </span>
-          <button className="btn ghost icon" aria-label="Close" onClick={close}>
+          <button className="btn ghost icon" aria-label="Close" onClick={closeModal}>
             <X />
           </button>
         </header>
-        <div className="editor-body">
-          {previewing && <PagePreview draft={draft} />}
-          <div className="editor-stage" ref={stageRef} hidden={previewing}>
-            <Ruler
-              axis="horizontal"
-              length={stage.w}
-              origin={gutterX}
-              scale={scale}
-              size={s.pageW}
-              unit={s.unit}
-              mirrored={s.arrangement === 'spreads'}
-              onPointerDown={(e) => dragGuide(e, 'horizontal', null)}
-            />
-            <Ruler
-              axis="vertical"
-              length={stage.h}
-              origin={pageTop}
-              scale={scale}
-              size={s.pageH}
-              unit={s.unit}
-              onPointerDown={(e) => dragGuide(e, 'vertical', null)}
-            />
-            <div className="ruler-corner" />
-            <div className="layout-canvas" style={{ left, top }}>
-              <SpreadCanvas
-                spread={sample}
-                sheet={s}
-                scale={scale}
-                pad={PAD}
-                overlay={guides}
-                onPointerDown={() => setSelected(null)}
-              />
-            </div>
-            {dragLabel && (
-              <div className="guide-drag-label data" style={{ left: dragLabel.x + 14, top: dragLabel.y + 14 }}>
-                {dragLabel.text}
-              </div>
-            )}
-          </div>
-          <LayoutPanel
-            s={s}
-            tab={tab}
-            draft={draft}
-            onDraft={setDraft}
-            pending={pending}
-            selected={selected}
-            onSelect={setSelected}
-            onRemove={remove}
-          />
-        </div>
+        {body}
       </div>
     </div>
   );

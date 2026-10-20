@@ -6,6 +6,7 @@ import type {
   BorderGuide,
   Frame,
   LastSpread,
+  PageSide,
   MiddleSpread,
   PageSetup,
   Placement,
@@ -119,10 +120,27 @@ export function convertUnits(project: Project, unit: Unit, dpi: number): Project
 }
 
 /**
- * The page at a new size: border guides stay on the page, and photos keep their place
- * relative to the guides (`relative`) or their exact position.
+ * What photos kept fixed on a resized page stay put relative to: each page's top-left
+ * corner, its center, or (spreads) its inside edge, at the gutter.
  */
-export function resizePage(project: Project, size: Size, relative: boolean): Project {
+export type Anchor = 'top-left' | 'center' | 'inside';
+
+/**
+ * How far a photo kept fixed moves when its page changes size by (dw, dh): with the
+ * point it's anchored to. A left page grows leftward from the gutter.
+ */
+export function anchorShift(anchor: Anchor, side: PageSide, dw: number, dh: number): { dx: number; dy: number } {
+  if (anchor === 'center') return { dx: side === 'left' ? -dw / 2 : dw / 2, dy: dh / 2 };
+  // The top-left corner moves only on a left page (it's at the outside edge); the inside edge stays at the gutter.
+  if (anchor === 'top-left' && side === 'left') return { dx: -dw, dy: 0 };
+  return { dx: 0, dy: 0 };
+}
+
+/**
+ * The page at a new size: border guides stay on the page, and photos keep their place
+ * relative to the guides (`relative`) or stay fixed relative to `anchor`.
+ */
+export function resizePage(project: Project, size: Size, relative: boolean, anchor: Anchor = 'inside'): Project {
   const from = sheetOf(project);
   if (from.pageW === size.w && from.pageH === size.h) return project;
   const to: Sheet = { ...from, pageW: size.w, pageH: size.h };
@@ -131,7 +149,14 @@ export function resizePage(project: Project, size: Size, relative: boolean): Pro
     clampBorder(g, to);
     return g;
   });
-  const moved = (items: Placement[]) => (relative ? items.map((p) => ({ ...p, ...relayoutRect(p, from, to) })) : items);
+  const dw = size.w - from.pageW;
+  const dh = size.h - from.pageH;
+  const fixed = (p: Placement): Placement => {
+    const { dx, dy } = anchorShift(anchor, sideAt(from, p.x + p.w / 2), dw, dh);
+    return { ...p, x: p.x + dx, y: p.y + dy };
+  };
+  const moved = (items: Placement[]) =>
+    items.map((p) => (relative ? { ...p, ...relayoutRect(p, from, to) } : fixed(p)));
   return {
     ...project,
     page: { ...project.page, w: size.w, h: size.h },

@@ -11,14 +11,17 @@ Tauri Mac app (WebKit) on the App Store. Instagram posting goes through a Cloudf
 ```bash
 npm run dev            # web app at http://localhost:5175/app/
 npm test               # unit tests (vitest)
+npm run test:e2e       # web interaction tests (Playwright: Chromium and WebKit; e2e/)
 npm run build          # type-check and build
 npm run lint           # oxlint
 npm run format:check   # prettier
 npm run test:app       # Mac app end to end (builds Tauri; a few minutes)
 ```
 
-Run tests, build, lint, and format before calling work done; run `test:app` too when the Mac
-app, saving, or exports change. The server is checked from `server/` (`npm test` there).
+Run tests, build, lint, and format before calling work done; run `test:e2e` when the UI's
+behavior changes (add or update a spec in `e2e/` for new interactions), and `test:app` too
+when the Mac app, saving, or exports change. The first `test:e2e` needs
+`npx playwright install chromium webkit`. The server is checked from `server/` (`npm test` there).
 
 ## Where things are
 
@@ -34,6 +37,8 @@ app, saving, or exports change. The server is checked from `server/` (`npm test`
 - `src/platform/`: web vs Mac differences (`#platform` import).
 - `docs/testing.md`: the manual and automated checklist. Update it with any behavior change.
 - `docs/proposals/`: design proposals and plans (layout model, print and color).
+- `icon/`: the app icon's drawings (light and dark) and renders; `npm run icons` makes the
+  Mac app's and the website's icons from them.
 
 ## Conventions
 
@@ -43,7 +48,10 @@ app, saving, or exports change. The server is checked from `server/` (`npm test`
 - UI copy is plain, short, and in sentence case. The Mac menu bar title-cases command names
   itself.
 - Pure logic gets unit tests (vitest runs in Node: no canvas, no DOM unless a file opts into
-  happy-dom). Canvas and WebKit behavior is covered by `test:app` or checked by hand.
+  happy-dom); keep logic out of components where it can be (e.g. `statusText`, `wheeled`).
+  Interactions get Playwright specs in `e2e/` (WebKit tests use a profile on disk: an
+  ephemeral one won't store photos). The Mac app's own behavior (files, windows, fullscreen)
+  is covered by `test:app`.
 - Web and Mac skew is accepted: the user base is small, so a format change shouldn't block a
   merge (one line in the PR is enough).
 

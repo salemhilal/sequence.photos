@@ -7,10 +7,10 @@ import { projectStore } from '../store';
 import type { Arrangement, BorderGuide, Edges, Sheet } from '../types';
 import { TERMS, UNITS } from '../units';
 import { NumberField } from './NumberField';
-import { applyPageSetup, draftOf, type PageDraft } from '../pageSetup';
-import { ui, type LayoutTab } from '../ui';
+import type { PageDraft } from '../pageSetup';
+import type { LayoutTab } from '../ui';
 import { PageSettings } from './PageSettings';
-import { Segmented } from './Segmented';
+import { Tabs } from './Tabs';
 import { same, type Axis, type Selection } from './layoutSelection';
 
 /**
@@ -36,8 +36,8 @@ interface PanelProps {
   tab: LayoutTab;
   draft: PageDraft;
   onDraft: (d: PageDraft) => void;
-  /** The draft has changes not yet applied: guides wait until they're applied or reverted. */
-  pending: boolean;
+  /** Switch tabs (Layout asks first about page changes that wait for Apply). */
+  onTab: (tab: LayoutTab) => void;
   selected: Selection | null;
   onSelect: (sel: Selection | null) => void;
   onRemove: (sel: Selection) => void;
@@ -77,7 +77,7 @@ function PanelSection({ id, title, actions, collapsed, shown, onToggle, children
   );
 }
 
-export function LayoutPanel({ s, tab, draft, onDraft, pending, selected, onSelect, onRemove }: PanelProps) {
+export function LayoutPanel({ s, tab, draft, onDraft, onTab, selected, onSelect, onRemove }: PanelProps) {
   const [collapsed, setCollapsed] = useState(() => new Set(collapsedPref.load()));
   // A guide selected on the page shows its settings, even in a folded section.
   const shown = selected ? SECTION_OF[selected.kind] : null;
@@ -128,23 +128,21 @@ export function LayoutPanel({ s, tab, draft, onDraft, pending, selected, onSelec
   };
 
   const tabs = (
-    <div className="layout-tabs">
-      <Segmented
-        halves
-        label="Layout"
-        options={TABS}
-        value={tab}
-        onChange={(t) => {
-          onSelect(null);
-          ui.set({ layoutTab: t });
-        }}
-      />
-    </div>
+    <Tabs
+      id="layout"
+      label="Layout"
+      options={TABS}
+      value={tab}
+      onChange={(t) => {
+        onSelect(null);
+        onTab(t);
+      }}
+    />
   );
 
   if (tab === 'page') {
     return (
-      <aside className="inspector sectioned layout-panel">
+      <aside className="inspector sectioned layout-panel page-tab" id="layout-panel" role="tabpanel">
         {tabs}
         <section>
           <PageSettings draft={draft} onChange={onDraft} showContent />
@@ -153,28 +151,8 @@ export function LayoutPanel({ s, tab, draft, onDraft, pending, selected, onSelec
     );
   }
 
-  // Guides are edited on the page as it is, so not while the Page tab has changes waiting.
-  if (pending) {
-    return (
-      <aside className="inspector sectioned layout-panel">
-        {tabs}
-        <section>
-          <p className="help">Apply or revert the page changes first.</p>
-          <div className="inline">
-            <button className="btn primary" onClick={() => applyPageSetup(draft)}>
-              Apply
-            </button>
-            <button className="btn ghost" onClick={() => onDraft(draftOf(projectStore.project))}>
-              Revert
-            </button>
-          </div>
-        </section>
-      </aside>
-    );
-  }
-
   return (
-    <aside className="inspector sectioned layout-panel">
+    <aside className="inspector sectioned layout-panel" id="layout-panel" role="tabpanel">
       {tabs}
 
       <PanelSection id="center" title="Center lines" {...fold}>
@@ -274,7 +252,8 @@ export function LayoutPanel({ s, tab, draft, onDraft, pending, selected, onSelec
       </PanelSection>
 
       <p className="help layout-note">
-        {terms.guidesNote} Distances in {units.name}. Shift snaps a dragged guide to {units.snapLabel}.
+        {terms.guidesNote} Distances in {units.name}. Shift snaps a dragged guide to {units.snapLabel}. Drag a guide off
+        the {terms.page} to remove it.
       </p>
     </aside>
   );
@@ -321,6 +300,8 @@ function BorderRow({ g, s, isDrop, selected, onSelect, onRemove }: BorderRowProp
         {EDGES[s.arrangement].map((edge) => (
           <NumberField
             key={edge}
+            // Linked, the top sets all four.
+            disabled={linked && edge !== 'top'}
             label={terms.edges[edge]}
             value={e[edge]}
             units={units}

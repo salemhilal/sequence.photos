@@ -16,6 +16,8 @@ export interface ExportOptions {
   per: Per;
   /** Images only. */
   format: 'jpeg' | 'png';
+  /** JPEG images' quality, 0 to 1 (PNG is lossless). */
+  quality: number;
   /**
    * Inches projects: output pixels per inch, for a PDF's photos or for images. At most the
    * project's dpi: more would only enlarge the photos. Null: the project's, whatever it is
@@ -27,20 +29,21 @@ export interface ExportOptions {
 }
 
 export const DEFAULT_PRINT_AT = 300;
+/** JPEG quality unless chosen: high, with little to see in what it drops. */
+export const DEFAULT_QUALITY = 0.92;
 
 export function defaultOptions(sheet: Pick<Sheet, 'arrangement'>): ExportOptions {
   return {
     per: sheet.arrangement === 'spreads' ? 'spread' : 'page',
     format: 'jpeg',
+    quality: DEFAULT_QUALITY,
     dpi: null,
     printAt: DEFAULT_PRINT_AT,
   };
 }
 
-/** Where a project can go: Instagram is web only. */
-export function destinations(web: boolean): Destination[] {
-  return ['pdf', 'images', 'indesign', ...(web ? (['instagram'] as const) : [])];
-}
+/** Where a project can go. */
+export const DESTINATIONS: readonly Destination[] = ['pdf', 'images', 'indesign', 'instagram'];
 
 /** Whether a destination measures in pixels (so an inches project converts to it). */
 export function measuresInPixels(d: Destination): boolean {

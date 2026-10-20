@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { platform } from '#platform';
 import {
   defaultServerUrl,
   DEV_SERVER_URL,
@@ -36,6 +37,7 @@ export function ServerSetting({ labelledBy }: { labelledBy: string }) {
   const save = (value: string) => {
     serverUrlPref.save(value === defaultServerUrl() ? '' : value);
     setServer(value);
+    platform.prefsChanged();
   };
   const pick = (c: ServerChoice) => {
     if (c === 'default') save(SERVER_URL);

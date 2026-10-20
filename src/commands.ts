@@ -1,7 +1,7 @@
 import type { PhotoId } from './ids';
 import { useEffect } from 'react';
 import type { Platform } from './platform/types';
-import { deleteFromProject, importPhotos } from './actions';
+import { deleteFromProject, deleteSpreads, importPhotos } from './actions';
 import { copyPhotos, duplicateAndSelect } from './clipboard';
 import { hasMod, isMac, isTextField, isTyping, MOD_LABEL } from './input';
 import { platform } from '#platform';
@@ -9,7 +9,7 @@ import { pickFiles } from './files';
 import { newProject } from './project';
 import { projectStore } from './store';
 import { startTour } from './tour';
-import { deskCovered, openModal, toggleGuides, toggleModal, toggleSidebar, ui } from './ui';
+import { deskCovered, goToPage, openModal, toggleGuides, toggleModal, toggleSidebar, ui } from './ui';
 
 /**
  * Every command in one table. Each has its name, bindings, when it applies, and what
@@ -19,13 +19,15 @@ import { deskCovered, openModal, toggleGuides, toggleModal, toggleSidebar, ui } 
  * (The spread editor, preview, and open menus handle their own keys while they're open.)
  */
 
-interface Binding {
+export interface Binding {
   /** `KeyboardEvent.key`, lowercased. */
   key: string;
   /** Requires the platform modifier (⌘ on macOS, Ctrl elsewhere). */
   mod?: boolean;
   /** `true` requires Shift, `false` (default) forbids it, `'any'` allows either. */
   shift?: boolean | 'any';
+  /** Requires Option (Alt). Keys then match by position, since Option changes the character they type. */
+  alt?: boolean;
 }
 
 interface Command {
@@ -84,6 +86,11 @@ const withSelection = (fn: (ids: PhotoId[]) => void) => (): void | false => {
   fn(ids);
 };
 
+/** ⌥⌘1–⌥⌘3 for the pages (⌘1–⌘3 alone are the browser's, for its tabs). */
+function pageKey(key: string): Binding[] {
+  return [{ key, mod: true, alt: true }];
+}
+
 export const commands = {
   // No shortcut: browsers reserve ⌘N / Ctrl+N for a new window.
   newProject: { title: 'New project…', bindings: [], scope: 'app', run: () => void newProject() },
@@ -116,26 +123,31 @@ export const commands = {
     inFields: true,
     run: () => void platform.keepProjectAs?.(),
   },
-  // PDF, images, InDesign, or Instagram, chosen in the Export view.
+  // PDF, images, InDesign, or Instagram, chosen on the Export page.
   export: {
     title: { browser: 'Export…', macos: 'Export…' },
     bindings: [{ key: 'e', mod: true, shift: true }],
     scope: 'app',
     inFields: true,
-    run: () => openModal('export'),
+    run: () => goToPage('export'),
   },
+  // The pages, as the toolbar's switcher has them.
+  showDesk: { title: 'Desk', bindings: pageKey('1'), scope: 'app', inFields: true, run: () => goToPage('desk') },
   preview: {
-    // The toolbar says "Preview book" for a book; menus just "Preview".
     title: 'Preview',
-    bindings: [{ key: 'p', mod: true }],
+    bindings: [...pageKey('2'), { key: 'p', mod: true }],
     scope: 'app',
     inFields: true,
-    run: () => toggleModal('preview'),
+    run: () => goToPage('preview'),
   },
+  showExport: { title: 'Export', bindings: pageKey('3'), scope: 'app', inFields: true, run: () => goToPage('export') },
+  // The page's size and guides, over the page as the spread editor is. ⌥⌘P, as InDesign's
+  // Document Setup.
   layout: {
     title: { browser: 'Layout', macos: 'Layout…' },
-    bindings: [],
+    bindings: [{ key: 'p', mod: true, alt: true }],
     scope: 'app',
+    inFields: true,
     run: () => toggleModal('layout'),
   },
   // ⌘; as in InDesign and Photoshop.
@@ -145,7 +157,8 @@ export const commands = {
     bindings: [{ key: ',', mod: true }],
     scope: 'app',
     inFields: true,
-    run: () => toggleModal('settings'),
+    // Its own window in the Mac app; a dialog on the website.
+    run: () => (platform.openSettings ? platform.openSettings() : toggleModal('settings')),
   },
   toggleSidebar: { bindings: [{ key: 'b', mod: true }], scope: 'app', inFields: true, run: toggleSidebar },
   undo: { title: 'Undo', bindings: [{ key: 'z', mod: true }], scope: 'app', run: () => projectStore.undo() },
@@ -181,9 +194,18 @@ export const commands = {
     title: 'Delete',
     bindings: [{ key: 'delete' }, { key: 'backspace' }],
     scope: 'desk',
-    run: withSelection((ids) => deleteFromProject(ids)),
+    // Spreads selected in the sidebar, else photos on the desk.
+    run: () => {
+      const spreads = ui.get().spreadSelection;
+      if (spreads.length) return deleteSpreads(spreads);
+      return withSelection((ids) => deleteFromProject(ids))();
+    },
   },
-  clearSelection: { bindings: [{ key: 'escape' }], scope: 'desk', run: () => ui.set({ selection: [] }) },
+  clearSelection: {
+    bindings: [{ key: 'escape' }],
+    scope: 'desk',
+    run: () => ui.set({ selection: [], spreadSelection: [] }),
+  },
   nudge: {
     bindings: ['arrowleft', 'arrowright', 'arrowup', 'arrowdown'].map((key) => ({ key, shift: 'any' as const })),
     scope: 'desk',
@@ -232,13 +254,19 @@ export function shortcutAccelerator(id: CommandId): string | undefined {
   const b = (commands[id] as Command).bindings[0];
   // Menus would take plain keys (Delete, Escape, arrows) away from text fields.
   if (!b?.mod) return undefined;
-  return ['CmdOrCtrl', b.shift === true && 'Shift', b.key.length === 1 ? b.key.toUpperCase() : b.key]
+  return ['CmdOrCtrl', b.alt && 'Alt', b.shift === true && 'Shift', b.key.length === 1 ? b.key.toUpperCase() : b.key]
     .filter(Boolean)
     .join('+');
 }
 
-function matches(b: Binding, e: KeyboardEvent): boolean {
-  if (e.key.toLowerCase() !== b.key || e.altKey) return false;
+/** Whether a key event is a binding's combination (exported for tests). */
+export function matches(
+  b: Binding,
+  e: Pick<KeyboardEvent, 'key' | 'code' | 'altKey' | 'shiftKey' | 'metaKey' | 'ctrlKey'>,
+): boolean {
+  if (e.altKey !== Boolean(b.alt)) return false;
+  const key = b.alt && /^(Digit|Key)\w$/.test(e.code) ? e.code.slice(-1).toLowerCase() : e.key.toLowerCase();
+  if (key !== b.key) return false;
   if (hasMod(e) !== Boolean(b.mod)) return false;
   return b.shift === 'any' || e.shiftKey === Boolean(b.shift);
 }
@@ -251,8 +279,8 @@ export function shortcutLabel(id: CommandId): string {
   if (!b) return '';
   const key = b.key.length === 1 ? b.key.toUpperCase() : b.key;
   if (!b.mod) return key;
-  if (isMac) return `${b.shift === true ? '⇧' : ''}⌘${key}`;
-  return `${MOD_LABEL}${b.shift === true ? 'Shift+' : ''}${key}`;
+  if (isMac) return `${b.alt ? '⌥' : ''}${b.shift === true ? '⇧' : ''}⌘${key}`;
+  return `${MOD_LABEL}${b.alt ? 'Alt+' : ''}${b.shift === true ? 'Shift+' : ''}${key}`;
 }
 
 /** How long the modifier must be held before shortcut hints appear. */
@@ -272,7 +300,8 @@ export function useCommandShortcuts(): void {
       if (e.key === modKey) {
         if (!e.repeat) {
           clearTimeout(timer);
-          timer = setTimeout(() => ui.set({ hints: true }), HINT_DELAY);
+          // Not when the badges are turned off in Settings.
+          if (ui.get().shortcutBadges) timer = setTimeout(() => ui.set({ hints: true }), HINT_DELAY);
         }
         return;
       }

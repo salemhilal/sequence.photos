@@ -11,8 +11,8 @@ import {
   Redo2,
   Settings,
   Undo2,
-  X,
   Ruler,
+  X,
   Upload,
 } from 'lucide-react';
 import { usePasteHandler } from './clipboard';
@@ -22,7 +22,10 @@ import { AboutDialog } from './components/AboutDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ContextMenus } from './components/ContextMenu';
 import { Desk } from './components/Desk';
-import { FileMenu } from './components/FileMenu';
+import { Menu } from './components/Menu';
+import { PageSwitcher } from './components/PageSwitcher';
+import { ShortcutBadges } from './components/ShortcutBadges';
+import { StatusBar } from './components/StatusBar';
 import { useCommandItem } from './components/commandItem';
 import { LayoutEditor } from './components/LayoutEditor';
 import { PhotoImg } from './components/PhotoImg';
@@ -33,17 +36,16 @@ import { SettingsDialog } from './components/SettingsDialog';
 import { Sidebar } from './components/Sidebar';
 import { SpreadEditor } from './components/SpreadEditor';
 import { Tour } from './components/Tour';
+import { useNoticeTimeout } from './hooks';
 import { usePersistence } from './persistence';
 import { tourSeenPref } from './prefs';
 import { startTour } from './tour';
 import { projectStore, useProject } from './store';
-import { openModal, toggleSidebar, ui } from './ui';
+import { toggleSidebar, ui } from './ui';
 import { takeOver } from './tabLock';
 import { checkForUpdate, reloadToUpdate } from './update';
-import { allSpreads, findSpread } from './spreads';
+import { findSpread } from './spreads';
 import { TERMS } from './units';
-
-const NOTICE_MS = 6000;
 
 /**
  * A phone or tablet: a touch screen with no mouse or trackpad. The app is built for
@@ -62,9 +64,10 @@ export default function App() {
   const [mobileNotice, setMobileNotice] = useState(onTouchDevice);
   const editing = ui.use((s) => s.editingSpreadId);
   const modal = ui.use((s) => s.modal);
+  const page = ui.use((s) => s.page);
+  const statusBar = ui.use((s) => s.statusBar);
   const importing = ui.use((s) => s.importing);
   const notice = ui.use((s) => s.notice);
-  const busy = ui.use((s) => s.busy);
   const sidebarOpen = ui.use((s) => s.sidebarOpen);
   const blocked = ui.use((s) => s.blocked);
   const updateReady = ui.use((s) => s.updateReady);
@@ -81,11 +84,7 @@ export default function App() {
     if (editing && !findSpread(project, editing)) ui.set({ editingSpreadId: null });
   }, [project, editing]);
 
-  useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => ui.set({ notice: null }), NOTICE_MS);
-    return () => clearTimeout(t);
-  }, [notice]);
+  useNoticeTimeout();
 
   // The first time this browser opens the app to an empty project, show the tour.
   const fresh = loaded && Object.keys(project.photos).length === 0;
@@ -97,11 +96,6 @@ export default function App() {
   if (blocked === 'outdated') return <OutdatedScreen />;
   if (mobileNotice) return <MobileNotice onContinue={() => setMobileNotice(false)} />;
   if (!loaded) return <div className="loading">Opening your project…</div>;
-
-  const placed = allSpreads(project).reduce((n, s) => n + s.items.length, 0);
-  const status = importing?.total
-    ? `Importing ${importing.done} of ${importing.total}…`
-    : (busy ?? (importing ? 'Importing…' : `${project.pile.length} on desk · ${placed} placed`));
 
   return (
     <div className="app">
@@ -117,7 +111,8 @@ export default function App() {
         {platform.kind === 'browser' && (
           <>
             <span className="wordmark">SEQUENCE</span>
-            <FileMenu
+            <Menu
+              label="File"
               items={[
                 fileItem('newProject', <FilePlus />),
                 fileItem('importProject', <FolderOpen />),
@@ -128,11 +123,12 @@ export default function App() {
                 fileItem('about', <Info />, false),
               ]}
             />
-            <div className="btn-joined has-hint">
+            <div className="btn-joined">
               <button
                 className="btn ghost icon"
                 aria-label="Undo"
                 data-tip={`Undo (${shortcutLabel('undo')})`}
+                data-shortcut={shortcutLabel('undo')}
                 disabled={!canUndo}
                 onClick={() => projectStore.undo()}
               >
@@ -142,67 +138,66 @@ export default function App() {
                 className="btn ghost icon"
                 aria-label="Redo"
                 data-tip={`Redo (${shortcutLabel('redo')})`}
+                data-shortcut={shortcutLabel('redo')}
                 disabled={!canRedo}
                 onClick={() => projectStore.redo()}
               >
                 <Redo2 />
               </button>
-              <ShortcutHint label={`${shortcutLabel('undo')} · ${shortcutLabel('redo')}`} below />
             </div>
           </>
         )}
+        <PageSwitcher />
         <span className="spacer" data-tauri-drag-region />
-        <span className="status" data-tauri-drag-region>
-          {status}
-        </span>
+        {page === 'desk' && (
+          <button
+            className={`btn ghost icon${sidebarOpen ? '' : ' active'}`}
+            aria-label={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads}`}
+            aria-pressed={!sidebarOpen}
+            onClick={toggleSidebar}
+            data-tip={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads} (${shortcutLabel('toggleSidebar')})`}
+            data-shortcut={shortcutLabel('toggleSidebar')}
+          >
+            {sidebarOpen ? <PanelRightClose /> : <PanelRightOpen />}
+          </button>
+        )}
         <button
-          className="btn ghost"
+          className="btn ghost icon"
+          aria-label="Layout"
           data-tour="layout"
-          onClick={() => openModal('layout')}
-          data-tip="Layout: size and guides"
+          onClick={() => runCommand('layout')}
+          data-tip={`Layout: the page size and guides (${shortcutLabel('layout')})`}
+          data-shortcut={shortcutLabel('layout')}
         >
           <Ruler />
-          Layout
         </button>
         <button
-          className="btn accent has-hint"
-          data-tour="preview"
-          onClick={() => openModal('preview')}
-          data-tip={`Preview (${shortcutLabel('preview')})`}
-        >
-          {terms.preview}
-          <ShortcutHint label={shortcutLabel('preview')} />
-        </button>
-        <button
-          className={`btn ghost icon has-hint${sidebarOpen ? '' : ' active'}`}
-          aria-label={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads}`}
-          aria-pressed={!sidebarOpen}
-          onClick={toggleSidebar}
-          data-tip={`${sidebarOpen ? 'Hide' : 'Show'} ${terms.spreads} (${shortcutLabel('toggleSidebar')})`}
-        >
-          {sidebarOpen ? <PanelRightClose /> : <PanelRightOpen />}
-          <ShortcutHint label={shortcutLabel('toggleSidebar')} />
-        </button>
-        <button
-          className="btn ghost icon has-hint"
+          className="btn ghost icon"
           aria-label="Settings"
-          onClick={() => openModal('settings')}
+          onClick={() => runCommand('settings')}
           data-tip={`Settings (${shortcutLabel('settings')})`}
+          data-shortcut={shortcutLabel('settings')}
         >
           <Settings />
-          <ShortcutHint label={shortcutLabel('settings')} />
         </button>
       </header>
       <main className="main">
-        <Desk />
-        {sidebarOpen && <Sidebar />}
-        {editing && <SpreadEditor spreadId={editing} />}
+        {page === 'desk' && (
+          <>
+            <Desk />
+            {sidebarOpen && <Sidebar />}
+            {editing && <SpreadEditor spreadId={editing} />}
+          </>
+        )}
+        {page === 'preview' && <Preview />}
+        {page === 'export' && <ExportView />}
+        {/* Over the page, as the spread editor is: the toolbar and status bar stay in view. */}
+        {modal === 'layout' && <LayoutEditor />}
+        {modal === 'settings' && <SettingsDialog />}
       </main>
-      {modal === 'settings' && <SettingsDialog />}
+      {statusBar && <StatusBar />}
+      <ShortcutBadges />
       {modal === 'about' && <AboutDialog />}
-      {modal === 'preview' && <Preview />}
-      {modal === 'layout' && <LayoutEditor />}
-      {modal === 'export' && <ExportView />}
       <QuickLook />
       <Tour />
       <ConfirmDialog />
@@ -235,17 +230,6 @@ export default function App() {
         </div>
       )}
     </div>
-  );
-}
-
-/** A shortcut badge shown over (or `below`) its button while the modifier key is held. */
-function ShortcutHint({ label, below }: { label: string; below?: boolean }) {
-  const show = ui.use((s) => s.hints);
-  if (!show) return null;
-  return (
-    <kbd className={`shortcut-hint${below ? ' below' : ''}`} aria-hidden="true">
-      {label}
-    </kbd>
   );
 }
 

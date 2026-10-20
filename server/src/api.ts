@@ -44,3 +44,9 @@ export interface UploadsRequest {
   enrollment: string;
   count: number;
 }
+
+/**
+ * How a post went, sent as `DELETE /uploads/<id>`'s `result` query parameter (the app
+ * appends it to the signed URL) so the server can count posts. See README "Metrics".
+ */
+export type PostResult = 'posted' | 'failed' | 'cancelled';

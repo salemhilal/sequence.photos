@@ -1,5 +1,5 @@
 import type { Draft } from 'immer';
-import { convertUnits, rearrange, resizePage, scaleProject } from './convertLayout';
+import { convertUnits, rearrange, resizePage, scaleProject, type Anchor } from './convertLayout';
 import { projectStore } from './store';
 import type { Arrangement, PageSetup, Project, Size, Unit } from './types';
 import { DEFAULT_DPI, PRESETS, type Preset } from './units';
@@ -18,6 +18,17 @@ export interface PageDraft {
   page: PageSetup;
   /** Move and scale photos with the guides, or keep their size and place. */
   content: Content;
+  /**
+   * Kept fixed, what photos stay put relative to. Not saved: it starts at each page's
+   * inside edge for spreads (as photos are stored, from the gutter), its top-left corner
+   * for frames.
+   */
+  anchor: Anchor;
+}
+
+/** What `fixed` photos stay put relative to, for an arrangement: frames have no inside edge. */
+export function anchorFor(draft: Pick<PageDraft, 'arrangement' | 'anchor'>): Anchor {
+  return draft.arrangement === 'frames' && draft.anchor === 'inside' ? 'top-left' : draft.anchor;
 }
 
 /** The project's page settings as a draft. */
@@ -26,6 +37,7 @@ export function draftOf(p: Project): PageDraft {
     arrangement: p.layout.kind,
     page: { ...p.page },
     content: p.settings.keepRelative ? 'rescale' : 'fixed',
+    anchor: p.layout.kind === 'spreads' ? 'inside' : 'top-left',
   };
 }
 
@@ -86,7 +98,7 @@ export function withPageSetup(project: Project, draft: PageDraft): Project {
       : convertUnits(p, unit, conversionDpi(project, draft));
   }
   p = rearrange(p, draft.arrangement);
-  p = resizePage(p, { w: draft.page.w, h: draft.page.h }, rescale);
+  p = resizePage(p, { w: draft.page.w, h: draft.page.h }, rescale, anchorFor(draft));
   if (p.page.pxPerUnit !== pxPerUnit) p = { ...p, page: { ...p.page, pxPerUnit } };
   if (p.settings.keepRelative !== rescale) p = { ...p, settings: { ...p.settings, keepRelative: rescale } };
   return p;

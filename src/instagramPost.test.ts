@@ -92,7 +92,7 @@ function fakeServers(overrides: Partial<Record<string, (call: Call) => Response 
   };
   const route = (call: Call): string => {
     const { method, url, params } = call;
-    if (url === DELETE_URL) return 'delete';
+    if (url.startsWith(`${DELETE_URL}?`)) return 'delete';
     if (url === `${SERVER_URL}/uploads`) return 'uploads';
     if (method === 'PUT') return 'put';
     if (url.startsWith(`${GRAPH}/${USER}/content_publishing_limit`)) return 'quota';
@@ -391,18 +391,39 @@ describe('postToInstagram: the server’s copies', () => {
     const server = fakeServers();
     await post();
     expect(server.to('delete').map((c) => c.init?.method)).toEqual(['DELETE']);
+    expect(server.to('delete').map((c) => c.params.result)).toEqual(['posted']);
   });
 
   it('deletes them after a failure', async () => {
     const server = fakeServers({ put: () => new Response(null, { status: 500 }) });
     await expect(post()).rejects.toThrow(/refused an image \(HTTP 500\)/);
-    expect(server.to('delete')).toHaveLength(1);
+    expect(server.to('delete').map((c) => c.params.result)).toEqual(['failed']);
   });
 
   it('deletes them after a failure to publish', async () => {
     const server = fakeServers({ publish: () => json({ error: { code: 4 } }, 400) });
     await expect(post()).rejects.toThrow(/posting limit/);
-    expect(server.to('delete')).toHaveLength(1);
+    expect(server.to('delete').map((c) => c.params.result)).toEqual(['failed']);
+  });
+
+  it('says it was cancelled, or posted when only some stories went up', async () => {
+    const controller = new AbortController();
+    let server = fakeServers({
+      status: () => {
+        controller.abort();
+        return json({ status_code: 'IN_PROGRESS' });
+      },
+    });
+    await expect(post({ signal: controller.signal })).rejects.toBeInstanceOf(CancelledError);
+    expect(server.to('delete').map((c) => c.params.result)).toEqual(['cancelled']);
+
+    vi.restoreAllMocks();
+    let published = 0;
+    server = fakeServers({
+      publish: () => (++published === 2 ? json({ error: { code: 4 } }, 400) : json({ id: `m${published}` })),
+    });
+    await expect(post({ slides: slides(3), kind: 'story' })).rejects.toThrow(/1 of 3 stories/);
+    expect(server.to('delete').map((c) => c.params.result)).toEqual(['posted']);
   });
 });
 

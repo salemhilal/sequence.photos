@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useElementSize, usePager } from '../hooks';
-import { connectInstagram, returnToExportAfterSignIn, takeReturnToExport, useInstagram } from '../instagram';
+import { useConnectInstagram, useInstagram } from '../instagram';
 import {
   fits,
   hashtagCount,
@@ -21,7 +21,7 @@ import { firstNonEmpty, outputPages, slideKey } from '../renderPlan';
 import { sheetOf } from '../spreads';
 import { useProject } from '../store';
 import type { Sheet } from '../types';
-import { closeModal, lockModal } from '../ui';
+import { goToPage, lockPage } from '../ui';
 import { Segmented } from './Segmented';
 import { PageCanvas } from './SpreadCanvas';
 
@@ -117,8 +117,8 @@ export function InstagramPost({ head }: Props) {
   // Posting can't be hidden midway: nothing else can close or replace this pane meanwhile.
   // Should it go anyway (the app closing), the post is cancelled.
   useEffect(() => {
-    lockModal(posting);
-    return () => lockModal(false);
+    lockPage(posting);
+    return () => lockPage(false);
   }, [posting]);
   useEffect(() => () => abort.current?.abort(), []);
   // Cancelling stops before anything is published.
@@ -126,22 +126,7 @@ export function InstagramPost({ head }: Props) {
 
   // Everything previews and can be set up before connecting; posting needs the account.
   const ready = connection !== null && !connection.needsReconnect;
-  const [connecting, setConnecting] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
-  const connect = () => {
-    setConnecting(true);
-    setConnectError(null);
-    returnToExportAfterSignIn();
-    void connectInstagram().then((message) => {
-      // Null: on the way to Instagram's sign-in page.
-      if (message) {
-        // Not on the way to Instagram after all: a later sign-in from Settings returns there.
-        takeReturnToExport();
-        setConnectError(message);
-        setConnecting(false);
-      }
-    });
-  };
+  const signIn = useConnectInstagram({ returnToExport: true });
 
   const problem = !ready
     ? null
@@ -209,10 +194,10 @@ export function InstagramPost({ head }: Props) {
                   ? `Connect @${connection.username} again to keep posting.`
                   : 'Posting goes through your Instagram account. It needs a Business or Creator account.'}
               </p>
-              <button className="btn" disabled={connecting} onClick={connect}>
-                {connecting ? 'Opening Instagram…' : connection ? 'Reconnect Instagram' : 'Connect Instagram'}
+              <button className="btn" disabled={signIn.busy} onClick={signIn.connect}>
+                {signIn.busy ? 'Opening Instagram…' : connection ? 'Reconnect Instagram' : 'Connect Instagram'}
               </button>
-              {connectError && <p className="help warn">{connectError}</p>}
+              {signIn.message && <p className={`help${signIn.message.warn ? ' warn' : ''}`}>{signIn.message.text}</p>}
             </>
           )}
         </section>
@@ -305,11 +290,7 @@ export function InstagramPost({ head }: Props) {
               {tags > 0 && ` · ${tags} / ${LIMITS.hashtags} hashtags`}
             </p>
           </section>
-        ) : (
-          <section>
-            <p className="help">Stories don’t have captions.</p>
-          </section>
-        )}
+        ) : null}
 
         <section className="export-actions">
           {status.kind === 'done' ? (
@@ -322,7 +303,7 @@ export function InstagramPost({ head }: Props) {
                   View on Instagram
                 </a>
               )}
-              <button className="btn ghost" onClick={closeModal}>
+              <button className="btn ghost" onClick={() => goToPage('desk')}>
                 Done
               </button>
             </>
@@ -373,7 +354,7 @@ interface PreviewProps {
 /** How the post will look on Instagram: a feed post's carousel, or stories. */
 function PostPreview({ slides, sheet, layout, kind, username, caption }: PreviewProps) {
   const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 700, h: 600 });
-  const { at, go } = usePager(slides.length);
+  const { at, go } = usePager(slides.length, true);
 
   // The media box: the image's shape in the feed; a phone screen (9:16) for stories.
   const aspect = kind === 'story' ? 9 / 16 : layout.width / layout.height;

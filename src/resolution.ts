@@ -35,8 +35,9 @@ export function placedSoft(photo: PhotoMeta | undefined, item: Placement, sheet:
 }
 
 /**
- * What the inspector says about a placed photo's detail: in inches, its pixels per inch
- * ("240 ppi · below 300 dpi"); in pixels, how much it's enlarged, only when it is.
+ * What the inspector says about a placed photo's detail, as a sentence: in inches, its
+ * resolution on the page ("This image is 240 dpi, which is below the project's 300 dpi.");
+ * in pixels, how much it's enlarged, only when it is.
  */
 export function resolutionNote(
   photo: PhotoMeta,
@@ -46,10 +47,13 @@ export function resolutionNote(
   const c = coverage(photo, item, sheet.pxPerUnit);
   const soft = isSoft(c);
   if (sheet.unit === 'in') {
-    const ppi = Math.round(Math.min(photo.pxW / item.w, photo.pxH / item.h));
-    return { text: soft ? `${ppi} ppi · below ${sheet.pxPerUnit} dpi` : `${ppi} ppi`, soft };
+    const dpi = Math.round(Math.min(photo.pxW / item.w, photo.pxH / item.h));
+    const text = soft
+      ? `This image is ${dpi} dpi, which is below the project’s ${sheet.pxPerUnit} dpi.`
+      : `This image is ${dpi} dpi.`;
+    return { text, soft };
   }
-  return soft ? { text: `Enlarged ${Math.round(100 / c)}%`, soft } : null;
+  return soft ? { text: `This image is enlarged ${Math.round(100 / c)}%.`, soft } : null;
 }
 
 /**
@@ -65,6 +69,21 @@ export function softPhotos(project: Project, pxPerUnit?: number): { photoId: Pho
   );
 }
 
+/**
+ * The soft photo after `current` in book order (from the start, with none or after the
+ * last), or null if there's no other.
+ */
+export function nextSoftPhoto(
+  project: Project,
+  current: PhotoId | null,
+): { photoId: PhotoId; spreadId: SpreadId } | null {
+  const soft = softPhotos(project);
+  const at = soft.findIndex((s) => s.photoId === current);
+  const others = soft.filter((s) => s.photoId !== current);
+  if (!others.length) return null;
+  return soft[(at + 1) % soft.length] ?? null;
+}
+
 /** "2 photos below 300 dpi", or "2 photos enlarged". */
 export function softLabel(count: number, sheet: Pick<Sheet, 'unit' | 'pxPerUnit'>): string {
   const photos = `${count} ${count === 1 ? 'photo' : 'photos'}`;
@@ -78,7 +97,7 @@ export function softSentence(count: number, sheet: Pick<Sheet, 'unit' | 'pxPerUn
   return sheet.unit === 'in' ? `${photos} ${verb} below ${sheet.pxPerUnit} dpi.` : `${photos} ${verb} enlarged.`;
 }
 
-/** Open a placed photo in the spread editor, selected (closing what's open over it). */
+/** Open a placed photo in the spread editor on the desk, selected (leaving the page or dialog it's shown from). */
 export function showPhoto(at: { photoId: PhotoId; spreadId: SpreadId }): void {
-  ui.set({ modal: null, editingSpreadId: at.spreadId, editorSelect: at.photoId });
+  ui.set({ page: 'desk', modal: null, editingSpreadId: at.spreadId, editorSelect: at.photoId });
 }

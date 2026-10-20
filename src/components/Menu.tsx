@@ -13,8 +13,21 @@ export interface MenuItem {
   separatorBefore?: boolean;
 }
 
-/** Toolbar dropdown for file actions. Closes on selection, outside click, or Escape. */
-export function FileMenu({ items }: { items: MenuItem[] }) {
+/**
+ * A dropdown menu from a button: the toolbar's File menu, the status bar's zoom. Closes on
+ * selection, outside click, or Escape. `up` opens it above the button, aligned to its right.
+ */
+export function Menu({
+  label,
+  items,
+  tip,
+  up = false,
+}: {
+  label: ReactNode;
+  items: MenuItem[];
+  tip?: string;
+  up?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -47,15 +60,16 @@ export function FileMenu({ items }: { items: MenuItem[] }) {
   }, [open]);
 
   return (
-    <div className="menu" ref={rootRef}>
+    <div className={`menu${up ? ' up' : ''}`} ref={rootRef}>
       <button
         ref={buttonRef}
         className={`btn ghost${open ? ' active' : ''}`}
         aria-haspopup="menu"
         aria-expanded={open}
+        data-tip={open ? undefined : tip}
         onClick={() => setOpen((o) => !o)}
       >
-        File
+        {label}
         <ChevronDown />
       </button>
       {open && (

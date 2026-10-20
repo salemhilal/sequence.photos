@@ -1,4 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
+import { emitTo, listen } from '@tauri-apps/api/event';
+import { getCurrentWindow, Window } from '@tauri-apps/api/window';
+import { platform } from './index';
 import { getImage } from '../../db';
 import { projectLoaded } from '../../persistence';
 import { tourSeenPref } from '../../prefs';
@@ -15,7 +18,7 @@ import { sheetOf } from '../../spreads';
 import { projectStore } from '../../store';
 import { endTour } from '../../tour';
 import type { Project } from '../../types';
-import { ui } from '../../ui';
+import { setStatusBar, ui } from '../../ui';
 import { readZip } from '../../zip';
 import { openPath, save, saveAs } from './documents';
 
@@ -186,6 +189,9 @@ async function scenarios(dir: string): Promise<void> {
     projectStore.undo();
   }
 
+  await fullscreen();
+  await settingsWindow();
+
   // New Project starts fresh history, so undo can't bring back a project without its file.
   await newProject();
   check('New Project starts an untitled, empty project', title()?.name === 'Untitled' && photoCount() === 0);
@@ -194,6 +200,83 @@ async function scenarios(dir: string): Promise<void> {
   // Leave the state the relaunch expects: Fixture B, with an unsaved change.
   await openPath(b);
   setWidth(9);
+}
+
+const press = (key: string) => window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+
+/**
+ * Preview's fullscreen: F makes the window fullscreen (macOS animates it, so each step
+ * waits), Esc leaves it (and only it: pages aren't dismissed), and leaving it some other way
+ * (the green button, here the window's own call) stops presenting.
+ */
+async function fullscreen(): Promise<void> {
+  const win = getCurrentWindow();
+  const isFull = () => win.isFullscreen();
+  const settle = async (want: boolean) => {
+    for (const start = Date.now(); (await isFull()) !== want && Date.now() - start < 5000;) await pause(100);
+    // The resize that reports it can come a moment after.
+    await pause(300);
+  };
+  ui.set({ page: 'preview' });
+  await pause(200);
+  press('f');
+  await settle(true);
+  check('Preview: F makes the window fullscreen', (await isFull()) && ui.get().presenting);
+  press('Escape');
+  await settle(false);
+  check(
+    'Preview: Esc leaves fullscreen, staying on the page',
+    !(await isFull()) && !ui.get().presenting && ui.get().page === 'preview',
+  );
+  press('f');
+  await settle(true);
+  await win.setFullscreen(false);
+  await settle(false);
+  check('Preview: leaving fullscreen another way stops presenting', !ui.get().presenting);
+  press('Escape');
+  await pause(200);
+  check('Preview: Esc again stays on the page', ui.get().page === 'preview');
+  ui.set({ page: 'desk' });
+}
+
+/** Waits for an event from another window, up to `ms`; whether it came. */
+async function heard(event: string, ms = 10_000): Promise<boolean> {
+  let came = false;
+  const stop = await listen(event, () => (came = true));
+  for (const start = Date.now(); !came && Date.now() - start < ms;) await pause(100);
+  stop();
+  return came;
+}
+
+/**
+ * Settings opens in a window of its own (one, however often it's asked for); a setting
+ * changed there reaches the main window, and test images asked for there land on its desk.
+ */
+async function settingsWindow(): Promise<void> {
+  const ready = heard('e2e-settings-ready');
+  platform.openSettings?.();
+  check('Settings opens in its own window', await ready);
+  platform.openSettings?.();
+  await pause(500);
+  const settings = (await Window.getAll()).filter((w) => w.label === 'settings');
+  check('asking again opens no second Settings window', settings.length === 1, `${settings.length}`);
+  check('the status bar shows to start', ui.get().statusBar);
+  await emitTo('settings', 'e2e-settings-act');
+  for (const start = Date.now(); ui.get().statusBar && Date.now() - start < 5000;) await pause(100);
+  check('a setting changed in the Settings window reaches the main window', !ui.get().statusBar);
+  const before = projectStore.project.pile.length;
+  await emitTo('settings', 'e2e-settings-add-images');
+  await until(() => projectStore.project.pile.length > before, 30_000);
+  check(
+    'Add test images in the Settings window adds them to the main window’s desk',
+    projectStore.project.pile.length === before + 1,
+    `${before} → ${projectStore.project.pile.length}`,
+  );
+  // Back as saved, so New Project (next) doesn't ask.
+  projectStore.undo();
+  // As it was: shown, and the window closed.
+  setStatusBar(true);
+  await settings[0]?.close();
 }
 
 /** The second run, after quitting: the last project should come back as it was left. */

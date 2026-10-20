@@ -56,6 +56,7 @@ function QuickLookView(props: { ids: PhotoId[]; index: number }) {
   return (
     <div className="quick-look" data-modal role="dialog" aria-label={`Quick Look: ${photo.name}`}>
       <header className="quick-look-head">
+        {/* A native tip for a long name: Quick Look covers the status bar, where hints go. */}
         <span className="quick-look-name" title={photo.name}>
           {photo.name}
         </span>

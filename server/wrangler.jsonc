@@ -13,6 +13,10 @@
   // by the owner) as a backstop to the sweep below.
   "r2_buckets": [{ "binding": "FRAMES", "bucket_name": "sequence-frames" }],
 
+  // Usage metrics (README "Metrics"): one data point per sign-in, renewal, upload, and
+  // post result, kept 3 months and read with `npm run metrics`.
+  "analytics_engine_datasets": [{ "binding": "METRICS", "dataset": "sequence_metrics" }],
+
   // The sweep: delete frames over an hour old.
   "triggers": { "crons": ["*/15 * * * *"] },
 
@@ -45,9 +49,9 @@
     // redirect URI.
     "CALLBACK_URL": "https://sequence-server.sequence-photos.workers.dev/auth/callback",
     // JSON map: `client` (from the OAuth state) → where to send the user back.
-    "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\"}",
+    "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\",\"mac\":\"sequence-photos://instagram\"}",
     // JSON array of origins allowed by CORS on /auth/redeem, /auth/renew, /uploads*.
-    "ALLOWED_ORIGINS": "[\"https://sequence.photos\"]",
+    "ALLOWED_ORIGINS": "[\"https://sequence.photos\",\"tauri://localhost\"]",
     "MAX_FRAMES": "10",
   },
 
@@ -57,6 +61,7 @@
     "dev": {
       "name": "sequence-server-dev",
       "r2_buckets": [{ "binding": "FRAMES", "bucket_name": "sequence-frames-dev" }],
+      "analytics_engine_datasets": [{ "binding": "METRICS", "dataset": "sequence_metrics_dev" }],
       "triggers": { "crons": ["*/15 * * * *"] },
       "ratelimits": [
         {
@@ -79,8 +84,8 @@
         // The dev Worker's callback URL (or http://localhost:8787/auth/callback when
         // running `wrangler dev`, if registered with the Meta app).
         "CALLBACK_URL": "https://sequence-server-dev.sequence-photos.workers.dev/auth/callback",
-        "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\",\"dev\":\"http://localhost:5175/app/\"}",
-        "ALLOWED_ORIGINS": "[\"https://sequence.photos\",\"http://localhost:5175\"]",
+        "RETURN_URLS": "{\"web\":\"https://sequence.photos/app/\",\"dev\":\"http://localhost:5175/app/\",\"mac\":\"sequence-photos://instagram\"}",
+        "ALLOWED_ORIGINS": "[\"https://sequence.photos\",\"http://localhost:5175\",\"tauri://localhost\"]",
         "MAX_FRAMES": "10",
       },
     },

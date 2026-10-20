@@ -1,13 +1,12 @@
 import { useMemo } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { folioLabel } from '../actions';
 import { sheetExtent } from '../geometry';
 import { useElementSize, usePager } from '../hooks';
 import { draftOf, previewPageSetup, sameDraft, type PageDraft } from '../pageSetup';
 import { allSpreads, sheetOf } from '../spreads';
 import { useProject } from '../store';
-import { TERMS, UNITS } from '../units';
+import { TERMS } from '../units';
 import { placedSoft, resolutionNote, softPhotos, softSentence } from '../resolution';
+import { Pager } from './Pager';
 import { PhotoImg } from './PhotoImg';
 import { SoftBadge } from './SoftBadge';
 import { SpreadCanvas } from './SpreadCanvas';
@@ -40,7 +39,6 @@ export function PagePreview({ draft }: Props) {
   // Room below for the controls.
   const scale = Math.max(0, Math.min(stage.w / (across + 2 * pad), (stage.h - 56) / (sheet.pageH + 2 * pad)));
   const terms = TERMS[sheet.arrangement];
-  const units = UNITS[sheet.unit];
   const soft = softPhotos(preview).length;
   // With no changes waiting, this is the project as it is: photos are soft, not would be.
   const changed = !sameDraft(draft, draftOf(project));
@@ -69,28 +67,7 @@ export function PagePreview({ draft }: Props) {
           />
         </div>
       )}
-      <div className="page-preview-controls">
-        <button
-          className="btn ghost icon"
-          aria-label={`Previous ${terms.spread}`}
-          disabled={at === 0}
-          onClick={() => go(-1)}
-        >
-          <ChevronLeft />
-        </button>
-        <span className="folio">{folioLabel(at, spreads.length, sheet.arrangement)}</span>
-        <span className="muted data">
-          {at + 1} / {spreads.length} · {units.format(sheet.pageW)} × {units.format(sheet.pageH)} {units.suffix}
-        </span>
-        <button
-          className="btn ghost icon"
-          aria-label={`Next ${terms.spread}`}
-          disabled={at === spreads.length - 1}
-          onClick={() => go(1)}
-        >
-          <ChevronRight />
-        </button>
-      </div>
+      <Pager at={at} count={spreads.length} go={go} noun={terms.spread} />
       {soft > 0 && <p className="page-preview-footer warn">{softSentence(soft, sheet, changed)}</p>}
     </div>
   );

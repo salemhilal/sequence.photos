@@ -21,14 +21,23 @@ const httpUrl = v.pipe(
   v.url(),
   v.check((s) => /^https?:\/\//.test(s), 'must be http(s)'),
 );
-const origin = v.pipe(
-  httpUrl,
-  v.check((s) => new URL(s).origin === s, 'must be a bare origin'),
-);
+/** The Mac app's pages' origin (Tauri's own scheme on macOS). */
+export const MAC_APP_ORIGIN = 'tauri://localhost';
+/** The Mac app's link scheme, which macOS hands to the app (registered in its Info.plist). */
+const APP_LINK = /^sequence-photos:\/\/[a-z0-9/-]*$/;
 
-// No fragment: the callback appends its own (`#instagram=…`).
+const origin = v.union([
+  v.pipe(
+    httpUrl,
+    v.check((s) => new URL(s).origin === s, 'must be a bare origin'),
+  ),
+  v.literal(MAC_APP_ORIGIN),
+]);
+
+// A web page, or the Mac app's link; no fragment: the callback appends its own (`#instagram=…`).
 const returnUrl = v.pipe(
-  httpUrl,
+  v.string(),
+  v.check((s) => v.is(httpUrl, s) || APP_LINK.test(s), 'must be http(s) or sequence-photos://'),
   v.check((s) => !s.includes('#'), 'must not have a fragment'),
 );
 const ReturnUrlsSchema = v.record(v.pipe(v.string(), v.regex(CLIENT_NAME)), returnUrl);

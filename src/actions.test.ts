@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { produce } from 'immer';
 import {
+  freeSpot,
   addPhotosToPile,
   folioLabel,
   deleteFromProject,
   deleteSpread,
+  deleteSpreads,
   dropPhotos,
   insertSpread,
   locate,
   moveSpread,
+  moveSpreads,
   putInPile,
   putOnNewSpread,
   raise,
@@ -361,5 +364,58 @@ describe('frames', () => {
   it('numbers frames one by one', () => {
     expect(spreadLabel(4, 6, 'frames')).toBe('5');
     expect(folioLabel(4, 6, 'frames')).toBe('05');
+  });
+});
+
+describe('freeSpot', () => {
+  const size = { w: 2, h: 3 };
+
+  it('is the spot asked for on an empty desk', () => {
+    expect(freeSpot([], size, { x: 10, y: 10 })).toEqual({ x: 9, y: 8.5 });
+  });
+
+  it('is the nearest spot clear of other photos', async () => {
+    const pile = [{ x: 8, y: 8, w: 4, h: 4 }];
+    const spot = freeSpot(pile, size, { x: 10, y: 10 });
+    const overlaps = (a: (typeof pile)[number], b: (typeof pile)[number]) =>
+      a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    expect(overlaps({ ...spot, ...size }, pile[0]!)).toBe(false);
+    // Next to it, not far away.
+    expect(Math.hypot(spot.x - 9, spot.y - 8.5)).toBeLessThan(5);
+  });
+});
+
+describe('several spreads at once', () => {
+  beforeEach(() => projectStore.reset(emptyProject())); // four spreads: first, two middle, last
+
+  it('move together, in order, to the drop point', () => {
+    const [first, a, b, last] = book().map((s) => s.id);
+    // Both middles to the end of the middles (before the last page).
+    moveSpreads([b!, a!], 3);
+    expect(book().map((s) => s.id)).toEqual([first, a, b, last]);
+    // The second middle before the first.
+    moveSpreads([b!], 1);
+    expect(book().map((s) => s.id)).toEqual([first, b, a, last]);
+  });
+
+  it('leave a book’s first and last spreads where they are', () => {
+    const [first, a, b, last] = book().map((s) => s.id);
+    moveSpreads([first!, last!, a!], 0);
+    expect(book().map((s) => s.id)).toEqual([first, a, b, last]);
+  });
+
+  it('delete together as one undo step, keeping the first and last spreads', () => {
+    const ids = book().map((s) => s.id);
+    deleteSpreads(ids);
+    expect(book().map((s) => s.kind)).toEqual(['first', 'last']);
+    projectStore.undo();
+    expect(book().map((s) => s.id)).toEqual(ids);
+  });
+
+  it('keep at least one frame', () => {
+    applyPageSetup({ ...draftOf(project()), arrangement: 'frames' });
+    const ids = book().map((s) => s.id);
+    deleteSpreads(ids);
+    expect(book().map((s) => s.id)).toEqual([ids[0]]);
   });
 });

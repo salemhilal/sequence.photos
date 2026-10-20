@@ -1,17 +1,13 @@
 import { useState } from 'react';
-import { useWindowEvent } from '../../hooks';
-import { connectInstagram, disconnectInstagram, useInstagram } from '../../instagram';
+import { disconnectInstagram, useConnectInstagram, useInstagram } from '../../instagram';
 
-/** Connect an Instagram account to post to (web only for now: the Mac app can't receive the sign-in's return yet). */
+/** Connect an Instagram account to post to: on the website, or from the Mac app through the browser. */
 export function InstagramSetting() {
   const connection = useInstagram();
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { connect, busy, message } = useConnectInstagram();
   // When the dialog opened: enough to tell an expired connection.
   const [now] = useState(() => Date.now() / 1000);
   const expired = connection !== null && (connection.needsReconnect === true || connection.expiresAt <= now);
-  // Back from Instagram's page (restored from the back/forward cache): ready again.
-  useWindowEvent('pageshow', (e) => e.persisted && setBusy(false));
 
   if (connection && !expired) {
     return (
@@ -33,26 +29,12 @@ export function InstagramSetting() {
   }
   return (
     <div className="setting-controls">
-      <button
-        className="btn"
-        disabled={busy}
-        onClick={() => {
-          setBusy(true);
-          setError(null);
-          void connectInstagram().then((message) => {
-            // Null: on the way to Instagram's sign-in page.
-            if (message) {
-              setError(message);
-              setBusy(false);
-            }
-          });
-        }}
-      >
+      <button className="btn" disabled={busy} onClick={connect}>
         {busy ? 'Opening Instagram…' : expired ? 'Reconnect Instagram' : 'Connect Instagram'}
       </button>
-      {/* An error takes the description's place. */}
-      {error ? (
-        <p className="help warn">{error}</p>
+      {/* What the button has to say takes the description's place. */}
+      {message ? (
+        <p className={`help${message.warn ? ' warn' : ''}`}>{message.text}</p>
       ) : (
         <p className="help">
           {expired

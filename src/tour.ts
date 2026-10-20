@@ -46,19 +46,19 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Spreads',
-    body: 'Drag photos from the desk onto a page; they’re sized to fit its guides. Drag a spread’s handle to reorder it, or click “+” to add one.',
+    body: 'Drag photos from the desk onto a page; they’re sized to fit its guides. Drag a spread to reorder it, or click “+” to add one.',
     target: '.sidebar',
   },
   {
     title: 'Arrange a spread',
-    body: 'Click a spread to open it. Move and resize photos; they snap to the page edges and guides.',
+    body: 'Double-click a spread, or click its pencil, to open it. Move and resize photos; they snap to the page edges and guides.',
     target: '.modal.editor',
     editor: true,
   },
   {
     title: 'Layout',
     body: 'On the Page tab, choose spreads or frames, inches or pixels, and the size. On the Guides tab, set the border guides photos fit to when you drop them on a page, and drag guides out of the rulers. They apply to every spread, mirrored on facing pages.',
-    target: '.modal.layout-editor',
+    target: '.layout-editor',
     modal: 'layout',
   },
   {
@@ -138,6 +138,7 @@ export function startTour(): void {
   ui.set({
     tour: 0,
     selection: [],
+    page: 'desk',
     modal: null,
     editingSpreadId: null,
     quickLook: null,
@@ -153,6 +154,7 @@ export function goToStep(index: number): void {
   if (!step) return endTour();
   ui.set({
     tour: index,
+    page: 'desk',
     modal: step.modal ?? null,
     // The Layout step shows the guides, which the sample book has.
     ...(step.modal === 'layout' && { layoutTab: 'guides' as const }),
@@ -162,7 +164,7 @@ export function goToStep(index: number): void {
 
 export function endTour(): void {
   if (ui.get().tour === null) return;
-  ui.set({ modal: null, editingSpreadId: null, selection: [], ...before });
+  ui.set({ page: 'desk', modal: null, editingSpreadId: null, selection: [], ...before });
   restoreProject?.();
   restoreProject = null;
   // Saving resumes only once the user's project is back.

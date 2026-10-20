@@ -7,7 +7,7 @@ import { InvalidProjectError } from './validate';
 import { isRecord } from './guards';
 import { projectStore, emptyProject } from './store';
 import { MOD_LABEL } from './input';
-import { ask, modalLocked, ui } from './ui';
+import { ask, pageLocked, ui } from './ui';
 import { createZip, readZip, type ZipInput } from './zip';
 import { platform } from '#platform';
 
@@ -82,7 +82,7 @@ export async function buildProjectFile(verb = 'Exporting'): Promise<Blob> {
 /** Replace the current project with one from a file. Undoable. */
 export async function importProject(file: File): Promise<void> {
   if (ui.get().importing) return;
-  ui.set({ busy: 'Opening project…', importing: { done: 0, total: 0 } });
+  ui.set({ busy: 'Opening project…', importing: { done: 0, total: 0, label: 'Opening project' } });
   try {
     const zip = await readZip(file).catch(() => {
       throw new ProjectFileError(`“${file.name}” isn't a Sequence project.`);
@@ -108,7 +108,7 @@ export async function importProject(file: File): Promise<void> {
     const ids = Object.keys(project.photos).map(toPhotoId);
     const missing = new Set<PhotoId>();
     let done = 0;
-    ui.set({ importing: { done, total: ids.length } });
+    ui.set({ importing: { done, total: ids.length, label: 'Opening project' } });
 
     for (const id of ids) {
       const paths = manifest.files[id];
@@ -122,7 +122,7 @@ export async function importProject(file: File): Promise<void> {
       const thumb = thumbEntry ? await thumbEntry.blob('image/jpeg') : await thumbFromBlob(full);
       await putImage(id, { full, thumb });
       setUrl(id, thumb);
-      ui.set({ importing: { done: ++done, total: ids.length } });
+      ui.set({ importing: { done: ++done, total: ids.length, label: 'Opening project' } });
     }
 
     for (const id of missing) {
@@ -231,7 +231,7 @@ export async function confirmReplace(title: string, what: string, confirmLabel: 
 }
 
 export async function openProjectFile(file: File): Promise<void> {
-  if (modalLocked()) return;
+  if (pageLocked()) return;
   const hasWork = Object.keys(projectStore.project.photos).length > 0;
   if (hasWork && !(await confirmReplace('Replace your current project?', `“${file.name}”`, 'Replace'))) return;
   try {
@@ -245,10 +245,10 @@ export async function openProjectFile(file: File): Promise<void> {
 
 /** Start over with an empty project, after confirming. Undoable on the website. */
 export async function newProject(): Promise<void> {
-  // Not while a dialog's work mustn't be interrupted (see lockModal).
-  if (modalLocked()) return;
+  // Not while a page's work mustn't be interrupted (see lockPage).
+  if (pageLocked()) return;
   if (!(await confirmReplace('Start a new project?', 'A new, empty project', 'New project'))) return;
   projectStore.replace(emptyProject());
-  ui.set({ selection: [], editingSpreadId: null, modal: null });
+  ui.set({ selection: [], editingSpreadId: null, page: 'desk', modal: null });
   platform.projectReplaced();
 }

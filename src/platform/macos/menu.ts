@@ -1,4 +1,6 @@
+import { emitTo } from '@tauri-apps/api/event';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
+import { FIELD_COMMAND } from './index';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { REPO_URL } from '../../config';
 import { commandTitle, runFromMenu, shortcutAccelerator, type CommandId } from '../../commands';
@@ -22,25 +24,32 @@ export function titleCase(s: string): string {
     .join(' ');
 }
 
-/** A menu item for a command; `textFallback` edits the focused text field instead, when there is one. */
-function command(id: CommandId, textFallback?: () => void, text = titleCase(commandTitle(id))) {
+/**
+ * A menu item for a command; `field` is the text-editing command that runs instead in a
+ * focused text field. The menu bar's actions run in the main window, so with the Settings
+ * window in front, those editing commands go to it instead (not to the project behind it).
+ */
+function command(id: CommandId, field?: FieldCommand, text = titleCase(commandTitle(id))) {
   return MenuItem.new({
     id,
     text,
     accelerator: shortcutAccelerator(id),
-    action: () => void runFromMenu(id, textFallback),
+    action: () => {
+      if (field && !document.hasFocus()) return void emitTo('settings', FIELD_COMMAND, field);
+      runFromMenu(id, field && (() => void document.execCommand(field)));
+    },
   });
 }
 
 const separator = () => PredefinedMenuItem.new({ item: 'Separator' });
 const predefined = (item: 'Cut' | 'Copy' | 'Paste' | 'Minimize' | 'Maximize' | 'Fullscreen') =>
   PredefinedMenuItem.new({ item });
-// Text fields' own editing, for menu shortcuts typed in them.
-const inField = (cmd: 'undo' | 'redo' | 'selectAll') => () => void document.execCommand(cmd);
+/** Text fields' own editing, for menu shortcuts typed in them. */
+type FieldCommand = 'undo' | 'redo' | 'selectAll';
 
 export async function setUpMenu(): Promise<void> {
-  const undo = await command('undo', inField('undo'));
-  const redo = await command('redo', inField('redo'));
+  const undo = await command('undo', 'undo');
+  const redo = await command('redo', 'redo');
   // Its wording follows the sidebar (see sync below).
   const sidebar = await command('toggleSidebar', undefined, 'Hide Spreads');
   const guides = await command('toggleGuides', undefined, 'Hide Guides');
@@ -92,13 +101,16 @@ export async function setUpMenu(): Promise<void> {
           await command('duplicate'),
           await command('deleteSelection'),
           await separator(),
-          await command('selectAll', inField('selectAll')),
+          await command('selectAll', 'selectAll'),
         ],
       }),
       await Submenu.new({
         text: 'View',
         items: [
+          await command('showDesk'),
           await command('preview'),
+          await command('showExport'),
+          await separator(),
           await command('layout'),
           guides,
           sidebar,

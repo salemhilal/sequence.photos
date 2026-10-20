@@ -4,12 +4,21 @@
  * selection and actions; non-photo blue marks guides, as in print production.
  */
 :root {
-  --bg: #f2f1ee;
-  --panel: #fafaf8;
-  --desk: #787876;
-  --stage: #787876;
-  --text: #1b1a18;
-  --muted: #6b6862;
+  /* Surfaces, in steps: the window (toolbar, gaps), panels, panel headers, raised
+     controls, and inset wells. Panels are divided by --divider, darker than both sides. */
+  --bg: #e3e3e3;
+  --panel: #f0f0f0;
+  --header: #e8e8e8;
+  --control: #fbfbfb;
+  --inset: #e6e6e6;
+  /* Segmented controls' tracks: a step darker than whatever they sit on. */
+  --track: rgba(0, 0, 0, 0.08);
+  --divider: #c6c6c6;
+  /* A raised control's edge: a hairline and a soft drop in light, a top highlight in dark. */
+  --raise: 0 0 0 0.5px rgba(0, 0, 0, 0.18), 0 1px 1px rgba(0, 0, 0, 0.06);
+  --desk: #787878;
+  --text: #1c1c1c;
+  --muted: #6b6b6b;
   --hover: rgba(0, 0, 0, 0.06);
   --fill: rgba(0, 0, 0, 0.05);
   --border: rgba(0, 0, 0, 0.09);
@@ -27,15 +36,21 @@
   --warn: #a8620a;
   --danger: #c2412d;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 3px 10px rgba(0, 0, 0, 0.12);
-  --radius: 5px;
+  /* Radii: 3 px controls, 5 px menus and popovers, 8 px dialogs; tiled panels have none. */
+  --radius: 3px;
+  --radius-pop: 5px;
+  --radius-dialog: 8px;
   --font: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   color-scheme: light dark;
   accent-color: var(--accent);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text);
   background: var(--bg);
+  /* Inspector rows: a label column, then the control. */
+  --label-col: 76px;
+  --knob: #ffffff;
 }
 
 /* Theme: <html data-theme="light|dark"> forces a theme; without it, follow the system. */
@@ -43,10 +58,17 @@
   color-scheme: light;
 }
 :root[data-theme='dark'] {
-  --bg: #151514;
-  --panel: #1c1c1a;
-  --text: #e9e6df;
-  --muted: #8d8a83;
+  --bg: #1b1b1b;
+  --panel: #242424;
+  --header: #2c2c2c;
+  --control: #333333;
+  --inset: #181818;
+  --track: #181818;
+  --divider: #0e0e0e;
+  --raise: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --knob: #cfcfcf;
+  --text: #e6e6e6;
+  --muted: #8e8e8e;
   --hover: rgba(255, 255, 255, 0.07);
   --fill: rgba(255, 255, 255, 0.06);
   --border: rgba(255, 255, 255, 0.08);
@@ -61,10 +83,17 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #151514;
-    --panel: #1c1c1a;
-    --text: #e9e6df;
-    --muted: #8d8a83;
+    --bg: #1b1b1b;
+    --panel: #242424;
+    --header: #2c2c2c;
+    --control: #333333;
+    --inset: #181818;
+    --track: #181818;
+    --divider: #0e0e0e;
+    --raise: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --knob: #cfcfcf;
+    --text: #e6e6e6;
+    --muted: #8e8e8e;
     --hover: rgba(255, 255, 255, 0.07);
     --fill: rgba(255, 255, 255, 0.06);
     --border: rgba(255, 255, 255, 0.08);
@@ -89,6 +118,36 @@ body,
   height: 100%;
   overflow: hidden;
 }
+/*
+ * Desktop conventions: the arrow cursor (the hand is only for links that open a web
+ * page), UI text that can't be selected by accident, images that don't drag out as
+ * files, thin scrollbars in the theme's colors, and icons drawn with a fine stroke.
+ */
+body {
+  cursor: default;
+  -webkit-user-select: none;
+  user-select: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+input,
+textarea,
+[contenteditable='true'],
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+input:is([type='text'], [type='number'], [type='search'], :not([type])),
+textarea,
+[contenteditable='true'] {
+  cursor: text;
+}
+img {
+  -webkit-user-drag: none;
+}
+.lucide {
+  stroke-width: 1.5;
+}
 button {
   font: inherit;
   color: inherit;
@@ -112,26 +171,23 @@ button {
  *   IBM Plex Mono — data and labels: numbers, units, measurements, counts,
  *   page numbers, shortcuts, file names, and field and section labels.
  * Exception: the empty desk's heading is set in mono, as a label on the desk itself.
- * Mono sizes: 10.5px uppercase labels (.caps, tags), 11px data (.data),
- * 12px input fields, shortcut badges, and settings titles; 13px page numbers
- * in headings.
+ * Labels (section and field) are sans, in the muted color, not mono capitals.
+ * Chrome text is 12px; mono 11px for data (.data) and 12px in fields.
  */
 .data {
   font-family: var(--mono);
   font-size: 11px;
 }
-/* Small monospace caps, for section labels. */
-.caps {
-  font-family: var(--mono);
-  font-size: 10.5px;
+/* A small label for a group of controls. */
+.section-label {
+  font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--muted);
 }
 /* A note under a control (after .data, so a .help.data note keeps this size). */
 .help {
   margin: 0;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--muted);
 }
 .help.warn {
@@ -142,12 +198,6 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-/* Page numbers, set like a book's folios. */
-.folio {
-  font-family: var(--mono);
-  font-weight: 500;
-  letter-spacing: 0.02em;
 }
 .spacer {
   flex: 1;
@@ -192,30 +242,28 @@ button {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 28px;
+  height: 26px;
   padding: 0 10px;
   border: 1px solid transparent;
   border-radius: var(--radius);
-  background: var(--fill);
-  cursor: pointer;
+  background: var(--control);
   white-space: nowrap;
+  box-shadow: var(--raise);
 }
-.btn:hover:not(:disabled) {
-  background: var(--hover);
+
+/* Filled buttons answer a press, as native ones do; only ghost buttons light on hover. */
+.btn:active:not(:disabled) {
+  background: var(--border-strong);
 }
 .btn.ghost {
   background: transparent;
+  box-shadow: none;
 }
 .btn.ghost:hover:not(:disabled) {
   background: var(--hover);
 }
-.btn.accent {
-  background: transparent;
-  border-color: var(--accent);
-  color: var(--accent-ink);
-}
-.btn.accent:hover:not(:disabled) {
-  background: var(--accent-soft);
+.btn.ghost:active:not(:disabled) {
+  background: var(--border-strong);
 }
 .btn:disabled {
   color: color-mix(in srgb, currentColor 35%, transparent);
@@ -225,47 +273,57 @@ button {
   color: var(--on-accent);
   opacity: 0.4;
 }
-.btn:disabled .shortcut-hint {
-  opacity: 0.55;
+.inspector .btn,
+.sidebar .btn,
+.settings .btn {
+  height: 24px;
+}
+.inspector .btn.icon,
+.sidebar .btn.icon {
+  width: 24px;
 }
 .btn.icon.small {
   width: 24px;
   height: 24px;
 }
 .btn.icon {
-  width: 28px;
+  width: 26px;
   padding: 0;
   font-size: 18px;
   line-height: 1;
 }
 .btn .lucide,
-.row-delete .lucide,
-.grip .lucide {
+.row-delete .lucide {
   width: 16px;
   height: 16px;
-  stroke-width: 1.75;
   flex-shrink: 0;
 }
 .turn .lucide {
   width: 28px;
   height: 28px;
 }
+/* Raised like the other buttons, no more: a faint light top edge, a hairline, a soft drop. */
 .btn.primary {
+  border-color: transparent;
   background: var(--accent);
-  border-color: var(--accent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 0 0 0.5px rgba(0, 0, 0, 0.25),
+    0 1px 1px rgba(0, 0, 0, 0.12);
   color: var(--on-accent);
   font-weight: 500;
 }
-.btn.primary:hover:not(:disabled) {
+.btn.primary:active:not(:disabled) {
   background: var(--accent);
-  filter: brightness(1.08);
+  filter: brightness(0.9);
 }
 .menu {
   position: relative;
 }
 .btn.active {
-  background: var(--accent-soft);
+  color: var(--accent-ink);
 }
+
 .menu-list {
   position: absolute;
   top: calc(100% + 4px);
@@ -274,7 +332,7 @@ button {
   min-width: 220px;
   padding: 4px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-pop);
   background: var(--panel);
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.18),
@@ -288,11 +346,10 @@ button {
   height: 30px;
   padding: 0 8px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius);
   background: none;
-  font-size: 13px;
+  font-size: 12px;
   text-align: left;
-  cursor: pointer;
 }
 .menu-item:hover:not(:disabled),
 .menu-item:focus-visible {
@@ -310,7 +367,6 @@ button {
 .menu-item .lucide {
   width: 16px;
   height: 16px;
-  stroke-width: 1.75;
   color: var(--muted);
 }
 .menu-label {
@@ -378,7 +434,6 @@ button {
   padding: 0;
   border: 1px solid var(--border-strong);
   border-radius: 50%;
-  cursor: pointer;
 }
 .swatch.on {
   box-shadow:
@@ -397,36 +452,41 @@ button {
   position: absolute;
   inset: 0;
   opacity: 0;
-  cursor: pointer;
 }
-.btn.has-hint {
-  position: relative;
+/* Shortcut badges, while ⌘ (Ctrl) is held: each below its button, over everything. */
+.shortcut-badges {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
 }
 .shortcut-hint {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1;
-  padding: 3px 9px;
-  border-radius: 5px;
+  position: fixed;
+  transform: translateX(-50%);
+  padding: 2px 6px;
+  border-radius: var(--radius);
   background: var(--text);
   color: var(--bg);
-  font: 500 12px/1.4 var(--mono);
+  font: 500 11px/1.4 var(--mono);
   white-space: nowrap;
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
-.shortcut-hint.below {
-  top: calc(100% + 6px);
-  transform: translateX(-50%);
+.shortcut-hint.disabled {
+  opacity: 0.55;
 }
 /* Joined buttons (undo/redo): one pill with a hairline between. */
 .btn-joined {
   position: relative;
   display: inline-flex;
   border-radius: var(--radius);
-  background: var(--fill);
+  background: var(--control);
+  box-shadow: var(--raise);
+}
+/* The toolbar's undo and redo: as tall as the pages' switcher buttons. */
+.toolbar .btn-joined .btn {
+  width: 24px;
+  height: 22px;
 }
 .btn-joined .btn {
   border-radius: 0;
@@ -446,14 +506,50 @@ button {
   height: 100%;
 }
 .toolbar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
   height: 42px;
   padding: 0 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
+  border-bottom: 1px solid var(--divider);
+  background: var(--bg);
   flex-shrink: 0;
+}
+.toolbar .wordmark {
+  padding-left: 0;
+  padding-right: 0;
+  margin-right: 10px;
+  background: none;
+  color: var(--text);
+}
+/* The pages, centered in the toolbar: a segmented control, the current page lighter. */
+.page-switcher {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 4px;
+  background: var(--track);
+}
+.page-switcher button {
+  height: 22px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+}
+.page-switcher button:hover {
+  color: var(--text);
+}
+.page-switcher button.on {
+  background: var(--control);
+  box-shadow: var(--raise);
+  color: var(--text);
 }
 /* Mac app: the toolbar is the title bar, with the traffic lights at its left. */
 .native-app .toolbar {
@@ -462,21 +558,18 @@ button {
   padding-left: 94px;
 }
 /*
- * Full-window views sit under the traffic lights too: their headers are the toolbar's
- * height, so the lights sit in line with the text and buttons, not above them.
+ * Quick Look covers the window, traffic lights too: its header is the toolbar's height, so
+ * the lights sit in line with its text and buttons, not above them.
  */
-.native-app .preview-head,
 .native-app .quick-look-head {
   box-sizing: border-box;
   height: 42px;
   padding-block: 0;
   padding-left: 94px;
 }
+/* The Mac app's document name, after the traffic lights (the pages' switcher is centered). */
 .window-title {
-  position: absolute;
-  left: 50%;
-  max-width: 40%;
-  transform: translateX(-50%);
+  max-width: 28%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -496,18 +589,7 @@ button {
   color: var(--on-accent);
   user-select: none;
 }
-.status {
-  /* Long messages ("Rendering frame 12 of 30…") end in "…" rather than running under the
-     Mac app's centered window title. */
-  max-width: 26vw;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 11px;
-  margin-right: 10px;
-}
+
 .main {
   position: relative;
   flex: 1;
@@ -578,7 +660,6 @@ button {
 .item {
   position: absolute;
   box-shadow: var(--shadow);
-  cursor: grab;
   touch-action: none;
 }
 /*
@@ -660,7 +741,6 @@ button {
   color: var(--text);
   opacity: 0.7;
   pointer-events: auto;
-  cursor: help;
   /* On the desk, counter its zoom so the icon stays one size. */
   transform: scale(var(--inv, 1));
 }
@@ -734,19 +814,18 @@ button {
 }
 .desk-empty p {
   margin: 0;
-  font: 13px/1.5 var(--font);
+  font: 14px/1.5 var(--font);
+}
+.desk-empty .link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  pointer-events: auto;
 }
 :root[data-desk-tone='light'] .desk-empty {
   color: rgba(0, 0, 0, 0.78);
 }
-:root[data-desk-tone='light'] .desk-empty-title {
-  color: #111;
-}
-.desk-empty .desk-empty-title {
-  margin-bottom: 2px;
-  font: 500 15px/1.6 var(--mono);
-  color: #fff;
-}
+
 /* A new project's page-size card, on the empty desk. */
 .setup-card {
   display: flex;
@@ -756,18 +835,17 @@ button {
   max-width: 320px;
   margin-top: 28px;
   padding: 14px 18px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-dialog);
   background: var(--panel);
   color: var(--text);
   text-shadow: none;
   box-shadow: var(--shadow);
   pointer-events: auto;
 }
-.setup-card .inline {
-  gap: 14px;
-}
-.setup-card .num-field input {
-  width: 64px;
+/* Its form reads left to right, as in the Layout panel. */
+.setup-card .page-settings {
+  align-self: stretch;
+  text-align: left;
 }
 .setup-card .help {
   font: 12px/1.5 var(--font);
@@ -783,24 +861,91 @@ button {
   text-underline-offset: 2px;
   cursor: pointer;
 }
-.desk-empty .btn {
-  margin-top: 12px;
-  pointer-events: auto;
-}
-.zoom {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
+
+/* Status bar: counts, the page, progress, and the desk's zoom, along the window's foot. */
+.statusbar {
+  flex: none;
   display: flex;
-  gap: 4px;
-}
-.zoom .btn {
-  background: var(--panel);
-  box-shadow: var(--shadow);
-}
-.zoom-level {
-  min-width: 52px;
+  align-items: center;
+  gap: 14px;
+  height: 24px;
+  padding: 0 4px 0 10px;
+  border-top: 1px solid var(--divider);
+  background: var(--bg);
+  color: var(--muted);
   font: 11px var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.statusbar .btn {
+  height: 20px;
+  padding: 0 6px;
+  color: var(--muted);
+  font: 11px var(--mono);
+}
+.statusbar .btn.icon {
+  width: 20px;
+  padding: 0;
+}
+.statusbar .btn .lucide {
+  width: 13px;
+  height: 13px;
+}
+.statusbar .btn:hover:not(:disabled) {
+  color: var(--text);
+}
+.status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status-progress progress {
+  appearance: none;
+  width: 90px;
+  height: 3px;
+  border: 0;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--border-strong);
+}
+.status-progress progress::-webkit-progress-bar {
+  background: var(--border-strong);
+}
+.status-progress progress::-webkit-progress-value {
+  background: var(--accent);
+  transition: width 150ms ease-out;
+}
+.status-progress progress::-moz-progress-bar {
+  background: var(--accent);
+}
+.status-zoom {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.status-zoom .menu .btn {
+  min-width: 52px;
+  justify-content: flex-end;
+  color: var(--text);
+}
+.statusbar .menu-list {
+  font: 12px var(--font);
+}
+/* A menu opened upward, from the status bar. */
+.menu.up .menu-list {
+  top: auto;
+  bottom: calc(100% + 4px);
+  left: auto;
+  right: 0;
+  min-width: 160px;
 }
 
 /* Sidebar */
@@ -809,7 +954,7 @@ button {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--divider);
   background: var(--panel);
   user-select: none;
 }
@@ -844,36 +989,46 @@ body.col-resizing * {
   cursor: col-resize !important;
   user-select: none;
 }
-.sidebar-head {
+/* A panel's header bar: its title, then its actions. */
+.panel-header {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 10px 16px 4px 20px;
+  gap: 2px;
+  height: 28px;
+  padding: 0 6px 0 10px;
+  background: var(--header);
+  border-bottom: 1px solid var(--divider);
 }
+.panel-title {
+  font-weight: 500;
+  margin-right: 4px;
+}
+
 .sidebar-list {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 16px 24px;
+  padding: 6px 10px 24px;
 }
 /* Wide sidebar: spreads in a grid. Insert gaps sit in the gutters between columns. */
 .sidebar-list.grid {
   display: grid;
   align-content: start;
-  column-gap: 20px;
-  row-gap: 14px;
-  padding-left: 24px;
-  padding-right: 24px;
+  column-gap: 12px;
+  row-gap: 8px;
 }
 .spread-cell {
   position: relative;
   min-width: 0;
+  /* Gliding into new columns scales from here (see Sidebar). */
+  transform-origin: top left;
 }
 .insert-gap.vertical {
   position: absolute;
-  left: -20px;
+  left: -12px;
   top: 0;
   bottom: 0;
-  width: 20px;
+  width: 12px;
   height: auto;
 }
 .insert-gap.vertical::before {
@@ -897,8 +1052,17 @@ body.col-resizing * {
   line-height: 1;
 }
 .spread-row {
-  padding: 6px 4px 8px;
+  padding: 4px 4px 2px;
   border-radius: var(--radius);
+}
+.thumb-well {
+  padding: 8px;
+  border-radius: 2px;
+  background: var(--inset);
+}
+.spread-row.selected {
+  background: var(--control);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .spread-row.editing {
   background: var(--accent-soft);
@@ -906,12 +1070,17 @@ body.col-resizing * {
 .spread-row.dragging {
   opacity: 0.4;
 }
-.spread-row-head {
+.spread-row-foot {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 22px;
+  height: 20px;
+  padding: 0 2px;
+  color: var(--muted);
   font-size: 12px;
+}
+.spread-row.selected .spread-row-foot {
+  color: var(--text);
 }
 .spread-label {
   font: 500 11px var(--mono);
@@ -921,23 +1090,12 @@ body.col-resizing * {
  * The handle's dots line up with the spread's left edge. The icon's own
  * whitespace (8 of its 24 units, at 16px) is pulled back with a negative margin.
  */
-.grip {
-  display: inline-flex;
-  color: var(--muted);
-  padding: 0;
-  margin-left: calc(-16px * 8 / 24);
+
+/* The whole row drags (a movable spread), with the rest of the selection. */
+.spread-row.draggable {
   touch-action: none;
 }
-.grip.locked {
-  visibility: hidden;
-}
-.spread-row-head.draggable {
-  cursor: grab;
-  touch-action: none;
-}
-.spread-row-head.draggable:active {
-  cursor: grabbing;
-}
+.row-edit,
 .row-delete {
   display: inline-flex;
   margin-left: auto;
@@ -945,21 +1103,33 @@ body.col-resizing * {
   background: none;
   color: var(--muted);
   font-size: 16px;
-  cursor: pointer;
   opacity: 0;
   padding: 0 4px;
 }
+.spread-row:hover .row-edit,
+.row-edit:focus-visible,
 .spread-row:hover .row-delete,
 .row-delete:focus-visible {
   opacity: 1;
 }
+.row-edit:hover,
 .row-delete:hover {
   color: var(--text);
 }
-.spread-row-head .muted {
+.row-edit {
+  margin-left: 0;
+}
+.row-edit .lucide {
+  width: 13px;
+  height: 13px;
+}
+.row-edit + .row-delete {
+  margin-left: 0;
+}
+.spread-row-foot .muted {
   margin-left: auto;
 }
-.spread-row-head .muted + .row-delete {
+.spread-row-foot .muted + .row-delete {
   margin-left: 4px;
 }
 .insert-gap {
@@ -985,13 +1155,12 @@ body.col-resizing * {
 .insert-btn {
   position: relative;
   z-index: 1;
-  border: 1px solid var(--accent);
-  background: var(--panel);
-  color: var(--accent-ink);
+  border: 1px solid var(--border-strong);
+  background: var(--control);
+  color: var(--muted);
   border-radius: 999px;
   font-size: 12px;
   padding: 1px 10px;
-  cursor: pointer;
   opacity: 0;
 }
 .insert-gap:hover .insert-btn,
@@ -1025,7 +1194,6 @@ body.col-resizing * {
   flex-shrink: 0;
 }
 .spread-canvas.thumb {
-  cursor: pointer;
 }
 .page {
   position: absolute;
@@ -1043,13 +1211,10 @@ body.col-resizing * {
 .spread-items .item {
   box-shadow: none;
 }
-.thumb .item {
-  cursor: grab;
-}
 .offpage-mask {
   position: absolute;
   pointer-events: none;
-  box-shadow: 0 0 0 9999px color-mix(in srgb, var(--stage) 70%, transparent);
+  box-shadow: 0 0 0 9999px color-mix(in srgb, var(--desk) 70%, transparent);
 }
 .page-outline {
   position: absolute;
@@ -1158,7 +1323,6 @@ body.col-resizing * {
   background: var(--guide-hit);
 }
 .line-guide.fixed {
-  cursor: pointer;
 }
 .line-guide.fixed::after {
   background: var(--guide);
@@ -1209,7 +1373,7 @@ body.col-resizing * {
 }
 /* The Layout view's panel (.inspector.sectioned, below). */
 .inspector.layout-panel {
-  width: 270px;
+  width: 300px;
 }
 .section-head {
   display: flex;
@@ -1225,14 +1389,13 @@ body.col-resizing * {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin: -4px 0 -4px -6px;
-  padding: 4px 6px 4px 2px;
+  margin: 0 0 0 -6px;
+  padding: 0 6px 0 2px;
   border: 0;
   border-radius: var(--radius);
   background: none;
   color: inherit;
   text-align: left;
-  cursor: pointer;
 }
 .section-toggle:hover {
   background: var(--fill);
@@ -1258,7 +1421,7 @@ body.col-resizing * {
   color: var(--muted);
 }
 .layout-note {
-  padding: 14px;
+  padding: 12px 10px;
 }
 .layout-panel .num-field {
   min-width: 0;
@@ -1291,10 +1454,10 @@ body.col-resizing * {
   flex-direction: column;
   gap: 6px;
 }
-.border-guide .num-field {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
+/* Each edge's name inside its field, in words. */
+.border-guide .num-label {
+  min-width: 44px;
+  font-family: var(--font);
 }
 /* Which border guide dropped photos fit: one is on; the others can be picked. */
 .drop-toggle {
@@ -1303,10 +1466,8 @@ body.col-resizing * {
   border-radius: 3px;
   background: none;
   color: var(--muted);
-  font: 500 10.5px var(--mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
   white-space: nowrap;
 }
 .drop-toggle:hover {
@@ -1345,7 +1506,7 @@ body.col-resizing * {
   display: flex;
   flex-direction: column;
   background: var(--panel);
-  border-radius: 10px;
+  border-radius: var(--radius-dialog);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   max-width: 100%;
   max-height: 100%;
@@ -1356,8 +1517,10 @@ body.col-resizing * {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--divider);
+  background: var(--bg);
 }
+
 .modal-title {
   display: flex;
   align-items: baseline;
@@ -1368,6 +1531,14 @@ body.col-resizing * {
 .editor {
   width: 100%;
   height: 100%;
+}
+/* A page under the toolbar (Layout, Export): its stage and inspector, flush. */
+.page-view {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
 }
 .editor-body {
   flex: 1;
@@ -1380,7 +1551,7 @@ body.col-resizing * {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--stage);
+  background: var(--desk);
   user-select: none;
   touch-action: none;
 }
@@ -1395,7 +1566,7 @@ body.col-resizing * {
   width: 230px;
   flex-shrink: 0;
   padding: 14px;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--divider);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1409,6 +1580,36 @@ body.col-resizing * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* The spread editor's panel: its settings scroll; the buttons at its foot stay put. */
+.inspector.editor-inspector {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.inspector-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  overflow-y: auto;
+}
+.inspector-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+/* Which spread is open, under it. */
+.editor-stage .editor-pager {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
 }
 .inspector-actions {
   display: flex;
@@ -1424,15 +1625,27 @@ body.col-resizing * {
 .sectioned section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px;
+  gap: 6px;
+  padding: 0 10px 12px;
   border-bottom: 1px solid var(--border);
 }
+
 .sectioned h3 {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
 }
+.sectioned section.collapsed {
+  padding-bottom: 0;
+}
+/* A section with no title row (a note, the actions) keeps the same room above as below. */
+.sectioned section:not(:has(> h3, > .section-head)) {
+  padding-top: 12px;
+}
+
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1442,42 +1655,70 @@ body.col-resizing * {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--radius);
+  background: var(--inset);
+  box-shadow: inset 0 0 0 1px var(--border);
   font-size: 12px;
 }
-.num-label {
-  color: var(--muted);
-  font: 11px var(--mono);
-  min-width: 12px;
+.num-field:focus-within {
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
-.num-field input {
-  width: 100%;
-  min-width: 0;
-  height: 26px;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: var(--fill);
-  font: 12px var(--mono);
+.num-field.disabled {
+  opacity: 0.5;
 }
-.num-field input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
+
+/* Drag on a field's label or units to scrub its value. */
+.num-label,
 .num-suffix {
   color: var(--muted);
   font: 11px var(--mono);
+  cursor: ew-resize;
 }
+.num-label {
+  min-width: 12px;
+}
+.num-field.disabled .num-label,
+.num-field.disabled .num-suffix {
+  cursor: default;
+}
+
+.num-field input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: 12px var(--mono);
+  appearance: textfield;
+}
+.num-field input::-webkit-inner-spin-button,
+.num-field input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.num-field input:focus,
+.num-field input:focus-visible {
+  outline: none;
+}
+
 .check {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 12px;
 }
 .strip {
   display: flex;
   flex-direction: column;
   height: 96px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--divider);
   flex-shrink: 0;
   user-select: none;
 }
@@ -1502,7 +1743,6 @@ body.col-resizing * {
 .strip-item {
   height: 56px;
   flex-shrink: 0;
-  cursor: grab;
   box-shadow: var(--shadow);
   touch-action: none;
 }
@@ -1511,48 +1751,80 @@ body.col-resizing * {
 .settings {
   width: 460px;
 }
-.settings-tabs {
+/* The Mac app's Settings window: the same tabs and settings, filling the window. */
+.settings-window {
   display: flex;
-  gap: 4px;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--border);
+  flex-direction: column;
+  height: 100%;
+  background: var(--panel);
 }
-.settings-tabs button {
+.settings-window .settings-body {
+  flex: 1;
+  min-height: 0;
+}
+.window-foot {
+  flex: none;
+  height: 24px;
+  margin: 0;
+  padding: 0 10px;
+  border-top: 1px solid var(--divider);
+  background: var(--bg);
+  color: var(--muted);
+  font: 11px/24px var(--mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tabs {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  height: 28px;
+  padding: 0 6px;
+  background: var(--header);
+  border-bottom: 1px solid var(--divider);
+}
+
+.tabs button {
   margin-bottom: -1px;
-  padding: 8px 10px;
+  padding: 0 8px;
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 13px;
-  cursor: pointer;
+  font-size: 12px;
 }
-.settings-tabs button:hover {
+
+.tabs button:hover {
   color: inherit;
 }
-.settings-tabs button.on {
-  border-bottom-color: var(--accent);
+.tabs button.on {
+  border-bottom-color: var(--text);
   color: inherit;
 }
-.settings-tabs button:focus-visible {
+.tabs button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 .text-field {
   width: 100%;
-  height: 28px;
+  height: 24px;
   padding: 0 8px;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--radius);
-  background: var(--fill);
+  background: var(--inset);
   color: inherit;
   font: 12px var(--mono);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
+
 .text-field:focus {
   outline: none;
-  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
+
 .settings-body {
   padding: 4px 20px 16px;
   overflow-y: auto;
@@ -1569,12 +1841,10 @@ body.col-resizing * {
 }
 .setting h3 {
   margin: 5px 0 0;
-  font-family: var(--mono);
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
+
 .setting-controls {
   display: flex;
   flex-direction: column;
@@ -1584,26 +1854,6 @@ body.col-resizing * {
 }
 .setting .inline {
   gap: 14px;
-}
-/* Tooltips: `data-tip` on an element shows its text (see tooltip.ts). */
-.tooltip {
-  position: fixed;
-  z-index: 100;
-  width: max-content;
-  max-width: 240px;
-  padding: 6px 9px;
-  border-radius: 6px;
-  background: var(--text);
-  color: var(--bg);
-  box-shadow: var(--shadow);
-  font: 400 12px/1.4 var(--font);
-  letter-spacing: normal;
-  text-transform: none;
-  white-space: normal;
-  pointer-events: none;
-}
-.tooltip[hidden] {
-  display: none;
 }
 
 /* Confirmation */
@@ -1646,12 +1896,10 @@ body.col-resizing * {
   text-align: center;
 }
 .about-body .wordmark {
-  margin: 0 0 10px;
-}
-.about-name {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 500;
+  margin: 0 0 8px;
+  padding: 8px 14px 6px;
+  border-radius: 6px;
+  font-size: 20px;
 }
 .about-version {
   margin: 0 0 4px;
@@ -1688,23 +1936,25 @@ body.col-resizing * {
 .segmented {
   display: inline-flex;
   padding: 2px;
-  background: var(--fill);
+  background: var(--track);
   border: 0;
   border-radius: var(--radius);
   gap: 2px;
 }
 .segmented label {
-  padding: 4px 14px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
+  padding: 3px 10px;
+  border-radius: 2px;
+  font-size: 12px;
+  line-height: 16px;
 }
-.segmented label:hover {
-  background: var(--accent-soft);
+
+.segmented label {
+  color: var(--muted);
 }
 .segmented label.on {
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--control);
+  box-shadow: var(--raise);
+  color: var(--text);
 }
 .segmented input {
   position: absolute;
@@ -1716,26 +1966,109 @@ body.col-resizing * {
   outline-offset: 1px;
 }
 
-/* Layout and size (the Layout view, and a new project's desk) */
-.layout-fields,
-.size-form {
+/* Inspector rows: a label in the label column, the control (and any note) beside it. */
+.field-row {
+  display: grid;
+  grid-template-columns: var(--label-col) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 6px;
+  min-width: 0;
+  min-height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.field-row > * {
+  grid-column: 2;
+}
+.field-row > .field-label {
+  grid-column: 1;
+  color: var(--muted);
+}
+.field-row > .segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+.field-row > .segmented label {
+  text-align: center;
+}
+.size-fields {
+  gap: 4px;
+}
+.size-fields .num-field {
+  flex: 1;
+}
+.page-content-choices {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: 4px;
+}
+
+/* Sliders: a thin track and a small knob, as in desktop apps. */
+input[type='range']:not(.columns-slider) {
+  appearance: none;
+  min-width: 0;
+  height: 16px;
+  margin: 0;
+  background: none;
+}
+input[type='range']:not(.columns-slider)::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border-strong);
+}
+input[type='range']:not(.columns-slider)::-moz-range-track {
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border-strong);
+}
+input[type='range']:not(.columns-slider)::-webkit-slider-thumb {
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--knob);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+}
+input[type='range']:not(.columns-slider)::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--knob);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.slider-control {
   gap: 8px;
 }
-.size-form .inline {
-  gap: 10px;
+.slider-control input {
+  flex: 1;
 }
-.size-form select {
-  height: 26px;
+
+/* Layout and size (the Layout view, and a new project's desk) */
+.layout-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.select {
+  height: 24px;
   padding: 0 6px;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--radius);
-  background: var(--fill);
+  background: var(--inset);
   color: inherit;
   font: 12px var(--font);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
+
 /* Two choices, each half the toggle. */
 .segmented.halves {
   display: inline-grid;
@@ -1744,51 +2077,17 @@ body.col-resizing * {
 .segmented.halves label {
   text-align: center;
 }
-.layout-fields .field-label {
-  font-size: 12px;
-  color: var(--muted);
-}
-/* In the Layout panel, the size form fills its width. */
-.layout-panel .layout-fields,
-.layout-panel .size-form {
-  align-items: stretch;
-}
-.layout-panel .size-form select {
-  width: 100%;
-}
-.layout-panel .size-form .num-field {
-  flex: 1;
-}
-.size-form select:focus-visible {
+.select:focus-visible {
   outline: none;
-  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 /* The Layout view's tabs, and the Page tab's form and preview. */
-.layout-tabs {
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+/* Layout's Page and Guides tabs, at the top of its panel. */
+.layout-panel .tabs {
+  flex-shrink: 0;
 }
-.layout-tabs .segmented {
-  display: grid;
-}
-.size-form .inline select,
-.layout-panel .size-form .inline select {
-  width: auto;
-  flex: none;
-}
-.page-content {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.page-content legend {
-  padding: 0;
-  margin-bottom: 4px;
-}
+
 .page-content:disabled .check {
   opacity: 0.5;
 }
@@ -1814,9 +2113,6 @@ body.col-resizing * {
   background: var(--panel);
   box-shadow: var(--shadow);
 }
-.layout-panel .size-form .dpi .num-field {
-  flex: 0 0 90px;
-}
 .page-preview-footer {
   margin: 0;
   padding: 4px 10px;
@@ -1833,21 +2129,22 @@ body.col-resizing * {
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--warn);
   box-shadow: var(--shadow);
 }
+/* The warning's own color, as its text; a heavier stroke so it reads at this size. */
 .soft-badge svg {
   width: 12px;
   height: 12px;
+  stroke-width: 2.25;
 }
 .item .soft-badge {
   position: absolute;
   top: 4px;
   left: 4px;
   pointer-events: auto;
-  cursor: help;
 }
 
 /* One page of a spread, clipped to it (Instagram's slides). */
@@ -1867,7 +2164,6 @@ body.col-resizing * {
   flex-direction: column;
   gap: 4px;
   font-size: 11px;
-  cursor: pointer;
 }
 .slide-pick .page-canvas {
   outline: 1px solid var(--border);
@@ -1903,16 +2199,19 @@ body.col-resizing * {
   width: 100%;
   resize: vertical;
   padding: 8px;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--radius);
-  background: var(--fill);
+  background: var(--inset);
   color: inherit;
   font: 13px/1.45 var(--font);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
+
 .text-area:focus {
   outline: none;
-  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
+
 .instagram-stage {
   display: flex;
   align-items: center;
@@ -1949,7 +2248,7 @@ body.col-resizing * {
   background: linear-gradient(45deg, #f9ce34, #ee2a7b, #6228d7);
   color: #fff;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
 }
 .ig-user {
   font-weight: 600;
@@ -2002,7 +2301,6 @@ body.col-resizing * {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.85);
   color: #000;
-  cursor: pointer;
 }
 .ig-arrow .lucide {
   width: 16px;
@@ -2084,14 +2382,19 @@ body.col-resizing * {
 }
 
 /* Preview */
+/* A page under the toolbar; fullscreen (an option), it covers the whole window. */
 .preview {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: #0f0f0e;
   color: #e9e6df;
+}
+.preview.presenting {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
 }
 .preview .muted,
 .preview .hint {
@@ -2108,28 +2411,40 @@ body.col-resizing * {
  * player's, leaving just the book; they come back quickly when it moves.
  */
 .preview-head,
-.preview .turn {
+.preview .turn,
+.preview-count {
   transition: opacity 150ms ease-out;
 }
-.preview.idle .preview-head,
-.preview.idle .turn {
+.preview.presenting.idle .preview-head,
+.preview.presenting.idle .turn,
+.preview.presenting.idle .preview-count {
   opacity: 0;
   transition-duration: 600ms;
 }
-.preview.idle {
+.preview.presenting.idle {
   cursor: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .preview-head,
-  .preview .turn {
+  .preview .turn,
+  .preview-count {
     transition: none;
   }
 }
 .preview .btn {
   background: rgba(255, 255, 255, 0.07);
 }
-.preview .btn:hover:not(:disabled) {
+.preview .btn:active:not(:disabled) {
   background: rgba(255, 255, 255, 0.12);
+}
+.preview-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.preview-count {
+  color: #8d8a83;
 }
 .preview-stage {
   position: relative;
@@ -2185,7 +2500,6 @@ body.col-resizing * {
   background: rgba(255, 255, 255, 0.08);
   color: #eee;
   font-size: 30px;
-  cursor: pointer;
 }
 .turn:disabled {
   opacity: 0.2;
@@ -2219,7 +2533,7 @@ body.col-resizing * {
 .quick-look .hint {
   color: #8d8a83;
 }
-.quick-look .btn:hover:not(:disabled) {
+.quick-look .btn:active:not(:disabled) {
   background: rgba(255, 255, 255, 0.12);
 }
 .quick-look-head {
@@ -2298,7 +2612,7 @@ body.col-resizing * {
   width: 340px;
   max-width: calc(100vw - 32px);
   padding: 18px 18px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-dialog);
   background: var(--panel);
   color: var(--text);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
@@ -2358,7 +2672,7 @@ body.col-resizing * {
   gap: 12px;
   padding: 8px 8px 8px 14px;
   border: 1px solid var(--danger);
-  border-radius: 8px;
+  border-radius: var(--radius-pop);
   background: var(--panel);
   color: var(--text);
   box-shadow: var(--shadow);
@@ -2373,7 +2687,7 @@ body.col-resizing * {
   gap: 12px;
   padding: 8px 8px 8px 14px;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-pop);
   background: var(--panel);
   box-shadow: var(--shadow);
 }
@@ -2387,7 +2701,7 @@ body.col-resizing * {
   align-items: center;
   gap: 10px;
   padding: 8px 8px 8px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-pop);
   background: var(--text);
   color: var(--bg);
   max-width: min(560px, calc(100vw - 32px));
@@ -2414,15 +2728,15 @@ body.col-resizing * {
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 12.5px;
-  cursor: pointer;
+  font-size: 12px;
 }
 .export-destination:hover:not(:disabled) {
   background: var(--fill);
 }
 .export-destination.on {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  border-color: transparent;
+  background: var(--control);
+  box-shadow: var(--raise);
 }
 .export-destination:disabled {
   opacity: 0.5;
@@ -2440,7 +2754,7 @@ body.col-resizing * {
   padding: 9px 10px;
   border-radius: var(--radius);
   background: var(--fill);
-  font-size: 12.5px;
+  font-size: 12px;
 }
 .export-note p {
   margin: 0;
@@ -2451,10 +2765,96 @@ body.col-resizing * {
   height: 13px;
   vertical-align: -2px;
 }
-.export-panel .dpi {
-  align-items: center;
+.text-field.test-images-count {
+  width: 72px;
+}
+
+/* The Page tab: its settings scroll, with Apply and Revert fixed below them. */
+.page-settings-body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
 }
-.export-panel .dpi .num-field {
-  flex: 0 0 80px;
+
+.layout-panel.page-tab {
+  overflow: hidden;
+}
+.layout-panel.page-tab > section {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  border-bottom: 0;
+}
+.layout-panel.page-tab .page-settings {
+  height: 100%;
+  gap: 0;
+}
+.layout-panel.page-tab .page-settings-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.layout-panel .page-settings-actions {
+  flex-shrink: 0;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* The sidebar's column count, in its header: a slim track with a pill that sits inside it. */
+.columns-slider {
+  appearance: none;
+  width: 52px;
+  height: 12px;
+  margin: 0;
+  padding: 0 1px;
+  border-radius: 999px;
+  background: var(--track);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+/* A raised pill, like the other sliders' knob. */
+.columns-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--knob);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.columns-slider::-moz-range-thumb {
+  width: 16px;
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--knob);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.columns-slider:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* How many spreads (or frames) there are, shown at the sidebar's foot while scrolling. */
+.sidebar-count {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font: 11px var(--mono);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+.sidebar-count.on {
+  opacity: 0.9;
 }

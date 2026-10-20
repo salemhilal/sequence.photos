@@ -1,13 +1,15 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { GripVertical, Plus, X } from 'lucide-react';
-import { deleteSpread, dropPhotos, folioLabel, insertSpread, moveSpread } from '../actions';
+import { Pencil, Plus, X } from 'lucide-react';
+import { deleteSpread, dropPhotos, folioLabel, insertSpread, isMovable, moveSpreads } from '../actions';
 import { clearGhost, sameTarget, startDrag, trackGhost } from '../drag';
 import { projectStore, useProject } from '../store';
+import type { SpreadId } from '../ids';
+import { isMac } from '../input';
 import type { Arrangement, Placement, Sheet, Spread } from '../types';
 import { sheetExtent, sideAt } from '../geometry';
 import { TERMS } from '../units';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
-import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH } from '../prefs';
+import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MAX_COLUMNS, SIDEBAR_MIN_WIDTH, sidebarColumnsPref } from '../prefs';
 import { openPhotoMenu, setSidebarWidth, ui } from '../ui';
 import { placedSoft, softLabel } from '../resolution';
 import { PhotoImg } from './PhotoImg';
@@ -16,41 +18,86 @@ import { SpreadCanvas } from './SpreadCanvas';
 import { allSpreads, sheetOf } from '../spreads';
 
 const GHOST_MAX = 140;
-/**
- * Narrowest a spread (or a frame, half as wide: a book's page) can be before the list
- * falls back to fewer columns, and the narrowest its picture gets.
- */
-const GRID_MIN_CELL: Record<Arrangement, number> = { spreads: 280, frames: 96 };
+/** The narrowest a spread's (or frame's) picture gets: columns beyond that don't fit. */
 const MIN_THUMB: Record<Arrangement, number> = { spreads: 120, frames: 60 };
+/** How long spreads take to glide into new columns. */
+const REFLOW_MS = 150;
+
+/** Where a spread's cell sits in the list (scrolling aside), and how wide it is. */
+interface Placed {
+  cell: HTMLElement;
+  x: number;
+  y: number;
+  w: number;
+}
+
+function measureCells(list: HTMLElement): Map<string, Placed> {
+  const origin = list.getBoundingClientRect();
+  const at = new Map<string, Placed>();
+  for (const cell of list.querySelectorAll<HTMLElement>('[data-spread-id]')) {
+    const r = cell.getBoundingClientRect();
+    at.set(cell.dataset.spreadId ?? '', {
+      cell,
+      x: r.left - origin.left,
+      y: r.top - origin.top + list.scrollTop,
+      w: r.width,
+    });
+  }
+  return at;
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** How long the count stays after scrolling stops. */
+const COUNT_MS = 1000;
 /** Space between grid columns; the vertical insert gaps live here. */
-const GRID_GAP_X = 20;
-/** Horizontal padding inside each spread row. */
-const ROW_PAD_X = 8;
+const GRID_GAP_X = 12;
+/** Horizontal padding inside each spread cell: its own, and the thumbnail well's. */
+const ROW_PAD_X = 24;
 /** The desk keeps at least this much room when the sidebar is widened. */
 const MIN_DESK_WIDTH = 160;
 
 /** The list's side padding, as in styles.css: one column, and the grid (roomier). */
-const LIST_PAD_X = 16;
-const GRID_PAD_X = 24;
+const LIST_PAD_X = 10;
+const GRID_PAD_X = 10;
 
 /**
- * One column until two spreads fit side by side, then as many columns as fit. Worked out
- * from the list's whole width, not its content's: the grid's padding differs, and
- * measuring inside it would flip between one column and two at some widths.
+ * The columns asked for (the header's slider), as many as fit. Worked out from the list's
+ * whole width, not its content's: the grid's padding differs, and measuring inside it would
+ * flip between one column and two at some widths.
  */
-function listLayout(listWidth: number, arrangement: Arrangement): { cols: number; thumbW: number } {
-  const min = GRID_MIN_CELL[arrangement];
+function listLayout(
+  listWidth: number,
+  arrangement: Arrangement,
+  wanted: number,
+): { cols: number; fit: number; thumbW: number } {
   const inGrid = listWidth - 2 * GRID_PAD_X;
-  const cols = Math.max(1, Math.floor((inGrid + GRID_GAP_X) / (min + GRID_GAP_X)));
+  const fit = Math.max(
+    1,
+    Math.min(
+      SIDEBAR_MAX_COLUMNS,
+      Math.floor((inGrid + GRID_GAP_X) / (MIN_THUMB[arrangement] + ROW_PAD_X + GRID_GAP_X)),
+    ),
+  );
+  const cols = Math.max(1, Math.min(wanted, fit));
   const contentWidth = cols > 1 ? inGrid : listWidth - 2 * LIST_PAD_X;
   const cellW = (contentWidth - GRID_GAP_X * (cols - 1)) / cols;
-  return { cols, thumbW: Math.max(MIN_THUMB[arrangement], cellW - ROW_PAD_X) };
+  return { cols, fit, thumbW: Math.max(MIN_THUMB[arrangement], cellW - ROW_PAD_X) };
 }
 
 export function Sidebar() {
   const { project } = useProject();
   const listRef = useRef<HTMLDivElement>(null);
-  const [reorder, setReorder] = useState<{ id: string; dropIndex: number } | null>(null);
+  const [reorder, setReorder] = useState<{ ids: readonly SpreadId[]; dropIndex: number } | null>(null);
+  const selection = ui.use((s) => s.spreadSelection);
+  // The last spread clicked, where a Shift-click's range starts.
+  const anchor = useRef<SpreadId | null>(null);
+  const [columns, setColumns] = useState(sidebarColumnsPref.load);
+  // The count, shown while scrolling and a moment after.
+  const [counting, setCounting] = useState(false);
+  const countTimer = useRef(0);
   const sheet = sheetOf(project);
   const book = sheet.arrangement === 'spreads';
   const terms = TERMS[sheet.arrangement];
@@ -59,16 +106,51 @@ export function Sidebar() {
   const preferredWidth = ui.use((s) => s.sidebarWidth);
   const width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(preferredWidth, window.innerWidth - MIN_DESK_WIDTH));
   const [listWidth, setListWidth] = useState(width);
-  const { cols, thumbW } = listLayout(listWidth, sheet.arrangement);
+  const { cols, fit, thumbW } = listLayout(listWidth, sheet.arrangement, columns);
   const grid = cols > 1;
+
+  // Where the cells were just before the columns change (see the glide below).
+  const before = useRef<Map<string, Placed> | null>(null);
+  const remember = () => {
+    before.current = listRef.current && !prefersReducedMotion() ? measureCells(listRef.current) : null;
+  };
 
   useLayoutEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setListWidth(el.clientWidth));
+    const ro = new ResizeObserver(() => {
+      remember();
+      setListWidth(el.clientWidth);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // When the columns change, each spread glides from where it was to where it is now
+  // (positions are kept relative to the list, so scrolling between doesn't count). Cells are
+  // measured only around a change: just before (the slider moving, the sidebar resizing),
+  // and once the new count is laid out.
+  useLayoutEffect(() => {
+    const was = before.current;
+    before.current = null;
+    if (!was || !listRef.current) return;
+    for (const [id, now] of measureCells(listRef.current)) {
+      const from = was.get(id);
+      if (!from || now.w === 0) continue;
+      now.cell.animate(
+        [
+          { transform: `translate(${from.x - now.x}px, ${from.y - now.y}px) scale(${from.w / now.w})` },
+          { transform: 'none' },
+        ],
+        { duration: REFLOW_MS, easing: 'ease-out' },
+      );
+    }
+  }, [cols]);
+  // A measure taken for a change that didn't come (the sidebar resized within the same
+  // count) isn't kept for a later one.
+  useLayoutEffect(() => {
+    before.current = null;
+  });
 
   const onResizeDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
@@ -94,14 +176,44 @@ export function Sidebar() {
     });
   };
 
-  /** Dragging a middle spread's header reorders it; clicking it opens the spread. */
-  const onHeaderDown = (e: React.PointerEvent, spread: Spread) => {
+  /** Select a spread as clicked: on its own, toggled (⌘ or Ctrl), or a range from the last (Shift). */
+  const select = (spread: Spread, e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
+    const ids = spreads.map((s) => s.id);
+    if (e.shiftKey && anchor.current && ids.includes(anchor.current)) {
+      const [from, to] = [ids.indexOf(anchor.current), ids.indexOf(spread.id)];
+      ui.set({ spreadSelection: ids.slice(Math.min(from, to), Math.max(from, to) + 1) });
+      return;
+    }
+    anchor.current = spread.id;
+    const toggle = isMac ? e.metaKey : e.ctrlKey;
+    const was = ui.get().spreadSelection;
+    ui.set({
+      spreadSelection: toggle
+        ? was.includes(spread.id)
+          ? was.filter((id) => id !== spread.id)
+          : [...was, spread.id]
+        : [spread.id],
+    });
+  };
+
+  /**
+   * A spread pressed: clicking selects it; dragging moves it, with the rest of the
+   * selection, in order (a book's first and last spreads stay put).
+   */
+  const onRowDown = (e: React.PointerEvent, spread: Spread) => {
     if (e.button !== 0) return;
-    e.stopPropagation();
-    const from = spreads.findIndex((s) => s.id === spread.id);
-    let dropIndex = from;
+    const click = { shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey };
+    let ids: readonly SpreadId[] | null = null;
+    let dropIndex = -1;
     startDrag(e, {
       onMove: ({ e: ev }) => {
+        if (!isMovable(spread)) return;
+        if (!ids) {
+          // Dragging a spread outside the selection drags it alone.
+          const chosen = ui.get().spreadSelection.includes(spread.id) ? ui.get().spreadSelection : [spread.id];
+          if (chosen !== ui.get().spreadSelection) ui.set({ spreadSelection: chosen });
+          ids = spreads.filter((s) => chosen.includes(s.id) && isMovable(s)).map((s) => s.id);
+        }
         // Nearest spread to the pointer; drop before or after it depending on which
         // half the pointer is in (left/right in a grid, top/bottom in a column).
         const rows = [...(listRef.current?.querySelectorAll<HTMLElement>('[data-row-index]') ?? [])];
@@ -122,16 +234,26 @@ export function Sidebar() {
         const at = before ? best.idx : best.idx + 1;
         // A book's first and last spreads stay put; frames can go anywhere.
         dropIndex = book ? Math.min(Math.max(1, at), spreads.length - 1) : at;
-        setReorder({ id: spread.id, dropIndex });
+        setReorder({ ids, dropIndex });
       },
       onEnd: (_, moved) => {
         setReorder(null);
-        if (!moved) return ui.set({ editingSpreadId: spread.id });
-        if (dropIndex === from || dropIndex === from + 1) return;
-        moveSpread(spread.id, dropIndex > from ? dropIndex - 1 : dropIndex);
+        if (!moved) return select(spread, click);
+        if (ids && dropIndex >= 0) moveSpreads(ids, dropIndex);
       },
       onCancel: () => setReorder(null),
     });
+  };
+
+  const onListScroll = () => {
+    setCounting(true);
+    clearTimeout(countTimer.current);
+    countTimer.current = window.setTimeout(() => setCounting(false), COUNT_MS);
+  };
+  const pickColumns = (n: number) => {
+    remember();
+    setColumns(n);
+    sidebarColumnsPref.save(n);
   };
 
   return (
@@ -142,8 +264,8 @@ export function Sidebar() {
         onPointerDown={onResizeDown}
         onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH, true)}
       />
-      <div className="sidebar-head">
-        <span className="caps">{terms.Spreads}</span>
+      <div className="sidebar-head panel-header">
+        <span className="panel-title">{terms.Spreads}</span>
         <button
           className="btn ghost icon small"
           aria-label={`Add ${terms.spread} at the end`}
@@ -153,15 +275,31 @@ export function Sidebar() {
           <Plus />
         </button>
         <span className="spacer" />
-        <span className="caps muted">{terms.count(spreads.length)}</span>
+        {/* Only as many columns as fit: none to choose from when one is all that fits. */}
+        {fit > 1 && (
+          <input
+            className="columns-slider"
+            type="range"
+            min={1}
+            max={fit}
+            step={1}
+            value={cols}
+            aria-label="Columns"
+            data-tip={`${cols} ${cols === 1 ? 'column' : 'columns'}`}
+            onChange={(e) => pickColumns(e.target.valueAsNumber)}
+          />
+        )}
       </div>
       <div
         className={`sidebar-list${grid ? ' grid' : ''}`}
         ref={listRef}
         style={grid ? { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` } : undefined}
+        onScroll={onListScroll}
+        // Pressing the list itself, between spreads, lets the selection go.
+        onPointerDown={(e) => e.target === e.currentTarget && ui.set({ spreadSelection: [] })}
       >
         {spreads.map((spread, i) => (
-          <div key={spread.id} className="spread-cell">
+          <div key={spread.id} className="spread-cell" data-spread-id={spread.id}>
             {/* A book's first and last spreads stay put; frames can go anywhere. */}
             {(i > 0 || !book) && (
               <InsertGap index={i} active={reorder?.dropIndex === i} vertical={grid} noun={terms.spread} />
@@ -173,8 +311,9 @@ export function Sidebar() {
               sheet={sheet}
               thumbW={thumbW}
               soft={spread.items.filter((it) => placedSoft(project.photos[it.photoId], it, sheet)).length}
-              dragging={reorder?.id === spread.id}
-              onHeaderDown={onHeaderDown}
+              selected={selection.includes(spread.id)}
+              dragging={reorder?.ids.includes(spread.id) ?? false}
+              onRowDown={onRowDown}
             />
           </div>
         ))}
@@ -188,6 +327,9 @@ export function Sidebar() {
             />
           </div>
         )}
+      </div>
+      <div className={`sidebar-count${counting ? ' on' : ''}`} aria-hidden="true">
+        {terms.count(spreads.length)}
       </div>
     </aside>
   );
@@ -241,11 +383,12 @@ interface RowProps {
   thumbW: number;
   /** How many of its photos have less detail than the page asks for. */
   soft: number;
+  selected: boolean;
   dragging: boolean;
-  onHeaderDown: (e: React.PointerEvent, s: Spread) => void;
+  onRowDown: (e: React.PointerEvent, s: Spread) => void;
 }
 
-function SpreadRow({ spread, index, total, sheet, thumbW, soft, dragging, onHeaderDown }: RowProps) {
+function SpreadRow({ spread, index, total, sheet, thumbW, soft, selected, dragging, onRowDown }: RowProps) {
   const editing = ui.use((s) => s.editingSpreadId === spread.id);
   // Thumbnails are as wide as a book's two pages, or a frame.
   const scale = thumbW / sheetExtent(sheet).width;
@@ -254,11 +397,6 @@ function SpreadRow({ spread, index, total, sheet, thumbW, soft, dragging, onHead
   const label = folioLabel(index, total, sheet.arrangement);
 
   const open = () => ui.set({ editingSpreadId: spread.id });
-
-  const onCanvasDown = (e: React.PointerEvent) => {
-    if (e.button !== 0) return;
-    startDrag(e, { onEnd: (_, moved) => !moved && open() });
-  };
 
   const onItemDown = (e: React.PointerEvent, p: Placement) => {
     if (e.button !== 0) return;
@@ -272,7 +410,8 @@ function SpreadRow({ spread, index, total, sheet, thumbW, soft, dragging, onHead
       onEnd: ({ e: ev }, moved) => {
         const target = trackGhost(ev, null);
         clearGhost();
-        if (!moved) return open();
+        // A click on a photo selects its spread, as a click anywhere else on it does.
+        if (!moved) return ui.set({ spreadSelection: [spread.id] });
         // Dropping back on the page it came from leaves it where it was.
         if (target?.kind === 'page' && target.spreadId === spread.id && target.side === fromSide) return;
         const at = deskGeometry.toDesk(ev.clientX, ev.clientY);
@@ -295,20 +434,41 @@ function SpreadRow({ spread, index, total, sheet, thumbW, soft, dragging, onHead
   );
 
   return (
-    <div className={`spread-row${editing ? ' editing' : ''}${dragging ? ' dragging' : ''}`} data-row-index={index}>
+    <div
+      className={`spread-row${editing ? ' editing' : ''}${selected ? ' selected' : ''}${dragging ? ' dragging' : ''}${movable ? ' draggable' : ''}`}
+      data-row-index={index}
+      aria-selected={selected}
+      onPointerDown={(e) => onRowDown(e, spread)}
+      onDoubleClick={open}
+    >
+      {/* The thumbnail in a dark well; its number and actions below. The whole cell drags. */}
+      <div className="thumb-well">
+        <SpreadCanvas
+          spread={spread}
+          sheet={sheet}
+          scale={scale}
+          clip
+          droppable
+          renderItem={renderItem}
+          className="thumb"
+        />
+      </div>
       <div
-        className={`spread-row-head${movable ? ' draggable' : ''}`}
-        data-tip={
-          movable ? 'Drag to reorder' : spread.kind === 'frame' ? undefined : 'The first and last pages stay in place'
-        }
-        onPointerDown={movable ? (e) => onHeaderDown(e, spread) : undefined}
+        className="spread-row-foot"
+        data-tip={movable || spread.kind === 'frame' ? undefined : 'The first and last pages stay in place'}
       >
-        <span className={`grip${movable ? '' : ' locked'}`} aria-hidden="true">
-          <GripVertical />
-        </span>
         <span className="spread-label">{label}</span>
         {soft > 0 && <SoftBadge note={softLabel(soft, sheet)} />}
         <span className="spacer" />
+        <button
+          className="row-edit"
+          aria-label={`Edit ${spread.kind === 'frame' ? 'frame' : 'pages'} ${label}`}
+          data-tip="Edit"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={open}
+        >
+          <Pencil />
+        </button>
         {movable && (
           <button
             className="row-delete"
@@ -321,16 +481,6 @@ function SpreadRow({ spread, index, total, sheet, thumbW, soft, dragging, onHead
           </button>
         )}
       </div>
-      <SpreadCanvas
-        spread={spread}
-        sheet={sheet}
-        scale={scale}
-        clip
-        droppable
-        renderItem={renderItem}
-        onPointerDown={onCanvasDown}
-        className="thumb"
-      />
     </div>
   );
 }

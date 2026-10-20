@@ -247,3 +247,27 @@ describe('pixel density', () => {
     expect(projectStore.project.page).toEqual({ w: 1080, h: 1080, unit: 'px', pxPerUnit: 2 });
   });
 });
+
+describe('keeping photos fixed', () => {
+  it('relative to the inside edge (spreads, the default): a right page photo keeps its x', () => {
+    const was = { ...placed() };
+    applyPageSetup(draft({ content: 'fixed', page: { w: 12 } }));
+    expect(placed().x).toBeCloseTo(was.x);
+  });
+
+  it('relative to the center: a right page photo moves half the width change', () => {
+    const was = { ...placed() };
+    applyPageSetup(draft({ content: 'fixed', anchor: 'center', page: { w: 12, h: 10 } }));
+    expect(placed().x).toBeCloseTo(was.x + 1);
+    expect(placed().y).toBeCloseTo(was.y + 1);
+    expect(placed().w).toBeCloseTo(was.w);
+  });
+
+  it('relative to the top-left corner: frames keep their place from the left edge', () => {
+    applyPageSetup(draft({ arrangement: 'frames' }));
+    const frame = () => allSpreads(projectStore.project).flatMap((s) => s.items)[0]!;
+    const was = { ...frame() };
+    applyPageSetup(draft({ content: 'fixed', anchor: 'top-left', page: { w: 12 } }));
+    expect(frame().x).toBeCloseTo(was.x);
+  });
+});
