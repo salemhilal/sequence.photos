@@ -1,9 +1,11 @@
 import { useSyncExternalStore } from 'react';
 import { getImage, putImage } from './db';
 import type { PhotoMeta } from './types';
+import { DESK_PHOTO_PX } from './geometry';
 import { newPhotoId } from './ids';
 
-const THUMB_MAX = 1400;
+/** The preview's longest side: also a desk photo's size at 100% (see DESK_PHOTO_PX). */
+const THUMB_MAX = DESK_PHOTO_PX;
 
 const urls = new Map<string, string>();
 const loading = new Set<string>();
@@ -116,6 +118,11 @@ async function makeThumb(bitmap: ImageBitmap): Promise<Blob> {
 export interface ImportResult {
   photos: PhotoMeta[];
   failed: string[];
+  /**
+   * Whether the browser refused to store photos at all (Safari's Private Browsing, where
+   * IndexedDB won't take them): not the files' fault.
+   */
+  storageRefused: boolean;
 }
 
 /** Decode, thumbnail, and store files. EXIF orientation is applied by createImageBitmap. */
@@ -128,6 +135,7 @@ export async function importFiles(
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   const photos: PhotoMeta[] = [];
   const failed: string[] = [];
+  let storageRefused = false;
   let done = 0;
   onProgress(0, sorted.length);
 
@@ -140,7 +148,10 @@ export async function importFiles(
         const thumb = await makeThumb(bitmap);
         const meta: PhotoMeta = { id: newPhotoId(), name: file.name, pxW: bitmap.width, pxH: bitmap.height };
         bitmap.close();
-        await putImage(meta.id, { full: file, thumb });
+        await putImage(meta.id, { full: file, thumb }).catch((e: unknown) => {
+          storageRefused = true;
+          throw e;
+        });
         setUrl(meta.id, thumb);
         photos.push(meta);
       } catch {
@@ -153,5 +164,5 @@ export async function importFiles(
 
   const order = new Map(sorted.map((f, i) => [f.name, i]));
   photos.sort((a, b) => (order.get(a.name) ?? 0) - (order.get(b.name) ?? 0));
-  return { photos, failed };
+  return { photos, failed, storageRefused };
 }

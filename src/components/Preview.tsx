@@ -1,12 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { folioLabel } from '../actions';
-import { useWindowEvent } from '../hooks';
-import { saveFrames } from '../frames';
-import { savePdf } from '../pdf';
+import { useEffect, useRef, useState } from 'react';
+import { platform } from '#platform';
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
+import { useElementSize, usePageStatus, useWindowEvent } from '../hooks';
 import { useProject } from '../store';
-import { closeModal, ui } from '../ui';
+import { ui } from '../ui';
 import { SpreadCanvas } from './SpreadCanvas';
+import { sheetExtent } from '../geometry';
+import { TERMS } from '../units';
 import { allSpreads, sheetOf } from '../spreads';
 
 /** How long the pointer rests before the controls fade, as a video player's do. */
@@ -58,34 +58,43 @@ export function Preview() {
     );
   });
   const [dir, setDir] = useState<'next' | 'prev'>('next');
-  const stageRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  const [stage, setStage] = useState({ w: 900, h: 600 });
+  const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 900, h: 600 });
   const busy = ui.use((s) => s.busy);
+  const presenting = ui.use((s) => s.presenting);
   const sheet = sheetOf(project);
-  // Saving (a PDF or images) shows its progress in the header: keep it up until that's done.
-  const idle = useIdle(rootRef, busy !== null);
+  // Fullscreen, the controls fade while the pointer rests (not while saving shows its progress).
+  const idle = useIdle(rootRef, busy !== null || !presenting);
   const spreads = allSpreads(project);
   const spread = spreads[Math.min(index, spreads.length - 1)];
 
-  const close = closeModal;
+  const present = (on: boolean) => {
+    ui.set({ presenting: on });
+    platform.setFullscreen(on);
+  };
+  // Leaving fullscreen some other way (the browser's Esc, the green button) stops presenting;
+  // so does leaving the page.
+  useEffect(() => {
+    const stop = platform.watchFullscreen((on) => !on && ui.set({ presenting: false }));
+    return () => {
+      stop();
+      if (ui.get().presenting) present(false);
+    };
+  }, []);
   const go = (d: number) => {
     setDir(d > 0 ? 'next' : 'prev');
     setIndex((i) => Math.min(spreads.length - 1, Math.max(0, i + d)));
   };
 
-  useLayoutEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => e && setStage({ w: e.contentRect.width, h: e.contentRect.height }));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
   useWindowEvent(
     'keydown',
     (e) => {
-      if (e.key === 'Escape') close();
+      if (ui.get().modal || ui.get().confirm) return;
+      // Esc leaves fullscreen (pages aren't dismissed: the switcher changes them).
+      if (e.key === 'Escape') {
+        if (!ui.get().presenting) return;
+        present(false);
+      } else if (e.key === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey) present(!ui.get().presenting);
       else if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') go(1);
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(-1);
       else if (e.key === 'Home') go(-spreads.length);
@@ -97,42 +106,49 @@ export function Preview() {
     true,
   );
 
+  const terms = TERMS[sheet.arrangement];
+  // How to use it, in the status bar (fullscreen hides that, so its header says it instead).
+  const keys = `← → to ${terms.turn}`;
+  usePageStatus(`${keys} · F for fullscreen`);
+
   if (!spread) return null;
-  // A book shows both pages' width (single pages on their side); a frame, its own.
-  const across = sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW;
-  const scale = Math.min((stage.w - 40) / across, (stage.h - 40) / sheet.pageH);
-  const label = folioLabel(index, spreads.length, sheet.layout);
+  // A book shows both pages' width (single pages on their side); a frame, its own. Room
+  // below for the count.
+  const across = sheetExtent(sheet).width;
+  const scale = Math.min((stage.w - 40) / across, (stage.h - 72) / sheet.pageH);
 
   return (
-    <div className={`preview${idle ? ' idle' : ''}`} data-modal ref={rootRef}>
+    <div className={`preview${idle ? ' idle' : ''}${presenting ? ' presenting' : ''}`} ref={rootRef}>
       <header className="preview-head">
-        <span className="folio">{label}</span>
-        <span className="muted data">
-          {index + 1} / {spreads.length}
-        </span>
         <span className="spacer" />
-        <span className="hint">← → to turn pages · Esc to exit</span>
-        <button
-          className="btn"
-          onClick={() => void (sheet.layout === 'print' ? savePdf() : saveFrames())}
-          disabled={busy !== null}
-        >
-          {busy ?? (sheet.layout === 'print' ? 'Download PDF' : 'Save images')}
-        </button>
-        <button className="btn" onClick={close}>
-          Exit preview
+        {presenting && <span className="hint">{keys} · Esc to leave fullscreen</span>}
+        {presenting && busy !== null && <span className="muted">{busy}</span>}
+        <button className="btn" onClick={() => present(!presenting)}>
+          {presenting ? <Minimize2 /> : <Maximize2 />}
+          {presenting ? 'Exit fullscreen' : 'Fullscreen'}
         </button>
       </header>
       <div className="preview-stage" ref={stageRef}>
-        <button className="turn prev" aria-label="Previous spread" disabled={index === 0} onClick={() => go(-1)}>
+        <button
+          className="turn prev"
+          aria-label={`Previous ${terms.spread}`}
+          disabled={index === 0}
+          onClick={() => go(-1)}
+        >
           <ChevronLeft />
         </button>
-        <div key={spread.id} className={`preview-spread turn-${dir}`}>
-          <SpreadCanvas spread={spread} sheet={sheet} scale={scale} clip className="book" />
+        {/* The count, just below the spread. */}
+        <div className="preview-column">
+          <div key={spread.id} className={`preview-spread turn-${dir}`}>
+            <SpreadCanvas spread={spread} sheet={sheet} scale={scale} clip className="book" />
+          </div>
+          <span className="preview-count data">
+            {index + 1} / {spreads.length}
+          </span>
         </div>
         <button
           className="turn next"
-          aria-label="Next spread"
+          aria-label={`Next ${terms.spread}`}
           disabled={index === spreads.length - 1}
           onClick={() => go(1)}
         >

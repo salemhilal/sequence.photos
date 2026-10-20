@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { projectStore, emptyProject } from './store';
 import type { Draft } from 'immer';
-import { setLayoutSize } from './pageSize';
+import { setLayoutSize } from './pageSetup';
 import { sheetOf } from './spreads';
 import type { Project } from './types';
 

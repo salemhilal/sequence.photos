@@ -59,6 +59,6 @@ describe('app preferences', () => {
     store.set('photobook-theme', 'sepia');
     store.set('photobook-desk', 'red');
     store.set('photobook-sidebar-width', '12');
-    expect([themePref.load(), deskColorPref.load(), sidebarWidthPref.load()]).toEqual(['system', '#787876', 284]);
+    expect([themePref.load(), deskColorPref.load(), sidebarWidthPref.load()]).toEqual(['system', '#787878', 284]);
   });
 });

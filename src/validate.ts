@@ -5,13 +5,14 @@ import {
   type Project,
   type Layout,
   type LineGuide,
+  type PageSetup,
   type PhotoMeta,
   type Placement,
   type Settings,
-  type Size,
   type SpreadKind,
 } from './types';
 import { hasFrames } from './spreads';
+import { isRecord } from './guards';
 
 /**
  * Checking a whole project before the app uses it. Projects come from outside the code's
@@ -35,7 +36,7 @@ function fail(where: string): never {
 }
 
 function record(v: unknown, where: string): Raw {
-  return typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Raw) : fail(where);
+  return isRecord(v) ? v : fail(where);
 }
 
 function list(v: unknown, where: string): unknown[] {
@@ -130,7 +131,6 @@ function settings(v: unknown, where: string): Settings {
   const lines = list(s.lines, `${where}.lines`).map((g, i) => line(g, guideIds, `${where}.lines[${i}]`));
   // A drop guide that's gone isn't damage: it means the largest (see dropGuide).
   const dropBorder = s.dropBorder === null ? null : toGuideId(text(s.dropBorder, `${where}.dropBorder`));
-  const sizes = record(s.sizes, `${where}.sizes`);
   return {
     centerV: bool(s.centerV, `${where}.centerV`),
     centerH: bool(s.centerH, `${where}.centerH`),
@@ -138,32 +138,37 @@ function settings(v: unknown, where: string): Settings {
     borders,
     lines,
     dropBorder,
-    sizes: { print: size(sizes.print, `${where}.sizes.print`), digital: size(sizes.digital, `${where}.sizes.digital`) },
   };
 }
 
-function size(v: unknown, where: string): Size {
-  const s = record(v, where);
-  return { w: num(s.w, `${where}.w`, { min: 0, above: true }), h: num(s.h, `${where}.h`, { min: 0, above: true }) };
+/** The page: a size above zero, a known unit, and a resolution above zero. */
+function page(v: unknown, where: string): PageSetup {
+  const p = record(v, where);
+  if (p.unit !== 'in' && p.unit !== 'px') fail(`${where}.unit`);
+  return {
+    w: num(p.w, `${where}.w`, { min: 0, above: true }),
+    h: num(p.h, `${where}.h`, { min: 0, above: true }),
+    unit: p.unit,
+    pxPerUnit: num(p.pxPerUnit, `${where}.pxPerUnit`, { min: 0, above: true }),
+  };
 }
 
-/** The layout: a print book's spreads, each in its place, or a digital sequence's frames (at least one). */
+/** The layout: a book's spreads, each in its place, or a sequence's frames (at least one). */
 function layout(v: unknown, item: (p: unknown, where: string) => Placement): Layout {
   const l = record(v, 'layout');
   const ids = new Set<string>();
-  if (l.kind === 'print') {
+  if (l.kind === 'spreads') {
     return {
-      kind: 'print',
-      page: size(l.page, 'layout.page'),
+      kind: 'spreads',
       firstSpread: spread(l.firstSpread, 'first', ids, item, 'layout.firstSpread'),
       spreads: list(l.spreads, 'layout.spreads').map((s, i) => spread(s, 'middle', ids, item, `layout.spreads[${i}]`)),
       lastSpread: spread(l.lastSpread, 'last', ids, item, 'layout.lastSpread'),
     };
   }
-  if (l.kind === 'digital') {
+  if (l.kind === 'frames') {
     const frames = list(l.frames, 'layout.frames').map((s, i) => spread(s, 'frame', ids, item, `layout.frames[${i}]`));
     if (!hasFrames(frames)) fail('layout.frames: none');
-    return { kind: 'digital', frame: size(l.frame, 'layout.frame'), frames };
+    return { kind: 'frames', frames };
   }
   return fail('layout.kind');
 }
@@ -186,7 +191,7 @@ export function validateProject(v: unknown): Project {
   const book = layout(d.layout, item);
 
   // New placements go on top: nextZ stays above every z (repaired if it isn't).
-  const spreads = book.kind === 'print' ? [book.firstSpread, ...book.spreads, book.lastSpread] : book.frames;
+  const spreads = book.kind === 'spreads' ? [book.firstSpread, ...book.spreads, book.lastSpread] : book.frames;
   const zs = [...pile, ...spreads.flatMap((s) => s.items)].map((p) => p.z);
   const nextZ = Math.max(num(d.nextZ, 'nextZ'), ...zs.map((z) => z + 1));
 
@@ -194,6 +199,7 @@ export function validateProject(v: unknown): Project {
     schemaVersion: CURRENT_SCHEMA,
     photos,
     pile,
+    page: page(d.page, 'page'),
     layout: book,
     settings: settings(d.settings, 'settings'),
     nextZ,

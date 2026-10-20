@@ -1,11 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useId, useState } from 'react';
 import { platform } from '#platform';
 import { Dialog } from './Dialog';
-import { formatBytes, readStorageStatus, requestPersistence, type StorageStatus } from '../storage';
 import type { ThemePref } from '../theme';
-import { setTheme, closeModal, ui } from '../ui';
+import { closeModal, setShortcutBadges, setStatusBar, setTheme, ui } from '../ui';
+import { isMac } from '../input';
 import { DeskColorPicker } from './DeskColorPicker';
-import { DEFAULT_SERVER_URL, normalizeServerUrl, serverUrlPref } from '../server';
+import { Segmented } from './Segmented';
+import { Tabs } from './Tabs';
+import { WindowFoot } from './WindowFoot';
+import { InstagramSetting } from './settings/InstagramSetting';
+import { ServerSetting } from './settings/ServerSetting';
+import { TestImagesSetting } from './settings/TestImagesSetting';
+import { StorageRow } from './settings/StorageRow';
 
 const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -13,177 +19,121 @@ const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'dark', label: 'Dark' },
 ];
 
-function ThemePicker() {
+function ThemePicker({ labelledBy }: { labelledBy: string }) {
   const theme = ui.use((s) => s.theme);
-  return (
-    <div className="segmented" role="radiogroup" aria-labelledby="appearance-label">
-      {THEMES.map((t) => (
-        <label key={t.value} className={theme === t.value ? 'on' : ''}>
-          <input
-            type="radio"
-            name="theme"
-            value={t.value}
-            checked={theme === t.value}
-            onChange={() => setTheme(t.value)}
-          />
-          {t.label}
-        </label>
-      ))}
-    </div>
-  );
+  return <Segmented labelledBy={labelledBy} options={THEMES} value={theme} onChange={setTheme} />;
 }
 
-/** How much space the project uses in this browser, and whether the browser will keep it. */
-function StorageRow() {
-  const [status, setStatus] = useState<StorageStatus | null | undefined>(undefined);
-  const [declined, setDeclined] = useState(false);
-
-  useEffect(() => {
-    void readStorageStatus().then(setStatus);
-  }, []);
-
-  if (status === undefined) return null;
-  if (status === null) return <p className="help">This browser doesn't report storage details.</p>;
-
-  const protect = async () => {
-    const granted = await requestPersistence();
-    setDeclined(!granted);
-    setStatus(await readStorageStatus());
-  };
-
-  return (
-    <>
-      {status.usage !== null && <span className="data">{formatBytes(status.usage)} used</span>}
-      {status.persisted ? (
-        <p className="help">Protected: the browser won't clear it on its own.</p>
-      ) : (
-        <>
-          <p className="help">Not protected: the browser may clear it if space runs low.</p>
-          <button className="btn" onClick={() => void protect()}>
-            Protect storage
-          </button>
-          {declined && <p className="help">The browser declined. Installing the app usually helps.</p>}
-        </>
-      )}
-      <p className="help">Export your project to keep a backup.</p>
-    </>
-  );
-}
-
-type Tab = 'general' | 'advanced';
+type Tab = 'general' | 'accounts' | 'advanced';
 const TABS: { value: Tab; label: string }[] = [
   { value: 'general', label: 'General' },
+  // Instagram, and on the website, the browser's storage.
+  { value: 'accounts', label: platform.kind === 'browser' ? 'Instagram & storage' : 'Instagram' },
   { value: 'advanced', label: 'Advanced' },
 ];
 
-/** The server address: the deployed default, or this browser's override. */
-function ServerUrlSetting() {
-  const [saved, setSaved] = useState(() => serverUrlPref.load());
-  const [draft, setDraft] = useState(saved);
-  const normalized = draft.trim() === '' ? '' : normalizeServerUrl(draft);
-  const changed = normalized !== null && normalized !== saved;
-  const save = (value: string) => {
-    serverUrlPref.save(value);
-    setSaved(value);
-    setDraft(value);
-  };
-
-  return (
-    <form
-      className="setting-controls"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (changed) save(normalized);
-      }}
-    >
-      <input
-        className="text-field"
-        type="url"
-        aria-label="Server address"
-        placeholder={DEFAULT_SERVER_URL ?? 'https://…'}
-        value={draft}
-        spellCheck={false}
-        autoComplete="off"
-        onChange={(e) => setDraft(e.target.value)}
-      />
-      {normalized === null && (
-        <p className="help warn">Use an https address, or http://localhost for a server on this computer.</p>
-      )}
-      <div className="inline">
-        <button type="submit" className={`btn${changed ? ' primary' : ''}`} disabled={!changed}>
-          Save
-        </button>
-        {saved !== '' && (
-          <button type="button" className="btn ghost" onClick={() => save('')}>
-            Use default
-          </button>
-        )}
-      </div>
-      <p className="help">
-        {saved !== ''
-          ? 'This browser uses the address above. '
-          : DEFAULT_SERVER_URL
-            ? 'Using Sequence’s server. '
-            : 'No server is set up yet. '}
-        Used to post to Instagram. Leave empty for the default
-        {DEFAULT_SERVER_URL ? ` (${DEFAULT_SERVER_URL})` : ''}.
-      </p>
-    </form>
-  );
-}
-
-/** The app's own preferences; the project's page setup is in Layout. */
+/** The app's own preferences, as a dialog (the website); the project's page setup is in Layout. */
 export function SettingsDialog() {
-  const [tab, setTab] = useState<Tab>('general');
   return (
     <Dialog title="Settings" onClose={closeModal} className="settings">
-      <div className="settings-tabs" role="tablist" aria-label="Settings">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            role="tab"
-            id={`settings-tab-${t.value}`}
-            aria-selected={tab === t.value}
-            aria-controls="settings-panel"
-            className={tab === t.value ? 'on' : ''}
-            onClick={() => setTab(t.value)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="settings-body" role="tabpanel" id="settings-panel" aria-labelledby={`settings-tab-${tab}`}>
-        {tab === 'general' ? <GeneralSettings /> : <AdvancedSettings />}
-      </div>
+      <SettingsPanel />
     </Dialog>
   );
 }
 
-function AdvancedSettings() {
+/** The app's own preferences in a window of their own (the Mac app's Settings window). */
+export function SettingsWindow() {
   return (
-    <section className="setting">
-      <h3>Server</h3>
-      <ServerUrlSetting />
-    </section>
+    <div className="settings-window">
+      <SettingsPanel />
+      <WindowFoot />
+    </div>
   );
 }
 
-function GeneralSettings() {
+/** Settings' tabs and what's on each. */
+function SettingsPanel() {
+  const [tab, setTab] = useState<Tab>('general');
+  return (
+    <>
+      <Tabs id="settings" label="Settings" options={TABS} value={tab} onChange={setTab} />
+      <div className="settings-body" id="settings-panel" role="tabpanel" aria-labelledby={`settings-tab-${tab}`}>
+        {tab === 'general' ? <GeneralSettings /> : tab === 'accounts' ? <AccountSettings /> : <AdvancedSettings />}
+      </div>
+    </>
+  );
+}
+
+function AdvancedSettings() {
+  const heading = useId();
+  const testImages = useId();
   return (
     <>
       <section className="setting">
-        <h3 id="appearance-label">Appearance</h3>
+        <h3 id={heading}>Server</h3>
+        <ServerSetting labelledBy={heading} />
+      </section>
+      <section className="setting">
+        <h3 id={testImages}>Test images</h3>
+        <TestImagesSetting labelledBy={testImages} />
+      </section>
+    </>
+  );
+}
+
+/** How the app looks: its theme, the desk's color, and the status bar and shortcut badges. */
+function GeneralSettings() {
+  const theme = useId();
+  const statusBar = ui.use((s) => s.statusBar);
+  const badges = ui.use((s) => s.shortcutBadges);
+  return (
+    <>
+      <section className="setting">
+        <h3 id={theme}>Theme</h3>
         <div className="setting-controls">
-          <ThemePicker />
+          <ThemePicker labelledBy={theme} />
         </div>
       </section>
 
       <section className="setting">
-        <h3>Desk</h3>
+        <h3>Desk color</h3>
         <div className="setting-controls">
           <DeskColorPicker />
           <p className="help">Also in the desk's right-click menu.</p>
         </div>
+      </section>
+
+      <section className="setting">
+        <h3>Status bar</h3>
+        <div className="setting-controls">
+          <label className="check">
+            <input type="checkbox" checked={statusBar} onChange={(e) => setStatusBar(e.target.checked)} />
+            Show the status bar
+          </label>
+          <p className="help">Along the window's foot: hints, what's selected, progress, and zoom.</p>
+        </div>
+      </section>
+
+      <section className="setting">
+        <h3>Shortcuts</h3>
+        <div className="setting-controls">
+          <label className="check">
+            <input type="checkbox" checked={badges} onChange={(e) => setShortcutBadges(e.target.checked)} />
+            Show shortcuts while {isMac ? '⌘' : 'Ctrl'} is held
+          </label>
+        </div>
+      </section>
+    </>
+  );
+}
+
+/** Instagram, and on the website, how the browser keeps the project. */
+function AccountSettings() {
+  return (
+    <>
+      <section className="setting">
+        <h3>Instagram</h3>
+        <InstagramSetting />
       </section>
 
       {/* A browser concern: the Mac app's storage isn't the browser's. */}

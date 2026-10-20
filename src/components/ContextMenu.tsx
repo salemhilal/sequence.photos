@@ -88,7 +88,7 @@ function DeskItems({ onClose }: { onClose: () => void }) {
       </button>
       <div className="menu-separator" />
       <div className="menu-section">
-        <span className="caps muted">Desk color</span>
+        <span className="section-label muted">Desk color</span>
         <DeskColorPicker />
       </div>
     </>
@@ -101,7 +101,7 @@ function PhotoItems({ menu, onClose }: { menu: Extract<ContextMenuState, { kind:
   const onPage = locate(project, menu.photoId)?.where === 'spread';
   return (
     <>
-      <div className="menu-caption data muted" title={name}>
+      <div className="menu-caption data muted" data-tip={name}>
         {name}
       </div>
       <button className="menu-item" role="menuitem" onClick={() => openQuickLook([menu.photoId])}>

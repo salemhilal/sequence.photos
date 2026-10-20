@@ -1,6 +1,15 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { sameTarget } from '../drag';
-import { pageRect, pageSides, spreadGuides, type SnapFeedback } from '../geometry';
+import {
+  pageRect,
+  pageSides,
+  sheetExtent,
+  spreadGuides,
+  spreadLeft,
+  spreadWidth,
+  type SnapFeedback,
+} from '../geometry';
+import { pageRegion, type OutputPage } from '../renderPlan';
 import type { Placement, Sheet, Spread } from '../types';
 import { ui } from '../ui';
 import { PhotoImg } from './PhotoImg';
@@ -8,9 +17,9 @@ import { PhotoImg } from './PhotoImg';
 interface Props {
   spread: Spread;
   sheet: Sheet;
-  /** Pixels per inch. */
+  /** Screen pixels per unit (an inch, or a pixel). */
   scale: number;
-  /** Margin around the spread, in inches, where off-page photo edges remain visible. */
+  /** Margin around the spread, in its units, where off-page photo edges remain visible. */
   pad?: number;
   guides?: boolean;
   /** Clip photos to the pages (for preview). */
@@ -43,11 +52,10 @@ export function SpreadCanvas({
   const sides = pageSides(spread.kind);
   // A book's canvas spans both pages (single first and last pages sit on their side); a
   // frame's spans the frame.
-  const extentLeft = sheet.layout === 'print' ? -sheet.pageW : 0;
-  const extentW = sheet.layout === 'print' ? 2 * sheet.pageW : sheet.pageW;
-  const originX = (pad - extentLeft) * scale;
+  const extent = sheetExtent(sheet);
+  const originX = (pad - extent.left) * scale;
   const originY = pad * scale;
-  const width = (extentW + 2 * pad) * scale;
+  const width = (extent.width + 2 * pad) * scale;
   const height = (sheet.pageH + 2 * pad) * scale;
 
   const box = (x: number, y: number, w: number, h: number): CSSProperties => ({
@@ -57,8 +65,8 @@ export function SpreadCanvas({
     height: h * scale,
   });
 
-  const pagesX = sides[0] === 'left' ? -sheet.pageW : 0;
-  const pagesW = sides.length * sheet.pageW;
+  const pagesX = spreadLeft(spread.kind, sheet);
+  const pagesW = spreadWidth(spread.kind, sheet);
   // Center lines are drawn in their own color.
   const g = guides ? spreadGuides(spread, { ...sheet, centerV: false, centerH: false }) : null;
   const vLines = g
@@ -164,4 +172,17 @@ export function SpreadCanvas({
 
 function round(n: number): number {
   return Math.round(n * 1e6) / 1e6;
+}
+
+/** One page of a spread (or a frame), clipped to that page, as a slide or a thumbnail. */
+export function PageCanvas({ page, sheet, scale }: { page: OutputPage; sheet: Sheet; scale: number }) {
+  const region = pageRegion(page, sheet);
+  const extent = sheetExtent(sheet);
+  return (
+    <div className="page-canvas" style={{ width: region.w * scale, height: region.h * scale }}>
+      <div style={{ position: 'absolute', left: (extent.left - region.x) * scale, top: 0 }}>
+        <SpreadCanvas spread={page.spread} sheet={sheet} scale={scale} clip />
+      </div>
+    </div>
+  );
 }

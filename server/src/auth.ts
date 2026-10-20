@@ -1,0 +1,210 @@
+// Sign-in: /auth/callback, /auth/redeem, /auth/renew. See README "Sign-in".
+
+import * as v from 'valibot';
+import type {
+  InstagramConnection,
+  InstagramError,
+  RedeemRequest,
+  RenewRequest,
+  RenewResponse,
+} from './api';
+import { sha256Base64Url } from './encoding';
+import {
+  Base64Url32,
+  CLIENT_NAME,
+  Enrollment,
+  isBase64Url32,
+  isUsername,
+  parseBearer,
+  schemaFor,
+} from './formats';
+import { HttpError, jsonResponse, MAX_JSON_BODY, readJson } from './http';
+import {
+  exchangeCode,
+  exchangeLongLived,
+  getMe,
+  isProfessional,
+  PUBLISH_PERMISSION,
+  type Failure,
+} from './instagram';
+import {
+  ENROLL_RENEW_GRACE,
+  makeEnrollment,
+  readEnrollment,
+  seal,
+  timingSafeEqualStrings,
+  unseal,
+} from './keys';
+import { Tag, type Outcome } from './log';
+import { record } from './metrics';
+import type { Handler, RequestContext } from './router';
+
+interface OAuthState {
+  /** The state as received: safe to echo, having matched the strict format. */
+  raw: string;
+  client: string;
+  nonce: string;
+  challenge: string;
+}
+
+/** `<client>.<nonce>.<challenge>`. Null if malformed (the client isn't checked here). */
+export function parseState(value: string | null): OAuthState | null {
+  if (value === null || value.length > 200) return null;
+  const parts = value.split('.');
+  const [client, nonce, challenge] = parts;
+  if (
+    parts.length !== 3 ||
+    client === undefined ||
+    nonce === undefined ||
+    challenge === undefined
+  ) {
+    return null;
+  }
+  if (!CLIENT_NAME.test(client)) return null;
+  if (!isBase64Url32(nonce) || !isBase64Url32(challenge)) return null;
+  return { raw: value, client, nonce, challenge };
+}
+
+function redirect(location: string): Response {
+  return new Response(null, { status: 303, headers: { Location: location } });
+}
+
+/** A sign-in step's Instagram failure, as the callback's log outcome. */
+function failureOutcome(failure: Failure): Outcome {
+  return failure === 'unavailable' ? 'instagram_unavailable' : 'exchange_failed';
+}
+
+/** An Instagram failure checking an app's token: 502 if Instagram is down, else 401. */
+function instagramFailure(failure: Failure): HttpError {
+  return failure === 'unavailable'
+    ? new HttpError(502, 'instagram_unavailable')
+    : new HttpError(401, 'unauthorized');
+}
+
+interface EnrolledUserOptions {
+  /** How long past its `exp` the enrollment is still accepted (renewal). */
+  grace?: number;
+  /** Runs with the enrollment's user id after it's read, before Instagram is called. */
+  beforeInstagram?: (userId: string) => Promise<void>;
+}
+
+/**
+ * Checks for an enrolled user with a matching token: the enrollment first (local and
+ * cheap, so strangers are stopped before Instagram), then `/me` with the token, whose
+ * user id must be the enrollment's. Tags the log with the user. Returns the user id.
+ */
+export async function requireEnrolledUser(
+  ctx: RequestContext,
+  token: string,
+  enrollment: string,
+  options: EnrolledUserOptions = {},
+): Promise<string> {
+  const read = await readEnrollment(ctx.keys, enrollment, ctx.now, options.grace);
+  if (!read.ok) throw new HttpError(401, read.reason === 'expired' ? 'expired' : 'bad_signature');
+  ctx.log.user = await Tag.user(ctx.keys.log, read.userId);
+  await options.beforeInstagram?.(read.userId);
+
+  const me = await getMe(ctx.config, token);
+  if (!me.ok) throw instagramFailure(me.failure);
+  if (me.value.userId !== read.userId) throw new HttpError(401, 'enrollment_mismatch');
+  return read.userId;
+}
+
+/** `GET /auth/callback`: Instagram's OAuth redirect. */
+export const callback: Handler = async (ctx) => {
+  await ctx.rateLimit({ kind: 'ip', group: 'auth' });
+  const params = ctx.url.searchParams;
+
+  // Until the state is known good, there's nowhere safe to redirect: plain 400.
+  const state = parseState(params.get('state'));
+  if (!state) throw new HttpError(400, 'bad_state');
+  const returnUrl = ctx.config.returnUrls.get(state.client);
+  if (returnUrl === undefined) throw new HttpError(400, 'unknown_client');
+
+  // From here on, every outcome goes back to the app. The raw state matched the strict
+  // state format, so it's safe in the fragment as is.
+  const fail = (error: InstagramError, outcome: Outcome): Response => {
+    ctx.log.outcome = outcome;
+    return redirect(`${returnUrl}#instagram_error=${error}&state=${state.raw}`);
+  };
+
+  if (params.has('error')) return fail('cancelled', 'cancelled');
+
+  // Instagram may append `#_` to the code.
+  const code = params.get('code')?.replace(/#_$/, '');
+  if (code === undefined || !/^[\x21-\x7E]{1,4096}$/.test(code)) {
+    return fail('exchange_failed', 'bad_request');
+  }
+
+  const shortLived = await exchangeCode(ctx.config, ctx.env.IG_APP_SECRET, code);
+  if (!shortLived.ok) return fail('exchange_failed', failureOutcome(shortLived.failure));
+  if (!shortLived.value.permissions.includes(PUBLISH_PERMISSION)) {
+    return fail('missing_permission', 'missing_permission');
+  }
+
+  const longLived = await exchangeLongLived(ctx.env.IG_APP_SECRET, shortLived.value.token);
+  if (!longLived.ok) return fail('exchange_failed', failureOutcome(longLived.failure));
+
+  const me = await getMe(ctx.config, longLived.value.token, ['username', 'account_type']);
+  if (!me.ok) return fail('exchange_failed', failureOutcome(me.failure));
+  // The professional account's id from /me, not the one from the code exchange.
+  const { userId, username, accountType } = me.value;
+  ctx.log.user = await Tag.user(ctx.keys.log, userId);
+  if (!isProfessional(accountType)) return fail('not_professional', 'not_professional');
+  if (username === undefined || !isUsername(username)) {
+    return fail('exchange_failed', 'exchange_failed');
+  }
+
+  const connection: InstagramConnection = {
+    token: longLived.value.token,
+    expiresAt: ctx.now + longLived.value.expiresIn,
+    refreshedAt: ctx.now,
+    userId,
+    username,
+    enrollment: await makeEnrollment(ctx.keys, userId, ctx.now),
+  };
+  const sealed = await seal(ctx.keys, { connection, challenge: state.challenge }, ctx.now);
+  return redirect(`${returnUrl}#instagram=${sealed}&state=${state.raw}`);
+};
+
+const RedeemBody = schemaFor<RedeemRequest>()(
+  v.strictObject({
+    sealed: v.pipe(v.string(), v.maxLength(4096)),
+    verifier: Base64Url32,
+  }),
+);
+
+/** `POST /auth/redeem`: the sealed handoff + the app's verifier → the connection. */
+export const redeem: Handler = async (ctx) => {
+  await ctx.rateLimit({ kind: 'ip', group: 'auth' });
+  // Anything wrong is a 400 with no detail, including an oversize body.
+  const body = await readJson(ctx.request, MAX_JSON_BODY, RedeemBody).catch((error: unknown) => {
+    throw error instanceof HttpError ? new HttpError(400, error.outcome) : error;
+  });
+  const handoff = await unseal(ctx.keys, body.sealed, ctx.now);
+  if (!handoff) throw new HttpError(400, 'bad_request');
+  if (!timingSafeEqualStrings(await sha256Base64Url(body.verifier), handoff.challenge)) {
+    throw new HttpError(400, 'bad_request');
+  }
+  const user = await Tag.user(ctx.keys.log, handoff.connection.userId);
+  ctx.log.user = user;
+  record(ctx.env.METRICS, { event: 'connect', user });
+  return jsonResponse(handoff.connection);
+};
+
+const RenewBody = schemaFor<RenewRequest>()(v.strictObject({ enrollment: Enrollment }));
+
+/** `POST /auth/renew`: a still-recent enrollment + a token for the same user → a new one. */
+export const renew: Handler = async (ctx) => {
+  await ctx.rateLimit({ kind: 'ip', group: 'auth' });
+  const token = parseBearer(ctx.request.headers.get('Authorization'));
+  if (token === null) throw new HttpError(401, 'unauthorized');
+  const body = await readJson(ctx.request, MAX_JSON_BODY, RenewBody);
+  const userId = await requireEnrolledUser(ctx, token, body.enrollment, {
+    grace: ENROLL_RENEW_GRACE,
+  });
+
+  const response: RenewResponse = { enrollment: await makeEnrollment(ctx.keys, userId, ctx.now) };
+  record(ctx.env.METRICS, { event: 'renew', user: await Tag.user(ctx.keys.log, userId) });
+  return jsonResponse(response);
+};

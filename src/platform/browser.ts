@@ -47,6 +47,38 @@ export const platform: Platform = {
 
   projectIsSafe: () => false,
   projectReplaced() {},
+
+  openSignIn(url) {
+    location.assign(url);
+    return 'here';
+  },
+
+  onSignInReturn(finish) {
+    const { hash } = location;
+    if (!/[#&]instagram(_error)?=/.test(hash)) return;
+    // Out of the address bar right away (it's useless without this tab's verifier, but still).
+    history.replaceState(history.state, '', location.pathname + location.search);
+    finish(hash);
+  },
+
+  // Other tabs see localStorage change on their own.
+  prefsChanged() {},
+
+  onPrefsChanged(reload) {
+    window.addEventListener('storage', reload);
+  },
+
+  setFullscreen(on) {
+    // Refused (an embedded page, say), it stays a full-window preview.
+    if (on) void document.documentElement.requestFullscreen?.().catch(() => {});
+    else if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+  },
+
+  watchFullscreen(change) {
+    const onChange = () => change(document.fullscreenElement !== null);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  },
 };
 
 /** Once the project has photos, ask (once) for the browser not to clear its storage. */

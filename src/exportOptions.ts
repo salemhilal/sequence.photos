@@ -1,0 +1,75 @@
+import type { Project, Sheet } from './types';
+
+/**
+ * What the Export view exports to, and the choices each takes. Measurements convert only
+ * where the destination's differ from the project's: an inches project exported as images
+ * (or to Instagram) is turned into pixels at a dpi; a pixel project saved as a PDF is given
+ * a printed size at a dpi. InDesign opens pixels as pixels (a point each), so it needs none.
+ */
+
+export type Destination = 'pdf' | 'images' | 'indesign' | 'instagram';
+
+/** One output per spread (its pages side by side) or per page. Frames are always per page. */
+export type Per = 'spread' | 'page';
+
+export interface ExportOptions {
+  per: Per;
+  /** Images only. */
+  format: 'jpeg' | 'png';
+  /** JPEG images' quality, 0 to 1 (PNG is lossless). */
+  quality: number;
+  /**
+   * Inches projects: output pixels per inch, for a PDF's photos or for images. At most the
+   * project's dpi: more would only enlarge the photos. Null: the project's, whatever it is
+   * now (so it follows an undo while Export is open).
+   */
+  dpi: number | null;
+  /** Pixel projects as a PDF: how many pixels make an inch of the page. */
+  printAt: number;
+}
+
+export const DEFAULT_PRINT_AT = 300;
+/** JPEG quality unless chosen: high, with little to see in what it drops. */
+export const DEFAULT_QUALITY = 0.92;
+
+export function defaultOptions(sheet: Pick<Sheet, 'arrangement'>): ExportOptions {
+  return {
+    per: sheet.arrangement === 'spreads' ? 'spread' : 'page',
+    format: 'jpeg',
+    quality: DEFAULT_QUALITY,
+    dpi: null,
+    printAt: DEFAULT_PRINT_AT,
+  };
+}
+
+/** Where a project can go. */
+export const DESTINATIONS: readonly Destination[] = ['pdf', 'images', 'indesign', 'instagram'];
+
+/** Whether a destination measures in pixels (so an inches project converts to it). */
+export function measuresInPixels(d: Destination): boolean {
+  return d === 'images' || d === 'instagram';
+}
+
+/** Whether exporting to `d` converts the project's measurements (see the module comment). */
+export function converts(d: Destination, sheet: Pick<Sheet, 'unit'>): boolean {
+  if (d === 'indesign') return false;
+  return sheet.unit === 'in' ? measuresInPixels(d) : !measuresInPixels(d);
+}
+
+/**
+ * Output pixels per unit an export makes: for inches, the chosen dpi (no more than the
+ * project's); for pixels, one each. Photos are checked for detail against this.
+ */
+export function exportPxPerUnit(
+  d: Destination,
+  sheet: Pick<Sheet, 'unit' | 'pxPerUnit'>,
+  o: Pick<ExportOptions, 'dpi'>,
+): number {
+  if (sheet.unit === 'px' || d === 'indesign' || d === 'instagram') return sheet.pxPerUnit;
+  return Math.min(sheet.pxPerUnit, Math.max(1, o.dpi ?? sheet.pxPerUnit));
+}
+
+/** One output per spread or per page, as asked; frames are pages either way. */
+export function perOf(project: Project, o: Pick<ExportOptions, 'per'>): Per {
+  return project.layout.kind === 'spreads' ? o.per : 'page';
+}

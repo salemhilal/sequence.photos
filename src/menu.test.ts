@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runFromMenu } from './commands';
 import { projectStore, emptyProject } from './store';
 import { ui } from './ui';
-import { setLayoutSize } from './pageSize';
+import { setLayoutSize } from './pageSetup';
 import { sheetOf } from './spreads';
 
 afterEach(() => {

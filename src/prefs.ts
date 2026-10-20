@@ -1,4 +1,4 @@
-import { DEFAULT_DESK, isHexColor } from './deskColor';
+import { DEFAULT_DESK, savedDeskColor } from './deskColor';
 import type { ThemePref } from './theme';
 
 /**
@@ -47,9 +47,7 @@ export const themePref = createPref<ThemePref>('photobook-theme', 'system', (raw
   raw === 'light' || raw === 'dark' ? raw : undefined,
 );
 
-export const deskColorPref = createPref('photobook-desk', DEFAULT_DESK, (raw) =>
-  isHexColor(raw) ? raw.toLowerCase() : undefined,
-);
+export const deskColorPref = createPref('photobook-desk', DEFAULT_DESK, savedDeskColor);
 
 export const sidebarOpenPref = createPref(
   'photobook-sidebar',
@@ -58,9 +56,32 @@ export const sidebarOpenPref = createPref(
   (open) => (open ? 'open' : 'closed'),
 );
 
+/** Whether the status bar shows along the window's foot. */
+export const statusBarPref = createPref(
+  'photobook-status-bar',
+  true,
+  (raw) => raw !== 'hidden',
+  (shown) => (shown ? 'shown' : 'hidden'),
+);
+
+/** Whether holding ⌘ (Ctrl) shows each button's shortcut. */
+export const shortcutBadgesPref = createPref(
+  'photobook-shortcut-badges',
+  true,
+  (raw) => raw !== 'hidden',
+  (shown) => (shown ? 'shown' : 'hidden'),
+);
+
 export const sidebarWidthPref = createPref('photobook-sidebar-width', SIDEBAR_DEFAULT_WIDTH, (raw) => {
   const n = Number(raw);
   return Number.isFinite(n) && n >= SIDEBAR_MIN_WIDTH ? n : undefined;
+});
+
+/** How many columns of spreads (or frames) the sidebar shows, as many as fit (1 to 4). */
+export const SIDEBAR_MAX_COLUMNS = 4;
+export const sidebarColumnsPref = createPref('photobook-sidebar-columns', 1, (raw) => {
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 1 && n <= SIDEBAR_MAX_COLUMNS ? n : undefined;
 });
 
 /** Which of the Layout panel's sections are folded away. */

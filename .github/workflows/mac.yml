@@ -1,0 +1,38 @@
+# The Mac app's end-to-end test (npm run test:app: the real app, its WebKit and Rust side,
+# real files, fullscreen, the Settings window), on pull requests that touch the Mac side or
+# what it runs. It also runs before every App Store upload (see app-store.yml).
+
+name: Mac app
+
+on:
+  pull_request:
+    paths:
+      - 'src-tauri/**'
+      - 'src/platform/**'
+      - 'src/main.tsx'
+      - 'src/ui.ts'
+      - 'src/project.ts'
+      - 'src/persistence.ts'
+      - 'src/pdf.ts'
+      - 'src/rasterExport.ts'
+      - 'scripts/e2e-app.mjs'
+      - 'package-lock.json'
+      - '.github/workflows/mac.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: mac-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: npm run test:app

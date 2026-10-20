@@ -2,45 +2,82 @@ import type { Draft } from 'immer';
 import { getImage, putImage, type StoredImage } from './db';
 import { importFiles, setUrl } from './images';
 import { newPhotoId, newSpreadId, type PhotoId, type SpreadId } from './ids';
-import { allSpreads, findSpread, middleIndex, sheetOf } from './spreads';
+import { allSpreads, findSpread, frameIndex, hasFrames, middleIndex, sheetOf } from './spreads';
 import { projectStore } from './store';
-import { dropBox, fitCentered, pageRect, pileSize, PILE_PHOTO_SIZE } from './geometry';
+import { dropBox, fitCentered, pageRect, pileSize } from './geometry';
 import type { DropTarget } from './drag';
-import type { LayoutKind, Project, PageSide, PhotoMeta, Placement, Spread } from './types';
-import { DESK_PPI, deskGeometry } from './deskGeometry';
+import type { Arrangement, Project, PageSide, PhotoMeta, Placement, Spread } from './types';
+import { deskGeometry, viewToFit } from './deskGeometry';
 import { ui } from './ui';
 
-const CELL = 1.8;
-const JITTER = 0.3;
+/** Photos per row when several land on the desk at once. */
+const DESK_COLUMNS = 6;
+/** Space between desk photos, as a share of the largest one. */
+const DESK_GAP = 0.08;
 
-/** Scatter new photos like prints on a desk: a loose grid with jitter, overlapping slightly. */
+type Box = { x: number; y: number; w: number; h: number };
+
+/**
+ * Places sizes in a grid of `columns`, starting at `origin`: cells as wide as the widest
+ * and as tall as the tallest, each photo centered in its cell, with a gap in proportion.
+ * Returns the placements and the grid's bounds.
+ */
+function deskGrid(
+  sizes: { w: number; h: number }[],
+  origin: { x: number; y: number },
+  columns = DESK_COLUMNS,
+): { at: Box[]; bounds: Box } {
+  const cw = Math.max(...sizes.map((s) => s.w));
+  const ch = Math.max(...sizes.map((s) => s.h));
+  const gap = Math.max(cw, ch) * DESK_GAP;
+  const cols = Math.min(columns, sizes.length);
+  const rows = Math.ceil(sizes.length / cols);
+  const at = sizes.map((s, i) => ({
+    x: origin.x + (i % cols) * (cw + gap) + (cw - s.w) / 2,
+    y: origin.y + Math.floor(i / cols) * (ch + gap) + (ch - s.h) / 2,
+    w: s.w,
+    h: s.h,
+  }));
+  return { at, bounds: { x: origin.x, y: origin.y, w: cols * (cw + gap) - gap, h: rows * (ch + gap) - gap } };
+}
+
+/**
+ * New photos land on the desk at full size (as large as their preview stays sharp at
+ * 100%), in rows of six below anything already there, and the view zooms to fit them.
+ */
+/** Zoom the desk to show every photo on it (or reset it, with none). */
+export function fitDesk(): void {
+  const { pile } = projectStore.project;
+  if (!pile.length) {
+    ui.set({ view: { panX: 40, panY: 40, zoom: 1 } });
+    return;
+  }
+  const x = Math.min(...pile.map((p) => p.x));
+  const y = Math.min(...pile.map((p) => p.y));
+  const w = Math.max(...pile.map((p) => p.x + p.w)) - x;
+  const h = Math.max(...pile.map((p) => p.y + p.h)) - y;
+  ui.set({ view: viewToFit({ x, y, w, h }, deskGeometry.size()) });
+}
+
 export function addPhotosToPile(photos: PhotoMeta[]): void {
   if (!photos.length) return;
-  const vis = deskGeometry.visible();
-  const cols = Math.max(3, Math.floor((vis.w - 0.5) / CELL));
-  let top = vis.y + 0.4;
+  const sizes = photos.map(pileSize);
   const pile = projectStore.project.pile;
-  if (pile.length) top = Math.max(...pile.map((p) => p.y + p.h)) + 0.6;
-  const left = vis.x + 0.4;
+  const vis = deskGeometry.visible();
+  const gap = Math.max(...sizes.map((s) => Math.max(s.w, s.h))) * DESK_GAP;
+  const origin = pile.length
+    ? { x: Math.min(...pile.map((p) => p.x)), y: Math.max(...pile.map((p) => p.y + p.h)) + gap }
+    : { x: vis.x + gap, y: vis.y + gap };
+  const { at, bounds } = deskGrid(sizes, origin);
 
   projectStore.apply((d) => {
     photos.forEach((photo, i) => {
       d.photos[photo.id] = photo;
-      const { w, h } = pileSize(photo);
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const cx = left + col * CELL + CELL / 2 + (Math.random() * 2 - 1) * JITTER;
-      const cy = top + row * CELL + CELL / 2 + (Math.random() * 2 - 1) * JITTER;
-      d.pile.push({ photoId: photo.id, x: cx - w / 2, y: cy - h / 2, w, h, z: d.nextZ++ });
+      const box = at[i];
+      if (box) d.pile.push({ photoId: photo.id, ...box, z: d.nextZ++ });
     });
   });
-
-  // Bring the new batch into view if it landed below the fold.
-  const view = ui.get().view;
-  const rows = Math.ceil(photos.length / cols);
-  if (top > vis.y + vis.h - 1 && rows > 0) {
-    ui.set({ view: { ...view, panY: view.panY - (top - vis.y - 0.4) * DESK_PPI * view.zoom } });
-  }
+  ui.set({ view: viewToFit(bounds, deskGeometry.size()) });
 }
 
 /** Placement for a photo freshly dropped on a page: fit inside the drop border guide, centered on the page. */
@@ -134,15 +171,15 @@ export function putOnPage(d: Draft<Project>, photoIds: PhotoId[], spreadId: Spre
 function addSpread(d: Draft<Project>, index: number): SpreadId {
   const l = d.layout;
   const id = newSpreadId();
-  if (l.kind === 'print') l.spreads.splice(middleIndex(l.spreads, index), 0, { kind: 'middle', id, items: [] });
-  else l.frames.splice(Math.min(Math.max(0, index), l.frames.length), 0, { kind: 'frame', id, items: [] });
+  if (l.kind === 'spreads') l.spreads.splice(middleIndex(l.spreads, index), 0, { kind: 'middle', id, items: [] });
+  else l.frames.splice(frameIndex(l.frames, index), 0, { kind: 'frame', id, items: [] });
   return id;
 }
 
 /** Recipe: add a spread before position `index` and put photos on it (a new spread's left page). */
 export function putOnNewSpread(d: Draft<Project>, photoIds: PhotoId[], index: number): void {
   const id = addSpread(d, index);
-  putOnPage(d, photoIds, id, d.layout.kind === 'print' ? 'left' : 'whole');
+  putOnPage(d, photoIds, id, d.layout.kind === 'spreads' ? 'left' : 'whole');
 }
 
 /** Recipe: return a photo to the pile, centered on a desk point (defaults to the visible center). */
@@ -152,18 +189,47 @@ export function putInPile(d: Draft<Project>, photoId: PhotoId, at?: { x: number;
   removeFromSpreads(d, photoId);
   if (locate(d, photoId)?.where === 'desk') return;
   const { w, h } = pileSize(photo);
-  let c = at;
-  if (!c) {
-    const v = deskGeometry.visible();
-    c = {
-      x: v.x + v.w / 2 + (Math.random() - 0.5) * PILE_PHOTO_SIZE,
-      y: v.y + v.h / 2 + (Math.random() - 0.5) * PILE_PHOTO_SIZE,
-    };
-  }
-  d.pile.push({ photoId, x: c.x - w / 2, y: c.y - h / 2, w, h, z: d.nextZ++ });
+  // Where asked; else the nearest place to the middle of the view clear of other photos.
+  const box = at ? { x: at.x - w / 2, y: at.y - h / 2 } : freeSpot(d.pile, { w, h }, centerOf(deskGeometry.visible()));
+  d.pile.push({ photoId, ...box, w, h, z: d.nextZ++ });
 }
 
-const TIDY_GAP = 0.3;
+function centerOf(r: { x: number; y: number; w: number; h: number }): { x: number; y: number } {
+  return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+}
+
+/**
+ * Where a photo of `size` can go on the desk without overlapping any other (a gap apart):
+ * the clear spot nearest `near`, trying a grid around it in widening rings. Its top-left
+ * corner, in desk inches.
+ */
+export function freeSpot(
+  pile: readonly { x: number; y: number; w: number; h: number }[],
+  size: { w: number; h: number },
+  near: { x: number; y: number },
+): { x: number; y: number } {
+  const gap = DESK_GAP * Math.max(size.w, size.h);
+  const step = { x: size.w + gap, y: size.h + gap };
+  const clear = (x: number, y: number) =>
+    pile.every(
+      (p) => x + size.w + gap <= p.x || p.x + p.w + gap <= x || y + size.h + gap <= p.y || p.y + p.h + gap <= y,
+    );
+  const origin = { x: near.x - size.w / 2, y: near.y - size.h / 2 };
+  for (let ring = 0; ring <= 40; ring++) {
+    let best: { x: number; y: number; d: number } | null = null;
+    for (let i = -ring; i <= ring; i++) {
+      for (let j = -ring; j <= ring; j++) {
+        if (Math.max(Math.abs(i), Math.abs(j)) !== ring) continue;
+        const x = origin.x + i * step.x;
+        const y = origin.y + j * step.y;
+        const d = Math.hypot(i * step.x, j * step.y);
+        if (clear(x, y) && (!best || d < best.d)) best = { x, y, d };
+      }
+    }
+    if (best) return { x: best.x, y: best.y };
+  }
+  return origin;
+}
 
 /**
  * Arrange desk photos in a tidy grid, keeping their rough reading order
@@ -176,7 +242,9 @@ export function tidyPile(photoIds?: PhotoId[]): void {
   const items = projectStore.project.pile.filter((p) => !ids || ids.has(p.photoId));
   if (items.length < 2) return;
 
-  const cell = Math.max(...items.map((p) => Math.max(p.w, p.h))) + TIDY_GAP;
+  const big = Math.max(...items.map((p) => Math.max(p.w, p.h)));
+  const gap = big * DESK_GAP;
+  const cell = big + gap;
   const cy = (p: Placement) => p.y + p.h / 2;
   const cx = (p: Placement) => p.x + p.w / 2;
 
@@ -210,8 +278,8 @@ export function tidyPile(photoIds?: PhotoId[]): void {
     for (const p of d.pile) {
       const at = slot.get(p.photoId);
       if (!at) continue;
-      p.x = left + at.col * cell + (cell - TIDY_GAP - p.w) / 2;
-      p.y = top + at.row * cell + (cell - TIDY_GAP - p.h) / 2;
+      p.x = left + at.col * cell + (big - p.w) / 2;
+      p.y = top + at.row * cell + (big - p.h) / 2;
     }
   });
 }
@@ -226,8 +294,9 @@ const DUPLICATE_OFFSET = 0.25;
 
 /**
  * Duplicate photos as new, independent photos (each with its own copy of the image
- * data), placed `offset` inches down and right of the originals: on the desk, or on
- * the same spread. One undo step. Returns the new photos' ids.
+ * data), placed down and right of the originals: on the desk, or on the same spread. On
+ * a page, the step is the share of its width `offset` inches is of a 10 in page, in any
+ * unit (0.25 in on 10 in; 27 px of 1,080). One undo step. Returns the new photos' ids.
  */
 export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OFFSET): Promise<PhotoId[]> {
   const sources: { from: PhotoId; id: PhotoId; img: StoredImage }[] = [];
@@ -241,6 +310,8 @@ export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OF
   // Reference the new photos before storing their images, so a background cleanup
   // of unreferenced images can't remove them in between.
   projectStore.apply((d) => {
+    const sheet = sheetOf(d);
+    const onSpread = (offset * sheet.pageW) / 10;
     for (const { from, id } of sources) {
       const meta = d.photos[from];
       if (!meta) continue;
@@ -251,7 +322,9 @@ export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OF
         continue;
       }
       const p = at.placement;
-      const copy = { ...p, photoId: id, x: p.x + offset, y: p.y + offset, z: d.nextZ++ };
+      // On the desk, in proportion to the photo (0.25 in for the old 2 in desk photos).
+      const step = at.where === 'desk' ? (offset * Math.max(p.w, p.h)) / 2 : onSpread;
+      const copy = { ...p, photoId: id, x: p.x + step, y: p.y + step, z: d.nextZ++ };
       (at.where === 'desk' ? d.pile : at.spread.items).push(copy);
     }
   });
@@ -278,72 +351,121 @@ export function insertSpread(index: number): void {
  * Delete a spread, returning its photos to the desk: a book's middle spread (the first and
  * last aren't in that list, so can't be), or any frame but a sequence's only one.
  */
-export function deleteSpread(spreadId: SpreadId): void {
+/** Whether a spread can move or be deleted: a book's middle spreads, and any frame. */
+export function isMovable(spread: Pick<Spread, 'kind'>): boolean {
+  return spread.kind === 'middle' || spread.kind === 'frame';
+}
+
+/**
+ * Delete spreads (or frames) as one undo step, their photos back on the desk in a small
+ * grid in the middle of the view. A book's first and last spreads stay, and so does a
+ * sequence's last frame.
+ */
+export function deleteSpreads(spreadIds: readonly SpreadId[]): void {
+  const doomed = new Set(spreadIds);
   projectStore.apply((d) => {
     const l = d.layout;
-    let spread: Draft<Spread> | undefined;
-    if (l.kind === 'print') {
-      const idx = l.spreads.findIndex((s) => s.id === spreadId);
-      if (idx >= 0) spread = l.spreads.splice(idx, 1)[0];
+    const removed: Draft<Spread>[] = [];
+    if (l.kind === 'spreads') {
+      removed.push(...l.spreads.filter((s) => doomed.has(s.id)));
+      l.spreads = l.spreads.filter((s) => !doomed.has(s.id));
     } else {
-      const idx = l.frames.findIndex((s) => s.id === spreadId);
-      if (idx >= 0 && l.frames.length > 1) spread = l.frames.splice(idx, 1)[0];
+      // A sequence keeps at least one frame: its first, if all were asked for.
+      const kept = l.frames.filter((s) => !doomed.has(s.id));
+      const next = hasFrames(kept) ? kept : ([l.frames[0]] as const);
+      removed.push(...l.frames.filter((s) => !next.includes(s)));
+      l.frames = [...next];
     }
-    if (!spread) return;
-    const ids = spread.items.map((i) => i.photoId);
+    // Back on the desk in a small grid in the middle of the view.
+    const ids = removed.flatMap((s) => s.items.map((i) => i.photoId));
+    const sizes = ids.flatMap((id) => {
+      const photo = d.photos[id];
+      return photo ? [pileSize(photo)] : [];
+    });
+    if (!sizes.length) return;
     const v = deskGeometry.visible();
+    const { bounds } = deskGrid(sizes, { x: 0, y: 0 }, 4);
+    const { at } = deskGrid(sizes, { x: v.x + (v.w - bounds.w) / 2, y: v.y + (v.h - bounds.h) / 2 }, 4);
     ids.forEach((id, n) => {
-      putInPile(d, id, {
-        x: v.x + v.w / 2 + ((n % 4) - 1.5) * CELL + (Math.random() - 0.5) * JITTER,
-        y: v.y + v.h / 2 + (Math.floor(n / 4) - 0.5) * CELL + (Math.random() - 0.5) * JITTER,
-      });
+      const box = at[n];
+      if (box) putInPile(d, id, { x: box.x + box.w / 2, y: box.y + box.h / 2 });
     });
   });
-  if (ui.get().editingSpreadId === spreadId) ui.set({ editingSpreadId: null });
+  const editing = ui.get().editingSpreadId;
+  if (editing && !findSpread(projectStore.project, editing)) ui.set({ editingSpreadId: null });
+  ui.set((u) => ({ spreadSelection: u.spreadSelection.filter((id) => findSpread(projectStore.project, id)) }));
+}
+
+export function deleteSpread(spreadId: SpreadId): void {
+  deleteSpreads([spreadId]);
+}
+
+/**
+ * Move spreads (or frames) together, keeping their order, to just before position
+ * `dropIndex` in the whole run (counted before they're taken out). A book's first and
+ * last spreads don't move, and nothing goes before the first or after the last.
+ */
+export function moveSpreads(spreadIds: readonly SpreadId[], dropIndex: number): void {
+  const moving = new Set(spreadIds);
+  /** The run with the moving ones taken out and put back together at `at` (in the run). */
+  const reorder = <T extends { id: SpreadId }>(run: T[], at: number): T[] => {
+    const i = Math.max(0, Math.min(run.length, at));
+    const stays = (s: T) => !moving.has(s.id);
+    return [...run.slice(0, i).filter(stays), ...run.filter((s) => moving.has(s.id)), ...run.slice(i).filter(stays)];
+  };
+  projectStore.apply((d) => {
+    const l = d.layout;
+    // A book's middle spreads start at position 1 in the whole run.
+    if (l.kind === 'spreads') l.spreads = reorder(l.spreads, dropIndex - 1);
+    else {
+      const next = reorder(l.frames, dropIndex);
+      if (hasFrames(next)) l.frames = next;
+    }
+  });
 }
 
 /** Move a book's middle spread, or a frame, to position `toIndex` (counted after its removal). */
 export function moveSpread(spreadId: SpreadId, toIndex: number): void {
-  projectStore.apply((d) => {
-    const l = d.layout;
-    if (l.kind === 'print') {
-      const from = l.spreads.findIndex((s) => s.id === spreadId);
-      const [spread] = from >= 0 ? l.spreads.splice(from, 1) : [];
-      if (spread) l.spreads.splice(middleIndex(l.spreads, toIndex), 0, spread);
-    } else {
-      const from = l.frames.findIndex((s) => s.id === spreadId);
-      const [frame] = from >= 0 ? l.frames.splice(from, 1) : [];
-      if (frame) l.frames.splice(Math.min(Math.max(0, toIndex), l.frames.length), 0, frame);
-    }
-  });
+  const all = allSpreads(projectStore.project);
+  const from = all.findIndex((s) => s.id === spreadId);
+  // As a drop index (before removal): one further along when moving later.
+  moveSpreads([spreadId], from >= 0 && toIndex >= from ? toIndex + 1 : toIndex);
 }
 
 /**
  * Folio-style labels, zero-padded like a book's page numbers: "01", "02–03", "08" for a
  * book's spreads, or "01", "02", … for a sequence's frames.
  */
-export function folioLabel(index: number, total: number, layout: LayoutKind = 'print'): string {
-  const width = Math.max(2, String(layout === 'print' ? total * 2 : total).length);
-  return spreadLabel(index, total, layout)
+export function folioLabel(index: number, total: number, arrangement: Arrangement): string {
+  const width = Math.max(2, String(arrangement === 'spreads' ? total * 2 : total).length);
+  return spreadLabel(index, total, arrangement)
     .split('–')
     .map((n) => n.padStart(width, '0'))
     .join('–');
 }
 
 /** Page labels, e.g. "1", "2–3", counting a book's single first and last pages; a frame's number. */
-export function spreadLabel(index: number, total: number, layout: LayoutKind = 'print'): string {
-  if (layout === 'digital' || index === 0) return String(index + 1);
+export function spreadLabel(index: number, total: number, arrangement: Arrangement): string {
+  if (arrangement === 'frames' || index === 0) return String(index + 1);
   const left = index * 2;
   if (index === total - 1) return String(left);
   return `${left}–${left + 1}`;
 }
 
+/** Said when the browser won't store photos at all, as in Safari's Private Browsing. */
+export const STORAGE_REFUSED =
+  'This browser won’t store photos here (as in a private window), so they couldn’t be added. Open Sequence in a regular window.';
+
 export async function importPhotos(files: File[]): Promise<void> {
   if (ui.get().importing) return;
   try {
-    const { photos, failed } = await importFiles(files, (done, total) => ui.set({ importing: { done, total } }));
+    const { photos, failed, storageRefused } = await importFiles(files, (done, total) =>
+      ui.set({ importing: { done, total } }),
+    );
     addPhotosToPile(photos);
-    if (failed.length) {
+    if (storageRefused) {
+      ui.set({ notice: STORAGE_REFUSED });
+    } else if (failed.length) {
       ui.set({
         notice: `Couldn't read ${failed.length} file${failed.length > 1 ? 's' : ''}: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '…' : ''}`,
       });

@@ -1,21 +1,19 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Minus, Plus } from 'lucide-react';
 import { bump, dropPhotos, importPhotos, raise } from '../actions';
-import { addPhotos } from '../commands';
+import { addPhotos, runCommand, shortcutLabel } from '../commands';
 import { isProjectFile, openProjectFile } from '../project';
 import { clearGhost, startDrag, trackGhost } from '../drag';
 import { intersects, resizeRect, type Corner, type Rect } from '../geometry';
 import { projectStore, useProject } from '../store';
 import type { Placement } from '../types';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
+import { wheeled } from '../deskZoom';
 import { isTyping } from '../input';
-import { deskCovered, openPhotoMenu, openModal, openQuickLook, ui } from '../ui';
-import { PageSizeFields } from './PageSizeFields';
+import { deskCovered, openPhotoMenu, openQuickLook, ui } from '../ui';
+import { OwnPageSettings } from './PageSettings';
 import { PhotoImg } from './PhotoImg';
 
 const CORNERS: Corner[] = ['nw', 'ne', 'sw', 'se'];
-const MIN_ZOOM = 0.2;
-const MAX_ZOOM = 5;
 const GHOST_MAX = 140;
 /** When moving photos on the desk, the drop border fades in within this distance of its edge. */
 const EDGE_FADE_PX = 120;
@@ -55,6 +53,10 @@ export function Desk() {
       const k = DESK_PPI * v.zoom;
       return { x: -v.panX / k, y: -v.panY / k, w: (r?.width ?? 800) / k, h: (r?.height ?? 600) / k };
     };
+    deskGeometry.size = () => {
+      const r = ref.current?.getBoundingClientRect();
+      return { w: r?.width ?? 800, h: r?.height ?? 600 };
+    };
   }, []);
 
   // Wheel pans; pinch or Ctrl/Cmd + wheel zooms around the cursor.
@@ -63,14 +65,8 @@ export function Desk() {
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const v = ui.get().view;
-      if (e.ctrlKey || e.metaKey) {
-        const r = el.getBoundingClientRect();
-        const zoom = clamp(v.zoom * Math.exp(-e.deltaY * 0.01), MIN_ZOOM, MAX_ZOOM);
-        zoomAround(zoom, e.clientX - r.left, e.clientY - r.top);
-      } else {
-        ui.set({ view: { ...v, panX: v.panX - e.deltaX, panY: v.panY - e.deltaY } });
-      }
+      const r = el.getBoundingClientRect();
+      ui.set({ view: wheeled(ui.get().view, e, e.clientX - r.left, e.clientY - r.top) });
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
@@ -293,7 +289,7 @@ export function Desk() {
       data-drop="desk"
       onPointerDown={onBackgroundDown}
       onContextMenu={(e) => {
-        if ((e.target as HTMLElement).closest('.zoom, .desk-empty .btn')) return;
+        if ((e.target as HTMLElement).closest('.desk-empty .btn')) return;
         e.preventDefault();
         ui.set({ contextMenu: { kind: 'desk', x: e.clientX, y: e.clientY } });
       }}
@@ -334,17 +330,19 @@ export function Desk() {
       )}
       {project.pile.length === 0 && (
         <div className="desk-empty">
-          <p className="desk-empty-title">
-            {Object.keys(project.photos).length ? 'Every photo is placed' : 'Start by adding photos'}
+          {Object.keys(project.photos).length > 0 && <p>Every photo is placed.</p>}
+          <p className="desk-empty-add">
+            Drop photos here, or{' '}
+            <button
+              className="link"
+              data-shortcut={shortcutLabel('addPhotos')}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={addPhotos}
+            >
+              add them
+            </button>
+            .
           </p>
-          <p>
-            Add or drop photos or exported projects here.
-            <br />
-            They land on this desk, where you can drag them onto pages.
-          </p>
-          <button className="btn primary" onPointerDown={(e) => e.stopPropagation()} onClick={addPhotos}>
-            Add photos
-          </button>
           {Object.keys(project.photos).length === 0 && (
             // A new project: set the page size before placing anything.
             <div
@@ -352,11 +350,11 @@ export function Desk() {
               onPointerDown={(e) => e.stopPropagation()}
               onContextMenu={(e) => e.stopPropagation()}
             >
-              <span className="caps muted">Layout</span>
-              <PageSizeFields />
+              <span className="section-label muted">Page</span>
+              <OwnPageSettings />
               <p className="help">
                 You can change this anytime in{' '}
-                <button className="link" onClick={() => openModal('layout')}>
+                <button className="link" onClick={() => runCommand('layout')}>
                   Layout
                 </button>
                 , along with the guides photos fit and snap to.
@@ -370,7 +368,6 @@ export function Desk() {
           <span>{fileDrop === 'project' ? 'Drop to open project' : 'Drop to add photos'}</span>
         </div>
       )}
-      <ZoomControls />
     </div>
   );
 }
@@ -437,37 +434,4 @@ function SelectionFrames({
       })}
     </div>
   );
-}
-
-function ZoomControls() {
-  const zoom = ui.use((s) => s.view.zoom);
-  const step = (f: number) => {
-    const el = document.querySelector('.desk');
-    const r = el?.getBoundingClientRect();
-    zoomAround(clamp(zoom * f, MIN_ZOOM, MAX_ZOOM), (r?.width ?? 0) / 2, (r?.height ?? 0) / 2);
-  };
-  return (
-    <div className="zoom" onPointerDown={(e) => e.stopPropagation()}>
-      <button className="btn icon" aria-label="Zoom out" onClick={() => step(1 / 1.25)}>
-        <Minus />
-      </button>
-      <button className="btn zoom-level" onClick={() => zoomAround(1, 0, 0)} title="Reset zoom">
-        {Math.round(zoom * 100)}%
-      </button>
-      <button className="btn icon" aria-label="Zoom in" onClick={() => step(1.25)}>
-        <Plus />
-      </button>
-    </div>
-  );
-}
-
-/** Set zoom keeping the desk point under (sx, sy) — desk-relative pixels — fixed. */
-function zoomAround(zoom: number, sx: number, sy: number): void {
-  const v = ui.get().view;
-  const f = zoom / v.zoom;
-  ui.set({ view: { zoom, panX: sx - (sx - v.panX) * f, panY: sy - (sy - v.panY) * f } });
-}
-
-function clamp(n: number, lo: number, hi: number): number {
-  return Math.min(hi, Math.max(lo, n));
 }

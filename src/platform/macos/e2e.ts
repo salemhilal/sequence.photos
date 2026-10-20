@@ -1,14 +1,24 @@
 import { invoke } from '@tauri-apps/api/core';
+import { emitTo, listen } from '@tauri-apps/api/event';
+import { getCurrentWindow, Window } from '@tauri-apps/api/window';
+import { platform } from './index';
 import { getImage } from '../../db';
 import { projectLoaded } from '../../persistence';
 import { tourSeenPref } from '../../prefs';
+import { putOnPage } from '../../actions';
+import { defaultOptions } from '../../exportOptions';
+import { renderPdf } from '../../pdf';
+import { renderImages } from '../../rasterExport';
+import { outputPages } from '../../renderPlan';
+import { toPhotoId } from '../../ids';
 import { newProject } from '../../project';
-import { setLayoutSize } from '../../pageSize';
+import { applyPageSetup, draftOf, setLayoutSize } from '../../pageSetup';
+import { DEFAULT_PAGE } from '../../units';
 import { sheetOf } from '../../spreads';
 import { projectStore } from '../../store';
 import { endTour } from '../../tour';
 import type { Project } from '../../types';
-import { ui } from '../../ui';
+import { setStatusBar, ui } from '../../ui';
 import { readZip } from '../../zip';
 import { openPath, save, saveAs } from './documents';
 
@@ -117,6 +127,71 @@ async function scenarios(dir: string): Promise<void> {
   await waiting;
   check('then opens it', title()?.name === 'Fixture A' && photoCount() === 3);
 
+  // A sequence of frames: switched to, saved and reopened as one, and rendered as images
+  // in the app's WebKit (OffscreenCanvas, createImageBitmap).
+  applyPageSetup({
+    ...draftOf(projectStore.project),
+    arrangement: 'frames',
+    page: { w: 1080, h: 1350, unit: 'px', pxPerUnit: 1 },
+  });
+  const { layout, page } = projectStore.project;
+  const frame = layout.kind === 'frames' ? layout.frames[0] : undefined;
+  check('switches to frames', layout.kind === 'frames' && !!frame);
+  if (layout.kind === 'frames' && frame) {
+    projectStore.apply((d) => putOnPage(d, [toPhotoId('p0')], frame.id, 'whole'));
+    const frames = `${dir}/Frames.photo-sequence`;
+    check('saves a sequence of frames', await saveAs(frames), ui.get().notice ?? '');
+    const saved = await savedProject(frames);
+    check(
+      'the file is frames, at its size',
+      saved.layout.kind === 'frames' && saved.page.unit === 'px' && sheetOf(saved).pageW === page.w,
+      saved.layout.kind,
+    );
+    const placed = outputPages(projectStore.project, 'page');
+    const { files, missing } = await renderImages(placed, projectStore.project, () => undefined);
+    const first = files[0] && (await createImageBitmap(files[0].data).catch(() => null));
+    check(
+      'renders frames as JPEGs at the frame size',
+      missing === 0 && files.length === placed.length && first?.width === page.w && first.height === page.h,
+      `${files.length} files, ${missing} missing, ${first?.width}×${first?.height}`,
+    );
+    await openPath(a);
+    await openPath(frames);
+    check(
+      'reopens a sequence of frames',
+      title()?.name === 'Frames' && projectStore.project.layout.kind === 'frames' && !title()?.edited,
+    );
+    // Back to a book in inches, through the same Apply.
+    applyPageSetup({ ...draftOf(projectStore.project), arrangement: 'spreads', page: { ...DEFAULT_PAGE } });
+    const book = projectStore.project;
+    check(
+      'switches back to spreads in inches',
+      book.layout.kind === 'spreads' && book.page.unit === 'in' && book.page.w === 10,
+      `${book.layout.kind} ${book.page.w} ${book.page.unit}`,
+    );
+    // A page in inches renders at its dpi: 10 × 8 in at 300 is 3000 × 2400.
+    const pages = outputPages(book, 'page').slice(0, 2);
+    const out = await renderImages(pages, book, () => undefined);
+    const image = out.files[0] && (await createImageBitmap(out.files[0].data).catch(() => null));
+    check(
+      'renders a page in inches at its dpi',
+      out.files.length === 2 && image?.width === 3000 && image.height === 2400,
+      `${out.files.length} files, ${image?.width}×${image?.height}`,
+    );
+    // The PDF, from the photos' originals, in the app's WebKit.
+    const pdf = await renderPdf(defaultOptions(sheetOf(book)), () => undefined).catch(() => null);
+    check(
+      'renders a PDF from the originals',
+      !!pdf && pdf.missing === 0 && pdf.previews === 0 && pdf.blob.size > 0,
+      pdf ? `${pdf.missing} missing, ${pdf.previews} previews` : 'failed',
+    );
+    // Leave the file as saved, so New Project doesn't ask.
+    projectStore.undo();
+  }
+
+  await fullscreen();
+  await settingsWindow();
+
   // New Project starts fresh history, so undo can't bring back a project without its file.
   await newProject();
   check('New Project starts an untitled, empty project', title()?.name === 'Untitled' && photoCount() === 0);
@@ -125,6 +200,83 @@ async function scenarios(dir: string): Promise<void> {
   // Leave the state the relaunch expects: Fixture B, with an unsaved change.
   await openPath(b);
   setWidth(9);
+}
+
+const press = (key: string) => window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+
+/**
+ * Preview's fullscreen: F makes the window fullscreen (macOS animates it, so each step
+ * waits), Esc leaves it (and only it: pages aren't dismissed), and leaving it some other way
+ * (the green button, here the window's own call) stops presenting.
+ */
+async function fullscreen(): Promise<void> {
+  const win = getCurrentWindow();
+  const isFull = () => win.isFullscreen();
+  const settle = async (want: boolean) => {
+    for (const start = Date.now(); (await isFull()) !== want && Date.now() - start < 5000;) await pause(100);
+    // The resize that reports it can come a moment after.
+    await pause(300);
+  };
+  ui.set({ page: 'preview' });
+  await pause(200);
+  press('f');
+  await settle(true);
+  check('Preview: F makes the window fullscreen', (await isFull()) && ui.get().presenting);
+  press('Escape');
+  await settle(false);
+  check(
+    'Preview: Esc leaves fullscreen, staying on the page',
+    !(await isFull()) && !ui.get().presenting && ui.get().page === 'preview',
+  );
+  press('f');
+  await settle(true);
+  await win.setFullscreen(false);
+  await settle(false);
+  check('Preview: leaving fullscreen another way stops presenting', !ui.get().presenting);
+  press('Escape');
+  await pause(200);
+  check('Preview: Esc again stays on the page', ui.get().page === 'preview');
+  ui.set({ page: 'desk' });
+}
+
+/** Waits for an event from another window, up to `ms`; whether it came. */
+async function heard(event: string, ms = 10_000): Promise<boolean> {
+  let came = false;
+  const stop = await listen(event, () => (came = true));
+  for (const start = Date.now(); !came && Date.now() - start < ms;) await pause(100);
+  stop();
+  return came;
+}
+
+/**
+ * Settings opens in a window of its own (one, however often it's asked for); a setting
+ * changed there reaches the main window, and test images asked for there land on its desk.
+ */
+async function settingsWindow(): Promise<void> {
+  const ready = heard('e2e-settings-ready');
+  platform.openSettings?.();
+  check('Settings opens in its own window', await ready);
+  platform.openSettings?.();
+  await pause(500);
+  const settings = (await Window.getAll()).filter((w) => w.label === 'settings');
+  check('asking again opens no second Settings window', settings.length === 1, `${settings.length}`);
+  check('the status bar shows to start', ui.get().statusBar);
+  await emitTo('settings', 'e2e-settings-act');
+  for (const start = Date.now(); ui.get().statusBar && Date.now() - start < 5000;) await pause(100);
+  check('a setting changed in the Settings window reaches the main window', !ui.get().statusBar);
+  const before = projectStore.project.pile.length;
+  await emitTo('settings', 'e2e-settings-add-images');
+  await until(() => projectStore.project.pile.length > before, 30_000);
+  check(
+    'Add test images in the Settings window adds them to the main window’s desk',
+    projectStore.project.pile.length === before + 1,
+    `${before} → ${projectStore.project.pile.length}`,
+  );
+  // Back as saved, so New Project (next) doesn't ask.
+  projectStore.undo();
+  // As it was: shown, and the window closed.
+  setStatusBar(true);
+  await settings[0]?.close();
 }
 
 /** The second run, after quitting: the last project should come back as it was left. */

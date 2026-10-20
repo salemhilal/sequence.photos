@@ -4,3 +4,7 @@ package-lock.json
 # Rust build output and Tauri's generated schemas
 src-tauri/target
 src-tauri/gen
+# The server checks its own formatting (server/package.json: npm run format:check)
+server
+# Icon Composer writes its own JSON style (made by scripts/icons.mjs)
+icon/AppIcon.icon

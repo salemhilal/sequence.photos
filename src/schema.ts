@@ -1,7 +1,7 @@
 import { newGuideId } from './ids';
 import { emptyProject } from './store';
 import { CURRENT_SCHEMA, type Project } from './types';
-import { DEFAULT_FRAME } from './units';
+import { DEFAULT_DPI } from './units';
 import { InvalidProjectError, validateProject } from './validate';
 
 /**
@@ -25,7 +25,6 @@ const migrations: Record<number, (project: Raw) => Raw> = {
     const v1: Raw = { ...base.settings, pageW: 10, pageH: 8, borders: [0.5, 1.25] };
     delete v1.lines;
     delete v1.dropBorder;
-    delete v1.sizes;
     return { ...project, settings: { ...v1, ...(project.settings as object) } };
   },
   /**
@@ -63,8 +62,34 @@ const migrations: Record<number, (project: Raw) => Raw> = {
     return {
       ...rest,
       layout: { kind: 'print', page, firstSpread, spreads, lastSpread },
-      settings: { ...settings, sizes: { print: { ...page }, digital: { ...DEFAULT_FRAME } } },
+      settings: { ...settings, sizes: { print: { ...page }, digital: { w: 1080, h: 1350 } } },
     };
+  },
+  /**
+   * 3 → 4: the layout's kind no longer decides its unit. A print book becomes spreads in
+   * inches at 300 dpi, a digital sequence frames in pixels at 1×, and the page size moves
+   * out of the layout to the project. Each kind's remembered size goes: arrangements share
+   * one page size.
+   */
+  3: (project) => {
+    const { layout, settings, ...rest } = project;
+    const kept: Raw = { ...(settings as Raw) };
+    delete kept.sizes;
+    const l: Raw = { ...(layout as Raw) };
+    const kind = l.kind;
+    delete l.kind;
+    if (kind === 'print') {
+      const page = { ...(l.page as Raw), unit: 'in', pxPerUnit: DEFAULT_DPI };
+      delete l.page;
+      return { ...rest, page, layout: { kind: 'spreads', ...l }, settings: kept };
+    }
+    if (kind === 'digital') {
+      const page = { ...(l.frame as Raw), unit: 'px', pxPerUnit: 1 };
+      delete l.frame;
+      return { ...rest, page, layout: { kind: 'frames', ...l }, settings: kept };
+    }
+    // Anything else is damage, which validateProject reports.
+    return project;
   },
 };
 
