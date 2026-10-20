@@ -1,4 +1,4 @@
-import { DEFAULT_DESK, isHexColor } from './deskColor';
+import { DEFAULT_DESK, savedDeskColor } from './deskColor';
 import type { ThemePref } from './theme';
 
 /**
@@ -47,9 +47,7 @@ export const themePref = createPref<ThemePref>('photobook-theme', 'system', (raw
   raw === 'light' || raw === 'dark' ? raw : undefined,
 );
 
-export const deskColorPref = createPref('photobook-desk', DEFAULT_DESK, (raw) =>
-  isHexColor(raw) ? raw.toLowerCase() : undefined,
-);
+export const deskColorPref = createPref('photobook-desk', DEFAULT_DESK, savedDeskColor);
 
 export const sidebarOpenPref = createPref(
   'photobook-sidebar',

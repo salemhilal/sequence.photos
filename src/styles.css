@@ -16,7 +16,7 @@
   --divider: #c6c6c6;
   /* A raised control's edge: a hairline and a soft drop in light, a top highlight in dark. */
   --raise: 0 0 0 0.5px rgba(0, 0, 0, 0.18), 0 1px 1px rgba(0, 0, 0, 0.06);
-  --desk: #787876;
+  --desk: #787878;
   --text: #1c1c1c;
   --muted: #6b6b6b;
   --hover: rgba(0, 0, 0, 0.06);

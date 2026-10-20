@@ -1,15 +1,34 @@
 /** Desk background color. A per-browser viewing preference (see prefs.ts), like the theme. */
 
-export const DEFAULT_DESK = '#787876';
+export const DEFAULT_DESK = '#787878';
 
-/** Darkest to lightest. */
+/**
+ * Darkest to lightest, all neutral: photos are judged against them, and black and white are
+ * true black and white, as references.
+ */
 export const DESK_PRESETS: { value: string; label: string }[] = [
-  { value: '#121211', label: 'Black' },
-  { value: '#3b3b3a', label: 'Dark gray' },
+  { value: '#000000', label: 'Black' },
+  { value: '#3b3b3b', label: 'Dark gray' },
   { value: DEFAULT_DESK, label: 'Neutral gray' },
-  { value: '#b3b3b0', label: 'Light gray' },
-  { value: '#f4f3f0', label: 'White' },
+  { value: '#b3b3b3', label: 'Light gray' },
+  { value: '#ffffff', label: 'White' },
 ];
+
+/** The presets before they were neutral, as they may be saved: each becomes its neutral one. */
+const WARM_PRESETS: Record<string, string> = {
+  '#121211': '#000000',
+  '#3b3b3a': '#3b3b3b',
+  '#787876': DEFAULT_DESK,
+  '#b3b3b0': '#b3b3b3',
+  '#f4f3f0': '#ffffff',
+};
+
+/** A saved desk color, with an old warm preset read as its neutral one. */
+export function savedDeskColor(raw: string): string | undefined {
+  if (!isHexColor(raw)) return undefined;
+  const color = raw.toLowerCase();
+  return WARM_PRESETS[color] ?? color;
+}
 
 const HEX = /^#[0-9a-f]{6}$/i;
 

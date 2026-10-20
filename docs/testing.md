@@ -40,6 +40,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Photos and thumbnails don't drag out as image files.
 - [ ] Filled buttons (Layout, Preview, Export, Apply) don't change on hover and darken while
       pressed; ghost and icon buttons light on hover.
+- [ ] The desk's colors (Settings → General, or the desk's right-click menu) are true black,
+      neutral grays, and true white. One saved before they were neutral (a warm gray) comes
+      back as its neutral one.
 - [ ] Surfaces step in neutral grays, in both themes: the toolbar and view headers darkest
       (lightest gray in light), panels a step up, buttons raised a step more; panels meet
       the desk and each other at a dark hairline, with no rounded corners or shadows.
