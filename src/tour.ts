@@ -10,7 +10,7 @@ import { isMac } from './input';
 import { tourSeenPref } from './prefs';
 import { projectStore, emptyProject } from './store';
 import type { Project, PhotoMeta } from './types';
-import { ui, type Modal, type Page, type UiState } from './ui';
+import { ui, type Modal, type UiState } from './ui';
 import taxi from './tour/taxi.jpg';
 import spire from './tour/spire.jpg';
 import reflections from './tour/reflections.jpg';
@@ -31,8 +31,6 @@ export interface TourStep {
   target?: string;
   /** Open the spread editor on the sample spread. */
   editor?: boolean;
-  /** Go to a page (the desk otherwise). */
-  page?: Page;
   modal?: Modal;
 }
 
@@ -156,7 +154,7 @@ export function goToStep(index: number): void {
   if (!step) return endTour();
   ui.set({
     tour: index,
-    page: step.page ?? 'desk',
+    page: 'desk',
     modal: step.modal ?? null,
     // The Layout step shows the guides, which the sample book has.
     ...(step.modal === 'layout' && { layoutTab: 'guides' as const }),
