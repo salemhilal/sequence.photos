@@ -48,6 +48,21 @@ test.describe('pages', () => {
     await expect(statusText(page)).toHaveText('← → to turn pages · F for fullscreen');
   });
 
+  test('a dialog over Export takes the arrow keys', async ({ page }) => {
+    await goTo(page, 'Export');
+    const exportCount = page.locator('.export-view .page-preview-controls .data');
+    await expect(exportCount).toHaveText(/^1 \/ 4/);
+    await openLayout(page);
+    const layoutCount = page.getByRole('dialog', { name: 'Layout' }).locator('.page-preview-controls .data');
+    await expect(layoutCount).toHaveText('1 / 4');
+    await page.keyboard.press('ArrowRight');
+    await expect(layoutCount).toHaveText('2 / 4');
+    await expect(exportCount).toHaveText(/^1 \/ 4/);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('ArrowRight');
+    await expect(exportCount).toHaveText(/^2 \/ 4/);
+  });
+
   test('⌥⌘P opens and closes Layout', async ({ page }) => {
     const dialog = page.getByRole('dialog', { name: 'Layout' });
     await page.keyboard.press(`${MOD}+Alt+KeyP`);

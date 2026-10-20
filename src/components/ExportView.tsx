@@ -411,7 +411,7 @@ function OutputPreview({
   /** Images: the pixels each page becomes, shown in the label. */
   pxPerUnit: number | null;
 }) {
-  const { at, go } = usePager(pages.length);
+  const { at, go } = usePager(pages.length, true);
   const page = pages[at];
   const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 800, h: 500 });
 

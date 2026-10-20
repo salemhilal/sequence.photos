@@ -49,15 +49,17 @@ export function useElementSize<T extends HTMLElement>(initial: Size): [RefObject
 /**
  * Going through `count` pages one at a time, with ‹ › buttons (`go`) and the ← → keys.
  * The position is kept within the pages as they change. Keys aimed at a control that uses
- * them itself (a text field, a radio group) are left to it.
+ * them itself (a text field, a radio group) are left to it. `onPage`: it's on a page (Export),
+ * not in a dialog, so a dialog over it (Layout, Settings) takes the keys.
  */
-export function usePager(count: number): { at: number; go: (step: number) => void } {
+export function usePager(count: number, onPage = false): { at: number; go: (step: number) => void } {
   const [index, setIndex] = useState(0);
   const at = Math.max(0, Math.min(index, count - 1));
   const go = (step: number) => setIndex(Math.max(0, Math.min(count - 1, at + step)));
   useWindowEvent('keydown', (e) => {
     // Not behind a confirmation, either.
     if (ownsArrowKeys(e.target) || e.metaKey || e.ctrlKey || e.altKey || ui.get().confirm) return;
+    if (onPage && ui.get().modal) return;
     if (e.key === 'ArrowLeft') go(-1);
     else if (e.key === 'ArrowRight') go(1);
     else return;

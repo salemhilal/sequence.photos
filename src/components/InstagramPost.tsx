@@ -354,7 +354,7 @@ interface PreviewProps {
 /** How the post will look on Instagram: a feed post's carousel, or stories. */
 function PostPreview({ slides, sheet, layout, kind, username, caption }: PreviewProps) {
   const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 700, h: 600 });
-  const { at, go } = usePager(slides.length);
+  const { at, go } = usePager(slides.length, true);
 
   // The media box: the image's shape in the feed; a phone screen (9:16) for stories.
   const aspect = kind === 'story' ? 9 / 16 : layout.width / layout.height;

@@ -302,7 +302,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] **[S]** Export's preview, one per spread: the first and last single pages show at the
       size of a page in a spread, not enlarged to fill.
 - [ ] File → Export… (⌘⇧E), the switcher, or ⌥⌘3 opens the Export page: a preview of what it makes on the left,
-      with ‹ › and ←/→, and the destination and its options on the right. Destinations: PDF,
+      with ‹ › and ←/→ (not while Layout or Settings is over it), and the destination and its
+      options on the right. Destinations: PDF,
       Images, InDesign, and Instagram. It opens on PDF for inches, Instagram for
       1080 px frames, else Images; then on the last one picked, with the last choices
       (spread or page, format, Print at), while the app is open.
