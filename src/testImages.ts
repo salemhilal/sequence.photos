@@ -35,8 +35,8 @@ const SIZES = [
 const QUALITY = 0.9;
 
 /** A random pick. */
-function pick<T>(items: readonly T[]): T {
-  return items[Math.floor(Math.random() * items.length) % items.length]!;
+function pick<T extends readonly [unknown, ...unknown[]]>(items: T): T[number] {
+  return items[Math.floor(Math.random() * items.length) % items.length] ?? items[0];
 }
 
 /** Two or three neighboring film colors, for one gradient, either way around the wheel. */
@@ -45,7 +45,7 @@ export function gradientColors(random: () => number = Math.random): string[] {
   const start = Math.floor(random() * FILM_COLORS.length);
   const step = random() < 0.5 ? 1 : -1;
   const n = FILM_COLORS.length;
-  return Array.from({ length: count }, (_, i) => FILM_COLORS[(((start + i * step) % n) + n) % n]!);
+  return Array.from({ length: count }, (_, i) => FILM_COLORS[(((start + i * step) % n) + n) % n] ?? FILM_COLORS[0]);
 }
 
 /** A small tile of grain, repeated over each image: cheap, and enough to read as film. */
@@ -129,8 +129,13 @@ export async function makeTestImages(count: number, onProgress: (done: number) =
   return files;
 }
 
-/** Make `count` test images and add them to the desk, with progress in the status bar. */
+/**
+ * Make `count` test images and add them to the desk, with progress in the status bar. Not
+ * while photos are being added (as Add photos), which the Mac app's Settings window, asking
+ * from afar, can't see.
+ */
 export async function addTestImages(count: number): Promise<void> {
+  if (ui.get().importing) return;
   const label = 'Making test images';
   ui.set({ importing: { done: 0, total: count, label } });
   let files: File[];

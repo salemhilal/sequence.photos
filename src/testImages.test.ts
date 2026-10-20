@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FILM_COLORS, gradientColors } from './testImages';
+import { addTestImages, FILM_COLORS, gradientColors } from './testImages';
+import { ui } from './ui';
 
 /** Each channel of a #rrggbb color, 0 to 255. */
 const channels = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -30,5 +31,13 @@ describe('test images', () => {
         expect(gap === 1 || gap === FILM_COLORS.length - 1).toBe(true);
       }
     }
+  });
+
+  it('wait their turn: none are made while photos are being added', async () => {
+    const importing = { done: 1, total: 4 };
+    ui.set({ importing });
+    await addTestImages(2);
+    expect(ui.get().importing).toBe(importing);
+    ui.set({ importing: null });
   });
 });
