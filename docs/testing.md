@@ -214,7 +214,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 - [ ] _(e2e)_ Opens from the toolbar's ruler icon (right, beside Settings), ⌥⌘P, or the empty
       desk's "Layout" link: a dialog over the page on the website (toolbar and status bar in
-      view; ×, Esc, or ⌥⌘P closes it). **[Mac]** Its own window, titled Layout (asking again
+      view; ×, Esc, or ⌥⌘P closes it, and the status bar says what the page under it does
+      again). **[Mac]** Its own window, titled Layout (asking again
       brings it forward; View → Layout…), editing the main window's project: a change there
       shows in the main window at once and is undone there with ⌘Z, and a change in the main
       window (or an undo) shows in Layout. A line at its foot shows hints and the page size.

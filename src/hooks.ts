@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { ownsArrowKeys } from './input';
 import type { Size } from './types';
-import { ui } from './ui';
+import { addPageStatus, ui, type PageStatus } from './ui';
 
 /**
  * Listen for a window event with the latest `handler` (so it can read current
@@ -67,12 +67,19 @@ export function usePager(count: number): { at: number; go: (step: number) => voi
 }
 
 /**
- * What a page (or the spread editor over the desk) says in the status bar while it's open:
- * its size, how to use it (see statusText).
+ * What a page (or the spread editor over the desk, or Layout over either) says in the status
+ * bar while it's open: its size, how to use it (see statusText). Closing a dialog brings
+ * back what the page under it says.
  */
 export function usePageStatus(text: string | null): void {
+  const status = useRef<PageStatus | null>(null);
   useEffect(() => {
-    ui.set({ pageStatus: text });
-  }, [text]);
-  useEffect(() => () => ui.set({ pageStatus: null }), []);
+    const added = addPageStatus(null);
+    status.current = added;
+    return () => {
+      added.remove();
+      status.current = null;
+    };
+  }, []);
+  useEffect(() => status.current?.set(text), [text]);
 }

@@ -40,6 +40,12 @@ test.describe('pages', () => {
     await expect(statusText(page)).toContainText('10 × 8 in spreads · 300 dpi');
     await goTo(page, 'Preview');
     await expect(statusText(page)).toHaveText('← → to turn pages · F for fullscreen');
+    // Layout over the page says its own; closing it brings back the page's.
+    await openLayout(page);
+    await expect(statusText(page)).toContainText('10 × 8 in');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Layout' })).toHaveCount(0);
+    await expect(statusText(page)).toHaveText('← → to turn pages · F for fullscreen');
   });
 
   test('⌥⌘P opens and closes Layout', async ({ page }) => {

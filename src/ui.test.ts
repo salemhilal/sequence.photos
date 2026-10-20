@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { closeModal, goToPage, lockPage, pageLocked, openModal, setCloseGuard, toggleModal, ui } from './ui';
+import {
+  addPageStatus,
+  closeModal,
+  goToPage,
+  lockPage,
+  pageLocked,
+  openModal,
+  setCloseGuard,
+  toggleModal,
+  ui,
+} from './ui';
 
 afterEach(() => {
   lockPage(false);
@@ -60,5 +70,33 @@ describe('pages and dialogs', () => {
     closeModal();
     await Promise.resolve();
     expect(ui.get().modal).toBeNull();
+  });
+});
+
+describe('addPageStatus', () => {
+  it('shows the last one opened, and the one under it again once that closes', () => {
+    const preview = addPageStatus('← → to turn pages');
+    expect(ui.get().pageStatus).toBe('← → to turn pages');
+    const layout = addPageStatus('10 × 8 in');
+    expect(ui.get().pageStatus).toBe('10 × 8 in');
+    // The page under it changing doesn't show over the dialog.
+    preview.set('← → to turn frames');
+    expect(ui.get().pageStatus).toBe('10 × 8 in');
+    layout.set('8 × 10 in');
+    expect(ui.get().pageStatus).toBe('8 × 10 in');
+    layout.remove();
+    expect(ui.get().pageStatus).toBe('← → to turn frames');
+    preview.remove();
+    expect(ui.get().pageStatus).toBeNull();
+  });
+
+  it('closes in any order', () => {
+    const page = addPageStatus('page');
+    const dialog = addPageStatus('dialog');
+    page.remove();
+    expect(ui.get().pageStatus).toBe('dialog');
+    dialog.remove();
+    dialog.remove();
+    expect(ui.get().pageStatus).toBeNull();
   });
 });

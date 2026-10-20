@@ -230,6 +230,41 @@ export function toggleModal(modal: Modal): void {
   change({ page: ui.get().page, modal: ui.get().modal === modal ? null : modal });
 }
 
+/** A page's (or dialog's) line in the status bar, while it's open: see `addPageStatus`. */
+export interface PageStatus {
+  set(text: string | null): void;
+  remove(): void;
+}
+
+/**
+ * What the open pages and dialogs say in the status bar, in the order they opened. The last
+ * one's shows; closing it (Layout over Preview, say) brings back the one under it.
+ */
+const pageStatuses: { text: string | null }[] = [];
+
+function showPageStatus(): void {
+  const text = pageStatuses.at(-1)?.text ?? null;
+  if (ui.get().pageStatus !== text) ui.set({ pageStatus: text });
+}
+
+/** Add a page's (or dialog's) status, shown over any already open until it's removed. */
+export function addPageStatus(text: string | null): PageStatus {
+  const entry = { text };
+  pageStatuses.push(entry);
+  showPageStatus();
+  return {
+    set(next) {
+      entry.text = next;
+      showPageStatus();
+    },
+    remove() {
+      const i = pageStatuses.indexOf(entry);
+      if (i >= 0) pageStatuses.splice(i, 1);
+      showPageStatus();
+    },
+  };
+}
+
 /**
  * Whether the desk is out of reach (another page, a dialog, the spread editor, Quick Look,
  * or the tour), pausing desk shortcuts.
