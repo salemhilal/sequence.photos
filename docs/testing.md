@@ -502,3 +502,12 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
 - [ ] Settings has General (Instagram, Appearance, Desk; no Storage) and Advanced (Server,
       Test images), as on the website.
 - [ ] Opening a project from a newer version says to update from the App Store (no Reload).
+- [ ] The icon (Dock, Finder, the About window) is the stack of frames: white in light mode,
+      black in dark mode (macOS 26 and later, following System Settings → Appearance); the
+      white one on older macOS.
+
+## Icons (web)
+
+- [ ] The browser tab's favicon is the white stack in a light color scheme and the black one
+      in dark (Chrome, Firefox; Safari may keep the white one).
+- [ ] Adding the site to a home screen or installing it as an app shows the white stack.

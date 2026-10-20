@@ -6,6 +6,10 @@
   <!-- No encryption beyond what macOS provides, so App Store uploads skip export compliance questions. -->
   <key>ITSAppUsesNonExemptEncryption</key>
   <false/>
+  <!-- The icon in Assets.car (see scripts/icons.mjs): light or dark with the system on macOS 26
+       and later. Older macOS uses icon.icns, the light one. -->
+  <key>CFBundleIconName</key>
+  <string>AppIcon</string>
   <!-- The app's link, which brings an Instagram sign-in back from the browser (see src/instagram.ts). -->
   <key>CFBundleURLTypes</key>
   <array>

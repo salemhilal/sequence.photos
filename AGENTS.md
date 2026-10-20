@@ -37,6 +37,8 @@ when the Mac app, saving, or exports change. The first `test:e2e` needs
 - `src/platform/`: web vs Mac differences (`#platform` import).
 - `docs/testing.md`: the manual and automated checklist. Update it with any behavior change.
 - `docs/proposals/`: design proposals and plans (layout model, print and color).
+- `icon/`: the app icon's drawings (light and dark) and renders; `npm run icons` makes the
+  Mac app's and the website's icons from them.
 
 ## Conventions
 
