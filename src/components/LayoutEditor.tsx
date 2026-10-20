@@ -44,11 +44,8 @@ const SAMPLES: Record<Arrangement, Spread> = {
   frames: { id: toSpreadId('layout'), kind: 'frame', items: [] },
 };
 
-/**
- * The Layout view: the page's settings and guides, over the page as a dialog, or (`inWindow`)
- * filling a window of its own (the Mac app's).
- */
-export function LayoutEditor({ inWindow = false }: { inWindow?: boolean }) {
+/** The Layout view: the page's settings and guides, over the page as the spread editor is. */
+export function LayoutEditor() {
   const { project } = useProject();
   const s = sheetOf(project);
   const units = UNITS[s.unit];
@@ -124,9 +121,9 @@ export function LayoutEditor({ inWindow = false }: { inWindow?: boolean }) {
   useWindowEvent('keydown', (e) => {
     if (isTyping(e) || e.metaKey || e.ctrlKey || ui.get().confirm) return;
     if (e.key === 'Escape') {
-      // Esc deselects a guide, then closes the dialog (a window stays: Mac windows don't close on Esc).
+      // Esc deselects a guide, then closes Layout.
       if (selected) setSelected(null);
-      else if (!inWindow) closeModal();
+      else closeModal();
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected) {
       e.preventDefault();
       remove(selected);
@@ -306,7 +303,6 @@ export function LayoutEditor({ inWindow = false }: { inWindow?: boolean }) {
       />
     </div>
   );
-  if (inWindow) return <div className="page-view layout-editor">{body}</div>;
   return (
     <div className="modal-backdrop" data-modal onPointerDown={(e) => e.target === e.currentTarget && closeModal()}>
       <div className="modal editor layout-editor" data-modal role="dialog" aria-label="Layout">

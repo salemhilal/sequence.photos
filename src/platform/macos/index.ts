@@ -3,11 +3,8 @@ import { emit, emitTo, listen } from '@tauri-apps/api/event';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { mayClose, setStatusBar, ui } from '../../ui';
-import { projectStore } from '../../store';
-import { toGuideId } from '../../ids';
-import { isLayoutWindow, isMainWindow, isSettingsWindow } from '../../windowKind';
-import { mirrorMainProject, serveLayoutWindow } from './mirror';
+import { setStatusBar, ui } from '../../ui';
+import { isMainWindow, isSettingsWindow } from '../../windowKind';
 import type { MainRequest, Platform } from '../types';
 import { chooseSaveLocation, writeFile } from './files';
 
@@ -29,9 +26,8 @@ function suggestedName(filename: string): string {
   return `${named}${filename.slice(filename.lastIndexOf('.'))}`;
 }
 
-/** The Settings and Layout windows' labels, and the events between the app's windows. */
+/** The Settings window's label, and the events between the app's windows. */
 const SETTINGS = 'settings';
-const LAYOUT = 'layout';
 const PREFS_CHANGED = 'prefs-changed';
 const MAIN_REQUEST = 'main-request';
 
@@ -44,28 +40,13 @@ export const platform: Platform = {
   kind: 'macos',
 
   start() {
-    // The Settings and Layout windows are only that: no documents, menu bar, or toolbar of
-    // their own. Layout edits the main window's project, through a copy kept in step.
+    // The Settings window is only Settings: no documents, menu bar, or toolbar of its own.
     if (isMainWindow) {
       // Room for the traffic lights in the toolbar, which is also the title bar.
       document.documentElement.classList.add('native-app');
       void import('./menu').then((m) => m.setUpMenu());
       void loadDocuments().then((m) => m.startDocuments());
-      serveLayoutWindow();
       if (__E2E__) void import('./e2e').then((m) => m.runE2E());
-    } else if (isLayoutWindow) {
-      mirrorMainProject();
-      // Closing it with page changes waiting for Apply asks first, as the dialog does.
-      void getCurrentWindow().onCloseRequested(async (e) => {
-        if (!(await mayClose())) e.preventDefault();
-      });
-      if (__E2E__) {
-        // The end-to-end test's hooks: add a guide when asked, and say how wide the page is.
-        void listen('e2e-layout-act', () =>
-          projectStore.apply((d) => void d.settings.lines.push({ id: toGuideId('e2e'), axis: 'vertical', at: 1 })),
-        );
-        void listen('e2e-layout-report', () => void emit('e2e-layout-width', projectStore.project.page.w));
-      }
     } else if (isSettingsWindow && __E2E__) {
       // The end-to-end test's hooks in the Settings window: say it's up, and when asked, change
       // a setting or ask for test images (to check the main window follows).
@@ -129,23 +110,6 @@ export const platform: Platform = {
 
   onPrefsChanged(reload) {
     void listen(PREFS_CHANGED, reload);
-  },
-
-  openLayout() {
-    void (async () => {
-      const open = await WebviewWindow.getByLabel(LAYOUT);
-      if (open) return void open.setFocus();
-      new WebviewWindow(LAYOUT, {
-        url: 'app/index.html?window=layout',
-        title: 'Layout',
-        width: 1180,
-        height: 760,
-        minWidth: 820,
-        minHeight: 520,
-        center: true,
-        dragDropEnabled: false,
-      });
-    })();
   },
 
   openSettings() {

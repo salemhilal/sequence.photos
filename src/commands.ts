@@ -141,13 +141,13 @@ export const commands = {
     run: () => goToPage('preview'),
   },
   showExport: { title: 'Export', bindings: pageKey('3'), scope: 'app', inFields: true, run: () => goToPage('export') },
-  // The page's size and guides: its own window in the Mac app, a dialog on the website. ⌥⌘P,
-  // as InDesign's Document Setup.
+  // The page's size and guides, over the page as the spread editor is. ⌥⌘P, as InDesign's
+  // Document Setup.
   layout: {
     title: { browser: 'Layout', macos: 'Layout…' },
     bindings: [{ key: 'p', mod: true, alt: true }],
     scope: 'app',
-    run: () => (platform.openLayout ? platform.openLayout() : toggleModal('layout')),
+    run: () => toggleModal('layout'),
   },
   // ⌘; as in InDesign and Photoshop.
   toggleGuides: { bindings: [{ key: ';', mod: true }], scope: 'app', inFields: true, run: toggleGuides },

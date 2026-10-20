@@ -26,8 +26,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       fields, test images, and the private-window notice. CI runs them on every pull request.
       Items below marked _(e2e)_ are among them; check the rest by hand.
 - [ ] `npm run test:app`: the Mac app end-to-end test passes (open, Save, Save As, relaunch,
-      sandboxed, Preview's fullscreen, the Settings window and its sync with the main window,
-      the Layout window editing the main window's project).
+      sandboxed, Preview's fullscreen, the Settings window and its sync with the main window).
       CI runs it on pull requests that touch the Mac side, and before App Store uploads.
 - [ ] In `server/`: `npm test`, `npm run typecheck`, `npm run lint`, `npm run format:check`.
 
@@ -214,13 +213,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 ## Layout
 
 - [ ] _(e2e)_ Opens from the toolbar's ruler icon (right, beside Settings), ⌥⌘P, or the empty
-      desk's "Layout" link: a dialog over the page on the website (toolbar and status bar in
-      view; ×, Esc, or ⌥⌘P closes it, and the status bar says what the page under it does
-      again). **[Mac]** Its own window, titled Layout (asking again
-      brings it forward; View → Layout…), editing the main window's project: a change there
-      shows in the main window at once and is undone there with ⌘Z, and a change in the main
-      window (or an undo) shows in Layout. A line at its foot shows hints and the page size.
-      `npm run test:app` checks both directions and the undo.
+      desk's "Layout" link (**[Mac]** also View → Layout…): over the page as the spread
+      editor is, on the website and in the Mac app alike (toolbar and status bar in view; ×,
+      Esc, or ⌥⌘P closes it, and the status bar says what the page under it does again).
 - [ ] Two tabs (underlined, like Settings'), Page and Guides; the tab is kept while the app is
       open.
 

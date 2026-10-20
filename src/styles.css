@@ -1762,16 +1762,6 @@ body.col-resizing * {
   flex: 1;
   min-height: 0;
 }
-/* The Mac app's Layout window: the view fills it, above its foot. */
-.layout-window {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-.layout-window .page-view {
-  flex: 1;
-  min-height: 0;
-}
 .window-foot {
   flex: none;
   height: 24px;

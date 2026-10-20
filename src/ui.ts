@@ -198,11 +198,6 @@ export function setCloseGuard(guard: (() => Promise<boolean>) | null): void {
   closeGuard = guard;
 }
 
-/** Whether the open dialog (or the window holding it) may close: asks, if it has a guard. */
-export function mayClose(): Promise<boolean> {
-  return closeGuard ? closeGuard() : Promise.resolve(true);
-}
-
 /** Change the page and dialog, once the dialog being closed agrees (and not while locked). */
 function change(next: Pick<UiState, 'page' | 'modal'>): void {
   const s = ui.get();

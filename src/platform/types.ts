@@ -67,9 +67,6 @@ export interface Platform {
   /** Open Settings in a window of its own (the Mac app); absent where it's a dialog. */
   openSettings?: () => void;
 
-  /** Open Layout in a window of its own (the Mac app); absent where it's a dialog. */
-  openLayout?: () => void;
-
   /** From the Settings window: ask the main window, which holds the project, to do something. */
   sendToMain?: (request: MainRequest) => void;
 

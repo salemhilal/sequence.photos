@@ -191,7 +191,6 @@ async function scenarios(dir: string): Promise<void> {
 
   await fullscreen();
   await settingsWindow();
-  await layoutWindow();
 
   // New Project starts fresh history, so undo can't bring back a project without its file.
   await newProject();
@@ -278,36 +277,6 @@ async function settingsWindow(): Promise<void> {
   // As it was: shown, and the window closed.
   setStatusBar(true);
   await settings[0]?.close();
-}
-
-/**
- * Layout opens in a window of its own, editing the main window's project: a guide added
- * there lands in the project (one undo removes it), and a change here reaches it.
- */
-async function layoutWindow(): Promise<void> {
-  const ready = heard('layout-ready');
-  platform.openLayout?.();
-  check('Layout opens in its own window', await ready);
-  const lines = projectStore.project.settings.lines.length;
-  await emitTo('layout', 'e2e-layout-act');
-  await until(() => projectStore.project.settings.lines.length > lines, 5000);
-  check(
-    'a guide added in the Layout window lands in the project',
-    projectStore.project.settings.lines.length === lines + 1,
-  );
-  projectStore.undo();
-  check('one undo removes it', projectStore.project.settings.lines.length === lines);
-  setWidth(15);
-  let width = 0;
-  const stop = await listen<number>('e2e-layout-width', (e) => (width = e.payload));
-  for (const start = Date.now(); width !== 15 && Date.now() - start < 5000;) {
-    await emitTo('layout', 'e2e-layout-report');
-    await pause(200);
-  }
-  stop();
-  check('a change in the main window reaches the Layout window', width === 15, `${width}`);
-  projectStore.undo();
-  await (await Window.getByLabel('layout'))?.close();
 }
 
 /** The second run, after quitting: the last project should come back as it was left. */
