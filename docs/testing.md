@@ -26,7 +26,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       fields, test images, and the private-window notice. CI runs them on every pull request.
       Items below marked _(e2e)_ are among them; check the rest by hand.
 - [ ] `npm run test:app`: the Mac app end-to-end test passes (open, Save, Save As, relaunch,
-      sandboxed, Preview's fullscreen, the Settings window and its sync with the main window).
+      sandboxed, Preview's fullscreen, the Settings window and its sync with the main window,
+      the Layout window editing the main window's project).
       CI runs it on pull requests that touch the Mac side, and before App Store uploads.
 - [ ] In `server/`: `npm test`, `npm run typecheck`, `npm run lint`, `npm run format:check`.
 
@@ -46,7 +47,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Surfaces step in neutral grays, in both themes: the toolbar and view headers darkest
       (lightest gray in light), panels a step up, buttons raised a step more; panels meet
       the desk and each other at a dark hairline, with no rounded corners or shadows.
-      Shadows only on things that float: menus, tooltips, toasts, and dialogs.
+      Shadows only on things that float: menus, toasts, and dialogs.
 - [ ] Amber only for selection (desk, sidebar, guides), the primary button (Export, Apply),
       active toggles (an amber icon), drop targets, progress, and links. The toolbar's
       wordmark is plain text; Preview is an ordinary button; selected segments, tabs, and
@@ -180,7 +181,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       it in the editor, and its
       spread's row in the sidebar has one, titled "N photos below 300 dpi" (or "enlarged").
 - [ ] Center on page/frame and Fit page/frame work. "Fit … guide" buttons, largest first;
-      hovering one makes its box glow; per-edge guides show a range and a tooltip.
+      hovering one makes its box glow; per-edge guides show a range and a hint.
 - [ ] Right-click a placed photo → Duplicate: the copy is offset by a fortieth of the page's
       width (0.25 in on a 10 in page, about 27 px on a 1,080 px frame).
 - [ ] Add a frame, open it, ⌘Z: the editor closes cleanly and desk shortcuts work.
@@ -198,7 +199,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       Cancel stays.
 - [ ] Settings or About over a page close when going to another page.
 - [ ] No grab or help cursors over photos or marks: the arrow throughout.
-- [ ] A soft photo's "Show me" (Layout, Export) goes to the desk with it open in the editor.
+- [ ] A soft photo's "Show me" (Export) goes to the desk with it open in the editor.
 - [ ] The tour's Layout step shows the Layout dialog; its Preview step points at the switcher.
 
 ## Hints
