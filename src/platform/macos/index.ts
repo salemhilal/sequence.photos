@@ -4,6 +4,7 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { setStatusBar, ui } from '../../ui';
+import { isTextField } from '../../input';
 import { isMainWindow, isSettingsWindow } from '../../windowKind';
 import type { MainRequest, Platform } from '../types';
 import { chooseSaveLocation, writeFile } from './files';
@@ -29,6 +30,8 @@ function suggestedName(filename: string): string {
 /** The Settings window's label, and the events between the app's windows. */
 const SETTINGS = 'settings';
 const PREFS_CHANGED = 'prefs-changed';
+/** A menu's text-editing command (undo, redo, select all), for the Settings window's focused field. */
+export const FIELD_COMMAND = 'field-command';
 const MAIN_REQUEST = 'main-request';
 
 /**
@@ -47,7 +50,13 @@ export const platform: Platform = {
       void import('./menu').then((m) => m.setUpMenu());
       void loadDocuments().then((m) => m.startDocuments());
       if (__E2E__) void import('./e2e').then((m) => m.runE2E());
-    } else if (isSettingsWindow && __E2E__) {
+    } else if (isSettingsWindow) {
+      // The menu bar's Undo, Redo, and Select All, typed in a field here (see menu.ts).
+      void listen<string>(FIELD_COMMAND, (e) => {
+        if (isTextField(document.activeElement)) document.execCommand(e.payload);
+      });
+    }
+    if (isSettingsWindow && __E2E__) {
       // The end-to-end test's hooks in the Settings window: say it's up, and when asked, change
       // a setting or ask for test images (to check the main window follows).
       void listen('e2e-settings-act', () => setStatusBar(false));

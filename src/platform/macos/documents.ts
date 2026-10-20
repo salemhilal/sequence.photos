@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getAllWindows, getCurrentWindow } from '@tauri-apps/api/window';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { projectLoaded } from '../../persistence';
 import { createPref } from '../../prefs';
@@ -250,10 +250,14 @@ export async function startDocuments(): Promise<void> {
   projectStore.subscribe(showState);
   ui.subscribe(showState);
 
+  // Closing the main window (its button, ⌘W, or Quit) closes the app: Settings goes too,
+  // since the menu bar belongs to this window and wouldn't work without it.
   const win = getCurrentWindow();
   void win.onCloseRequested(async (e) => {
     e.preventDefault();
-    if (await confirmClose()) await win.destroy();
+    if (!(await confirmClose())) return;
+    for (const other of await getAllWindows()) if (other.label !== win.label) await other.destroy();
+    await win.destroy();
   });
 
   // Files opened from Finder (or dropped on the Dock icon) while the app is running.

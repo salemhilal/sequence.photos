@@ -215,7 +215,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] _(e2e)_ Opens from the toolbar's ruler icon (right, beside Settings), ⌥⌘P, or the empty
       desk's "Layout" link (**[Mac]** also View → Layout…): over the page as the spread
       editor is, on the website and in the Mac app alike (toolbar and status bar in view; ×,
-      Esc, or ⌥⌘P closes it, and the status bar says what the page under it does again).
+      Esc, or ⌥⌘P closes it, and the status bar says what the page under it does again). ⌥⌘P works while typing in a field.
 - [ ] Two tabs (underlined, like Settings'), Page and Guides; the tab is kept while the app is
       open.
 
@@ -356,6 +356,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       shortcuts there changes the main window at once; so does connecting or disconnecting
       Instagram. Advanced → Add test images adds them to the main window's desk.
       `npm run test:app` checks it opens once and that a setting reaches the main window.
+- [ ] **[Mac]** In the Settings window, ⌘Z, ⇧⌘Z, and ⌘A edit the focused field there (not the
+      project behind it, not the desk's photos). A sign-in message at its foot clears after a few
+      seconds. Closing the main window, or ⌘Q, closes Settings too, so the app quits.
 - [ ] **[Mac]** Connecting Instagram from the Settings window: the browser opens; coming back
       connects, shown in the Settings window (and Export in the main window).
 - [ ] Advanced → Test images: a count (1–50, 6 to start) and Add test images. It closes

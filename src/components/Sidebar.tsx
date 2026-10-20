@@ -23,6 +23,29 @@ const MIN_THUMB: Record<Arrangement, number> = { spreads: 120, frames: 60 };
 /** How long spreads take to glide into new columns. */
 const REFLOW_MS = 150;
 
+/** Where a spread's cell sits in the list (scrolling aside), and how wide it is. */
+interface Placed {
+  cell: HTMLElement;
+  x: number;
+  y: number;
+  w: number;
+}
+
+function measureCells(list: HTMLElement): Map<string, Placed> {
+  const origin = list.getBoundingClientRect();
+  const at = new Map<string, Placed>();
+  for (const cell of list.querySelectorAll<HTMLElement>('[data-spread-id]')) {
+    const r = cell.getBoundingClientRect();
+    at.set(cell.dataset.spreadId ?? '', {
+      cell,
+      x: r.left - origin.left,
+      y: r.top - origin.top + list.scrollTop,
+      w: r.width,
+    });
+  }
+  return at;
+}
+
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
@@ -86,39 +109,47 @@ export function Sidebar() {
   const { cols, fit, thumbW } = listLayout(listWidth, sheet.arrangement, columns);
   const grid = cols > 1;
 
+  // Where the cells were just before the columns change (see the glide below).
+  const before = useRef<Map<string, Placed> | null>(null);
+  const remember = () => {
+    before.current = listRef.current && !prefersReducedMotion() ? measureCells(listRef.current) : null;
+  };
+
   useLayoutEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setListWidth(el.clientWidth));
+    const ro = new ResizeObserver(() => {
+      remember();
+      setListWidth(el.clientWidth);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
   // When the columns change, each spread glides from where it was to where it is now
-  // (positions are kept relative to the list, so scrolling between doesn't count).
-  const placed = useRef<{ cols: number; at: Map<string, { x: number; y: number; w: number }> } | null>(null);
+  // (positions are kept relative to the list, so scrolling between doesn't count). Cells are
+  // measured only around a change: just before (the slider moving, the sidebar resizing),
+  // and once the new count is laid out.
   useLayoutEffect(() => {
-    const list = listRef.current;
-    if (!list) return;
-    const origin = list.getBoundingClientRect();
-    const at = new Map<string, { x: number; y: number; w: number }>();
-    const glide = placed.current !== null && placed.current.cols !== cols && !prefersReducedMotion();
-    for (const cell of list.querySelectorAll<HTMLElement>('[data-spread-id]')) {
-      const id = cell.dataset.spreadId ?? '';
-      const r = cell.getBoundingClientRect();
-      const now = { x: r.left - origin.left, y: r.top - origin.top + list.scrollTop, w: r.width };
-      at.set(id, now);
-      const was = glide ? placed.current?.at.get(id) : undefined;
-      if (!was || now.w === 0) continue;
-      cell.animate(
+    const was = before.current;
+    before.current = null;
+    if (!was || !listRef.current) return;
+    for (const [id, now] of measureCells(listRef.current)) {
+      const from = was.get(id);
+      if (!from || now.w === 0) continue;
+      now.cell.animate(
         [
-          { transform: `translate(${was.x - now.x}px, ${was.y - now.y}px) scale(${was.w / now.w})` },
+          { transform: `translate(${from.x - now.x}px, ${from.y - now.y}px) scale(${from.w / now.w})` },
           { transform: 'none' },
         ],
         { duration: REFLOW_MS, easing: 'ease-out' },
       );
     }
-    placed.current = { cols, at };
+  }, [cols]);
+  // A measure taken for a change that didn't come (the sidebar resized within the same
+  // count) isn't kept for a later one.
+  useLayoutEffect(() => {
+    before.current = null;
   });
 
   const onResizeDown = (e: React.PointerEvent) => {
@@ -220,6 +251,7 @@ export function Sidebar() {
     countTimer.current = window.setTimeout(() => setCounting(false), COUNT_MS);
   };
   const pickColumns = (n: number) => {
+    remember();
     setColumns(n);
     sidebarColumnsPref.save(n);
   };

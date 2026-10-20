@@ -1,3 +1,4 @@
+import { useNoticeTimeout } from '../hooks';
 import { ui } from '../ui';
 
 /**
@@ -6,6 +7,7 @@ import { ui } from '../ui';
  */
 export function WindowFoot() {
   const text = ui.use((s) => s.hint ?? s.notice);
+  useNoticeTimeout();
   return (
     <p className="window-foot" role="status">
       {text}

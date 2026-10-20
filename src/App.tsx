@@ -36,6 +36,7 @@ import { SettingsDialog } from './components/SettingsDialog';
 import { Sidebar } from './components/Sidebar';
 import { SpreadEditor } from './components/SpreadEditor';
 import { Tour } from './components/Tour';
+import { useNoticeTimeout } from './hooks';
 import { usePersistence } from './persistence';
 import { tourSeenPref } from './prefs';
 import { startTour } from './tour';
@@ -45,8 +46,6 @@ import { takeOver } from './tabLock';
 import { checkForUpdate, reloadToUpdate } from './update';
 import { findSpread } from './spreads';
 import { TERMS } from './units';
-
-const NOTICE_MS = 6000;
 
 /**
  * A phone or tablet: a touch screen with no mouse or trackpad. The app is built for
@@ -85,11 +84,7 @@ export default function App() {
     if (editing && !findSpread(project, editing)) ui.set({ editingSpreadId: null });
   }, [project, editing]);
 
-  useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => ui.set({ notice: null }), NOTICE_MS);
-    return () => clearTimeout(t);
-  }, [notice]);
+  useNoticeTimeout();
 
   // The first time this browser opens the app to an empty project, show the tour.
   const fresh = loaded && Object.keys(project.photos).length === 0;

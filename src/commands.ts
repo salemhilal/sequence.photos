@@ -147,6 +147,7 @@ export const commands = {
     title: { browser: 'Layout', macos: 'Layout…' },
     bindings: [{ key: 'p', mod: true, alt: true }],
     scope: 'app',
+    inFields: true,
     run: () => toggleModal('layout'),
   },
   // ⌘; as in InDesign and Photoshop.

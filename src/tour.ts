@@ -51,7 +51,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Arrange a spread',
-    body: 'Click a spread to open it. Move and resize photos; they snap to the page edges and guides.',
+    body: 'Double-click a spread, or click its pencil, to open it. Move and resize photos; they snap to the page edges and guides.',
     target: '.modal.editor',
     editor: true,
   },

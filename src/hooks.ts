@@ -85,3 +85,16 @@ export function usePageStatus(text: string | null): void {
   }, []);
   useEffect(() => status.current?.set(text), [text]);
 }
+
+/** How long a notice stays. */
+const NOTICE_MS = 6000;
+
+/** Clear a notice a few seconds after it's shown (each new one starts the wait again). */
+export function useNoticeTimeout(): void {
+  const notice = ui.use((s) => s.notice);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => ui.set({ notice: null }), NOTICE_MS);
+    return () => clearTimeout(t);
+  }, [notice]);
+}
