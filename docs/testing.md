@@ -92,6 +92,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Corner-handle resize keeps proportions; Shift resizes freely.
 - [ ] Arrows nudge ⅛ in, Shift+arrows 1 in; a run of nudges is one undo step.
 - [ ] ⌘A selects all, Delete removes, Escape clears the selection.
+- [ ] _(e2e)_ Option-drag a desk photo (or a selection): copies go where they're dropped, the
+      originals stay, the copies are selected; one undo step; they survive a reload with their
+      own images. Option-drag onto a page places the copies there. Esc mid-drag: no copies.
 - [ ] ⌘D duplicates (offset, selected, "… copy.jpg"). ⌘C then ⌘V pastes copies that step
       further each time; copying in the app and pasting into another app gives the image.
 - [ ] Tap Space with photos selected: Quick Look (holding Space doesn't). ←/→ browse with a
@@ -146,7 +149,10 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 ## Spread and frame editor
 
 - [ ] The header has only the guides toggle and ×; the status bar says "Shift: free resize ·
-      Option: no snapping · Arrows nudge".
+      Option: no snapping, or drag a copy · Arrows nudge".
+- [ ] _(e2e)_ Option-drag a placed photo: a copy ("… copy.jpg", selected) goes where it's dropped
+      and the original stays; Option held means no snapping (let go of it mid-drag to snap). One
+      undo step. Option-drag it onto the desk strip: the copy goes to the desk.
 - [ ] _(e2e)_ Under the spread, ‹ "2 / 4" › (its place among all spreads or frames, not its page
       numbers); ‹ › (and ←/→ with nothing selected) go back and forth, disabled at the ends.
 - [ ] _(e2e)_ Pinch or ⌘-scroll zooms around the pointer; scrolling pans; dragging, snapping, and

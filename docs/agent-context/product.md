@@ -44,18 +44,19 @@ Clicking a guide highlights its settings. Guides can be hidden for now (not save
 
 ⌘ on the Mac, Ctrl elsewhere. Holding the modifier shows each button's shortcut (a setting).
 
-| Action                   | Shortcut                       |
-| ------------------------ | ------------------------------ |
-| Add photos               | ⌘I                             |
-| Desk, Preview, Export    | ⌥⌘1, ⌥⌘2 (or ⌘P), ⌥⌘3 (or ⇧⌘E) |
-| Layout                   | ⌥⌘P                            |
-| Settings                 | ⌘,                             |
-| Open, save project       | ⌘O, ⌘S                         |
-| Show or hide the sidebar | ⌘B                             |
-| Show or hide guides      | ⌘;                             |
-| Copy, paste, duplicate   | ⌘C, ⌘V, ⌘D                     |
-| Quick Look               | Space                          |
-| Undo, redo               | ⌘Z, ⇧⌘Z (Ctrl+Y)               |
+| Action                   | Shortcut                            |
+| ------------------------ | ----------------------------------- |
+| Add photos               | ⌘I                                  |
+| Desk, Preview, Export    | ⌥⌘1, ⌥⌘2 (or ⌘P), ⌥⌘3 (or ⇧⌘E)      |
+| Layout                   | ⌥⌘P                                 |
+| Settings                 | ⌘,                                  |
+| Open, save project       | ⌘O, ⌘S                              |
+| Show or hide the sidebar | ⌘B                                  |
+| Show or hide guides      | ⌘;                                  |
+| Copy, paste, duplicate   | ⌘C, ⌘V, ⌘D                          |
+| Duplicate by dragging    | Option-drag (desk or spread editor) |
+| Quick Look               | Space                               |
+| Undo, redo               | ⌘Z, ⇧⌘Z (Ctrl+Y)                    |
 
 The code is the source of truth (`src/commands.ts`; the menus in `src/components/Menu.tsx` and `src/platform/macos/menu.ts`).
 

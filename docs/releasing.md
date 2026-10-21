@@ -38,7 +38,8 @@ The App Store workflow also runs when a GitHub release is published by hand (its
 certificates, provisioning profile, and API key it needs are Actions secrets; its header lists
 them.
 
-Before a release, go through [testing.md](testing.md). If the UI changed, retake the screenshots
+To get a release ready (patch notes, screenshots, checks), coding agents use the `release-prep`
+skill in `.claude/skills/`. Before a release, go through [testing.md](testing.md). If the UI changed, retake the screenshots
 (`npm run screenshots`) and upload `docs/app-store/*.png` to the version in App Store Connect.
 
 ### By hand

@@ -1,5 +1,5 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { bump, dropPhotos, importPhotos, raise } from '../actions';
+import { bump, copiesOf, dropPhotos, importPhotos, placeCopies, raise, showCopies, storeCopies } from '../actions';
 import { addPhotos, runCommand, shortcutLabel } from '../commands';
 import { isProjectFile, openProjectFile } from '../project';
 import { clearGhost, startDrag, trackGhost } from '../drag';
@@ -145,10 +145,19 @@ export function Desk() {
     const current = ui.get().selection;
     const wasSelected = current.includes(p.photoId);
     if (!wasSelected) ui.set({ selection: toggle ? [...current, p.photoId] : [p.photoId] });
-    const ids = ui.get().selection;
+    const picked = ui.get().selection;
+    // Option-drag drags out copies, leaving the originals where they are.
+    const copies = e.altKey ? copiesOf(picked) : [];
+    const ids = copies.length ? copies.map((c) => c.id) : picked;
     const k = DESK_PPI * ui.get().view.zoom;
     const ghostW = Math.min(GHOST_MAX, p.w * k);
     const ghost = { photoId: p.photoId, count: ids.length, w: ghostW, h: (ghostW * p.h) / p.w };
+    const cancel = () => {
+      clearGhost();
+      setEdge(null);
+      projectStore.cancel();
+      if (copies.length) ui.set({ selection: picked });
+    };
     // The desk is where these photos already are, so its drop border only
     // appears near the edge, as a hint that you're about to leave it.
     const deskEl = ref.current;
@@ -161,14 +170,20 @@ export function Desk() {
     };
 
     startDrag(e, {
-      onStart: () => projectStore.begin(),
+      onStart: () => {
+        projectStore.begin();
+        if (!copies.length) return;
+        showCopies(copies);
+        ui.set({ selection: ids });
+      },
       onMove: ({ e: ev, dx, dy }) => {
         const target = trackGhost(ev, null);
         setEdge(ev);
         ui.set({ ghost: target?.kind === 'desk' ? null : { ...ghost, clientX: ev.clientX, clientY: ev.clientY } });
         const set = new Set(ids);
-        const ordered = [...projectStore.project.pile].sort((a, b) => a.z - b.z);
         projectStore.preview((d) => {
+          placeCopies(d, copies);
+          const ordered = [...d.pile].sort((a, b) => a.z - b.z);
           for (const q of ordered) {
             if (!set.has(q.photoId)) continue;
             const item = d.pile.find((i) => i.photoId === q.photoId);
@@ -197,18 +212,18 @@ export function Desk() {
           // Moved around the desk: keep the new positions.
           projectStore.end();
         } else if (target) {
-          projectStore.preview((d) => void dropPhotos(d, target, ids));
+          projectStore.preview((d) => {
+            placeCopies(d, copies);
+            dropPhotos(d, target, ids);
+          });
           projectStore.end();
           ui.set({ selection: [] });
         } else {
-          projectStore.cancel();
+          return cancel();
         }
+        void storeCopies(copies);
       },
-      onCancel: () => {
-        clearGhost();
-        setEdge(null);
-        projectStore.cancel();
-      },
+      onCancel: cancel,
     });
   };
 

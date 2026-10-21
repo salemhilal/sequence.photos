@@ -1,6 +1,16 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Eye, EyeOff, X } from 'lucide-react';
-import { bump, dropPhotos, putInPile, putOnPage, raise } from '../actions';
+import {
+  bump,
+  copiesOf,
+  dropPhotos,
+  placeCopies,
+  putInPile,
+  putOnPage,
+  raise,
+  showCopies,
+  storeCopies,
+} from '../actions';
 import { clearGhost, startDrag, trackGhost } from '../drag';
 import {
   borderBox,
@@ -104,7 +114,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const scale = fitScale * view.zoom;
 
   // How to move and resize, in the status bar.
-  usePageStatus(`Shift: free resize · ${isMac ? 'Option' : 'Alt'}: no snapping · Arrows nudge`);
+  usePageStatus(`Shift: free resize · ${isMac ? 'Option' : 'Alt'}: no snapping, or drag a copy · Arrows nudge`);
 
   const selectedItem = spread?.items.find((i) => i.photoId === selected) ?? null;
 
@@ -170,15 +180,30 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
     e.stopPropagation();
     setSelected(p.photoId);
     const start: Rect = { x: p.x, y: p.y, w: p.w, h: p.h };
+    // Option-drag drags out a copy, leaving the original where it is.
+    const copies = e.altKey ? copiesOf([p.photoId]) : [];
+    const id = copies[0]?.id ?? p.photoId;
+    const cancel = () => {
+      setSnapHit(null);
+      clearGhost();
+      projectStore.cancel();
+      setSelected(p.photoId);
+    };
     startDrag(e, {
-      onStart: () => projectStore.begin(),
+      onStart: () => {
+        projectStore.begin();
+        if (!copies.length) return;
+        showCopies(copies);
+        setSelected(id);
+      },
       onMove: ({ e: ev, dx, dy }) => {
         trackGhost(ev, null);
         const moved = { ...start, x: start.x + dx / scale, y: start.y + dy / scale };
         const { rect, hit } = ev.altKey ? { rect: moved, hit: null } : snapMove(moved, lines, threshold);
         setSnapHit(hit);
         projectStore.preview((d) => {
-          const item = findItem(d, spreadId, p.photoId);
+          placeCopies(d, copies);
+          const item = findItem(d, spreadId, id);
           if (!item) return;
           item.x = rect.x;
           item.y = rect.y;
@@ -199,16 +224,16 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
         clearGhost();
         // Moves within the spread stay put; dropping on the desk strip returns the photo to the desk.
         if (target?.kind === 'strip') {
-          projectStore.preview((d) => void dropPhotos(d, target, [p.photoId]));
+          projectStore.preview((d) => {
+            placeCopies(d, copies);
+            dropPhotos(d, target, [id]);
+          });
           setSelected(null);
         }
         projectStore.end();
+        void storeCopies(copies);
       },
-      onCancel: () => {
-        setSnapHit(null);
-        clearGhost();
-        projectStore.cancel();
-      },
+      onCancel: cancel,
     });
   };
 
