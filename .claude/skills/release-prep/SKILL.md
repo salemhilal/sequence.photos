@@ -1,6 +1,6 @@
 ---
 name: release-prep
-description: Get Sequence ready to release a new version (web and Mac App Store) — check branches and CI, write patch notes, decide whether screenshots need retaking, run the checks, and line up the Release workflow. Use when asked to prepare, prep, or get ready for a release, or for patch notes.
+description: Get Sequence ready to release a new version (web and Mac App Store) — check branches and CI, write patch notes, decide whether screenshots need retaking, run the checks, run the Release workflow on the user's go-ahead, and end with everything the App Store Connect forms need. Use when asked to prepare, prep, or get ready for a release, or for patch notes.
 ---
 
 # Preparing a release
@@ -17,8 +17,11 @@ ready and hands the user the decisions. It never publishes by itself.
 - Unmerged work: open PRs (`gh pr list`), and branches ahead of `main`
   (`git branch -r --no-merged origin/main`). Ask which of them belong in the release.
 - CI on what will ship: `gh run list --branch <branch> --limit 4` (CI and Mac app both green).
-- The new version: ask, or propose one (major for a new model or big UI change, minor for
-  features, patch for fixes). The workflow refuses one that isn't higher, or is tagged.
+- The new version: ask the user whether this is a **major**, **minor**, or **patch** bump,
+  saying the current version and what each would make it (e.g. "Now 1.2.3: major → 2.0.0,
+  minor → 1.3.0, patch → 1.2.4"), with a recommendation from what changed (major for a new
+  model or big UI change, minor for features, patch for fixes). Use the AskUserQuestion tool
+  if it's there. The workflow refuses a version that isn't higher, or is already tagged.
 
 ## 2. Patch notes
 
@@ -78,13 +81,37 @@ Then go through `docs/testing.md`'s release items, and list the by-hand checks f
 ## 6. Hand-off
 
 Summarize: what ships, the patch notes, screenshots (current or retaken), checks, and
-anything blocking. Then, each only on the user's explicit go-ahead:
+anything blocking. Then, each only on the user's explicit go-ahead ("ship it" covers all
+three):
 
 1. Merge the release branch into `main` (merge commit; this deploys the website).
-2. Dry run: `gh workflow run release.yml -f version=X.Y.Z -f dry_run=true`, and report it.
-3. The real run: `gh workflow run release.yml -f version=X.Y.Z -f notes="…"`.
-4. What's left in App Store Connect for the user: pick the build, paste "What's New",
-   upload `docs/app-store/*.png` if retaken, review notes, submit.
+2. Dry run: `gh workflow run release.yml -f version=X.Y.Z -f dry_run=true`; wait for it
+   (`gh run watch <id> --exit-status`) and report it.
+3. The real run: `gh workflow run release.yml -f version=X.Y.Z -f notes="…"` (the GitHub
+   notes). Wait for it in the background (`gh run watch`); you're notified when it ends.
+
+## 7. The App Store forms (after the upload)
+
+When the real run finishes, check it did everything: both jobs green
+(`gh run view <id> --json jobs`), the tag minted (`git ls-remote --tags origin vX.Y.Z`), the
+GitHub release published (`gh release view vX.Y.Z`), and the App Store job's upload step
+succeeded. If anything failed, report it in full instead, with the failing step's log.
+
+Then open the screenshots folder in Finder (the `reveal_path` tool on `docs/app-store`), and
+make the **last message** of the run everything the user needs for App Store Connect, ready
+to paste, and nothing else after it:
+
+- **Version:** X.Y.Z, and the build to pick (it appears under TestFlight, then in the
+  version's Build section; processing can take a few minutes after upload).
+- **What's New in This Version:** the App Store patch notes in a code block, plain text with
+  "•" bullets (no markdown).
+- **Screenshots:** the folder (revealed in Finder), the files in order, and whether they're
+  new (upload, replacing the old ones) or unchanged (leave them).
+- **App Review notes**, if anything reviewers need changed (e.g. how to try Instagram);
+  otherwise say none are needed.
+- **Anything else that changed and needs a form:** privacy answers, age rating, the
+  description or keywords for a new headline feature. Say "nothing else" if so.
+- Then: submit for review.
 
 ## Rules
 
