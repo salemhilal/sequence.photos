@@ -213,7 +213,7 @@ try {
 
   // 4. Quick Look on a desk photo.
   if (wanted('quick')) {
-    await ui(({ openQuickLook }) => openQuickLook(['p-window', 'p-reflections', 'p-hand']));
+    await ui(({ openQuickLook }) => openQuickLook(['p-reflections', 'p-window', 'p-hand']));
     await shot('4-quick-look');
     await ui(({ closeQuickLook }) => closeQuickLook());
   }
