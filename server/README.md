@@ -356,7 +356,7 @@ The same rules as the logs: users and batches are the logs' short keyed hashes, 
 an Instagram id, username, token, or batch id. User tags are keyed by `SERVER_SECRET`, so
 rotating it starts users' counts over. A failed write never fails the request.
 
-To run the report, put these in `server/.env.metrics` (git-ignored) or the environment:
+To run the report, put these in `server/.env.local` (git-ignored, as every `.env*.local` is) or the environment:
 
 ```
 CLOUDFLARE_ACCOUNT_ID=…   # the dashboard's Account home → Account ID
@@ -562,7 +562,7 @@ wrangler.jsonc
    honours the conditional put). Check that the rate-limit bindings work on the free
    plan (an 11th `/auth/redeem` from one IP within a minute should get `429`).
 7. For `npm run metrics`: an API token with Account Analytics: Read, in
-   `server/.env.metrics` (see Metrics). The datasets need no setup: the first write makes
+   `server/.env.local` (see Metrics). The datasets need no setup: the first write makes
    them.
 8. Later, for App Review: privacy policy URL, the Meta callback URLs above, a screencast
    of connecting and posting.

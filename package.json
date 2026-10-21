@@ -22,7 +22,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:app": "node scripts/e2e-app.mjs",
-    "check": "npm run format:check && npm run lint && tsc -b && npm test",
+    "check": "node scripts/check-env.mjs && npm run format:check && npm run lint && tsc -b && npm test",
     "setup": "npm ci --prefix server && playwright install chromium webkit",
     "lint": "oxlint",
     "format": "prettier --write .",

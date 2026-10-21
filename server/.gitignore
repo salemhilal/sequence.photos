@@ -1,6 +1,4 @@
 node_modules/
 .wrangler/
-.dev.vars*
-!.dev.vars.example
-.env*
+# Secrets (.dev.vars, .env*.local) are ignored by the repository's .gitignore.
 coverage/
