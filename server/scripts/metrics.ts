@@ -2,7 +2,7 @@
 // through Cloudflare's SQL API. See README "Metrics" for the columns.
 //
 // Needs CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN (a token with Account Analytics:
-// Read), from the environment or `server/.env.local`. `-- --dev` reads the dev Worker's.
+// Read), from the environment or `server/.env.metrics.local`. `-- --dev` reads the dev Worker's.
 
 import * as v from 'valibot';
 

@@ -7,7 +7,7 @@
     "dev": "wrangler dev --env dev",
     "deploy": "wrangler deploy",
     "deploy:dev": "wrangler deploy --env dev",
-    "metrics": "node --env-file-if-exists=.env.local scripts/metrics.ts",
+    "metrics": "node --env-file-if-exists=.env.metrics.local scripts/metrics.ts",
     "test": "vitest run",
     "typecheck": "wrangler types --strict-vars=false --check && tsc --noEmit && tsc --noEmit -p scripts",
     "types": "wrangler types --strict-vars=false",
