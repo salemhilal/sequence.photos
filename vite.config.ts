@@ -2,11 +2,16 @@
 import react from '@vitejs/plugin-react';
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv, type Plugin, type ResolvedConfig } from 'vite';
 import { VitePWA, type VitePluginPWAAPI } from 'vite-plugin-pwa';
+
+/** The repository, and the website's pages (site/): Vite's root, so its pages are served from it. */
+const repo = fileURLToPath(new URL('.', import.meta.url));
+const site = resolve(repo, 'site');
+const dist = resolve(repo, 'dist');
 
 const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -66,18 +71,18 @@ function webSecurityHeaders(mode: string): Plugin {
     name: 'web-security-headers',
     // After the HTML pages are written, so their final inline scripts are hashed.
     writeBundle(options) {
-      const dir = options.dir ?? 'dist';
+      const dir = options.dir ?? dist;
       const pages = readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.html'));
       const inline = pages.flatMap((page) =>
         [...readFileSync(join(dir, page), 'utf8').matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(
           (m) => m[1] ?? '',
         ),
       );
-      const env = loadEnv(mode, process.cwd(), 'VITE_');
+      const env = loadEnv(mode, repo, 'VITE_');
       writeFileSync(join(dir, '_headers'), securityHeaders(env, inline));
     },
     configurePreviewServer(server) {
-      const file = 'dist/_headers';
+      const file = join(dist, '_headers');
       if (!existsSync(file)) return;
       const headers = readFileSync(file, 'utf8')
         .split('\n')
@@ -96,6 +101,9 @@ export default defineConfig(({ mode }) => {
   const app = mode === 'app';
   let resolved: ResolvedConfig;
   return {
+    // The website's pages are in site/; the app's code in src/, and .env, at the repository's root.
+    root: site,
+    envDir: repo,
     plugins: [
       react(),
       // Works offline: a service worker (production builds only) caches the whole app,
@@ -168,27 +176,35 @@ export default defineConfig(({ mode }) => {
     // Where the website and the Mac app differ (see src/platform/types.ts): each build
     // gets its own implementation, so the app's code is never part of the website.
     resolve: {
-      alias: {
-        '#platform': fileURLToPath(
-          new URL(app ? './src/platform/macos/index.ts' : './src/platform/browser.ts', import.meta.url),
-        ),
-      },
+      alias: [
+        {
+          find: '#platform',
+          replacement: fileURLToPath(
+            new URL(app ? './src/platform/macos/index.ts' : './src/platform/browser.ts', import.meta.url),
+          ),
+        },
+        // The app's page (site/app/index.html) loads /src/main.tsx: the repository's src/,
+        // outside Vite's root.
+        { find: /^\/src\//, replacement: `${resolve(repo, 'src')}/` },
+      ],
     },
     build: {
+      outDir: dist,
+      emptyOutDir: true,
       rollupOptions: {
         // The website: a landing page (/), the app (/app/), a privacy policy (/privacy/, which
         // the Mac app links to), and a support page (/support/). The Mac app is just the app.
         input: app
-          ? 'app/index.html'
+          ? resolve(site, 'app/index.html')
           : {
-              landing: 'index.html',
-              app: 'app/index.html',
-              privacy: 'privacy/index.html',
-              support: 'support/index.html',
+              landing: resolve(site, 'index.html'),
+              app: resolve(site, 'app/index.html'),
+              privacy: resolve(site, 'privacy/index.html'),
+              support: resolve(site, 'support/index.html'),
             },
       },
     },
-    // public/ is the website's (its icons, share image, and old service worker's
+    // site/public/ is the website's (its icons, share image, and old service worker's
     // remover); the Mac app uses none of it. See scripts/check-app-bundle.mjs.
     publicDir: app ? false : 'public',
     // Pre-bundle lucide-react with React up front; discovering it mid-session
@@ -206,6 +222,7 @@ export default defineConfig(({ mode }) => {
     // Tauri's dev server output reads better without Vite clearing the terminal.
     clearScreen: false,
     test: {
+      root: repo,
       environment: 'node',
       include: ['src/**/*.test.ts'],
     },
