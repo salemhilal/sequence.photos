@@ -79,7 +79,7 @@ async function scenarios(dir: string): Promise<void> {
   check('shows photos on the desk', (shown?.naturalWidth ?? 0) > 0);
   await document.fonts.ready;
   check('loads its fonts', document.fonts.check('13px "Inter Tight"') && document.fonts.check('12px "IBM Plex Mono"'));
-  // Checked after relaunching: set before first paint by app/index.html's inline script.
+  // Checked after relaunching: set before first paint by site/app/index.html's inline script.
   localStorage.setItem('photobook-theme', 'dark');
 
   // Save.

@@ -2,7 +2,7 @@ import { DEV_SERVER_URL, INSTAGRAM, SERVER_URL } from './config';
 import { createPref } from './prefs';
 
 /**
- * Sequence's server (the sequence-server repo), which the app uses to post to Instagram.
+ * Sequence's server (`server/`), which the app uses to post to Instagram.
  * The default is SERVER_URL (config.ts), or DEV_SERVER_URL when the app itself runs on
  * this computer (`npm run dev`), since only the development server sends sign-ins back
  * there. Settings → Advanced can choose either, or one on this computer (e.g. a local

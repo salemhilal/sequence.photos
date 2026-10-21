@@ -356,7 +356,7 @@ The same rules as the logs: users and batches are the logs' short keyed hashes, 
 an Instagram id, username, token, or batch id. User tags are keyed by `SERVER_SECRET`, so
 rotating it starts users' counts over. A failed write never fails the request.
 
-To run the report, put these in `server/.env.metrics` (git-ignored) or the environment:
+To run the report, copy `server/.env.metrics.local.example` to `server/.env.metrics.local` (git-ignored, as every `.env*.local` is) and fill it in, or set these in the environment. Not in `server/.env` or `.env.local`: wrangler loads those into its own environment, so its deploys would use this read-only token instead of `wrangler login`.
 
 ```
 CLOUDFLARE_ACCOUNT_ID=…   # the dashboard's Account home → Account ID
@@ -492,7 +492,7 @@ are rejected at sign-in.)
   7. `DELETE` the upload batch, only after publishing succeeds or the post is abandoned
      (in a `finally`), with `&result=` saying which (see Metrics).
   8. Show the post: `GET /<mediaId>?fields=permalink`.
-- **Privacy policy** (`privacy/index.html`) and the App Store privacy
+- **Privacy policy** (`site/privacy/index.html`) and the App Store privacy
   answers: when you post to Instagram, the frames are uploaded to Sequence's server for
   Instagram to fetch, and deleted after posting (automatically within about an hour and
   a half otherwise); your Instagram token stays on your device.
@@ -562,7 +562,7 @@ wrangler.jsonc
    honours the conditional put). Check that the rate-limit bindings work on the free
    plan (an 11th `/auth/redeem` from one IP within a minute should get `429`).
 7. For `npm run metrics`: an API token with Account Analytics: Read, in
-   `server/.env.metrics` (see Metrics). The datasets need no setup: the first write makes
+   `server/.env.metrics.local` (see Metrics). The datasets need no setup: the first write makes
    them.
 8. Later, for App Review: privacy policy URL, the Meta callback URLs above, a screencast
    of connecting and posting.
@@ -606,6 +606,8 @@ Meta app's secret, and the dev Meta app's redirect URI set to the `CALLBACK_URL`
 | `npm run typecheck` | checks `worker-configuration.d.ts` is current, then `tsc` |
 | `npm run lint` | typescript-eslint, strict and type-aware; no `any`, unsafe access, non-null assertions, or `as` |
 | `npm run format` / `format:check` | prettier |
+| `npm run check` | all of the above, as CI runs them |
+| `npm run deploy` / `deploy:dev` | deploy production, or the `dev` environment (needs `wrangler login`) |
 | `npm run types` | regenerates `worker-configuration.d.ts` (the `Env` type) from `wrangler.jsonc`; run after any change to it |
 
 A local server can't post to Instagram for real: its frame URLs are on `localhost`,

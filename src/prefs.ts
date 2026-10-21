@@ -42,7 +42,7 @@ export function createPref<T>(
 export const SIDEBAR_DEFAULT_WIDTH = 284;
 export const SIDEBAR_MIN_WIDTH = 240;
 
-// The theme and desk keys are also read by the inline script in app/index.html, before first paint.
+// The theme and desk keys are also read by the inline script in site/app/index.html, before first paint.
 export const themePref = createPref<ThemePref>('photobook-theme', 'system', (raw) =>
   raw === 'light' || raw === 'dark' ? raw : undefined,
 );
