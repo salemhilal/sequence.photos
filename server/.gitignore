@@ -3,4 +3,5 @@ node_modules/
 # The server commits no env files: wrangler reads .env files, which would hold Cloudflare tokens.
 # (Secrets in .dev.vars and .env*.local are also ignored by the repository's .gitignore.)
 .env*
+!.env*.example
 coverage/

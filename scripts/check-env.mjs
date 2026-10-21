@@ -11,9 +11,9 @@ const SECRETISH = /SECRET|TOKEN|PASSWORD|PRIVATE|CREDENTIAL|(^|_)KEY($|_)/;
 const envFile = (f) => /^\.env($|\.)|^\.dev\.vars/.test(basename(f));
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).split('\n').filter(envFile);
 
-const unignored = git('ls-files', '--others', '--exclude-standard').map(
-  (f) => `${f}: isn't committed or git-ignored; rename it .env.local if it holds secrets`,
-);
+const unignored = git('ls-files', '--others', '--exclude-standard')
+  .filter((f) => !f.endsWith('.example'))
+  .map((f) => `${f}: isn't committed or git-ignored; rename it .env.local if it holds secrets`);
 
 const committed = git('ls-files').flatMap((file) => {
   if (file.endsWith('.example') || !existsSync(file)) return [];

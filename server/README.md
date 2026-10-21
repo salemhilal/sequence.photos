@@ -356,7 +356,7 @@ The same rules as the logs: users and batches are the logs' short keyed hashes, 
 an Instagram id, username, token, or batch id. User tags are keyed by `SERVER_SECRET`, so
 rotating it starts users' counts over. A failed write never fails the request.
 
-To run the report, put these in `server/.env.metrics.local` (git-ignored, as every `.env*.local` is) or the environment. Not in `server/.env` or `.env.local`: wrangler loads those into its own environment, so its deploys would use this read-only token instead of `wrangler login`.
+To run the report, copy `server/.env.metrics.local.example` to `server/.env.metrics.local` (git-ignored, as every `.env*.local` is) and fill it in, or set these in the environment. Not in `server/.env` or `.env.local`: wrangler loads those into its own environment, so its deploys would use this read-only token instead of `wrangler login`.
 
 ```
 CLOUDFLARE_ACCOUNT_ID=…   # the dashboard's Account home → Account ID
