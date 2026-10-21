@@ -28,7 +28,8 @@ dist-ssr
 /playwright-report/
 
 # Secrets, anywhere in the repository: every file meant for them is named so it's ignored.
-# .env.local (and .env.*.local) for scripts and Vite; .dev.vars for the server's Worker.
+# .env.local (and .env.*.local) for scripts; .dev.vars for the server's Worker. Vite reads
+# .env.local too and ships its VITE_ values, so no secret there starts with VITE_.
 # Committed .env files are public (scripts/check-env.mjs checks).
 .env*.local
 .dev.vars*

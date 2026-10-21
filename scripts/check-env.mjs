@@ -1,28 +1,33 @@
-// Fails if a committed env file could hold a secret. Committed .env files ship in the
-// website and the Mac app, so they may only set public VITE_ values; secrets go in files
-// named to be git-ignored (.env.local, .env.*.local, .dev.vars). Prints names, never values.
+// Fails if an env file could leak a secret: a committed one that sets anything but public
+// VITE_ values (they ship in the website and the Mac app), or one that's neither committed
+// nor git-ignored, so `git add -A` would pick it up. Secrets go in files named to be
+// git-ignored (.env.local, .env.*.local, .dev.vars). Prints names, never values.
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 
 const SECRETISH = /SECRET|TOKEN|PASSWORD|PRIVATE|CREDENTIAL|(^|_)KEY($|_)/;
-const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
-  .split('\n')
-  .filter((f) => /^\.env|^\.dev\.vars/.test(basename(f)) && !f.endsWith('.example'));
+const envFile = (f) => /^\.env($|\.)|^\.dev\.vars/.test(basename(f));
+const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).split('\n').filter(envFile);
 
-const problems = files.flatMap((file) => {
+const unignored = git('ls-files', '--others', '--exclude-standard').map(
+  (f) => `${f}: isn't committed or git-ignored; rename it .env.local if it holds secrets`,
+);
+
+const committed = git('ls-files').flatMap((file) => {
+  if (file.endsWith('.example') || !existsSync(file)) return [];
   if (/\.local$|^\.dev\.vars/.test(basename(file))) return [`${file}: is a secrets file, and shouldn't be committed`];
   return readFileSync(file, 'utf8')
     .split('\n')
     .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#'))
+    .filter((line) => /^(export\s+)?[A-Za-z_]\w*\s*=/.test(line))
     .map(
       (line) =>
         line
+          .replace(/^export\s+/, '')
           .split('=')[0]
-          ?.replace(/^export\s+/, '')
-          .trim() ?? '',
+          ?.trim() ?? '',
     )
     .flatMap((name) => {
       if (!name.startsWith('VITE_')) return [`${file}: ${name} isn't a public VITE_ value`];
@@ -31,7 +36,8 @@ const problems = files.flatMap((file) => {
     });
 });
 
+const problems = [...unignored, ...committed];
 if (problems.length) {
-  console.error(`Committed env files are public; put secrets in .env.local:\n  ${problems.join('\n  ')}`);
+  console.error(`Env files that could leak a secret:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }

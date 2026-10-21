@@ -57,7 +57,7 @@ Clicking a guide highlights its settings. Guides can be hidden for now (not save
 | Quick Look               | Space                          |
 | Undo, redo               | ⌘Z, ⇧⌘Z (Ctrl+Y)               |
 
-The code is the source of truth (`src/commands.ts`, `src/menu.ts`).
+The code is the source of truth (`src/commands.ts`; the menus in `src/components/Menu.tsx` and `src/platform/macos/menu.ts`).
 
 ## The tour
 

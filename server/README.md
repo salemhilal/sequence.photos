@@ -606,6 +606,8 @@ Meta app's secret, and the dev Meta app's redirect URI set to the `CALLBACK_URL`
 | `npm run typecheck` | checks `worker-configuration.d.ts` is current, then `tsc` |
 | `npm run lint` | typescript-eslint, strict and type-aware; no `any`, unsafe access, non-null assertions, or `as` |
 | `npm run format` / `format:check` | prettier |
+| `npm run check` | all of the above, as CI runs them |
+| `npm run deploy` / `deploy:dev` | deploy production, or the `dev` environment (needs `wrangler login`) |
 | `npm run types` | regenerates `worker-configuration.d.ts` (the `Env` type) from `wrangler.jsonc`; run after any change to it |
 
 A local server can't post to Instagram for real: its frame URLs are on `localhost`,

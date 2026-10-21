@@ -96,7 +96,8 @@ through [docs/testing.md](docs/testing.md): what's automated and what to check b
 
 Secrets live only in files whose names are git-ignored everywhere in the repo:
 `.env.local` (or `.env.*.local`) and the server's `.dev.vars`. Committed `.env` files hold
-public `VITE_` values only, since they ship in the website and the app;
+public `VITE_` values only, since they ship in the website and the app. Vite reads
+`.env.local` as well and ships its `VITE_` values, so no secret there starts with `VITE_`.
 `scripts/check-env.mjs` checks that in `npm run check` and CI.
 
 ## Directories

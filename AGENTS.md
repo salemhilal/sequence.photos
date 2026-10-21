@@ -74,4 +74,5 @@ when the Mac app, saving, or exports change. The first `test:e2e` needs
   `wrangler secret put`.
 - Local secrets go only in git-ignored names: `.env.local` (or `.env.*.local`), or the
   server's `.dev.vars`. Committed `.env` files ship in the app, so they hold public `VITE_`
-  values only (`scripts/check-env.mjs` checks).
+  values only (`scripts/check-env.mjs` checks). Vite ships `VITE_` values from `.env.local`
+  too, so no secret's name starts with `VITE_`.

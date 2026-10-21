@@ -20,7 +20,7 @@ export const REPO_URL = required('VITE_REPO_URL', env.VITE_REPO_URL);
 export const APP_STORE_URL = required('VITE_APP_STORE_URL', env.VITE_APP_STORE_URL);
 
 /**
- * Sequence's servers (the sequence-server repo), for posting to Instagram: the one the
+ * Sequence's servers (`server/`), for posting to Instagram: the one the
  * app uses by default, and the development one Settings → Advanced can switch to.
  */
 export const SERVER_URL = required('VITE_SERVER_URL', env.VITE_SERVER_URL);

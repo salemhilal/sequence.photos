@@ -12,7 +12,8 @@ You need Git and Node 24 (the version in `.nvmrc`; anything from 20.19 works).
 git clone git@github.com:salemhilal/sequence.photos.git
 cd sequence.photos
 nvm install      # or: brew install node@24
-npm install
+npm ci
+npm run setup    # the server's packages, and the browsers for npm run test:e2e
 npm run dev      # → http://localhost:5175 (the landing page; the app is at /app/)
 npm test
 ```
@@ -22,7 +23,7 @@ is checked in.
 
 ## The Mac app
 
-On a Mac (macOS 13 or later), you also need:
+On a Mac (macOS 14 or later), you also need:
 
 1. **The Xcode Command Line Tools**, for the compiler and code signing:
    ```bash
