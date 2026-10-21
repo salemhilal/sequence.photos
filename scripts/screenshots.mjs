@@ -1,5 +1,5 @@
 // Takes the app's screenshots (npm run screenshots): the App Store's, the README's, and the
-// landing page's, from the Mac app's interface with the six sample photos in src/tour/.
+// landing page's, from the Mac app's interface with the six photos in assets/screenshots/.
 //
 // It runs the Mac build's web side (vite --mode app, on :5176) in headless Chromium at
 // 1440 × 900 pt @2x, with Tauri stubbed out and the window's traffic lights drawn in, so
@@ -7,8 +7,7 @@
 //   docs/app-store/1-desk.png … 5-export.png   2880 × 1800, for App Store Connect
 //   docs/screenshot.jpg                        the desk, for the README
 //   site/landing/landing-*.jpg                 2000 × 1250, the landing page's four
-// Resizing uses sips, so it runs on a Mac. `--only desk,preview` takes some of them;
-// `--photos <dir>` uses larger copies of the samples (same names) for sharper shots.
+// Resizing uses sips, so it runs on a Mac. `--only desk,preview` takes some of them.
 
 import { chromium } from '@playwright/test';
 import { execFileSync, spawn } from 'node:child_process';
@@ -21,7 +20,9 @@ const PORT = 5176;
 /** Where the dev server serves src/ from: the app's own URLs, so imports here share its modules. */
 const SRC_URL = `/@fs${fileURLToPath(new URL('../src/', import.meta.url))}`;
 const APP_URL = `http://localhost:${PORT}/app/index.html`;
-const SAMPLES = ['lily', 'taxi', 'spire', 'reflections', 'door', 'leaves'];
+/** The photos, assets/screenshots/<name>.jpg: large, so none is shown bigger than it is. */
+const PHOTOS = ['lily', 'taxi', 'dancers', 'hand', 'reflections', 'park'];
+const PHOTOS_DIR = fileURLToPath(new URL('../assets/screenshots/', import.meta.url));
 /** The shots, in the App Store's order, and which of them the landing page shows (as what). */
 const SHOTS = [
   { name: '1-desk', landing: 'landing-desk' },
@@ -30,8 +31,6 @@ const SHOTS = [
   { name: '4-quick-look', landing: 'landing-quick-look' },
   { name: '5-export' },
 ];
-/** A folder of larger copies of the samples (lily.jpg, …), for sharper shots; else src/tour/. */
-const photosDir = process.argv.includes('--photos') ? process.argv[process.argv.indexOf('--photos') + 1] : null;
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null;
 const wanted = (name) => !only || only.some((o) => name.includes(o));
 
@@ -97,44 +96,39 @@ try {
   await page.waitForSelector('.desk');
 
   // The book: three photos on the desk, three placed on its four pages, saved as "City Walks".
-  const samples = Object.fromEntries(
-    SAMPLES.map((n) => [
-      n,
-      readFileSync(photosDir ? join(photosDir, `${n}.jpg`) : new URL(`../src/tour/${n}.jpg`, import.meta.url)).toString(
-        'base64',
-      ),
-    ]),
+  const files = Object.fromEntries(
+    PHOTOS.map((n) => [n, readFileSync(join(PHOTOS_DIR, `${n}.jpg`)).toString('base64')]),
   );
   await page.evaluate(
-    async ([SRC, samples]) => {
+    async ([SRC, files]) => {
       const { projectStore, emptyProject } = await import(SRC + 'store.ts');
       const { putImage } = await import(SRC + 'db.ts');
       const { putOnPage } = await import(SRC + 'actions.ts');
       const { pileSize } = await import(SRC + 'geometry.ts');
       const { allSpreads } = await import(SRC + 'spreads.ts');
+      const { thumbFromBlob } = await import(SRC + 'images.ts');
       const photos = {};
-      for (const [n, b64] of Object.entries(samples)) {
+      for (const [n, b64] of Object.entries(files)) {
         const blob = new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'image/jpeg' });
-        await putImage('p-' + n, { full: blob, thumb: blob });
+        // Stored as adding photos stores them: the original, and a display copy.
+        await putImage('p-' + n, { full: blob, thumb: await thumbFromBlob(blob) });
         const bmp = await createImageBitmap(blob);
         photos['p-' + n] = { id: 'p-' + n, name: n + '.jpg', pxW: bmp.width, pxH: bmp.height };
       }
       projectStore.reset(emptyProject());
       projectStore.apply((d) => {
         d.photos = photos;
-        // 150 dpi, which the samples have enough detail for (they'd be marked at 300).
-        d.page.pxPerUnit = 150;
         // Four pages: 01, 02–03, 04.
         d.layout.spreads.splice(1);
         // A loose row, like prints dealt out on a table.
-        ['reflections', 'door', 'leaves'].forEach((n, i) => {
+        ['hand', 'reflections', 'park'].forEach((n, i) => {
           const { w, h } = pileSize(photos['p-' + n]);
           d.pile.push({ photoId: 'p-' + n, x: i * w * 1.25, y: [0.06, 0, 0.1][i] * h, w, h, z: d.nextZ++ });
         });
         const spreads = allSpreads(d);
         putOnPage(d, ['p-lily'], spreads[0].id, 'right');
         putOnPage(d, ['p-taxi'], spreads[1].id, 'left');
-        putOnPage(d, ['p-spire'], spreads[1].id, 'right');
+        putOnPage(d, ['p-dancers'], spreads[1].id, 'right');
       });
       const saved = await (await import(SRC + 'persistence.ts')).saveProject();
       if (saved !== 'saved') throw new Error('not saved: ' + saved);
@@ -144,7 +138,7 @@ try {
         JSON.stringify({ path: '/Users/me/Documents/City Walks.photo-sequence', clean: true }),
       );
     },
-    [SRC_URL, samples],
+    [SRC_URL, files],
   );
   await page.reload();
   await page.waitForSelector('.desk .item');
@@ -175,7 +169,7 @@ try {
     console.log('saved', path);
   };
 
-  // 1. The desk: the photos centered, the door selected.
+  // 1. The desk: the photos centered, the reflections selected.
   if (wanted('desk')) {
     const box = await page.locator('.desk').boundingBox();
     await ui(
@@ -191,7 +185,7 @@ try {
             panX: (width - W * ppi * zoom) / 2 - x0 * ppi * zoom,
             panY: (height - H * ppi * zoom) / 2 - y0 * ppi * zoom,
           },
-          selection: ['p-door'],
+          selection: ['p-reflections'],
         });
       },
       { width: box.width, height: box.height },
@@ -199,7 +193,7 @@ try {
     await shot('1-desk');
   }
 
-  // 2. The spread editor on pages 2–3, the spire selected so its guides show.
+  // 2. The spread editor on pages 2–3, the dancers selected so their guides show.
   if (wanted('spread')) {
     await ui(({ ui }, spreads) => ui.set({ selection: [], editingSpreadId: spreads[1].id }));
     const items = page.locator('.modal.editor .item');
@@ -219,7 +213,7 @@ try {
 
   // 4. Quick Look on a desk photo.
   if (wanted('quick')) {
-    await ui(({ openQuickLook }) => openQuickLook(['p-leaves', 'p-door', 'p-reflections']));
+    await ui(({ openQuickLook }) => openQuickLook(['p-reflections', 'p-hand', 'p-park']));
     await shot('4-quick-look');
     await ui(({ closeQuickLook }) => closeQuickLook());
   }

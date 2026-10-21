@@ -102,14 +102,14 @@ public `VITE_` values only, since they ship in the website and the app. Vite rea
 
 ## Directories
 
-| Directory    | What's in it                                                                                    |
-| ------------ | ----------------------------------------------------------------------------------------------- |
-| `src/`       | The app: React and TypeScript, with its unit tests beside each file                             |
-| `site/`      | The website's pages (landing, app, privacy, support), the landing page's code, and public files |
-| `server/`    | The Cloudflare Worker for Instagram posting, with its own package and tests                     |
-| `src-tauri/` | The Mac app's native side (Rust), its config, entitlements, and icons                           |
-| `e2e/`       | Playwright interaction tests                                                                    |
-| `scripts/`   | Build and release scripts: the App Store build, version bump, icons, checks                     |
-| `assets/`    | Source art: the app icon's drawings (`npm run icons` makes the rest)                            |
-| `docs/`      | Setup, testing, releasing, design proposals, and context for coding agents                      |
-| `.github/`   | CI, the Mac app test, and the release and App Store workflows                                   |
+| Directory    | What's in it                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------- |
+| `src/`       | The app: React and TypeScript, with its unit tests beside each file                               |
+| `site/`      | The website's pages (landing, app, privacy, support), the landing page's code, and public files   |
+| `server/`    | The Cloudflare Worker for Instagram posting, with its own package and tests                       |
+| `src-tauri/` | The Mac app's native side (Rust), its config, entitlements, and icons                             |
+| `e2e/`       | Playwright interaction tests                                                                      |
+| `scripts/`   | Build and release scripts: the App Store build, version bump, icons, checks                       |
+| `assets/`    | Source art: the app icon's drawings (`npm run icons` makes the rest), and the screenshots' photos |
+| `docs/`      | Setup, testing, releasing, design proposals, and context for coding agents                        |
+| `.github/`   | CI, the Mac app test, and the release and App Store workflows                                     |

@@ -1,6 +1,6 @@
 ---
 name: screenshots
-description: Retake Sequence's screenshots (App Store, README, landing page) from the current UI with the six sample photos. Use when the UI has changed before a release, or when asked to update, retake, or add screenshots.
+description: Retake Sequence's screenshots (App Store, README, landing page) from the current UI with the six photos kept for them. Use when the UI has changed before a release, or when asked to update, retake, or add screenshots.
 ---
 
 # Screenshots
@@ -8,9 +8,9 @@ description: Retake Sequence's screenshots (App Store, README, landing page) fro
 `npm run screenshots` (`scripts/screenshots.mjs`) takes every screenshot from the Mac app's
 interface as it is now: the Mac build's web side (`vite --mode app` on :5176, started if it
 isn't running) in headless Chromium at 1440 × 900 pt @2x, with Tauri stubbed out and the
-traffic lights drawn in. The project is "City Walks": the six sample photos in `src/tour/`,
-three on the desk and three placed in a four-page book at 150 dpi (so nothing is marked low
-resolution). Dark theme. It writes:
+traffic lights drawn in. The project is "City Walks": the six photos in
+`assets/screenshots/` (the owner's, large enough that nothing is enlarged or marked low
+resolution), three on the desk and three placed in a four-page book at 300 dpi. Dark theme. It writes:
 
 | File                                         | Use                                        |
 | -------------------------------------------- | ------------------------------------------ |
@@ -21,8 +21,7 @@ resolution). Dark theme. It writes:
 ## Steps
 
 1. Run it: `npm run screenshots`. `--only desk,preview` retakes some (matched against the
-   names: desk, spread, preview, quick, export). `--photos <dir>` uses larger copies of the
-   samples (same file names) for sharper shots; ask the user for them if the shots look soft.
+   names: desk, spread, preview, quick, export).
 2. Look at every PNG (downscale with `sips -Z 1440` to a scratch folder first) before
    committing: nothing cut off, no warnings or empty states that weren't meant, the traffic
    lights clear of the toolbar's content, text legible.
@@ -36,8 +35,10 @@ resolution). Dark theme. It writes:
 
 ## Rules
 
-- Only the six sample photos in `src/tour/` (or larger copies of the same six from the
-  user). Never other photos, the user's own files, or the Mac app's real data.
+- Only the photos in `assets/screenshots/`. To change them, the user gives new ones: keep
+  them large (about 3,600 px on the long side, JPEG quality 90, never enlarged), and update
+  `PHOTOS` and the layout in the script. Never other photos, the user's other files, or the
+  Mac app's real data.
 - The script uses a throwaway browser profile; it doesn't touch the dev server's data on
   :5175 or anything else.
 - App Store screenshots must show the app as it ships: don't stage features that aren't in
