@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Sequence",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "identifier": "io.salem.PhotobookSequencer",
   "build": {
     "frontendDist": "../dist",
