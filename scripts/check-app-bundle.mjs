@@ -1,4 +1,4 @@
-// Fails if the Mac app's build (dist/, from `npm run build:web-ui-for-app`) contains
+// Fails if the Mac app's build (dist/, from `npm run app:ui:build`) contains
 // anything of the website's: its landing page, privacy policy, or public/ files. The
 // app is only app/index.html and the assets it loads (see vite.config.ts); the
 // website's pages are never built for it, and this makes sure it stays that way.
@@ -14,7 +14,7 @@ const extra = files.filter(
 );
 
 if (!files.includes('app/index.html')) {
-  console.error('dist/ isn’t the Mac app’s build (no app/index.html). Run npm run build:web-ui-for-app first.');
+  console.error('dist/ isn’t the Mac app’s build (no app/index.html). Run npm run app:ui:build first.');
   process.exit(1);
 }
 if (extra.length) {

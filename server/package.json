@@ -5,13 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --env dev",
-    "metrics": "node --env-file-if-exists=.env.metrics scripts/metrics.ts",
+    "deploy": "wrangler deploy",
+    "deploy:dev": "wrangler deploy --env dev",
+    "metrics": "node --env-file-if-exists=.env.metrics.local scripts/metrics.ts",
     "test": "vitest run",
     "typecheck": "wrangler types --strict-vars=false --check && tsc --noEmit && tsc --noEmit -p scripts",
     "types": "wrangler types --strict-vars=false",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "check": "npm run format:check && npm run typecheck && npm run lint && npm test"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.4.0",

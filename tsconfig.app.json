@@ -27,5 +27,5 @@
     /* Type-checked against the website's implementation; both satisfy Platform (see vite.config.ts). */
     "paths": { "#platform": ["./src/platform/browser.ts"] }
   },
-  "include": ["src"]
+  "include": ["src", "site/landing"]
 }

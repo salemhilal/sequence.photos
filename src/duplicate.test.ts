@@ -13,7 +13,8 @@ vi.mock('./db', () => ({
   deleteImage: async (id: string) => void images.delete(id),
 }));
 
-const { addPhotosToPile, copyName, duplicatePhotos, putOnPage } = await import('./actions');
+const { addPhotosToPile, copiesOf, copyName, duplicatePhotos, placeCopies, putOnPage, storeCopies } =
+  await import('./actions');
 const { projectStore, emptyProject } = await import('./store');
 const { applyPageSetup, draftOf } = await import('./pageSetup');
 const { sheetOf } = await import('./spreads');
@@ -107,5 +108,27 @@ describe('duplicatePhoto', () => {
     await duplicatePhotos([A]);
     projectStore.undo();
     expect(Object.keys(projectStore.project.photos)).toEqual([A]);
+  });
+});
+
+describe('copies dragged out (Option-drag)', () => {
+  it('places a copy exactly over its original, above it, and stores its image once asked', async () => {
+    const copies = copiesOf([A]);
+    projectStore.apply((d) => placeCopies(d, copies));
+    const id = copies[0]!.id;
+    const [orig, copy] = [A, id].map((pid) => projectStore.project.pile.find((p) => p.photoId === pid)!);
+    expect(projectStore.project.photos[id]?.name).toBe('IMG_1 copy.jpg');
+    expect({ x: copy!.x, y: copy!.y, w: copy!.w }).toEqual({ x: orig!.x, y: orig!.y, w: orig!.w });
+    expect(copy!.z).toBeGreaterThan(orig!.z);
+    expect(images.has(id)).toBe(false);
+    expect(await storeCopies(copies)).toEqual(copies);
+    expect(images.get(id)).toBe(images.get(A));
+  });
+
+  it('places a copy of a photo on a page on the same spread', () => {
+    projectStore.apply((d) => putOnPage(d, [A], allSpreads(d)[1]!.id, 'left'));
+    const copies = copiesOf([A]);
+    projectStore.apply((d) => placeCopies(d, copies));
+    expect(allSpreads(projectStore.project)[1]!.items.map((i) => i.photoId)).toEqual([A, copies[0]!.id]);
   });
 });

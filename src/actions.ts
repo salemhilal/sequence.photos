@@ -290,44 +290,85 @@ export function copyName(name: string): string {
   return dot > 0 ? `${name.slice(0, dot)} copy${name.slice(dot)}` : `${name} copy`;
 }
 
+/** A photo being copied: the original, and the new photo's id. */
+export interface PhotoCopy {
+  from: PhotoId;
+  id: PhotoId;
+}
+
+/** New ids for copies of these photos. */
+export function copiesOf(photoIds: readonly PhotoId[]): PhotoCopy[] {
+  return photoIds.map((from) => ({ from, id: newPhotoId() }));
+}
+
+/**
+ * Add the copies to the project: each a new photo ("… copy") placed where its original is
+ * (on the desk, or on the same spread), above everything, `offset` inches down and right.
+ * On a page, the step is the share of its width `offset` inches is of a 10 in page, in any
+ * unit (0.25 in on 10 in; 27 px of 1,080). Their images are stored by `storeCopies`.
+ */
+export function placeCopies(d: Draft<Project>, copies: readonly PhotoCopy[], offset = 0): void {
+  const sheet = sheetOf(d);
+  const onSpread = (offset * sheet.pageW) / 10;
+  for (const { from, id } of copies) {
+    const meta = d.photos[from];
+    if (!meta) continue;
+    d.photos[id] = { ...meta, id, name: copyName(meta.name) };
+    const at = locate(d, from);
+    if (!at) {
+      putInPile(d, id);
+      continue;
+    }
+    const p = at.placement;
+    // On the desk, in proportion to the photo (0.25 in for the old 2 in desk photos).
+    const step = at.where === 'desk' ? (offset * Math.max(p.w, p.h)) / 2 : onSpread;
+    const copy = { ...p, photoId: id, x: p.x + step, y: p.y + step, z: d.nextZ++ };
+    (at.where === 'desk' ? d.pile : at.spread.items).push(copy);
+  }
+}
+
+/**
+ * Store each copy's image (its own copy of the original's data) and show it. Call once the
+ * project refers to the copies, so a background cleanup of unreferenced images can't remove
+ * them in between. Returns the copies whose originals had an image.
+ */
+export async function storeCopies(copies: readonly PhotoCopy[]): Promise<PhotoCopy[]> {
+  const stored: PhotoCopy[] = [];
+  for (const c of copies) {
+    const img = await getImage(c.from);
+    if (!img) continue;
+    setUrl(c.id, img.thumb);
+    await putImage(c.id, img);
+    stored.push(c);
+  }
+  return stored;
+}
+
+/**
+ * Show the copies' images while they're dragged out (before they're stored), from the
+ * originals'.
+ */
+export function showCopies(copies: readonly PhotoCopy[]): void {
+  for (const c of copies) void getImage(c.from).then((img) => img && setUrl(c.id, img.thumb));
+}
+
 const DUPLICATE_OFFSET = 0.25;
 
 /**
- * Duplicate photos as new, independent photos (each with its own copy of the image
- * data), placed down and right of the originals: on the desk, or on the same spread. On
- * a page, the step is the share of its width `offset` inches is of a 10 in page, in any
- * unit (0.25 in on 10 in; 27 px of 1,080). One undo step. Returns the new photos' ids.
+ * Duplicate photos as new, independent photos (each with its own copy of the image data),
+ * placed down and right of the originals (see `placeCopies`). One undo step. Returns the new
+ * photos' ids.
  */
 export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OFFSET): Promise<PhotoId[]> {
-  const sources: { from: PhotoId; id: PhotoId; img: StoredImage }[] = [];
-  for (const from of photoIds) {
-    const img = await getImage(from);
-    if (img && projectStore.project.photos[from]) sources.push({ from, id: newPhotoId(), img });
+  const sources: (PhotoCopy & { img: StoredImage })[] = [];
+  for (const c of copiesOf(photoIds)) {
+    const img = await getImage(c.from);
+    if (img && projectStore.project.photos[c.from]) sources.push({ ...c, img });
   }
   if (!sources.length) return [];
   for (const { id, img } of sources) setUrl(id, img.thumb);
-
-  // Reference the new photos before storing their images, so a background cleanup
-  // of unreferenced images can't remove them in between.
-  projectStore.apply((d) => {
-    const sheet = sheetOf(d);
-    const onSpread = (offset * sheet.pageW) / 10;
-    for (const { from, id } of sources) {
-      const meta = d.photos[from];
-      if (!meta) continue;
-      d.photos[id] = { ...meta, id, name: copyName(meta.name) };
-      const at = locate(d, from);
-      if (!at) {
-        putInPile(d, id);
-        continue;
-      }
-      const p = at.placement;
-      // On the desk, in proportion to the photo (0.25 in for the old 2 in desk photos).
-      const step = at.where === 'desk' ? (offset * Math.max(p.w, p.h)) / 2 : onSpread;
-      const copy = { ...p, photoId: id, x: p.x + step, y: p.y + step, z: d.nextZ++ };
-      (at.where === 'desk' ? d.pile : at.spread.items).push(copy);
-    }
-  });
+  // Reference the new photos before storing their images (see storeCopies).
+  projectStore.apply((d) => placeCopies(d, sources, offset));
   for (const { id, img } of sources) await putImage(id, img);
   return sources.map((s) => s.id);
 }

@@ -16,7 +16,7 @@
   [headers.values]
     Cache-Control = "no-cache"
 
-# Removes the service worker that used to live here (see public/sw.js).
+# Removes the service worker that used to live here (see site/public/sw.js).
 [[headers]]
   for = "/sw.js"
   [headers.values]

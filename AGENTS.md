@@ -6,6 +6,9 @@ or an Instagram post. It's a React + TypeScript web app at sequence.photos, also
 Tauri Mac app (WebKit) on the App Store. Instagram posting goes through a Cloudflare Worker in
 `server/`, a separate package with its own README, tests, and deploy.
 
+What the app does, from the user's side, is in `docs/agent-context/` by topic (the product,
+projects and storage, exports); `README.md` covers building, running, and testing.
+
 ## Commands
 
 ```bash
@@ -16,6 +19,9 @@ npm run build          # type-check and build
 npm run lint           # oxlint
 npm run format:check   # prettier
 npm run test:app       # Mac app end to end (builds Tauri; a few minutes)
+npm run check          # secrets, format, lint, types, unit tests in one
+npm run app:dev        # the Mac app, reloading on changes
+npm run server:check   # the server's checks (server:dev, server:test, …)
 ```
 
 Run tests, build, lint, and format before calling work done; run `test:e2e` when the UI's
@@ -37,8 +43,11 @@ when the Mac app, saving, or exports change. The first `test:e2e` needs
 - `src/platform/`: web vs Mac differences (`#platform` import).
 - `docs/testing.md`: the manual and automated checklist. Update it with any behavior change.
 - `docs/proposals/`: design proposals and plans (layout model, print and color).
-- `icon/`: the app icon's drawings (light and dark) and renders; `npm run icons` makes the
-  Mac app's and the website's icons from them.
+- `site/`: the website's pages (landing, `app/`, privacy, support), the landing page's code
+  (`site/landing/`), and its public files; the app's code is in `src/`.
+- `assets/icon/`: the app icon's drawings (light and dark) and renders; `npm run icons`
+  makes the Mac app's and the website's icons from them.
+- `docs/releasing.md`: how the website, server, and Mac app are released.
 
 ## Conventions
 
@@ -59,7 +68,12 @@ when the Mac app, saving, or exports change. The first `test:e2e` needs
 
 - The dev server's data is disposable test data: change or reset it freely. Never touch the
   Mac app's real data or the user's own photos and files.
-- Public materials (screenshots, the landing page, the tour) use only the six sample photos
-  in `src/tour/`.
+- Public materials use only the owner's photos kept for them: the tour's six in `src/tour/`,
+  and the screenshots' six in `assets/screenshots/`. `npm run screenshots` retakes the App
+  Store's, the README's, and the landing page's (see `.claude/skills/screenshots/`).
 - Never paste secrets into code, logs, or chat. Server secrets are set by the owner with
   `wrangler secret put`.
+- Local secrets go only in git-ignored names: `.env.local` (or `.env.*.local`), or the
+  server's `.dev.vars`. Committed `.env` files ship in the app, so they hold public `VITE_`
+  values only (`scripts/check-env.mjs` checks). Vite ships `VITE_` values from `.env.local`
+  too, so no secret's name starts with `VITE_`.
