@@ -17,8 +17,11 @@ ready and hands the user the decisions. It never publishes by itself.
 - Unmerged work: open PRs (`gh pr list`), and branches ahead of `main`
   (`git branch -r --no-merged origin/main`). Ask which of them belong in the release.
 - CI on what will ship: `gh run list --branch <branch> --limit 4` (CI and Mac app both green).
-- The new version: ask, or propose one (major for a new model or big UI change, minor for
-  features, patch for fixes). The workflow refuses one that isn't higher, or is tagged.
+- The new version: ask the user whether this is a **major**, **minor**, or **patch** bump,
+  saying the current version and what each would make it (e.g. "Now 1.2.3: major → 2.0.0,
+  minor → 1.3.0, patch → 1.2.4"), with a recommendation from what changed (major for a new
+  model or big UI change, minor for features, patch for fixes). Use the AskUserQuestion tool
+  if it's there. The workflow refuses a version that isn't higher, or is already tagged.
 
 ## 2. Patch notes
 
