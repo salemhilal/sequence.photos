@@ -2947,7 +2947,7 @@ dependencies = [
 
 [[package]]
 name = "sequence"
-version = "0.1.2"
+version = "2.0.0"
 dependencies = [
  "objc2",
  "objc2-foundation",
