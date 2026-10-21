@@ -21,7 +21,7 @@ const PORT = 5176;
 const SRC_URL = `/@fs${fileURLToPath(new URL('../src/', import.meta.url))}`;
 const APP_URL = `http://localhost:${PORT}/app/index.html`;
 /** The photos, assets/screenshots/<name>.jpg: large, so none is shown bigger than it is. */
-const PHOTOS = ['lily', 'taxi', 'dancers', 'hand', 'reflections', 'park'];
+const PHOTOS = ['lily', 'taxi', 'dancers', 'hand', 'reflections', 'window'];
 const PHOTOS_DIR = fileURLToPath(new URL('../assets/screenshots/', import.meta.url));
 /** The shots, in the App Store's order, and which of them the landing page shows (as what). */
 const SHOTS = [
@@ -121,7 +121,7 @@ try {
         // Four pages: 01, 02–03, 04.
         d.layout.spreads.splice(1);
         // A loose row, like prints dealt out on a table.
-        ['hand', 'reflections', 'park'].forEach((n, i) => {
+        ['hand', 'reflections', 'window'].forEach((n, i) => {
           const { w, h } = pileSize(photos['p-' + n]);
           d.pile.push({ photoId: 'p-' + n, x: i * w * 1.25, y: [0.06, 0, 0.1][i] * h, w, h, z: d.nextZ++ });
         });
@@ -213,7 +213,7 @@ try {
 
   // 4. Quick Look on a desk photo.
   if (wanted('quick')) {
-    await ui(({ openQuickLook }) => openQuickLook(['p-reflections', 'p-hand', 'p-park']));
+    await ui(({ openQuickLook }) => openQuickLook(['p-window', 'p-reflections', 'p-hand']));
     await shot('4-quick-look');
     await ui(({ closeQuickLook }) => closeQuickLook());
   }
