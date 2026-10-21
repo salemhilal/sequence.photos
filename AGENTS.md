@@ -69,7 +69,8 @@ when the Mac app, saving, or exports change. The first `test:e2e` needs
 - The dev server's data is disposable test data: change or reset it freely. Never touch the
   Mac app's real data or the user's own photos and files.
 - Public materials (screenshots, the landing page, the tour) use only the six sample photos
-  in `src/tour/`.
+  in `src/tour/`. `npm run screenshots` retakes the App Store's, the README's, and the landing
+  page's (see `.claude/skills/screenshots/`).
 - Never paste secrets into code, logs, or chat. Server secrets are set by the owner with
   `wrangler secret put`.
 - Local secrets go only in git-ignored names: `.env.local` (or `.env.*.local`), or the
