@@ -16,7 +16,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] `npm run build`, then `node scripts/check-web-bundle.mjs`: the website has none of the
       Mac app's code. `dist/_headers` has the Content Security Policy for `/*`, naming both of
       Sequence's servers and a `sha256-` hash for the app page's inline script.
-- [ ] `npm run build:web-ui-for-app`, then `node scripts/check-app-bundle.mjs`: the Mac app's
+- [ ] `npm run app:ui:build`, then `node scripts/check-app-bundle.mjs`: the Mac app's
       build has none of the website's pages.
 - [ ] `npm run test:e2e`: the web app's interaction tests pass in Chromium and WebKit (the
       Mac app's engine): pages and their shortcuts, Esc staying on a page, Layout's
@@ -384,7 +384,7 @@ Posts made while testing are real and public. Use a test account, or delete them
       "Connected to Instagram as @user", and Settings shows it.
 - [ ] Cancel at Instagram: back with nothing said. A personal account, or a missing
       permission: the matching message in place of Settings' description.
-- [ ] **Mac app** (a bundled build: `npm run build:app`; links don't reach `tauri dev`):
+- [ ] **Mac app** (a bundled build: `npm run app:build`; links don't reach `tauri dev`):
       Connect Instagram opens the sign-in in the default browser, and the button says to
       finish there. After signing in, the browser offers to open Sequence
       (`sequence-photos://instagram`); the app says "Connected to Instagram as @user". From

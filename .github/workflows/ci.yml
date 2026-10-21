@@ -26,7 +26,7 @@ jobs:
       - run: npm run build
       - run: node scripts/check-web-bundle.mjs
       # The Mac app's web side (its native side needs macOS; see npm run test:app).
-      - run: npm run build:web-ui-for-app
+      - run: npm run app:ui:build
       - run: node scripts/check-app-bundle.mjs
 
   # The web app's interaction tests (e2e/), in Chromium and in WebKit, the Mac app's engine.

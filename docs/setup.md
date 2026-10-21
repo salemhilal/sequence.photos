@@ -33,7 +33,7 @@ On a Mac (macOS 13 or later), you also need:
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
    The installer adds `~/.cargo/bin` to your shell's `PATH`; open a new terminal after it
-   finishes (`cargo --version` should work). If `npm run app` says it can't find `cargo`,
+   finishes (`cargo --version` should work). If `npm run app:dev` says it can't find `cargo`,
    add this to `~/.zshrc`:
    ```bash
    export PATH="$HOME/.cargo/bin:$PATH"
@@ -42,9 +42,9 @@ On a Mac (macOS 13 or later), you also need:
 Then:
 
 ```bash
-npm run app        # run it, reloading on changes (the first build takes a few minutes)
+npm run app:dev    # run it, reloading on changes (the first build takes a few minutes)
 npm run test:app   # the end-to-end test: open, save, relaunch, and sandboxed
-npm run build:app  # a local build → src-tauri/target/release/bundle/macos/
+npm run app:build  # a local build → src-tauri/target/release/bundle/macos/
 ```
 
 Local builds are ad-hoc signed and sandboxed like the App Store's, so they need no Apple
