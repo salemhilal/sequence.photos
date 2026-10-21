@@ -52,26 +52,9 @@ account or certificates.
 
 ## Releasing
 
-Nothing to set up. Releases come from GitHub:
+Nothing to set up: releases come from GitHub. See [releasing.md](releasing.md).
 
-- **Website:** every push to `main` deploys to sequence.photos (Netlify). Pull requests get
-  a preview deploy.
-- **Mac app:** run the **Release** workflow (Actions → Release → Run workflow) with the
-  new version, or from the command line:
-
-  ```bash
-  gh workflow run release.yml -f version=0.1.2
-  ```
-
-  It sets the version everywhere, commits and tags it on `main`, and publishes the GitHub
-  release. Then the **App Store** workflow tests the app, builds it, signs it, and uploads
-  it to App Store Connect, where you pick the build and submit it for review. Tick _Dry
-  run_ to check a version without releasing.
-
-The signing certificates, provisioning profile, and App Store Connect API key live in the
-repo's Actions secrets (the workflow's header lists them), not on any machine.
-
-### Building for the App Store locally (optional)
+## Building for the App Store locally (optional)
 
 Only needed to upload without GitHub, with `npm run app:store`. It needs:
 

@@ -492,7 +492,7 @@ are rejected at sign-in.)
   7. `DELETE` the upload batch, only after publishing succeeds or the post is abandoned
      (in a `finally`), with `&result=` saying which (see Metrics).
   8. Show the post: `GET /<mediaId>?fields=permalink`.
-- **Privacy policy** (`privacy/index.html`) and the App Store privacy
+- **Privacy policy** (`site/privacy/index.html`) and the App Store privacy
   answers: when you post to Instagram, the frames are uploaded to Sequence's server for
   Instagram to fetch, and deleted after posting (automatically within about an hour and
   a half otherwise); your Instagram token stays on your device.
