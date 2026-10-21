@@ -1,13 +1,13 @@
-// Makes every app icon from the drawings in icon/ (npm run icons): sequence-light.svg and
+// Makes every app icon from the drawings in assets/icon/ (npm run icons): sequence-light.svg and
 // sequence-dark.svg, and favicon-light.svg and favicon-dark.svg, a simpler version that reads
 // at 16 px. Run it after changing a drawing, and commit what it writes:
 //
-//   icon/                 PNG renders of the drawings (the app icon on the macOS grid, and as
-//                         full-bleed squares for places that want an opaque square, like Meta's
-//                         app settings), and AppIcon.icon, the Mac icon as an Icon Composer file
-//   src-tauri/icons/      the Mac app's icons: Assets.car (light and dark, macOS 26 and later)
-//                         and the light icon for older macOS and the other bundle formats
-//   public/               the website's favicon (light and dark) and its home-screen icons
+//   assets/icon/      PNG renders of the drawings (the app icon on the macOS grid, and as
+//                     full-bleed squares for places that want an opaque square, like Meta's
+//                     app settings), and AppIcon.icon, the Mac icon as an Icon Composer file
+//   src-tauri/icons/  the Mac app's icons: Assets.car (light and dark, macOS 26 and later)
+//                     and the light icon for older macOS and the other bundle formats
+//   site/public/      the website's favicon (light and dark) and its home-screen icons
 //
 // Where an icon can't follow the light or dark appearance, it's the light one.
 // Rendering uses the Tauri CLI; Assets.car needs Xcode (for actool), and is skipped without it.
@@ -17,10 +17,10 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync,
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-const LIGHT = readFileSync('icon/sequence-light.svg', 'utf8');
-const DARK = readFileSync('icon/sequence-dark.svg', 'utf8');
-const FAVICON_LIGHT = readFileSync('icon/favicon-light.svg', 'utf8');
-const FAVICON_DARK = readFileSync('icon/favicon-dark.svg', 'utf8');
+const LIGHT = readFileSync('assets/icon/sequence-light.svg', 'utf8');
+const DARK = readFileSync('assets/icon/sequence-dark.svg', 'utf8');
+const FAVICON_LIGHT = readFileSync('assets/icon/favicon-light.svg', 'utf8');
+const FAVICON_DARK = readFileSync('assets/icon/favicon-dark.svg', 'utf8');
 const tmp = mkdtempSync(join(tmpdir(), 'sequence-icons-'));
 
 /** The drawing without its comment, so cut shapes don't claim to be the source. */
@@ -67,7 +67,7 @@ function favicon() {
       .replace(/url\(#/g, `url(#${prefix}`);
   return [
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">',
-    '  <!-- Made by scripts/icons.mjs from icon/favicon-*.svg: the light drawing, or the dark one in dark mode. -->',
+    '  <!-- Made by scripts/icons.mjs from assets/icon/favicon-*.svg: the light drawing, or the dark one in dark mode. -->',
     '  <style>.dark { display: none } @media (prefers-color-scheme: dark) { .light { display: none } .dark { display: inline } }</style>',
     `  <g class="light">${inner(FAVICON_LIGHT, 'l-')}</g>`,
     `  <g class="dark">${inner(FAVICON_DARK, 'd-')}</g>`,
@@ -78,11 +78,11 @@ function favicon() {
 
 /** The Icon Composer file: one layer, light by default and dark in the dark appearance; no glass. */
 function iconComposer() {
-  const dir = 'icon/AppIcon.icon';
+  const dir = 'assets/icon/AppIcon.icon';
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(join(dir, 'Assets'), { recursive: true });
-  copyFileSync('icon/sequence-light-square.png', join(dir, 'Assets/light.png'));
-  copyFileSync('icon/sequence-dark-square.png', join(dir, 'Assets/dark.png'));
+  copyFileSync('assets/icon/sequence-light-square.png', join(dir, 'Assets/light.png'));
+  copyFileSync('assets/icon/sequence-dark-square.png', join(dir, 'Assets/dark.png'));
   const layer = {
     'image-name-specializations': [{ value: 'light.png' }, { appearance: 'dark', value: 'dark.png' }],
     name: 'Sequence',
@@ -120,7 +120,7 @@ function assetCatalog() {
     // actool's icon exporter runs elsewhere, so the path must be absolute.
     [
       'actool',
-      resolve('icon/AppIcon.icon'),
+      resolve('assets/icon/AppIcon.icon'),
       '--compile',
       out,
       '--platform',
@@ -152,21 +152,21 @@ try {
     ['light', LIGHT],
     ['dark', DARK],
   ]) {
-    png(svg, 1024, `icon/sequence-${look}.png`);
-    png(square(svg), 1024, `icon/sequence-${look}-square.png`);
+    png(svg, 1024, `assets/icon/sequence-${look}.png`);
+    png(square(svg), 1024, `assets/icon/sequence-${look}-square.png`);
   }
-  png(body(FAVICON_LIGHT), 512, 'icon/favicon-light.png');
-  png(body(FAVICON_DARK), 512, 'icon/favicon-dark.png');
+  png(body(FAVICON_LIGHT), 512, 'assets/icon/favicon-light.png');
+  png(body(FAVICON_DARK), 512, 'assets/icon/favicon-dark.png');
   iconComposer();
   assetCatalog();
   bundleIcons();
 
-  writeFileSync('public/favicon.svg', favicon());
-  png(square(LIGHT), 180, 'public/apple-touch-icon.png');
-  png(rounded(LIGHT), 192, 'public/icons/icon-192.png');
-  png(rounded(LIGHT), 512, 'public/icons/icon-512.png');
-  png(square(LIGHT), 512, 'public/icons/maskable-512.png');
-  console.log('Icons written to icon/, src-tauri/icons/, and public/.');
+  writeFileSync('site/public/favicon.svg', favicon());
+  png(square(LIGHT), 180, 'site/public/apple-touch-icon.png');
+  png(rounded(LIGHT), 192, 'site/public/icons/icon-192.png');
+  png(rounded(LIGHT), 512, 'site/public/icons/icon-512.png');
+  png(square(LIGHT), 512, 'site/public/icons/maskable-512.png');
+  console.log('Icons written to assets/icon/, src-tauri/icons/, and site/public/.');
 } finally {
   rmSync(tmp, { recursive: true, force: true });
 }

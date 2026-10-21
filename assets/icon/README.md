@@ -17,5 +17,5 @@ and dark, drawn in the app's own neutrals.
 
 After changing a drawing, run `npm run icons` and commit what it writes: these renders,
 the Mac app's icons in `src-tauri/icons/` (`Assets.car` needs Xcode), and the website's
-favicon and home-screen icons in `public/`. Where an icon can't follow light or dark, it's
+favicon and home-screen icons in `site/public/`. Where an icon can't follow light or dark, it's
 the light one.

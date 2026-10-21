@@ -7,4 +7,4 @@ src-tauri/gen
 # The server checks its own formatting (server/package.json: npm run format:check)
 server
 # Icon Composer writes its own JSON style (made by scripts/icons.mjs)
-icon/AppIcon.icon
+assets/icon/AppIcon.icon
