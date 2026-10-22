@@ -21,6 +21,12 @@
   --font: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --gutter: clamp(16px, 4vw, 48px);
+  /*
+   * The page's sides: the gutter, or wider on big screens, so the content is at most 150 px
+   * past the screenshot on each side. The screenshot is 16:10, at most 1200 px wide and 62vh
+   * tall (99.2vh wide). The dividers still run edge to edge.
+   */
+  --edge: max(var(--gutter), calc((100vw - min(1200px, 99.2vh)) / 2 - 150px));
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -88,7 +94,7 @@ a {
   grid-template-columns: 1fr auto;
   align-items: end;
   gap: 24px 48px;
-  padding: 28px var(--gutter);
+  padding: 28px var(--edge);
   border-bottom: 1px solid var(--border);
 }
 .title-row {
@@ -164,7 +170,7 @@ h1 em {
   flex: 1;
   display: grid;
   place-items: center;
-  padding: 32px var(--gutter) 20px;
+  padding: 32px var(--edge) 20px;
   min-height: 0;
 }
 .viewer img {
@@ -197,10 +203,10 @@ h1 em {
   background: var(--hover);
 }
 .turn.prev {
-  left: var(--gutter);
+  left: var(--edge);
 }
 .turn.next {
-  right: var(--gutter);
+  right: var(--edge);
 }
 
 /* The contents: numbered like spreads. */
@@ -254,7 +260,7 @@ footer {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px 12px;
-  padding: 14px var(--gutter);
+  padding: 14px var(--edge);
   border-top: 1px solid var(--border);
   font-size: 12px;
 }
