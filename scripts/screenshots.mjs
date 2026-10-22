@@ -4,7 +4,7 @@
 // It runs the Mac build's web side (vite --mode app, on :5176) in headless Chromium at
 // 1440 × 900 pt @2x, with Tauri stubbed out and the window's traffic lights drawn in, so
 // the shots look like the app without driving it. Writes:
-//   docs/app-store/1-desk.png … 5-export.png   2880 × 1800, for App Store Connect
+//   docs/app-store/1-desk.png … 6-instagram.png   2880 × 1800, for App Store Connect
 //   docs/screenshot.jpg                        the desk, for the README
 //   site/landing/landing-*.jpg                 2000 × 1250, the landing page's four
 // Resizing uses sips, so it runs on a Mac. `--only desk,preview` takes some of them.
@@ -28,8 +28,9 @@ const SHOTS = [
   { name: '1-desk', landing: 'landing-desk' },
   { name: '2-spread-editor', landing: 'landing-spreads' },
   { name: '3-preview', landing: 'landing-preview' },
-  { name: '4-quick-look', landing: 'landing-quick-look' },
+  { name: '4-quick-look' },
   { name: '5-export' },
+  { name: '6-instagram', landing: 'landing-instagram' },
 ];
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null;
 const wanted = (name) => !only || only.some((o) => name.includes(o));
@@ -228,6 +229,60 @@ try {
     await page.keyboard.press('ArrowRight');
     await shot('5-export');
     await ui(({ goToPage }) => goToPage('desk'));
+  }
+
+  // 6. Posting to Instagram: the book made a 4:5 carousel (1080 × 1350 px frames, one photo
+  // each), saved so the title is clean, the lily first in the post's preview. Last, since it
+  // changes the project.
+  if (wanted('instagram')) {
+    await page.evaluate(async (SRC) => {
+      const { projectStore } = await import(SRC + 'store.ts');
+      projectStore.apply((d) => {
+        const W = 1080;
+        const H = 1350;
+        const M = 80;
+        d.page = { w: W, h: H, unit: 'px', pxPerUnit: 1 };
+        d.layout = {
+          kind: 'frames',
+          frames: ['lily', 'taxi', 'dancers'].map((n, i) => {
+            const { pxW, pxH } = d.photos['p-' + n];
+            const s = Math.min((W - 2 * M) / pxW, (H - 2 * M) / pxH);
+            const [w, h] = [pxW * s, pxH * s];
+            const item = { photoId: 'p-' + n, x: (W - w) / 2, y: (H - h) / 2, w, h, z: d.nextZ++ };
+            return { kind: 'frame', id: 'f-' + i, items: [item] };
+          }),
+        };
+      });
+      const saved = await (await import(SRC + 'persistence.ts')).saveProject();
+      if (saved !== 'saved') throw new Error('not saved: ' + saved);
+      localStorage.setItem(
+        'photobook-document',
+        JSON.stringify({ path: '/Users/me/Documents/City Walks.photo-sequence', clean: true }),
+      );
+      // Connected as the owner's account, for the preview's name. A stand-in: its token is
+      // nothing, and its server is nowhere, so nothing it could send would reach anyone.
+      const enrollment = btoa('v1\nENROLL\n1\n4102444800').replace(/=+$/, '') + '.screenshot';
+      localStorage.setItem(
+        'photobook-instagram',
+        JSON.stringify({
+          token: 'screenshot',
+          expiresAt: 4102444800,
+          refreshedAt: Math.floor(Date.now() / 1000),
+          userId: '1',
+          username: 'salemsphotos',
+          enrollment,
+          server: 'http://127.0.0.1:9',
+        }),
+      );
+    }, SRC_URL);
+    await page.reload();
+    await page.waitForSelector('.desk');
+    await page.evaluate(LIGHTS);
+    await ui(({ ui, goToPage }) => {
+      ui.set({ exportTo: 'instagram', selection: [] });
+      goToPage('export');
+    });
+    await shot('6-instagram');
   }
 } finally {
   await context.close();
