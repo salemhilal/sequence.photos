@@ -8,7 +8,8 @@
       name="description"
       content="Put your photos on a desk, arrange them across spreads, and page through the book. Free, with no account, on the web and for Mac."
     />
-    <meta name="theme-color" content="#0f0f0e" />
+    <meta name="theme-color" content="#0e0e0e" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f0f0f0" media="(prefers-color-scheme: light)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:url" content="https://%VITE_SITE_DOMAIN%/" />
@@ -27,13 +28,16 @@
     <section class="top">
       <div>
         <div class="title-row">
+          <!-- The favicon: the icon's stack, light or dark with the page. -->
+          <img class="mark" src="/favicon.svg" width="22" height="22" alt="" />
           <span class="wordmark">SEQUENCE</span>
           <span class="caps muted">A tool for playing with photo sequences</span>
         </div>
-        <h1>See the book <em>before</em> you make it.</h1>
+        <h1>Write a narrative with your photos</h1>
         <p class="lede">
-          Put your photos on a desk, arrange them across spreads, and page through the result. When it's right, export a
-          PDF or an InDesign file.
+          <!-- Broken after "photography" on wide screens, so the second line says what it's for. -->
+          <span class="line">A clean, powerful tool for sequencing your photography</span>
+          for books, print, and social media.
         </p>
       </div>
       <div class="side">
@@ -78,11 +82,11 @@
         alt="Preview: turning the book's pages"
       />
       <img
-        src="/landing/landing-quick-look.jpg"
+        src="/landing/landing-instagram.jpg"
         width="2000"
         height="1250"
         hidden
-        alt="Quick Look: a photo full size"
+        alt="Export to Instagram: a carousel of three photos, a lily first in the post's preview"
       />
       <button class="turn next" aria-label="Next screenshot">›</button>
     </section>
@@ -92,7 +96,7 @@
       <button aria-current="true"><span class="folio">01</span>Desk<small>Spread out every photo</small></button>
       <button><span class="folio">02–03</span>Spreads<small>Place them, with guides</small></button>
       <button><span class="folio">04–05</span>Preview<small>Turn the pages</small></button>
-      <button><span class="folio">06</span>Quick Look<small>See any photo full size</small></button>
+      <button><span class="folio">06</span>Export<small>PDF, images, InDesign, or Instagram</small></button>
     </nav>
 
     <footer class="muted">

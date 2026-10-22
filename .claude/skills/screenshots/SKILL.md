@@ -10,18 +10,19 @@ interface as it is now: the Mac build's web side (`vite --mode app` on :5176, st
 isn't running) in headless Chromium at 1440 × 900 pt @2x, with Tauri stubbed out and the
 traffic lights drawn in. The project is "City Walks": the six photos in
 `assets/screenshots/` (the owner's, large enough that nothing is enlarged or marked low
-resolution), three on the desk and three placed in a four-page book at 300 dpi. Dark theme. It writes:
+resolution), three on the desk and three placed in a four-page book at 300 dpi; the last shot
+makes it a 4:5 Instagram carousel. Dark theme. It writes:
 
-| File                                         | Use                                        |
-| -------------------------------------------- | ------------------------------------------ |
-| `docs/app-store/1-desk.png` … `5-export.png` | App Store Connect (2880 × 1800, Mac 16:10) |
-| `docs/screenshot.jpg`                        | The README (the desk)                      |
-| `site/landing/landing-*.jpg`                 | The landing page's four (2000 × 1250)      |
+| File                                            | Use                                                                      |
+| ----------------------------------------------- | ------------------------------------------------------------------------ |
+| `docs/app-store/1-desk.png` … `6-instagram.png` | App Store Connect (2880 × 1800, Mac 16:10)                               |
+| `docs/screenshot.jpg`                           | The README (the desk)                                                    |
+| `site/landing/landing-*.jpg`                    | The landing page's four: desk, spreads, preview, Instagram (2000 × 1250) |
 
 ## Steps
 
 1. Run it: `npm run screenshots`. `--only desk,preview` retakes some (matched against the
-   names: desk, spread, preview, quick, export).
+   names: desk, spread, preview, quick, export, instagram).
 2. Look at every PNG (downscale with `sips -Z 1440` to a scratch folder first) before
    committing: nothing cut off, no warnings or empty states that weren't meant, the traffic
    lights clear of the toolbar's content, text legible.

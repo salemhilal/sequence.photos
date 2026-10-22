@@ -1,22 +1,45 @@
 /*
- * The landing page (index.html): always dark, in the app's darkroom colors and type
- * (see src/styles.css).
+ * The landing page (index.html), in the app's neutrals and the icon's look: near-black in
+ * dark mode, paper in light, square corners, no accent color, so the screenshots and their
+ * photos carry the color. Its type is the app's (see src/styles.css).
  */
 :root {
-  --bg: #0f0f0e;
-  --text: #e9e6df;
-  --muted: #8d8a83;
+  --bg: #0e0e0e;
+  --text: #e6e6e6;
+  --muted: #8e8e8e;
   --fill: rgba(255, 255, 255, 0.06);
   --hover: rgba(255, 255, 255, 0.1);
-  --border: rgba(255, 255, 255, 0.08);
-  --accent: #e0a13a;
-  --on-accent: #1f1606;
-  --accent-soft: rgba(224, 161, 58, 0.18);
-  --radius: 5px;
+  --border: rgba(255, 255, 255, 0.1);
+  /* The main button, and the screenshot being shown: the text color, as a fill or an edge. */
+  --strong: #e6e6e6;
+  --on-strong: #0e0e0e;
+  --strong-hover: #ffffff;
+  --current-bg: transparent;
+  --shot-edge: rgba(255, 255, 255, 0.14);
+  --shot-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  --radius: 2px;
   --font: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --gutter: clamp(16px, 4vw, 48px);
   color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f0f0f0;
+    --text: #1c1c1c;
+    --muted: #6b6b6b;
+    --fill: rgba(0, 0, 0, 0.04);
+    --hover: rgba(0, 0, 0, 0.08);
+    --border: rgba(0, 0, 0, 0.12);
+    --strong: #1c1c1c;
+    --on-strong: #ffffff;
+    --strong-hover: #000000;
+    --current-bg: #ffffff;
+    /* An ink hairline around the screenshot, like the icon's. */
+    --shot-edge: #1c1c1c;
+    --shot-shadow: 0 20px 50px rgba(0, 0, 0, 0.14);
+    color-scheme: light;
+  }
 }
 * {
   box-sizing: border-box;
@@ -34,15 +57,14 @@ body {
 a {
   color: inherit;
 }
+.mark {
+  display: block;
+}
 .wordmark {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.08em;
-  padding: 4px 8px 3px;
-  border-radius: 4px;
-  background: var(--accent);
-  color: var(--on-accent);
 }
 .caps {
   font-family: var(--mono);
@@ -81,10 +103,11 @@ h1 {
   font-weight: 500;
   line-height: 1;
   letter-spacing: -0.035em;
+  text-wrap: balance;
 }
 h1 em {
   font-style: normal;
-  color: var(--accent);
+  color: var(--muted);
 }
 .lede {
   margin: 14px 0 0;
@@ -92,6 +115,10 @@ h1 em {
   font-size: 16px;
   line-height: 1.5;
   color: var(--muted);
+  text-wrap: pretty;
+}
+.lede .line {
+  display: block;
 }
 .side {
   display: flex;
@@ -108,20 +135,21 @@ h1 em {
   align-items: center;
   gap: 12px;
 }
+/* At the badge's height, with its corners (8.4 at its 40 px, so 9 at 44). */
 .cta {
   display: inline-flex;
   align-items: center;
   height: 44px;
   padding: 0 18px;
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  color: var(--accent);
+  border-radius: 9px;
+  background: var(--strong);
+  color: var(--on-strong);
   font-size: 15px;
   font-weight: 600;
   text-decoration: none;
 }
 .cta:hover {
-  background: var(--accent-soft);
+  background: var(--strong-hover);
 }
 /* Apple's badge, at the buttons' height (never smaller than 40 px, per Apple). */
 .store-badge img {
@@ -141,13 +169,13 @@ h1 em {
 }
 .viewer img {
   max-width: min(100%, 1200px);
-  max-height: 54vh;
+  max-height: 62vh;
   width: auto;
   height: auto;
-  border-radius: 8px;
+  border-radius: var(--radius);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 30px 90px rgba(0, 0, 0, 0.7);
+    0 0 0 1px var(--shot-edge),
+    var(--shot-shadow);
 }
 .viewer img[hidden] {
   display: none;
@@ -158,7 +186,7 @@ h1 em {
   width: 36px;
   height: 52px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--fill);
   color: var(--text);
   font-size: 18px;
@@ -204,12 +232,16 @@ h1 em {
   background: var(--fill);
 }
 .contents button[aria-current='true'] {
-  border-color: var(--accent);
+  border-color: var(--strong);
+  background: var(--current-bg);
   color: var(--text);
 }
 .contents .folio {
   font-size: 12px;
-  color: var(--accent);
+  color: var(--muted);
+}
+.contents button[aria-current='true'] .folio {
+  color: var(--text);
 }
 .contents small {
   grid-column: 1 / -1;
@@ -245,6 +277,10 @@ footer {
   }
   .title-row {
     flex-wrap: wrap;
+  }
+  /* Narrow, the subhead wraps where it fits. */
+  .lede .line {
+    display: inline;
   }
   .side {
     align-items: flex-start;
