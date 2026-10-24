@@ -42,7 +42,7 @@ Check whether the UI changed since they were taken:
 
 ```bash
 since=$(git log -1 --format=%H -- docs/app-store)
-git diff --stat "$since"..HEAD -- src/components src/styles.css site/app src/tour
+git diff --stat "$since"..HEAD -- src/components src/styles.css site/app scripts/screenshots.mjs
 ```
 
 If anything visible changed (layout, toolbar, pages, colors, new views), retake them with
@@ -97,9 +97,9 @@ When the real run finishes, check it did everything: both jobs green
 GitHub release published (`gh release view vX.Y.Z`), and the App Store job's upload step
 succeeded. If anything failed, report it in full instead, with the failing step's log.
 
-Then open the screenshots folder in Finder (the `reveal_path` tool on `docs/app-store`), and
-make the **last message** of the run everything the user needs for App Store Connect, ready
-to paste, and nothing else after it:
+Then open the screenshots folder in Finder (the `reveal_path` tool on `docs/app-store`, or
+`open docs/app-store`), and make the **last message** of the run everything the user needs
+for App Store Connect, ready to paste, and nothing else after it:
 
 - **Version:** X.Y.Z, and the build to pick (it appears under TestFlight, then in the
   version's Build section; processing can take a few minutes after upload).

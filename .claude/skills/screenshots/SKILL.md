@@ -5,13 +5,11 @@ description: Retake Sequence's screenshots (App Store, README, landing page) fro
 
 # Screenshots
 
-`npm run screenshots` (`scripts/screenshots.mjs`) takes every screenshot from the Mac app's
-interface as it is now: the Mac build's web side (`vite --mode app` on :5176, started if it
-isn't running) in headless Chromium at 1440 × 900 pt @2x, with Tauri stubbed out and the
-traffic lights drawn in. The project is "City Walks": the six photos in
-`assets/screenshots/` (the owner's, large enough that nothing is enlarged or marked low
-resolution), three on the desk and three placed in a four-page book at 300 dpi; the last shot
-makes it a 4:5 Instagram carousel. Dark theme. It writes:
+`npm run screenshots` (`scripts/screenshots.mjs`; its header says how) takes every screenshot
+from the Mac app's interface as it is now, in the dark theme, on a Mac (it resizes with
+`sips`). The project is "City Walks": the six photos in `assets/screenshots/`, three on the
+desk and three in a four-page book; the last shot makes it a 4:5 Instagram carousel. It
+writes:
 
 | File                                            | Use                                                                      |
 | ----------------------------------------------- | ------------------------------------------------------------------------ |
