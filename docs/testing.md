@@ -10,9 +10,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Automated checks
 
-- [ ] `npm test`: unit tests pass.
-- [ ] `npx tsc -b` and `npm run lint`: no errors or warnings.
-- [ ] `npm run format:check`: formatted.
+- [ ] `npm run check`: no secrets in committed env files, formatted, no lint or type errors,
+      unit tests pass.
 - [ ] `npm run build`, then `node scripts/check-web-bundle.mjs`: the website has none of the
       Mac app's code. `dist/_headers` has the Content Security Policy for `/*`, naming both of
       Sequence's servers and a `sha256-` hash for the app page's inline script.
@@ -28,7 +27,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] `npm run test:app`: the Mac app end-to-end test passes (open, Save, Save As, relaunch,
       sandboxed, Preview's fullscreen, the Settings window and its sync with the main window).
       CI runs it on pull requests that touch the Mac side, and before App Store uploads.
-- [ ] In `server/`: `npm test`, `npm run typecheck`, `npm run lint`, `npm run format:check`.
+- [ ] `npm run server:check`: the server's format, types, lint, and tests.
 
 ## Desktop feel
 
@@ -205,7 +204,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Settings or About over a page close when going to another page.
 - [ ] No grab or help cursors over photos or marks: the arrow throughout.
 - [ ] A soft photo's "Show me" (Export) goes to the desk with it open in the editor.
-- [ ] The tour's Layout step shows the Layout dialog; its Preview step points at the switcher.
+- [ ] The tour's Layout step opens Layout on its Guides tab; its Preview step points at the
+      switcher.
 
 ## Hints
 
@@ -371,7 +371,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       Settings, the status bar counts "Making test images", then "Adding photos", then it imports like Add photos: "Gradient 01.jpg"…
       on the desk, in film colors that blend cleanly (no gray middles), about 3000 × 2000 px
       (portrait, landscape, or square), with no ring in the glow or vignette. One undo removes them.
-- [ ] Appearance: System, Light, Dark apply at once and survive a reload.
+- [ ] Theme: System, Light, Dark apply at once and survive a reload.
 - [ ] Desk color: the swatches match the desk's menu and survive a reload.
 - [ ] Storage (web): usage and Protected or not; Protect storage asks the browser.
 - [ ] Server: Sequence, Development, or Local (an `http://localhost` address; Save only when
@@ -457,7 +457,7 @@ Posts made while testing are real and public. Use a test account, or delete them
       the three page buttons (⌥⌘1–⌥⌘3), Layout (⌥⌘P), the sidebar toggle, Settings, the editor's guides eye,
       and the empty desk's Add photos. A disabled button's badge is dimmed; releasing hides
       them. Off in Settings → General → Shortcuts, none show.
-- [ ] ⌘I add, ⌘O open, ⌘S export/save, ⌘⇧E export, ⌘P preview, ⌘; guides, ⌘,
+- [ ] ⌘I add, ⌘O open, ⌘S save, ⌘⇧E export, ⌘P preview, ⌘; guides, ⌘,
       settings, ⌘B sidebar.
 - [ ] Desk shortcuts (⌘A, ⌘C, ⌘D, Delete, arrows, Escape) do nothing on another page, or while
       a dialog or the editor is open.
@@ -515,12 +515,19 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
       and relaunch.
 - [ ] Exporting a PDF, images, or InDesign suggests the document's name ("Trip.pdf",
       "Trip (images).zip", "Trip (InDesign).zip"); an untitled project gets a dated name.
-- [ ] Settings has General (Instagram, Appearance, Desk; no Storage) and Advanced (Server,
-      Test images), as on the website.
 - [ ] Opening a project from a newer version says to update from the App Store (no Reload).
 - [ ] The icon (Dock, Finder, the About window) is the stack of frames: white in light mode,
       black in dark mode (macOS 26 and later, following System Settings → Appearance); the
       white one on older macOS.
+
+## Landing page (web)
+
+- [ ] `/` shows the headline, Try it online (opens `/app/`), and the Mac App Store badge; paper
+      in a light color scheme, near-black in dark, with no accent color.
+- [ ] The screenshots (desk, spreads, preview, Instagram) turn with ‹ ›, ←/→, or their
+      captions, wrapping around at the ends. On a wide screen the content stays within about
+      150 px of the screenshot on each side, while the dividers run edge to edge; at phone
+      width nothing scrolls sideways.
 
 ## Icons (web)
 
