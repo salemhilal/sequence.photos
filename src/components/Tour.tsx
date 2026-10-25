@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useWindowEvent } from '../hooks';
 import { endTour, goToStep, TOUR_STEPS } from '../tour';
 import { ui } from '../ui';
 
@@ -17,7 +16,11 @@ interface Box {
   height: number;
 }
 
-/** The running tour: dims the app except the step's target, with a card to step through. */
+/**
+ * The running tour: dims the app except the step's target, with a card to step through.
+ * Only the card takes clicks and keys; everything else goes on to the app underneath, which
+ * is showing the sample project to try things on.
+ */
 export function Tour() {
   const step = ui.use((s) => s.tour);
   return step === null ? null : <TourStepView index={step} />;
@@ -30,40 +33,43 @@ function TourStepView({ index }: { index: number }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [card, setCard] = useState({ width: 340, height: 180 });
 
+  const nextRef = useRef<HTMLButtonElement>(null);
+
+  // Each step starts with Next focused (so Enter, ← and → step through), as clicking a
+  // button doesn't focus it in Safari.
   useLayoutEffect(() => {
     const el = cardRef.current;
     if (el) setCard({ width: el.offsetWidth, height: el.offsetHeight });
+    nextRef.current?.focus();
   }, [index]);
 
-  useWindowEvent(
-    'keydown',
-    (e) => {
-      if (e.key === 'ArrowRight' || e.key === 'Enter') goToStep(index + 1);
-      else if (e.key === 'ArrowLeft') goToStep(Math.max(0, index - 1));
-      else if (e.key === 'Escape') endTour();
-      // Everything else is kept from the app underneath, which is showing the sample project.
-      e.stopImmediatePropagation();
-      if (!e.metaKey && !e.ctrlKey && e.key !== 'Tab') e.preventDefault();
-    },
-    true,
-  );
+  // While the card has focus: ← → step through, Esc ends. Elsewhere, keys are the app's.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowRight') goToStep(index + 1);
+    else if (e.key === 'ArrowLeft') goToStep(Math.max(0, index - 1));
+    else if (e.key === 'Escape') endTour();
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
   const hole = target && padWithin(target, innerWidth, innerHeight);
   const pos = placeCard(hole, card);
 
   return (
-    <div
-      className="tour"
-      role="dialog"
-      aria-label={`Tour: ${step.title}`}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => e.preventDefault()}
-    >
+    <>
       <div
         className={`tour-hole${hole ? '' : ' none'}`}
         style={hole ?? { left: innerWidth / 2, top: innerHeight / 2, width: 0, height: 0 }}
       />
-      <div ref={cardRef} className="tour-card" style={pos}>
+      <div
+        ref={cardRef}
+        className="tour-card"
+        style={pos}
+        role="dialog"
+        aria-label={`Tour: ${step.title}`}
+        onKeyDown={onKeyDown}
+      >
         <div className="tour-count data muted">
           {index + 1} of {TOUR_STEPS.length}
         </div>
@@ -81,12 +87,12 @@ function TourStepView({ index }: { index: number }) {
               Back
             </button>
           )}
-          <button className="btn primary" autoFocus onClick={() => goToStep(index + 1)}>
+          <button ref={nextRef} className="btn primary" onClick={() => goToStep(index + 1)}>
             {last ? 'Start your book' : 'Next'}
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

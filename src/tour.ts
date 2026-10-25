@@ -10,7 +10,8 @@ import { isMac } from './input';
 import { tourSeenPref } from './prefs';
 import { projectStore, emptyProject } from './store';
 import type { Project, PhotoMeta } from './types';
-import { ui, type Modal, type UiState } from './ui';
+import { putImage } from './db';
+import { onLeaveTour, ui, type Modal, type Page, type UiState } from './ui';
 import taxi from './tour/taxi.jpg';
 import spire from './tour/spire.jpg';
 import reflections from './tour/reflections.jpg';
@@ -19,9 +20,10 @@ import lily from './tour/lily.jpg';
 import door from './tour/door.jpg';
 
 /**
- * The product tour: a few steps that each point at part of the app. While it runs,
- * a sample project stands in for the user's. Nothing is saved (see maySave), and the
- * user's project comes back, history and all, when the tour ends.
+ * The product tour: a few steps that each point at part of the app. While it runs, a
+ * sample project stands in for the user's, and it's theirs to try things on: nothing is
+ * saved (see maySave), and their project comes back, history and all, when the tour ends.
+ * Adding, opening, or saving their own work ends it first (see leaveTour).
  */
 
 export interface TourStep {
@@ -29,58 +31,64 @@ export interface TourStep {
   body: string;
   /** CSS selector for what to highlight; none centers the card over everything. */
   target?: string;
+  /** The page it shows (the desk by default). */
+  page?: Page;
   /** Open the spread editor on the sample spread. */
   editor?: boolean;
   modal?: Modal;
 }
 
+const MOD = isMac ? '⌘' : 'Ctrl';
+const OPTION = isMac ? 'Option' : 'Alt';
+
 export const TOUR_STEPS: TourStep[] = [
   {
     title: 'Welcome to Sequence',
-    body: 'Sequence is a tool for playing with photo sequences. Here’s a quick look around, using a few sample photos. Your own work will remain unchanged.',
+    body: 'Here’s a quick look around, with a sample book. Try anything as you go: your own work is set aside, and comes back when the tour ends.',
   },
   {
     title: 'The desk',
-    body: 'Add photos by importing them, or just drop them here. Scroll or hold space and drag to pan, and pinch to zoom. Tap space to see a full-size preview of a selected photo. Right-click the desk to tidy up your photos or change the desk’s color.',
+    body: `Photos you add or drop in land here. Move them around like prints on a table, or ${OPTION}-drag one to duplicate it. Scroll to pan, pinch to zoom, and tap Space to see a photo full size.`,
     target: '.desk',
   },
   {
     title: 'Spreads',
-    body: 'Drag photos from the desk onto a page; they’re sized to fit its guides. Drag a spread to reorder it, or click “+” to add one.',
+    body: 'Drag a photo from the desk onto a page; it fits the page’s guides. Drag spreads to put them in order, or click + to add one.',
     target: '.sidebar',
   },
   {
     title: 'Arrange a spread',
-    body: 'Double-click a spread, or click its pencil, to open it. Move and resize photos; they snap to the page edges and guides.',
+    body: 'Double-click a spread to open it. Move and resize photos, and they snap to the page’s edges and guides, or type exact positions on the right. Drag one to the desk below to take it off the page.',
     target: '.modal.editor',
     editor: true,
   },
   {
     title: 'Layout',
-    body: 'On the Page tab, choose spreads or frames, inches or pixels, and the size. On the Guides tab, set the border guides photos fit to when you drop them on a page, and drag guides out of the rulers. They apply to every spread, mirrored on facing pages.',
+    body: 'Choose spreads (for a book) or frames (for slides and carousels), inches or pixels, and the page size. On the Guides tab, set the margins photos fit to.',
     target: '.layout-editor',
     modal: 'layout',
   },
   {
-    title: 'Settings',
-    body: 'Change how the app looks.',
-    target: '.modal.settings',
-    modal: 'settings',
+    title: 'Preview',
+    body: 'Page through the book as it will look. Press F for fullscreen.',
+    target: '.preview',
+    page: 'preview',
   },
   {
-    title: 'Preview the book',
-    body: 'Flip through it page by page, then export it as a PDF, images, or for InDesign.',
-    target: '[data-tour="preview"]',
+    title: 'Export',
+    body: 'Save a PDF to print or share, images, or an InDesign file with every photo placed, or post to Instagram. The preview shows exactly what you’ll get.',
+    target: '.export-view',
+    page: 'export',
   },
   {
     ...(platform.kind === 'macos'
       ? {
           title: 'Save your project',
-          body: 'File → Save keeps your project, photos and all, in one file. Double-click it to pick up where you left off. Hold ⌘ to see every shortcut.',
+          body: `File → Save keeps your project, photos and all, in one file. Double-click it to pick up where you left off. Hold ${MOD} to see every shortcut.`,
         }
       : {
           title: 'Keep a copy',
-          body: `Browsers can clear what sites store, so save your project now and then (File → Save project). It saves the photos and layout in one file. Hold ${isMac ? '⌘' : 'Ctrl'} to see every shortcut.`,
+          body: `Browsers can clear what sites store, so save your project now and then (File → Save project). It keeps the photos and layout in one file. Hold ${MOD} to see every shortcut.`,
           target: '.toolbar .menu > .btn',
         }),
   },
@@ -98,27 +106,37 @@ const SAMPLE_PX = { pxW: 795, pxH: 1200 };
 /** The sample desk photos' spacing, as a share of their width. */
 const SAMPLE_STEP = 1.12;
 
-/** The sample project: four photos on the desk, two on the first middle spread. */
+/** The sample desk photos: the first few samples, the rest are in the book. */
+const ON_DESK = 3;
+
+/**
+ * The sample project: three photos on the desk, and three in the book (the first page, and
+ * the first two-page spread), so Preview and Export open on a photo. At 150 dpi, which the
+ * small samples have enough detail for, so none is marked.
+ */
 export function sampleProject(): Project {
   const project = emptyProject();
+  project.page.pxPerUnit = 150;
   SAMPLES.forEach(([name], i) => {
     const photo: PhotoMeta = { id: toPhotoId(`tour-${name}`), name: `${name}.jpg`, ...SAMPLE_PX };
     project.photos[photo.id] = photo;
-    if (i >= 4) return;
+    if (i >= ON_DESK) return;
     const { w, h } = pileSize(photo);
     // A loose row, like prints set down by hand.
     project.pile.push({
       photoId: photo.id,
       x: i * w * SAMPLE_STEP,
-      y: [0.05, 0, 0.12, 0.02][i]! * h,
+      y: [0.05, 0, 0.12][i]! * h,
       w,
       h,
       z: project.nextZ++,
     });
   });
   return produce(project, (d) => {
-    // The book's first two-page spread (the sample is always spreads).
-    const spread = allSpreads(d)[1]!;
+    // The sample is always spreads: a single first page, then two-page spreads.
+    const [first, spread] = allSpreads(d);
+    if (!first || !spread) return;
+    putOnPage(d, [toPhotoId('tour-door')], first.id, 'right');
     putOnPage(d, [toPhotoId('tour-leaves')], spread.id, 'left');
     putOnPage(d, [toPhotoId('tour-lily')], spread.id, 'right');
   });
@@ -147,6 +165,23 @@ export function startTour(): void {
     view: frameSamples(),
   });
   restoreProject = projectStore.swap(sampleProject());
+  void storeSamples();
+}
+
+/**
+ * Store the sample photos as added photos are stored, so everything works on them during
+ * the tour: exporting, Quick Look, duplicating. Nothing refers to them once the tour ends,
+ * so the next save's cleanup removes them.
+ */
+async function storeSamples(): Promise<void> {
+  for (const [name, url] of SAMPLES) {
+    try {
+      const blob = await (await fetch(url)).blob();
+      await putImage(`tour-${name}`, { full: blob, thumb: blob });
+    } catch {
+      // Then they show, but don't export: the tour still works.
+    }
+  }
 }
 
 export function goToStep(index: number): void {
@@ -154,17 +189,16 @@ export function goToStep(index: number): void {
   if (!step) return endTour();
   ui.set({
     tour: index,
-    page: 'desk',
+    page: step.page ?? 'desk',
     modal: step.modal ?? null,
-    // The Layout step shows the guides, which the sample book has.
-    ...(step.modal === 'layout' && { layoutTab: 'guides' as const }),
+    ...(step.modal === 'layout' && { layoutTab: 'page' as const }),
     editingSpreadId: step.editor ? (allSpreads(projectStore.project)[1]?.id ?? null) : null,
   });
 }
 
 export function endTour(): void {
   if (ui.get().tour === null) return;
-  ui.set({ page: 'desk', modal: null, editingSpreadId: null, selection: [], ...before });
+  ui.set({ page: 'desk', modal: null, editingSpreadId: null, selection: [], quickLook: null, ...before });
   restoreProject?.();
   restoreProject = null;
   // Saving resumes only once the user's project is back.
@@ -176,9 +210,11 @@ function frameSamples() {
   const desk = document.querySelector('.desk')?.getBoundingClientRect();
   const w = desk?.width ?? 800;
   const h = desk?.height ?? 600;
-  // The row of four sample photos (see sampleProject), with room below for the tour's card.
+  // The row of sample photos on the desk (see sampleProject), with room below for the tour's card.
   const { w: pw, h: ph } = pileSize({ id: toPhotoId('tour'), name: '', ...SAMPLE_PX });
-  const box = { w: 3 * pw * SAMPLE_STEP + pw, h: ph * 1.12 };
+  const box = { w: (ON_DESK - 1) * pw * SAMPLE_STEP + pw, h: ph * 1.12 };
   const zoom = Math.min(1, (w * 0.8) / (box.w * DESK_PPI), (h * 0.5) / (box.h * DESK_PPI));
   return { zoom, panX: (w - box.w * DESK_PPI * zoom) / 2, panY: (h - box.h * DESK_PPI * zoom) / 3 };
 }
+
+onLeaveTour(endTour);

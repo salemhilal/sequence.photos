@@ -204,8 +204,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Settings or About over a page close when going to another page.
 - [ ] No grab or help cursors over photos or marks: the arrow throughout.
 - [ ] A soft photo's "Show me" (Export) goes to the desk with it open in the editor.
-- [ ] The tour's Layout step opens Layout on its Guides tab; its Preview step points at the
-      switcher.
+- [ ] The tour's Layout step opens Layout on its Page tab; its Preview and Export steps show
+      those pages.
 
 ## Hints
 
@@ -465,10 +465,16 @@ Posts made while testing are real and public. Use a test account, or delete them
 ## Tour
 
 - [ ] File → Take the tour (Mac: Help): a sample book replaces the project while it runs.
-- [ ] Each step highlights its part: desk, sidebar, editor, Layout, Settings, Preview, and the
-      File menu (web) or Save (Mac).
-- [ ] Ending or skipping at any step restores your project and its undo history exactly;
-      nothing from the tour is saved.
+- [ ] _(e2e)_ Each step highlights its part and shows its page: desk, sidebar, editor, Layout
+      (Page tab), Preview, Export, and the File menu (web) or Save (Mac). Next has focus at each
+      step; ← → step through while the card has focus.
+- [ ] _(e2e)_ The sample can be used as you go: click, drag, delete, Option-drag, Space for
+      Quick Look, export a PDF or images of it. Menus, Quick Look, and dialogs show above the
+      dimming. No sample photo is marked low resolution (the sample is 150 dpi).
+- [ ] _(e2e)_ Ending or skipping at any step restores your project and its undo history
+      exactly; nothing from the tour is saved, and your project is saved again after.
+- [ ] _(e2e)_ Adding photos (⌘I, a drop, a paste), opening a project, New project, or Save
+      ends the tour first, and acts on your own project.
 
 ## Offline and updates (web)
 
