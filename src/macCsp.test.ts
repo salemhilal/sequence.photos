@@ -15,4 +15,10 @@ describe('the Mac app’s security policy', () => {
       expect(connect).toContain(new URL(url).origin);
     }
   });
+
+  it('shows profile pictures from Instagram’s image servers', () => {
+    const conf = JSON.parse(tauriConf) as { app: { security: { csp: Record<string, string> } } };
+    const img = conf.app.security.csp['img-src']!.split(' ');
+    for (const domain of INSTAGRAM.imageDomains) expect(img).toContain(`https://*.${domain}`);
+  });
 });

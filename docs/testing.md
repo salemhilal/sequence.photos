@@ -425,6 +425,15 @@ Posts made while testing are real and public. Use a test account, or delete them
       blue hashtags and mentions; stories show progress bars on a 9:16 screen.
 - [ ] Pages outside 4:5 to 1.91:1 (feed), or too tall for stories: Size offers Crop or Expand
       to the nearest shape; the preview and help follow.
+- [ ] Connected: the preview's avatar is the account's profile picture (the initial without
+      one, before connecting, or if it won't load). On the website and in the Mac app (both
+      security policies allow Instagram's image servers).
+- [ ] _(e2e)_ People: click the preview's image to tag someone there; "@Name" becomes "name";
+      a name that can't be a username shows red and isn't tagged; Esc closes only the field;
+      × removes a tag; tagging someone again moves their tag; "N tagged." Each slide has its own
+      tags (up to 20); stories say they mention.
+- [ ] On Instagram: the tags are on the right images, at the right spots; a story mentions
+      them. A username that isn't a public account: Instagram's error, and nothing is posted.
 - [ ] Caption: "n / 2,200" and "n / 30 hashtags"; over either turns red and disables Post.
       Stories say they have no captions.
 - [ ] Post: Preparing and Uploading slide n of N, Instagram processing, Publishing. Cancel

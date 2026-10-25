@@ -2279,6 +2279,68 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
   background: #fff;
   box-shadow: none;
 }
+/* A profile picture in place of the initial. */
+img.ig-avatar {
+  object-fit: cover;
+  background: #ddd;
+}
+/* People tagged, as Instagram shows them: a dark bubble hanging from the spot. */
+.ig-user-tag {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 60%;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translate(-50%, 8px);
+}
+.ig-user-tag::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: calc(50% - 5px);
+  border: 5px solid transparent;
+  border-top: 0;
+  border-bottom-color: rgba(0, 0, 0, 0.78);
+}
+.ig-user-tag button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  opacity: 0.7;
+}
+.ig-user-tag button:hover {
+  opacity: 1;
+}
+.ig-user-tag .lucide {
+  width: 12px;
+  height: 12px;
+}
+.ig-user-tag input {
+  width: 120px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+.ig-user-tag input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+.ig-user-tag input.invalid {
+  color: #ff9b9b;
+}
 .ig-count {
   position: absolute;
   top: 12px;

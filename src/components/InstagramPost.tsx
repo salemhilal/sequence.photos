@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
 import { useElementSize, usePager } from '../hooks';
 import { useConnectInstagram, useInstagram } from '../instagram';
 import {
@@ -15,7 +15,8 @@ import {
   type PostKind,
   type Slide,
 } from '../instagramImage';
-import { CancelledError, postToInstagram, type PostStep } from '../instagramPost';
+import { CancelledError, postToInstagram, profilePicture, type PostStep } from '../instagramPost';
+import { addTag, MAX_TAGS, usernameOf, type UserTag } from '../instagramTags';
 import { PREVIEWS_NOTICE } from '../rasterExport';
 import { firstNonEmpty, outputPages, slideKey } from '../renderPlan';
 import { sheetOf } from '../spreads';
@@ -59,13 +60,31 @@ function stepLabel(step: PostStep): string {
   }
 }
 
+/** People tagged, by slide (`slideKey`). */
+type Tags = Record<string, readonly UserTag[]>;
+
 /** The post's choices, kept while the app is open so switching destinations keeps them. */
-let remembered: { kind: PostKind; fit: Fit; caption: string; chosen: Set<string> | null } = {
+let remembered: { kind: PostKind; fit: Fit; caption: string; chosen: Set<string> | null; tags: Tags } = {
   kind: 'feed',
   fit: 'crop',
   caption: '',
   chosen: null,
+  tags: {},
 };
+
+/** The account's profile picture while connected (asked for each time the pane opens), or null. */
+function useProfilePicture(token: string | null): string | null {
+  const [picture, setPicture] = useState<{ token: string; url: string | null } | null>(null);
+  useEffect(() => {
+    if (!token) return;
+    const controller = new AbortController();
+    void profilePicture(token, controller.signal).then((url) => {
+      if (!controller.signal.aborted) setPicture({ token, url });
+    });
+    return () => controller.abort();
+  }, [token]);
+  return token && picture?.token === token ? picture.url : null;
+}
 
 interface Props {
   /** What the panel starts with (the destination picker), told whether a post is under way. */
@@ -85,6 +104,7 @@ export function InstagramPost({ head }: Props) {
   const [kind, setKind] = useState<PostKind>(remembered.kind);
   const [fit, setFit] = useState<Fit>(remembered.fit);
   const [caption, setCaption] = useState(remembered.caption);
+  const [people, setPeople] = useState<Tags>(remembered.tags);
   // Instagram's API takes 10 at a time, for a carousel or a run of stories alike: the
   // first 10 with photos to start with, or those chosen last time that are still there.
   const [chosen, setChosen] = useState(() => {
@@ -92,8 +112,8 @@ export function InstagramPost({ head }: Props) {
     return kept?.size ? kept : firstNonEmpty(all, sheet, LIMITS.maxItems);
   });
   useEffect(() => {
-    remembered = { kind, fit, caption, chosen };
-  }, [kind, fit, caption, chosen]);
+    remembered = { kind, fit, caption, chosen, tags: people };
+  }, [kind, fit, caption, chosen, people]);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   // Photos that went out at preview size (their originals wouldn't decode here).
   const [previews, setPreviews] = useState(0);
@@ -127,6 +147,15 @@ export function InstagramPost({ head }: Props) {
   // Everything previews and can be set up before connecting; posting needs the account.
   const ready = connection !== null && !connection.needsReconnect;
   const signIn = useConnectInstagram({ returnToExport: true });
+  const picture = useProfilePicture(ready ? connection.token : null);
+  const tagged = slides.reduce((n, p) => n + (people[slideKey(p)]?.length ?? 0), 0);
+  const tagging = {
+    tags: people,
+    editable: !posting,
+    add: (key: string, tag: UserTag) => setPeople((t) => ({ ...t, [key]: addTag(t[key] ?? [], tag) })),
+    remove: (key: string, username: string) =>
+      setPeople((t) => ({ ...t, [key]: (t[key] ?? []).filter((x) => x.username !== username) })),
+  };
 
   const problem = !ready
     ? null
@@ -149,13 +178,14 @@ export function InstagramPost({ head }: Props) {
       kind,
       fit,
       caption: caption.trim(),
+      tags: slides.map((p) => people[slideKey(p)] ?? []),
       onPreviews: setPreviews,
       signal: controller.signal,
       onStep: (step) => setStatus({ kind: 'posting', step }),
     }).then(
       (link) => {
         // Posted: the next post starts fresh, not with this one's caption and slides.
-        remembered = { ...remembered, caption: '', chosen: null };
+        remembered = { ...remembered, caption: '', chosen: null, tags: {} };
         setStatus({ kind: 'done', link });
       },
       (error: unknown) =>
@@ -179,7 +209,9 @@ export function InstagramPost({ head }: Props) {
         layout={layout}
         kind={kind}
         username={connection?.username ?? 'you'}
+        picture={picture}
         caption={caption}
+        tagging={tagging}
       />
       <aside className="inspector sectioned export-panel">
         {head(posting)}
@@ -274,6 +306,16 @@ export function InstagramPost({ head }: Props) {
           </p>
         </section>
 
+        <section>
+          <h3>People</h3>
+          <p className="help">
+            {kind === 'feed'
+              ? 'Click a slide in the preview to tag someone there.'
+              : 'Click a story in the preview to mention someone there.'}
+            {tagged > 0 && ` ${tagged} tagged.`}
+          </p>
+        </section>
+
         {kind === 'feed' ? (
           <section>
             <h3>Caption</h3>
@@ -342,17 +384,27 @@ function Caption({ text }: { text: string }) {
   );
 }
 
+interface Tagging {
+  tags: Tags;
+  editable: boolean;
+  add: (key: string, tag: UserTag) => void;
+  remove: (key: string, username: string) => void;
+}
+
 interface PreviewProps {
   slides: readonly Slide[];
   sheet: Sheet;
   layout: PostImageLayout;
   kind: PostKind;
   username: string;
+  /** The profile picture's address, or null for the username's initial. */
+  picture: string | null;
   caption: string;
+  tagging: Tagging;
 }
 
 /** How the post will look on Instagram: a feed post's carousel, or stories. */
-function PostPreview({ slides, sheet, layout, kind, username, caption }: PreviewProps) {
+function PostPreview({ slides, sheet, layout, kind, username, picture, caption, tagging }: PreviewProps) {
   const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 700, h: 600 });
   const { at, go } = usePager(slides.length, true);
 
@@ -369,8 +421,9 @@ function PostPreview({ slides, sheet, layout, kind, username, caption }: Preview
   const render = (slide: Slide) => {
     const k = imageW / layout.width;
     const s = k * (layout.target.w / layout.source.w);
+    const key = slideKey(slide);
     return (
-      <div className="ig-image" style={{ width: imageW, height: imageH }}>
+      <TagLayer key={key} slideKey={key} tagging={tagging} style={{ width: imageW, height: imageH }}>
         <div
           style={{
             position: 'absolute',
@@ -380,7 +433,7 @@ function PostPreview({ slides, sheet, layout, kind, username, caption }: Preview
         >
           <PageCanvas page={slide} sheet={sheet} scale={s * sheet.pxPerUnit} />
         </div>
-      </div>
+      </TagLayer>
     );
   };
 
@@ -401,9 +454,7 @@ function PostPreview({ slides, sheet, layout, kind, username, caption }: Preview
 
   const head = (
     <header className="ig-head">
-      <span className="ig-avatar" aria-hidden="true">
-        {username.charAt(0).toUpperCase()}
-      </span>
+      <Avatar username={username} picture={picture} />
       <span className="ig-user">{username}</span>
     </header>
   );
@@ -458,6 +509,95 @@ function PostPreview({ slides, sheet, layout, kind, username, caption }: Preview
             <strong>{username}</strong> <Caption text={caption} />
           </p>
         </div>
+      )}
+    </div>
+  );
+}
+
+/** The account's profile picture, or its initial without one (or until it loads). */
+function Avatar({ username, picture }: { username: string; picture: string | null }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  return picture && failed !== picture ? (
+    <img className="ig-avatar" src={picture} alt="" referrerPolicy="no-referrer" onError={() => setFailed(picture)} />
+  ) : (
+    <span className="ig-avatar" aria-hidden="true">
+      {username.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+/**
+ * A slide's image with the people tagged on it, as Instagram shows them: click a spot to
+ * tag someone there (type their username, Return), click a tag's × to remove it.
+ */
+function TagLayer({
+  slideKey: key,
+  tagging,
+  style,
+  children,
+}: {
+  slideKey: string;
+  tagging: Tagging;
+  style: React.CSSProperties;
+  children: ReactNode;
+}) {
+  const [draft, setDraft] = useState<{ x: number; y: number; text: string } | null>(null);
+  const tags = tagging.tags[key] ?? [];
+  const full = tags.length >= MAX_TAGS;
+
+  const commit = () => {
+    const username = draft && usernameOf(draft.text);
+    if (draft && username) tagging.add(key, { username, x: draft.x, y: draft.y });
+    setDraft(null);
+  };
+  const place = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!tagging.editable || full) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    setDraft({ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height, text: '' });
+  };
+  const at = (t: { x: number; y: number }) => ({ left: `${t.x * 100}%`, top: `${t.y * 100}%` });
+
+  return (
+    <div
+      className={`ig-image${tagging.editable && !full ? ' taggable' : ''}`}
+      style={style}
+      data-tip={
+        tagging.editable ? (full ? `Up to ${MAX_TAGS} people per image` : 'Click to tag someone here') : undefined
+      }
+      onClick={place}
+    >
+      {children}
+      {tags.map((t) => (
+        <span key={t.username} className="ig-user-tag" style={at(t)} onClick={(e) => e.stopPropagation()}>
+          {t.username}
+          {tagging.editable && (
+            <button aria-label={`Remove ${t.username}`} onClick={() => tagging.remove(key, t.username)}>
+              <X />
+            </button>
+          )}
+        </span>
+      ))}
+      {draft && (
+        <span className="ig-user-tag draft" style={at(draft)} onClick={(e) => e.stopPropagation()}>
+          <input
+            autoFocus
+            aria-label="Username to tag"
+            placeholder="Username"
+            value={draft.text}
+            spellCheck={false}
+            autoCapitalize="off"
+            className={draft.text && !usernameOf(draft.text) ? 'invalid' : ''}
+            onChange={(e) => setDraft({ ...draft, text: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit();
+              else if (e.key === 'Escape') setDraft(null);
+              else return;
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onBlur={commit}
+          />
+        </span>
       )}
     </div>
   );
