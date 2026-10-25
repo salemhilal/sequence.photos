@@ -1,4 +1,4 @@
-import type { Project, Sheet } from './types';
+import type { ExportDestination, Project, Sheet } from './types';
 
 /**
  * What the Export view exports to, and the choices each takes. Measurements convert only
@@ -7,7 +7,7 @@ import type { Project, Sheet } from './types';
  * a printed size at a dpi. InDesign opens pixels as pixels (a point each), so it needs none.
  */
 
-export type Destination = 'pdf' | 'images' | 'indesign' | 'instagram';
+export type Destination = ExportDestination;
 
 /** One output per spread (its pages side by side) or per page. Frames are always per page. */
 export type Per = 'spread' | 'page';

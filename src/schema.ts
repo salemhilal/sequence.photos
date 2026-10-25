@@ -91,6 +91,8 @@ const migrations: Record<number, (project: Raw) => Raw> = {
     // Anything else is damage, which validateProject reports.
     return project;
   },
+  /** 4 → 5: projects keep their Export choices; a project from before has none yet. */
+  4: (project) => project,
 };
 
 export class NewerProjectError extends Error {

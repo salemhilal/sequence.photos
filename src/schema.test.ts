@@ -76,6 +76,28 @@ const samples: Record<number, unknown> = {
     },
     nextZ: 2,
   },
+  // Today's shape, before projects kept their Export choices.
+  4: {
+    schemaVersion: 4,
+    photos: { a: { id: 'a', name: 'a.jpg', pxW: 1200, pxH: 800 } },
+    pile: [{ photoId: 'a', x: 1, y: 1, w: 2, h: 1.33, z: 1 }],
+    page: { w: 10, h: 8, unit: 'in', pxPerUnit: 300 },
+    layout: {
+      kind: 'spreads',
+      firstSpread: { kind: 'first', id: 's1', items: [] },
+      spreads: [],
+      lastSpread: { kind: 'last', id: 's2', items: [] },
+    },
+    settings: {
+      centerV: true,
+      centerH: false,
+      keepRelative: true,
+      borders: [{ id: 'm', kind: 'even', inset: 0.5 }],
+      lines: [],
+      dropBorder: 'm',
+    },
+    nextZ: 2,
+  },
 };
 
 /**
@@ -134,6 +156,39 @@ describe('migrateProject', () => {
 
   it('refuses projects from a newer version', () => {
     expect(() => migrateProject({ ...expected, schemaVersion: CURRENT_SCHEMA + 1 })).toThrow(NewerProjectError);
+  });
+});
+
+describe('Export choices', () => {
+  const withExport = (state: unknown) => migrateProject({ ...structuredClone(expected), export: state });
+
+  it('keep what was chosen', () => {
+    const state = {
+      to: 'instagram',
+      options: { per: 'page', format: 'png', quality: 0.8, printAt: 150 },
+      instagram: {
+        kind: 'story',
+        fit: 'expand',
+        caption: 'Hi #film',
+        chosen: ['s1:whole'],
+        tags: { 's1:whole': [{ username: 'salemhilal', x: 0.5, y: 0.25 }] },
+      },
+    };
+    expect(withExport(state).export).toEqual(state);
+  });
+
+  it('leave out whatever is damaged, rather than refuse the project', () => {
+    const project = withExport({
+      to: 'fax',
+      options: { per: 'both', quality: 7 },
+      instagram: {
+        caption: 3,
+        chosen: ['ok', 4],
+        tags: { a: [{ username: 'Has Space', x: 0.5, y: 0.5 }, { username: 'ok', x: 2, y: 0 }, 'x'], b: 'no' },
+      },
+    });
+    expect(project.export).toEqual({ options: {}, instagram: { chosen: ['ok'] } });
+    expect(withExport('nonsense').export).toBeUndefined();
   });
 });
 

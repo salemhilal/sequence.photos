@@ -17,6 +17,7 @@ import {
 } from '../instagramImage';
 import { CancelledError, postToInstagram, profilePicture, type PostStep } from '../instagramPost';
 import { addTag, MAX_TAGS, usernameOf, type UserTag } from '../instagramTags';
+import { saveExportState } from '../exportState';
 import { PREVIEWS_NOTICE } from '../rasterExport';
 import { firstNonEmpty, outputPages, slideKey } from '../renderPlan';
 import { sheetOf } from '../spreads';
@@ -63,15 +64,6 @@ function stepLabel(step: PostStep): string {
 /** People tagged, by slide (`slideKey`). */
 type Tags = Record<string, readonly UserTag[]>;
 
-/** The post's choices, kept while the app is open so switching destinations keeps them. */
-let remembered: { kind: PostKind; fit: Fit; caption: string; chosen: Set<string> | null; tags: Tags } = {
-  kind: 'feed',
-  fit: 'crop',
-  caption: '',
-  chosen: null,
-  tags: {},
-};
-
 /** The account's profile picture while connected (asked for each time the pane opens), or null. */
 function useProfilePicture(token: string | null): string | null {
   const [picture, setPicture] = useState<{ token: string; url: string | null } | null>(null);
@@ -100,19 +92,37 @@ export function InstagramPost({ head }: Props) {
   const size = slideSize(sheet);
   const torn = project.layout.kind === 'spreads';
 
-  // The choices made last time (kept while the app is open, like Export's), else the defaults.
-  const [kind, setKind] = useState<PostKind>(remembered.kind);
-  const [fit, setFit] = useState<Fit>(remembered.fit);
-  const [caption, setCaption] = useState(remembered.caption);
-  const [people, setPeople] = useState<Tags>(remembered.tags);
+  // The post as it was left (saved with the project, like Export's choices), else the defaults.
+  const [saved] = useState(() => project.export?.instagram ?? {});
+  const [kind, setKind] = useState<PostKind>(saved.kind ?? 'feed');
+  const [fit, setFit] = useState<Fit>(saved.fit ?? 'crop');
+  const [caption, setCaption] = useState(saved.caption ?? '');
+  const [people, setPeople] = useState<Tags>(saved.tags ?? {});
   // Instagram's API takes 10 at a time, for a carousel or a run of stories alike: the
   // first 10 with photos to start with, or those chosen last time that are still there.
   const [chosen, setChosen] = useState(() => {
-    const kept = remembered.chosen && new Set(all.map(slideKey).filter((k) => remembered.chosen?.has(k)));
-    return kept?.size ? kept : firstNonEmpty(all, sheet, LIMITS.maxItems);
+    const was = new Set(saved.chosen ?? []);
+    const kept = new Set(all.map(slideKey).filter((k) => was.has(k)));
+    return kept.size ? kept : firstNonEmpty(all, sheet, LIMITS.maxItems);
   });
+  // Saved once something's changed (just opening the pane changes nothing).
+  const opened = useRef(true);
   useEffect(() => {
-    remembered = { kind, fit, caption, chosen, tags: people };
+    if (opened.current) {
+      opened.current = false;
+      return;
+    }
+    const tags = Object.fromEntries(Object.entries(people).filter(([, list]) => list.length));
+    saveExportState((s) => ({
+      ...s,
+      instagram: {
+        kind,
+        fit,
+        ...(caption && { caption }),
+        chosen: [...chosen],
+        ...(Object.keys(tags).length && { tags: tags as Record<string, UserTag[]> }),
+      },
+    }));
   }, [kind, fit, caption, chosen, people]);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   // Photos that went out at preview size (their originals wouldn't decode here).
@@ -184,8 +194,8 @@ export function InstagramPost({ head }: Props) {
       onStep: (step) => setStatus({ kind: 'posting', step }),
     }).then(
       (link) => {
-        // Posted: the next post starts fresh, not with this one's caption and slides.
-        remembered = { ...remembered, caption: '', chosen: null, tags: {} };
+        // Posted: the next post starts fresh, not with this one's caption, slides, and tags.
+        saveExportState((s) => ({ ...s, instagram: { kind, fit } }));
         setStatus({ kind: 'done', link });
       },
       (error: unknown) =>

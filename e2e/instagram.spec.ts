@@ -1,5 +1,5 @@
 import { type Page } from '@playwright/test';
-import { addTestImages, expect, goTo, openEditor, test } from './fixtures';
+import { addTestImages, expect, goTo, MOD, openEditor, test } from './fixtures';
 
 /** A photo on pages 2–3, then Export → Instagram. */
 async function openInstagram(page: Page) {
@@ -50,5 +50,31 @@ test.describe('Instagram: tagging people', () => {
     await expect(image.locator('.ig-user-tag')).toHaveCount(0);
     // Esc closed only the field, not the page.
     await expect(page.locator('.page-switcher button.on')).toHaveText('Export');
+  });
+});
+
+test.describe('Instagram: the post is kept with the project', () => {
+  test('a caption and its tags survive a reload, and undo leaves them be', async ({ page }) => {
+    await openInstagram(page);
+    await page.getByPlaceholder('Write a caption…').fill('City walks #film');
+    const image = page.locator('.ig-image').first();
+    const box = (await image.boundingBox())!;
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.getByLabel('Username to tag').fill('@salemhilal');
+    await page.keyboard.press('Enter');
+    await expect(image.locator('.ig-user-tag')).toHaveText('salemhilal');
+
+    // Undo is about the book: it takes the photo off the page, not the caption.
+    await page.getByPlaceholder('Write a caption…').blur();
+    await page.keyboard.press(`${MOD}+Z`);
+    await page.keyboard.press(`${MOD}+Shift+Z`);
+    await expect(page.getByPlaceholder('Write a caption…')).toHaveValue('City walks #film');
+
+    await page.waitForTimeout(1000);
+    await page.reload();
+    await goTo(page, 'Export');
+    await expect(page.getByRole('radio', { name: 'Instagram' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByPlaceholder('Write a caption…')).toHaveValue('City walks #film');
+    await expect(page.locator('.ig-image').first().locator('.ig-user-tag')).toHaveText('salemhilal');
   });
 });

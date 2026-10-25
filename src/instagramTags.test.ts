@@ -11,6 +11,12 @@ describe('tagging people', () => {
     expect(usernameOf('a'.repeat(31))).toBeNull();
   });
 
+  it('takes “@salemhilal” and “salemhilal” as the same person', () => {
+    expect(usernameOf('@salemhilal')).toBe('salemhilal');
+    const at = (input: string, x: number) => ({ username: usernameOf(input) ?? '', x, y: 0.5 });
+    expect(addTag(addTag([], at('@salemhilal', 0.2)), at('salemhilal', 0.8))).toEqual([at('salemhilal', 0.8)]);
+  });
+
   it('tags a person once per image, at the last spot', () => {
     const tags = addTag(addTag([], { username: 'a', x: 0.1, y: 0.1 }), { username: 'a', x: 0.5, y: 0.6 });
     expect(tags).toEqual([{ username: 'a', x: 0.5, y: 0.6 }]);

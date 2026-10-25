@@ -20,6 +20,7 @@ import { sheetExtent } from '../geometry';
 import { sheetOf } from '../spreads';
 import { useProject } from '../store';
 import type { Project, Sheet } from '../types';
+import { saveExportState } from '../exportState';
 import { goToPage, ui } from '../ui';
 import { TERMS, UNITS } from '../units';
 import { NumberField } from './NumberField';
@@ -44,9 +45,6 @@ const LOOKS: Record<Destination, { label: string; icon: ReactNode }> = {
   instagram: { label: 'Instagram', icon: <InstagramGlyph /> },
 };
 
-/** The options last chosen, kept while the app is open. */
-let remembered: Partial<Omit<ExportOptions, 'dpi'>> = {};
-
 /**
  * Where Export opens before anything's picked: a book or zine in inches as a PDF; pixel
  * frames at Instagram's width to Instagram (on the web), other pixel frames as images.
@@ -65,15 +63,22 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 export function ExportView() {
   const { project } = useProject();
   const sheet = sheetOf(project);
-  const to = ui.use((s) => s.exportTo) ?? defaultDestination(sheet);
-  // The choices made last time, while the app is open. (The dpi starts from the page's.)
-  const [options, setOptions] = useState<ExportOptions>(() => ({ ...defaultOptions(sheet), ...remembered }));
-  const set = (o: Partial<ExportOptions>) =>
-    setOptions((was) => {
-      const next = { ...was, ...o };
-      remembered = { per: next.per, format: next.format, quality: next.quality, printAt: next.printAt };
-      return next;
-    });
+  const to = ui.use((s) => s.exportTo) ?? project.export?.to ?? defaultDestination(sheet);
+  const pick = (d: Destination) => {
+    ui.set({ exportTo: d });
+    saveExportState((s) => ({ ...s, to: d }));
+  };
+  // The choices made last time, saved with the project. (The dpi starts from the page's.)
+  const [options, setOptions] = useState<ExportOptions>(() => ({
+    ...defaultOptions(sheet),
+    ...project.export?.options,
+  }));
+  const set = (o: Partial<ExportOptions>) => {
+    const next = { ...options, ...o };
+    setOptions(next);
+    const { per, format, quality, printAt } = next;
+    saveExportState((s) => ({ ...s, options: { per, format, quality, printAt } }));
+  };
   const busy = ui.use((s) => s.busy);
 
   // What's exported, in the status bar.
@@ -94,7 +99,7 @@ export function ExportView() {
             aria-checked={d === to}
             className={`export-destination${d === to ? ' on' : ''}`}
             disabled={locked}
-            onClick={() => ui.set({ exportTo: d })}
+            onClick={() => pick(d)}
           >
             {LOOKS[d].icon}
             {LOOKS[d].label}

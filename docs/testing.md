@@ -434,6 +434,11 @@ Posts made while testing are real and public. Use a test account, or delete them
       tags (up to 20); stories say they mention.
 - [ ] On Instagram: the tags are on the right images, at the right spots; a story mentions
       them. A username that isn't a public account: Instagram's error, and nothing is posted.
+- [ ] _(e2e)_ The post is kept with the project: its caption, tags, slides, Feed or Stories,
+      and fit survive a reload or a relaunch, travel in a saved project file, and aren't undo
+      steps (undoing a move leaves the caption). Posting clears the caption, slides, and tags.
+      Export's destination and options (pages per, format, quality, print size) are kept the
+      same way, per project.
 - [ ] Caption: "n / 2,200" and "n / 30 hashtags"; over either turns red and disables Post.
       Stories say they have no captions.
 - [ ] Post: Preparing and Uploading slide n of N, Instagram processing, Publishing. Cancel

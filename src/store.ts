@@ -98,6 +98,8 @@ class ProjectStore {
 
   /** Replace the whole document as one undoable step (e.g. importing a project). */
   replace(project: Project): void {
+    // Both sides of the step: what came in, and what it replaced.
+    this.replaced.add(project).add(this.present);
     this.push(this.present);
     this.future = [];
     this.lastCoalesce = null;
@@ -141,11 +143,26 @@ class ProjectStore {
     this.emit();
   }
 
+  /** Projects that came in whole (`replace`): undoing or redoing past one isn't a single project's edit. */
+  private replaced = new WeakSet<Project>();
+
+  /**
+   * A step back or forward keeps the Export choices as they are now: they're saved with the
+   * project but aren't edits to undo (so undoing a move doesn't bring back an old caption).
+   * Except across a whole project coming in or going, where each keeps its own.
+   */
+  private keepExport(to: Project, from: Project): Project {
+    if (this.replaced.has(to) || this.replaced.has(from) || to.export === from.export) return to;
+    const { export: state, ...rest } = to;
+    void state;
+    return from.export ? { ...rest, export: from.export } : rest;
+  }
+
   undo(): void {
     const prev = this.past.pop();
     if (!prev) return;
     this.future.push(this.present);
-    this.present = prev;
+    this.present = this.keepExport(prev, this.present);
     this.lastCoalesce = null;
     this.emit();
   }
@@ -154,7 +171,7 @@ class ProjectStore {
     const next = this.future.pop();
     if (!next) return;
     this.past.push(this.present);
-    this.present = next;
+    this.present = this.keepExport(next, this.present);
     this.lastCoalesce = null;
     this.emit();
   }
