@@ -16,7 +16,8 @@ import {
   type Slide,
 } from '../instagramImage';
 import { CancelledError, postToInstagram, profilePicture, type PostStep } from '../instagramPost';
-import { addTag, MAX_TAGS, usernameOf, type UserTag } from '../instagramTags';
+import { addTag, MAX_TAGS, moveTag, usernameOf, type UserTag } from '../instagramTags';
+import { startDrag } from '../drag';
 import { saveExportState } from '../exportState';
 import { PREVIEWS_NOTICE } from '../rasterExport';
 import { firstNonEmpty, outputPages, slideKey } from '../renderPlan';
@@ -165,6 +166,8 @@ export function InstagramPost({ head }: Props) {
     add: (key: string, tag: UserTag) => setPeople((t) => ({ ...t, [key]: addTag(t[key] ?? [], tag) })),
     remove: (key: string, username: string) =>
       setPeople((t) => ({ ...t, [key]: (t[key] ?? []).filter((x) => x.username !== username) })),
+    move: (key: string, username: string, x: number, y: number) =>
+      setPeople((t) => ({ ...t, [key]: moveTag(t[key] ?? [], username, x, y) })),
   };
 
   const problem = !ready
@@ -399,6 +402,7 @@ interface Tagging {
   editable: boolean;
   add: (key: string, tag: UserTag) => void;
   remove: (key: string, username: string) => void;
+  move: (key: string, username: string, x: number, y: number) => void;
 }
 
 interface PreviewProps {
@@ -566,6 +570,15 @@ function TagLayer({
     setDraft({ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height, text: '' });
   };
   const at = (t: { x: number; y: number }) => ({ left: `${t.x * 100}%`, top: `${t.y * 100}%` });
+  // Drag a tag to move it: the spot follows the pointer, as far as the image's edges.
+  const drag = (e: React.PointerEvent<HTMLSpanElement>, t: UserTag) => {
+    const image = e.currentTarget.parentElement?.getBoundingClientRect();
+    if (!tagging.editable || e.button !== 0 || !image) return;
+    e.stopPropagation();
+    startDrag(e, {
+      onMove: ({ dx, dy }) => tagging.move(key, t.username, t.x + dx / image.width, t.y + dy / image.height),
+    });
+  };
 
   return (
     <div
@@ -578,10 +591,20 @@ function TagLayer({
     >
       {children}
       {tags.map((t) => (
-        <span key={t.username} className="ig-user-tag" style={at(t)} onClick={(e) => e.stopPropagation()}>
+        <span
+          key={t.username}
+          className={`ig-user-tag${tagging.editable ? ' movable' : ''}`}
+          style={at(t)}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => drag(e, t)}
+        >
           {t.username}
           {tagging.editable && (
-            <button aria-label={`Remove ${t.username}`} onClick={() => tagging.remove(key, t.username)}>
+            <button
+              aria-label={`Remove ${t.username}`}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => tagging.remove(key, t.username)}
+            >
               <X />
             </button>
           )}

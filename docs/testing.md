@@ -429,7 +429,8 @@ Posts made while testing are real and public. Use a test account, or delete them
       one, before connecting, or if it won't load). On the website and in the Mac app (both
       security policies allow Instagram's image servers).
 - [ ] _(e2e)_ People: click the preview's image to tag someone there; "@Name" becomes "name";
-      a name that can't be a username shows red and isn't tagged; Esc closes only the field;
+      a name that can't be a username shows red and isn't tagged; Esc closes only the field; drag
+      a tag to move it (it stops at the image's edges);
       × removes a tag; tagging someone again moves their tag; "N tagged." Each slide has its own
       tags (up to 20); stories say they mention.
 - [ ] On Instagram: the tags are on the right images, at the right spots; a story mentions
@@ -439,6 +440,9 @@ Posts made while testing are real and public. Use a test account, or delete them
       steps (undoing a move leaves the caption). Posting clears the caption, slides, and tags.
       Export's destination and options (pages per, format, quality, print size) are kept the
       same way, per project.
+- [ ] The preview's image has a hairline edge, so a white page doesn't run into the card.
+- [ ] Post (or Export), its progress, Cancel, and the result stay at the panel's foot while
+      the options scroll, as Layout's Apply does.
 - [ ] Caption: "n / 2,200" and "n / 30 hashtags"; over either turns red and disables Post.
       Stories say they have no captions.
 - [ ] Post: Preparing and Uploading slide n of N, Instagram processing, Publishing. Cancel

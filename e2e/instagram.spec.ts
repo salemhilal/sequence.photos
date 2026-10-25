@@ -33,6 +33,37 @@ test.describe('Instagram: tagging people', () => {
     await expect(tag).toHaveCount(0);
   });
 
+  test('a tag can be dragged to another spot, as far as the image’s edges', async ({ page }) => {
+    await openInstagram(page);
+    const image = page.locator('.ig-image').first();
+    const box = (await image.boundingBox())!;
+    await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.25);
+    await page.getByLabel('Username to tag').fill('someone');
+    await page.keyboard.press('Enter');
+    const tag = image.locator('.ig-user-tag');
+    const grip = (await tag.boundingBox())!;
+    const [gx, gy] = [grip.x + 12, grip.y + grip.height / 2];
+    await page.mouse.move(gx, gy);
+    await page.mouse.down();
+    await page.mouse.move(gx + box.width * 0.5, gy + box.height * 0.25, { steps: 6 });
+    await page.mouse.up();
+    const spot = async () =>
+      tag.evaluate((el) => [parseFloat((el as HTMLElement).style.left), parseFloat((el as HTMLElement).style.top)]);
+    const [x, y] = await spot();
+    expect(x).toBeCloseTo(75, 0);
+    expect(y).toBeCloseTo(50, 0);
+    // Dragging didn't also start a new tag.
+    await expect(page.getByLabel('Username to tag')).toHaveCount(0);
+
+    // Past the edge, it stops at it.
+    const moved = (await tag.boundingBox())!;
+    await page.mouse.move(moved.x + 12, moved.y + moved.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(moved.x + box.width * 2, moved.y, { steps: 6 });
+    await page.mouse.up();
+    expect((await spot())[0]).toBe(100);
+  });
+
   test('a name that can’t be a username isn’t tagged; Esc leaves without one', async ({ page }) => {
     await openInstagram(page);
     const image = page.locator('.ig-image').first();

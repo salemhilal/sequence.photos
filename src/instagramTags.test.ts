@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addTag, MAX_TAGS, userTagsParam, usernameOf } from './instagramTags';
+import { addTag, MAX_TAGS, moveTag, userTagsParam, usernameOf } from './instagramTags';
 
 describe('tagging people', () => {
   it('reads a username as typed', () => {
@@ -20,6 +20,14 @@ describe('tagging people', () => {
   it('tags a person once per image, at the last spot', () => {
     const tags = addTag(addTag([], { username: 'a', x: 0.1, y: 0.1 }), { username: 'a', x: 0.5, y: 0.6 });
     expect(tags).toEqual([{ username: 'a', x: 0.5, y: 0.6 }]);
+  });
+
+  it('moves a tag, keeping it on the image', () => {
+    const tags = [
+      { username: 'a', x: 0.1, y: 0.1 },
+      { username: 'b', x: 0.2, y: 0.2 },
+    ];
+    expect(moveTag(tags, 'b', 0.6, 1.4)).toEqual([tags[0], { username: 'b', x: 0.6, y: 1 }]);
   });
 
   it('keeps to Instagram’s limit', () => {

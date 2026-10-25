@@ -27,6 +27,12 @@ export function addTag(tags: readonly UserTag[], tag: UserTag): UserTag[] {
   return [...tags.filter((t) => t.username !== tag.username), tag].slice(-MAX_TAGS);
 }
 
+/** Move a person's tag to another spot, kept inside the image. */
+export function moveTag(tags: readonly UserTag[], username: string, x: number, y: number): UserTag[] {
+  const clamp = (n: number) => Math.min(1, Math.max(0, n));
+  return tags.map((t) => (t.username === username ? { ...t, x: clamp(x), y: clamp(y) } : t));
+}
+
 /** `user_tags` for an image's container: the tags, with spots kept inside the image. */
 export function userTagsParam(tags: readonly UserTag[]): string | null {
   if (!tags.length) return null;
