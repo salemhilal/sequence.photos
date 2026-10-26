@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { cleanCrop, cropFrom, cropPixels, cropStyle, cropToRatio, isWhole, visibleSize, wholeRect } from './crop';
+import {
+  cleanCrop,
+  cropFrom,
+  cropPixels,
+  cropStyle,
+  cropToRatio,
+  dragCropHandle,
+  frameToRatio,
+  isWhole,
+  panCrop,
+  visibleSize,
+  wholeRect,
+} from './crop';
 import { fitCentered, pileSize } from './geometry';
 import { planPage } from './renderPlan';
 import { coverage } from './resolution';
@@ -82,5 +94,44 @@ describe('crops', () => {
       { [a]: photo(half) },
     );
     expect(plan.draws[0]?.src).toEqual({ x: 1000, y: 0, w: 2000, h: 3000 });
+  });
+});
+
+describe('crop mode', () => {
+  const whole = { x: 0, y: 0, w: 10, h: 8 };
+  const frame = { x: 2, y: 2, w: 4, h: 4 };
+  const free = { ratio: null, min: 0.5 };
+
+  it('drags an edge or a corner, inside the photo', () => {
+    expect(dragCropHandle(frame, whole, 'e', 1, 5, free).frame).toEqual({ x: 2, y: 2, w: 5, h: 4 });
+    expect(dragCropHandle(frame, whole, 'nw', -1, -1, free).frame).toEqual({ x: 1, y: 1, w: 5, h: 5 });
+    expect(dragCropHandle(frame, whole, 'w', -10, 0, free).frame).toEqual({ x: 0, y: 2, w: 6, h: 4 });
+    expect(dragCropHandle(frame, whole, 'e', -10, 0, free).frame.w).toBe(0.5);
+  });
+
+  it('keeps the shape with a ratio, as far as the photo has room', () => {
+    const { frame: f } = dragCropHandle(frame, whole, 'se', 2, 0, { ratio: 1, min: 0.5 });
+    expect(f).toEqual({ x: 2, y: 2, w: 6, h: 6 });
+    const big = dragCropHandle(frame, whole, 'se', 20, 20, { ratio: 1, min: 0.5 }).frame;
+    expect(big).toEqual({ x: 2, y: 2, w: 6, h: 6 });
+    // An edge grows the other way around its middle.
+    expect(dragCropHandle(frame, whole, 'e', 2, 0, { ratio: 1, min: 0.5 }).frame).toEqual({ x: 2, y: 1, w: 6, h: 6 });
+  });
+
+  it('snaps the moving edges to lines', () => {
+    const lines = { xs: [6.8], ys: [0.1] };
+    const r = dragCropHandle(frame, whole, 'ne', 1, -1.8, { ...free, lines, threshold: 0.3 });
+    expect(r.frame).toEqual({ x: 2, y: 0.1, w: 4.8, h: 5.9 });
+    expect(r.hit).toEqual({ xs: [6.8], ys: [0.1] });
+  });
+
+  it('pans the photo behind the frame, keeping the frame on it', () => {
+    expect(panCrop(frame, whole, 1, 1)).toEqual({ x: 1, y: 1, w: 10, h: 8 });
+    expect(panCrop(frame, whole, 5, -10)).toEqual({ x: 2, y: -2, w: 10, h: 8 });
+  });
+
+  it('makes the largest frame of a shape, centered on the frame', () => {
+    expect(frameToRatio(frame, whole, 1)).toEqual({ x: 0, y: 0, w: 8, h: 8 });
+    expect(frameToRatio(frame, whole, 2)).toEqual({ x: 0, y: 1.5, w: 10, h: 5 });
   });
 });

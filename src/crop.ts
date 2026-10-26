@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { Rect } from './geometry';
+import { snapPoints, type GuideLines, type Rect, type SnapFeedback } from './geometry';
 import type { Crop, PhotoMeta } from './types';
 
 /**
@@ -99,5 +99,102 @@ export function cropStyle(crop: Crop | undefined): CSSProperties | undefined {
     width: `${100 / crop.w}%`,
     height: `${100 / crop.h}%`,
     maxWidth: 'none',
+  };
+}
+
+/** A crop frame's handles: its edges and corners. */
+export type CropHandle = 'n' | 's' | 'e' | 'w' | 'nw' | 'ne' | 'sw' | 'se';
+
+interface DragOptions {
+  /** Keep this shape (width over height), or none for any. */
+  ratio: number | null;
+  /** The smallest a side gets, in the frame's units. */
+  min: number;
+  /** Lines the moving edges snap to (the spread editor's guides), within `threshold`. */
+  lines?: GuideLines | null;
+  threshold?: number;
+}
+
+/**
+ * Drag a crop frame's handle by (dx, dy): the edges it holds move, inside the whole photo
+ * (which stays put), snapping to `lines`. With a ratio, the frame keeps its shape: a corner
+ * anchors the opposite one, an edge stays centered on its axis. Returns the snapped lines too.
+ */
+export function dragCropHandle(
+  start: Rect,
+  whole: Rect,
+  handle: CropHandle,
+  dx: number,
+  dy: number,
+  { ratio, min, lines = null, threshold = 0 }: DragOptions,
+): { frame: Rect; hit: SnapFeedback } {
+  const hit: SnapFeedback = { xs: [], ys: [] };
+  const snap = (v: number, axis: 'xs' | 'ys') => {
+    if (!lines) return v;
+    const s = snapPoints([v], lines[axis], threshold);
+    if (s.line !== null) hit[axis].push(s.line);
+    return v + s.delta;
+  };
+  const right = start.x + start.w;
+  const bottom = start.y + start.h;
+  const wholeRight = whole.x + whole.w;
+  const wholeBottom = whole.y + whole.h;
+  let x1 = start.x;
+  let y1 = start.y;
+  let x2 = right;
+  let y2 = bottom;
+  if (handle.includes('w')) x1 = Math.min(right - min, Math.max(whole.x, snap(start.x + dx, 'xs')));
+  if (handle.includes('e')) x2 = Math.max(start.x + min, Math.min(wholeRight, snap(right + dx, 'xs')));
+  if (handle.includes('n')) y1 = Math.min(bottom - min, Math.max(whole.y, snap(start.y + dy, 'ys')));
+  if (handle.includes('s')) y2 = Math.max(start.y + min, Math.min(wholeBottom, snap(bottom + dy, 'ys')));
+  if (ratio === null) return { frame: { x: x1, y: y1, w: x2 - x1, h: y2 - y1 }, hit };
+
+  // Keeping the shape: size from the dragged edges (a corner, whichever moved more).
+  let w = x2 - x1;
+  let h = y2 - y1;
+  const horizontal = handle === 'e' || handle === 'w';
+  const vertical = handle === 'n' || handle === 's';
+  if (horizontal || (!vertical && Math.abs(w - start.w) / start.w >= Math.abs(h - start.h) / start.h)) h = w / ratio;
+  else w = h * ratio;
+  // Where it grows from: the opposite corner, or for an edge, the middle of the other axis.
+  const ax = handle.includes('w') ? right : handle.includes('e') ? start.x : start.x + start.w / 2;
+  const ay = handle.includes('n') ? bottom : handle.includes('s') ? start.y : start.y + start.h / 2;
+  const fx = handle.includes('w') ? 1 : handle.includes('e') ? 0 : 0.5;
+  const fy = handle.includes('n') ? 1 : handle.includes('s') ? 0 : 0.5;
+  // As large as asked, if the photo has room on each side of the anchor.
+  const room = Math.min(
+    fx > 0 ? (ax - whole.x) / (w * fx) : Infinity,
+    fx < 1 ? (wholeRight - ax) / (w * (1 - fx)) : Infinity,
+    fy > 0 ? (ay - whole.y) / (h * fy) : Infinity,
+    fy < 1 ? (wholeBottom - ay) / (h * (1 - fy)) : Infinity,
+    1,
+  );
+  w *= room;
+  h *= room;
+  return { frame: { x: ax - w * fx, y: ay - h * fy, w, h }, hit: { xs: [], ys: [] } };
+}
+
+/** Move the photo behind its crop frame by (dx, dy), as far as the frame stays on it. */
+export function panCrop(frame: Rect, whole: Rect, dx: number, dy: number): Rect {
+  const x = Math.min(frame.x, Math.max(frame.x + frame.w - whole.w, whole.x + dx));
+  const y = Math.min(frame.y, Math.max(frame.y + frame.h - whole.h, whole.y + dy));
+  return { ...whole, x, y };
+}
+
+/** The largest frame of shape `ratio` on the whole photo, centered on the frame now. */
+export function frameToRatio(frame: Rect, whole: Rect, ratio: number): Rect {
+  let w = whole.w;
+  let h = w / ratio;
+  if (h > whole.h) {
+    h = whole.h;
+    w = h * ratio;
+  }
+  const cx = frame.x + frame.w / 2;
+  const cy = frame.y + frame.h / 2;
+  return {
+    x: Math.min(whole.x + whole.w - w, Math.max(whole.x, cx - w / 2)),
+    y: Math.min(whole.y + whole.h - h, Math.max(whole.y, cy - h / 2)),
+    w,
+    h,
   };
 }

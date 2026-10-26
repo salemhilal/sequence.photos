@@ -4,9 +4,10 @@ import { importFiles, setUrl } from './images';
 import { newPhotoId, newSpreadId, type PhotoId, type SpreadId } from './ids';
 import { allSpreads, findSpread, frameIndex, hasFrames, middleIndex, sheetOf } from './spreads';
 import { projectStore } from './store';
-import { dropBox, fitCentered, pageRect, pileSize } from './geometry';
+import { cleanCrop, cropFrom, cropOf, WHOLE, wholeRect } from './crop';
+import { dropBox, fitCentered, pageRect, pileSize, type Rect } from './geometry';
 import type { DropTarget } from './drag';
-import type { Arrangement, Project, PageSide, PhotoMeta, Placement, Spread } from './types';
+import type { Arrangement, Crop, Project, PageSide, PhotoMeta, Placement, Spread } from './types';
 import { deskGeometry, viewToFit } from './deskGeometry';
 import { leaveTour, ui } from './ui';
 
@@ -371,6 +372,39 @@ export async function duplicatePhotos(photoIds: PhotoId[], offset = DUPLICATE_OF
   projectStore.apply((d) => placeCopies(d, sources, offset));
   for (const { id, img } of sources) await putImage(id, img);
   return sources.map((s) => s.id);
+}
+
+/**
+ * Crop a photo, or show all of it (none), wherever it is: its frame changes to show the new
+ * crop, and the photo itself stays where it was under it (as trimming a print does).
+ */
+export function setCrop(d: Draft<Project>, photoId: PhotoId, crop: Crop | undefined): void {
+  const photo = d.photos[photoId];
+  if (!photo) return;
+  const at = locate(d, photoId);
+  if (at) {
+    const whole = wholeRect(at.placement, cropOf(photo));
+    const c = crop ?? WHOLE;
+    Object.assign(at.placement, {
+      x: whole.x + c.x * whole.w,
+      y: whole.y + c.y * whole.h,
+      w: c.w * whole.w,
+      h: c.h * whole.h,
+    });
+  }
+  if (crop) photo.crop = crop;
+  else delete photo.crop;
+}
+
+/** A crop made in crop mode: the frame where it's been dragged, over the whole photo at `whole`. */
+export function setCropFrame(d: Draft<Project>, photoId: PhotoId, frame: Rect, whole: Rect): void {
+  const photo = d.photos[photoId];
+  const at = locate(d, photoId);
+  if (!photo || !at) return;
+  const crop = cleanCrop(cropFrom(frame, whole));
+  Object.assign(at.placement, crop ? frame : whole);
+  if (crop) photo.crop = crop;
+  else delete photo.crop;
 }
 
 export function deleteFromProject(photoIds: PhotoId[]): void {

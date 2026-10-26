@@ -4,6 +4,7 @@ import { addPhotos, runCommand, shortcutLabel } from '../commands';
 import { isProjectFile, openProjectFile } from '../project';
 import { clearGhost, startDrag, trackGhost } from '../drag';
 import { intersects, resizeRect, type Corner, type Rect } from '../geometry';
+import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { Placement } from '../types';
 import { DESK_PPI, deskGeometry } from '../deskGeometry';
@@ -11,9 +12,12 @@ import { wheeled } from '../deskZoom';
 import { isTyping } from '../input';
 import { deskCovered, openPhotoMenu, openQuickLook, ui } from '../ui';
 import { OwnPageSettings } from './PageSettings';
+import { CropFrame } from './CropFrame';
 import { PhotoImg } from './PhotoImg';
 
 const CORNERS: Corner[] = ['nw', 'ne', 'sw', 'se'];
+/** The smallest a crop leaves a desk photo's side, in inches. */
+const MIN_DESK_CROP = 0.2;
 const GHOST_MAX = 140;
 /** When moving photos on the desk, the drop border fades in within this distance of its edge. */
 const EDGE_FADE_PX = 120;
@@ -26,6 +30,9 @@ export function Desk() {
   const { project } = useProject();
   const view = ui.use((s) => s.view);
   const selection = ui.use((s) => s.selection);
+  const cropping = ui.use((s) => s.cropping);
+  const sheet = sheetOf(project);
+  const pageShape = { label: sheet.arrangement === 'frames' ? 'Frame' : 'Page', ratio: sheet.pageW / sheet.pageH };
   const dropHover = ui.use((s) => s.hover?.kind === 'desk');
   const ref = useRef<HTMLDivElement>(null);
   const spaceHeld = useRef(false);
@@ -327,16 +334,27 @@ export function Desk() {
           <DeskItem
             key={p.photoId}
             p={p}
-            selected={selection.includes(p.photoId)}
-            handles={single === p.photoId}
+            selected={selection.includes(p.photoId) && cropping !== p.photoId}
+            handles={single === p.photoId && cropping !== p.photoId}
             onDown={onItemDown}
             onHandleDown={onHandleDown}
             onHover={setHoverId}
+            crop={
+              cropping === p.photoId ? (
+                <CropFrame
+                  photoId={p.photoId}
+                  frame={p}
+                  scale={DESK_PPI * view.zoom}
+                  min={MIN_DESK_CROP}
+                  page={pageShape}
+                />
+              ) : null
+            }
           />
         ))}
       </div>
       <SelectionFrames
-        items={items.filter((p) => selection.includes(p.photoId))}
+        items={items.filter((p) => selection.includes(p.photoId) && cropping !== p.photoId)}
         view={view}
         handlesFor={single && (hoverId === single || resizingId === single) ? single : null}
       />
@@ -389,6 +407,8 @@ export function Desk() {
 
 interface ItemProps {
   p: Placement;
+  /** Crop mode over this photo, when it's being cropped. */
+  crop: React.ReactNode;
   selected: boolean;
   handles: boolean;
   onDown: (e: React.PointerEvent, p: Placement) => void;
@@ -396,10 +416,14 @@ interface ItemProps {
   onHover: (id: string | null) => void;
 }
 
-const DeskItem = memo(function DeskItem({ p, selected, handles, onDown, onHandleDown, onHover }: ItemProps) {
+const DeskItem = memo(function DeskItem({ p, selected, handles, onDown, onHandleDown, onHover, crop }: ItemProps) {
   return (
     <div
-      className={`item${selected ? ' selected' : ''}`}
+      className={`item${selected ? ' selected' : ''}${crop ? ' cropping' : ''}`}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        ui.set({ cropping: p.photoId, selection: [p.photoId] });
+      }}
       style={{ left: p.x * DESK_PPI, top: p.y * DESK_PPI, width: p.w * DESK_PPI, height: p.h * DESK_PPI }}
       onPointerDown={(e) => onDown(e, p)}
       onContextMenu={(e) => openPhotoMenu(e, p.photoId)}
@@ -407,6 +431,7 @@ const DeskItem = memo(function DeskItem({ p, selected, handles, onDown, onHandle
       onPointerLeave={() => onHover(null)}
     >
       <PhotoImg id={p.photoId} />
+      {crop}
       {handles &&
         CORNERS.map((c) => (
           <div key={c} className={`handle handle-${c}`} onPointerDown={(e) => onHandleDown(e, p, c)} />
