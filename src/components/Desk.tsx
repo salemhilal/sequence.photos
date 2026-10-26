@@ -13,6 +13,7 @@ import { isTyping } from '../input';
 import { deskCovered, openPhotoMenu, openQuickLook, ui } from '../ui';
 import { OwnPageSettings } from './PageSettings';
 import { CropFrame } from './CropFrame';
+import { pageShape } from '../crop';
 import { PhotoImg } from './PhotoImg';
 
 const CORNERS: Corner[] = ['nw', 'ne', 'sw', 'se'];
@@ -32,7 +33,7 @@ export function Desk() {
   const selection = ui.use((s) => s.selection);
   const cropping = ui.use((s) => s.cropping);
   const sheet = sheetOf(project);
-  const pageShape = { label: sheet.arrangement === 'frames' ? 'Frame' : 'Page', ratio: sheet.pageW / sheet.pageH };
+  const page = pageShape(sheet);
   const dropHover = ui.use((s) => s.hover?.kind === 'desk');
   const ref = useRef<HTMLDivElement>(null);
   const spaceHeld = useRef(false);
@@ -341,13 +342,7 @@ export function Desk() {
             onHover={setHoverId}
             crop={
               cropping === p.photoId ? (
-                <CropFrame
-                  photoId={p.photoId}
-                  frame={p}
-                  scale={DESK_PPI * view.zoom}
-                  min={MIN_DESK_CROP}
-                  page={pageShape}
-                />
+                <CropFrame photoId={p.photoId} frame={p} scale={DESK_PPI * view.zoom} min={MIN_DESK_CROP} page={page} />
               ) : null
             }
           />

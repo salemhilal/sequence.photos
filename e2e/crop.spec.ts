@@ -1,4 +1,4 @@
-import { addTestImages, expect, MOD, test } from './fixtures';
+import { addTestImages, expect, MOD, openEditor, test } from './fixtures';
 
 test.describe('cropping', () => {
   test('on the desk: double-click, drag an edge, Done; Esc puts it back; one undo step', async ({ page }) => {
@@ -51,5 +51,53 @@ test.describe('cropping', () => {
     const back = (await item.boundingBox())!;
     expect(back.width).toBeCloseTo(before.width, 0);
     expect(back.height).toBeCloseTo(before.height, 0);
+  });
+
+  test('right-click → Crop to a shape, then Reset crop', async ({ page }) => {
+    await addTestImages(page, 1);
+    await page.keyboard.press('Escape');
+    const item = page.locator('.desk .item').first();
+    const before = (await item.boundingBox())!;
+    await item.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Crop to' }).hover();
+    await page.getByRole('menuitemradio', { name: '16:9' }).click();
+    const wide = (await item.boundingBox())!;
+    expect(wide.width / wide.height).toBeCloseTo(16 / 9, 1);
+
+    await item.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Reset crop' }).click();
+    expect((await item.boundingBox())!.height).toBeCloseTo(before.height, 0);
+  });
+
+  test('in the spread editor, the crop’s edges snap to the guides (Option: not)', async ({ page }) => {
+    await addTestImages(page, 1);
+    await page.keyboard.press('Escape');
+    await openEditor(page, 1);
+    await page.locator('.strip-item').first().click();
+    const placed = page.locator('.modal.editor .spread-canvas .item').first();
+    await placed.dblclick();
+    await expect(page.locator('.crop-bar')).toBeVisible();
+    await expect(page.locator('.statusbar .status-text')).toContainText('no snapping');
+
+    // Drag the top edge down, near the page's center line: it lands on it.
+    const canvas = (await page.locator('.modal.editor .spread-canvas').first().boundingBox())!;
+    const middle = canvas.y + canvas.height / 2;
+    const drag = async (toY: number, alt = false) => {
+      const h = (await page.locator('.crop-n').boundingBox())!;
+      if (alt) await page.keyboard.down('Alt');
+      await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(h.x + h.width / 2, toY, { steps: 6 });
+      await page.mouse.up();
+      if (alt) await page.keyboard.up('Alt');
+    };
+    await drag(middle + 3);
+    const edge = async () => (await placed.boundingBox())!.y;
+    expect(Math.abs((await edge()) - middle)).toBeLessThan(1);
+
+    await drag(middle + 14, true);
+    expect((await edge()) - middle).toBeGreaterThan(10);
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.crop-bar')).toHaveCount(0);
   });
 });

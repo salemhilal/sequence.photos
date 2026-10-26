@@ -38,6 +38,8 @@ when the Mac app, saving, or exports change. The first `test:e2e` needs
   `CURRENT_SCHEMA`, adding a migration, and adding a sample to `schema.test.ts`.
 - `src/pageSetup.ts`, `src/convertLayout.ts`: the Layout view's Page tab (a draft applied as
   one undo step) and the arrangement, unit, and size conversions.
+- `src/crop.ts`: cropping (a photo's crop, in fractions of the original, shapes its frame);
+  crop mode is `src/components/CropFrame.tsx`.
 - `src/renderPlan.ts`: what every export draws, in output pixels; `src/pdf.ts`,
   `src/rasterExport.ts`, `src/idml.ts`, `src/instagramImage.ts` draw from it.
 - `src/platform/`: web vs Mac differences (`#platform` import).

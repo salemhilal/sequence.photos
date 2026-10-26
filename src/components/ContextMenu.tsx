@@ -1,6 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { Copy, CopyPlus, Eye, LayoutGrid, Trash2, Undo2 } from 'lucide-react';
-import { deleteFromProject, locate, putInPile, tidyPile } from '../actions';
+import { Check, ChevronRight, Copy, CopyPlus, Crop as CropIcon, Eye, LayoutGrid, Trash2, Undo2 } from 'lucide-react';
+import { deleteFromProject, locate, putInPile, setCrop, tidyPile } from '../actions';
+import { cropToRatio, isWhole, pageShape, visibleSize } from '../crop';
+import { sheetOf } from '../spreads';
+import type { PhotoId } from '../ids';
 import { copyPhotos, duplicateAndSelect } from '../clipboard';
 import { shortcutLabel } from '../commands';
 import { projectStore, useProject } from '../store';
@@ -152,6 +155,32 @@ function PhotoItems({ menu, onClose }: { menu: Extract<ContextMenuState, { kind:
       )}
       <div className="menu-separator" />
       <button
+        className="menu-item"
+        role="menuitem"
+        onClick={() => {
+          startCropping(menu.photoId);
+          onClose();
+        }}
+      >
+        <CropIcon />
+        <span className="menu-label">Crop…</span>
+      </button>
+      <CropToMenu photoId={menu.photoId} onClose={onClose} />
+      {!isWhole(project.photos[menu.photoId]?.crop) && (
+        <button
+          className="menu-item"
+          role="menuitem"
+          onClick={() => {
+            projectStore.apply((d) => setCrop(d, menu.photoId, undefined));
+            onClose();
+          }}
+        >
+          <span className="menu-icon-space" />
+          <span className="menu-label">Reset crop</span>
+        </button>
+      )}
+      <div className="menu-separator" />
+      <button
         className="menu-item danger"
         role="menuitem"
         onClick={() => {
@@ -164,5 +193,73 @@ function PhotoItems({ menu, onClose }: { menu: Extract<ContextMenuState, { kind:
         <span className="menu-label">Delete</span>
       </button>
     </>
+  );
+}
+
+/** Crop mode on a photo: on the desk where it is, or for one on a page, in its spread's editor. */
+function startCropping(photoId: PhotoId): void {
+  const at = locate(projectStore.project, photoId);
+  if (!at) return;
+  if (at.where === 'desk') ui.set({ cropping: photoId, selection: [photoId] });
+  else ui.set({ editingSpreadId: at.spread.id, editorSelect: photoId, cropping: photoId });
+}
+
+/** Crop to ›: the common shapes, and the page's, each as large as the photo allows. */
+function CropToMenu({ photoId, onClose }: { photoId: PhotoId; onClose: () => void }) {
+  const { project } = useProject();
+  const [open, setOpen] = useState(false);
+  const [flip, setFlip] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const photo = project.photos[photoId];
+  if (!photo) return null;
+  const page = pageShape(sheetOf(project));
+  const shapes = [
+    { label: 'Square', note: '1:1', ratio: 1 },
+    { label: '4:5', note: '', ratio: 4 / 5 },
+    { label: '3:2', note: '', ratio: 3 / 2 },
+    { label: '16:9', note: '', ratio: 16 / 9 },
+    { label: `The ${page.label.toLowerCase()}`, note: '', ratio: page.ratio },
+  ];
+  const { pxW, pxH } = visibleSize(photo);
+  const now = pxW / pxH;
+  const show = () => {
+    const r = ref.current?.getBoundingClientRect();
+    setFlip(!!r && r.right + 200 > window.innerWidth);
+    setOpen(true);
+  };
+  return (
+    <div ref={ref} className="menu-sub" onPointerEnter={show} onPointerLeave={() => setOpen(false)}>
+      <button
+        className={`menu-item${open ? ' active' : ''}`}
+        role="menuitem"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={show}
+      >
+        <span className="menu-icon-space" />
+        <span className="menu-label">Crop to</span>
+        <ChevronRight />
+      </button>
+      {open && (
+        <div className={`menu-list context-submenu${flip ? ' flip' : ''}`} role="menu" aria-label="Crop to">
+          {shapes.map((shape) => (
+            <button
+              key={shape.label}
+              className="menu-item"
+              role="menuitemradio"
+              aria-checked={Math.abs(shape.ratio - now) < 0.005}
+              onClick={() => {
+                projectStore.apply((d) => setCrop(d, photoId, cropToRatio(photo, shape.ratio)));
+                onClose();
+              }}
+            >
+              {Math.abs(shape.ratio - now) < 0.005 ? <Check /> : <span className="menu-icon-space" />}
+              <span className="menu-label">{shape.label}</span>
+              {shape.note && <span className="menu-shortcut">{shape.note}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

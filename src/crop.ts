@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { snapPoints, type GuideLines, type Rect, type SnapFeedback } from './geometry';
-import type { Crop, PhotoMeta } from './types';
+import type { Crop, PhotoMeta, Sheet } from './types';
 
 /**
  * Cropping: a photo shows only part of its original, the same wherever it is (on the
@@ -197,4 +197,9 @@ export function frameToRatio(frame: Rect, whole: Rect, ratio: number): Rect {
     w,
     h,
   };
+}
+
+/** The page's shape, for crop mode's Page choice ("Frame" for frames). */
+export function pageShape(sheet: Pick<Sheet, 'arrangement' | 'pageW' | 'pageH'>): { label: string; ratio: number } {
+  return { label: sheet.arrangement === 'frames' ? 'Frame' : 'Page', ratio: sheet.pageW / sheet.pageH };
 }

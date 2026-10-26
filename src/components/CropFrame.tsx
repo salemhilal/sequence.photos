@@ -72,8 +72,13 @@ export function CropFrame({ photoId, frame, scale, min, page, lines = null, thre
   useEffect(() => {
     projectStore.begin();
     return () => {
-      // Left some other way (the photo deleted, the view closed): keep what was made.
-      if (ui.get().cropping === photoId) projectStore.end();
+      // Left some other way (the photo deleted, the view closed): keep what was made, and
+      // leave crop mode once nothing shows it (not when React only remounts this).
+      if (ui.get().cropping !== photoId) return;
+      projectStore.end();
+      setTimeout(() => {
+        if (ui.get().cropping === photoId && !document.querySelector('.crop-frame')) ui.set({ cropping: null });
+      });
     };
   }, [photoId]);
 
@@ -158,18 +163,28 @@ export function CropFrame({ photoId, frame, scale, min, page, lines = null, thre
     width: pct(whole.w, frame.w),
     height: pct(whole.h, frame.h),
   };
-  const windowStyle = {
-    left: pct(frame.x - whole.x, whole.w),
-    top: pct(frame.y - whole.y, whole.h),
-    width: pct(frame.w, whole.w),
-    height: pct(frame.h, whole.h),
-  };
+  const l = (frame.x - whole.x) / whole.w;
+  const t = (frame.y - whole.y) / whole.h;
+  const r = (frame.x + frame.w - whole.x) / whole.w;
+  const b = (frame.y + frame.h - whole.y) / whole.h;
+  const at = (x1: number, y1: number, x2: number, y2: number) => ({
+    left: `${x1 * 100}%`,
+    top: `${y1 * 100}%`,
+    width: `${(x2 - x1) * 100}%`,
+    height: `${(y2 - y1) * 100}%`,
+  });
+  const windowStyle = at(l, t, r, b);
 
   return (
     // Presses stay here: the photo under crop mode (its item) would take them as a move.
     <div ref={ref} className="crop-frame" onPointerDown={(e) => e.stopPropagation()}>
       <div className="crop-whole" style={wholeStyle}>
         <PhotoImg id={photoId} crop={null} />
+        {/* What's cropped off, dimmed: above, below, and to each side of the crop. */}
+        <div className="crop-dim" style={at(0, 0, 1, t)} />
+        <div className="crop-dim" style={at(0, b, 1, 1)} />
+        <div className="crop-dim" style={at(0, t, l, b)} />
+        <div className="crop-dim" style={at(r, t, 1, b)} />
         <div className="crop-window" style={windowStyle} onPointerDown={dragPhoto} />
       </div>
       <div className="crop-thirds" />
