@@ -1,3 +1,4 @@
+import { cropPixels } from './crop';
 import { intersects, pageRect, pageSides, spreadLeft, spreadWidth, type Rect } from './geometry';
 import type { PhotoId } from './ids';
 import { allSpreads } from './spreads';
@@ -50,7 +51,7 @@ export function itemsOn(p: OutputPage, sheet: Sheet): Spread['items'] {
 /** A photo drawn onto an output page. */
 export interface Draw {
   photoId: PhotoId;
-  /** The part of the photo that shows, in its own upright pixels. */
+  /** The part of the photo that shows (within its crop), in its own upright pixels. */
   src: Rect;
   /** Where that part goes, in output pixels (within the image). */
   dst: Rect;
@@ -104,9 +105,11 @@ export function planPage(
     const y2 = Math.min(pxH, placed.y + placed.h);
     if (x2 <= x1 || y2 <= y1) continue;
     const dst = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
-    const sx = photo.pxW / placed.w;
-    const sy = photo.pxH / placed.h;
-    const src = { x: (x1 - placed.x) * sx, y: (y1 - placed.y) * sy, w: dst.w * sx, h: dst.h * sy };
+    // The frame shows the crop: its pixels, offset into the original.
+    const crop = cropPixels(photo);
+    const sx = crop.w / placed.w;
+    const sy = crop.h / placed.h;
+    const src = { x: crop.x + (x1 - placed.x) * sx, y: crop.y + (y1 - placed.y) * sy, w: dst.w * sx, h: dst.h * sy };
     draws.push({ photoId: item.photoId, src, dst, placed, z: item.z });
   }
   return { pxW, pxH, pxPerUnit: k, draws };

@@ -12,8 +12,9 @@ import type { PhotoMeta } from './types';
 export const PASS_THROUGH_SLACK = 1.5;
 
 /** Whether to embed the original as it is: a JPEG at most PASS_THROUGH_SLACK times the pixels needed across. */
-export function passThrough(info: ImageInfo, photo: Pick<PhotoMeta, 'pxW'>, needW: number): boolean {
-  return info.format === 'jpeg' && photo.pxW <= needW * PASS_THROUGH_SLACK;
+export function passThrough(info: ImageInfo, photo: Pick<PhotoMeta, 'pxW' | 'crop'>, needW: number): boolean {
+  // A cropped photo is drawn at its crop instead (the original would carry what's cut).
+  return info.format === 'jpeg' && !photo.crop && photo.pxW <= needW * PASS_THROUGH_SLACK;
 }
 
 /** A PDF transformation matrix: (p, q) → (a p + c q + e, b p + d q + f). */

@@ -11,6 +11,19 @@ export interface PhotoMeta {
   /** Pixel dimensions of the original, after EXIF orientation. */
   pxW: number;
   pxH: number;
+  /**
+   * The part of the original that shows, wherever the photo is (like a trimmed print), in
+   * fractions of its width and height; none is the whole photo. See crop.ts.
+   */
+  crop?: Crop;
+}
+
+/** A rectangle within a photo, in fractions of its upright width and height (0 to 1). */
+export interface Crop {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 export interface Placement {
@@ -150,7 +163,7 @@ export interface Sheet extends Settings {
  * The version of the saved project's shape. Bump it (and add a migration and a
  * test sample in schema.ts / schema.test.ts) whenever what gets saved changes.
  */
-export const CURRENT_SCHEMA = 5;
+export const CURRENT_SCHEMA = 6;
 
 export interface Project {
   /** Always the current shape: older ones are upgraded on load (see schema.ts). */

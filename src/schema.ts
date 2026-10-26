@@ -93,6 +93,8 @@ const migrations: Record<number, (project: Raw) => Raw> = {
   },
   /** 4 → 5: projects keep their Export choices; a project from before has none yet. */
   4: (project) => project,
+  /** 5 → 6: photos can be cropped; a project from before has none cropped. */
+  5: (project) => project,
 };
 
 export class NewerProjectError extends Error {

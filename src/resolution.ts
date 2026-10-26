@@ -1,3 +1,4 @@
+import { visibleSize } from './crop';
 import type { PhotoId, SpreadId } from './ids';
 import { allSpreads, sheetOf } from './spreads';
 import type { PhotoMeta, Placement, Project, Sheet } from './types';
@@ -15,11 +16,13 @@ import { ui } from './ui';
  * a free resize counts its thinner side). 1 or more: enough detail.
  */
 export function coverage(
-  photo: Pick<PhotoMeta, 'pxW' | 'pxH'>,
+  photo: Pick<PhotoMeta, 'pxW' | 'pxH' | 'crop'>,
   item: Pick<Placement, 'w' | 'h'>,
   pxPerUnit: number,
 ): number {
-  return Math.min(photo.pxW / (item.w * pxPerUnit), photo.pxH / (item.h * pxPerUnit));
+  // The pixels that show: a crop has fewer to spread over the same frame.
+  const { pxW, pxH } = visibleSize(photo);
+  return Math.min(pxW / (item.w * pxPerUnit), pxH / (item.h * pxPerUnit));
 }
 
 /** Under this is a warning; a hair under 1 (from rounding in the fields) isn't. */
@@ -47,7 +50,8 @@ export function resolutionNote(
   const c = coverage(photo, item, sheet.pxPerUnit);
   const soft = isSoft(c);
   if (sheet.unit === 'in') {
-    const dpi = Math.round(Math.min(photo.pxW / item.w, photo.pxH / item.h));
+    const { pxW, pxH } = visibleSize(photo);
+    const dpi = Math.round(Math.min(pxW / item.w, pxH / item.h));
     const text = soft
       ? `This image is ${dpi} dpi, which is below the project’s ${sheet.pxPerUnit} dpi.`
       : `This image is ${dpi} dpi.`;
