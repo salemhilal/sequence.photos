@@ -90,6 +90,9 @@ const context = await chromium.launchPersistentContext(profile, {
 });
 const page = context.pages()[0] ?? (await context.newPage());
 await page.addInitScript(TAURI_STUB);
+// Instagram's API, answered here: the shots' stand-in connection never reaches it, and has
+// no profile picture (the preview shows its initial).
+await page.route('https://graph.instagram.com/**', (route) => route.fulfill({ json: {} }));
 page.on('pageerror', (e) => console.error('page error:', e.message));
 
 try {

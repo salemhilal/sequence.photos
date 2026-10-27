@@ -106,13 +106,11 @@ export function InstagramPost({ head }: Props) {
     const kept = new Set(all.map(slideKey).filter((k) => was.has(k)));
     return kept.size ? kept : firstNonEmpty(all, sheet, LIMITS.maxItems);
   });
-  // Saved once something's changed (just opening the pane changes nothing).
-  const opened = useRef(true);
+  // Saved once something's changed from how the pane opened (just opening it changes nothing).
+  const now = JSON.stringify([kind, fit, caption, [...chosen], people]);
+  const [opened] = useState(now);
   useEffect(() => {
-    if (opened.current) {
-      opened.current = false;
-      return;
-    }
+    if (now === opened) return;
     const tags = Object.fromEntries(Object.entries(people).filter(([, list]) => list.length));
     saveExportState((s) => ({
       ...s,
@@ -124,7 +122,7 @@ export function InstagramPost({ head }: Props) {
         ...(Object.keys(tags).length && { tags: tags as Record<string, UserTag[]> }),
       },
     }));
-  }, [kind, fit, caption, chosen, people]);
+  }, [now, opened, kind, fit, caption, chosen, people]);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   // Photos that went out at preview size (their originals wouldn't decode here).
   const [previews, setPreviews] = useState(0);
