@@ -1,6 +1,6 @@
 [package]
 name = "sequence"
-version = "1.0.0"
+version = "1.1.0"
 description = "A tool for playing with photo sequences"
 authors = ["Salem Hilal"]
 license = "MIT"
