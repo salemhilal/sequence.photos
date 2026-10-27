@@ -202,6 +202,17 @@ export const commands = {
     scope: 'desk',
     run: withSelection((ids) => void duplicateAndSelect(ids)),
   },
+  // C, as Photoshop and Photos have it: crop mode on the one photo selected.
+  crop: {
+    title: 'Crop…',
+    bindings: [{ key: 'c' }],
+    scope: 'desk',
+    run: () => {
+      const [id, ...more] = ui.get().selection;
+      if (!id || more.length) return false;
+      ui.set({ cropping: id });
+    },
+  },
   deleteSelection: {
     title: 'Delete',
     bindings: [{ key: 'delete' }, { key: 'backspace' }],

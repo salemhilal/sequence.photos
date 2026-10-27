@@ -100,4 +100,26 @@ test.describe('cropping', () => {
     await page.keyboard.press('Enter');
     await expect(page.locator('.crop-bar')).toHaveCount(0);
   });
+
+  test('C crops the selected photo, on the desk and in the editor', async ({ page }) => {
+    await addTestImages(page, 1);
+    await page.keyboard.press('Escape');
+    // Nothing selected: nothing happens.
+    await page.keyboard.press('c');
+    await expect(page.locator('.crop-bar')).toHaveCount(0);
+    await page.locator('.desk .item').first().click();
+    await page.keyboard.press('c');
+    await expect(page.locator('.crop-bar')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.crop-bar')).toHaveCount(0);
+
+    await openEditor(page, 1);
+    await page.locator('.strip-item').first().click();
+    await page.locator('.modal.editor .spread-canvas .item').first().click();
+    await page.keyboard.press('c');
+    await expect(page.locator('.crop-bar')).toBeVisible();
+    await page.keyboard.press('Escape');
+    // Esc left crop mode, not the editor.
+    await expect(page.locator('.modal.editor')).toBeVisible();
+  });
 });

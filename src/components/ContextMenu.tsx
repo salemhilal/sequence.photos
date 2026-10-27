@@ -164,6 +164,7 @@ function PhotoItems({ menu, onClose }: { menu: Extract<ContextMenuState, { kind:
       >
         <CropIcon />
         <span className="menu-label">Crop…</span>
+        <kbd className="menu-shortcut">{shortcutLabel('crop')}</kbd>
       </button>
       <CropToMenu photoId={menu.photoId} onClose={onClose} />
       {!isWhole(project.photos[menu.photoId]?.crop) && (

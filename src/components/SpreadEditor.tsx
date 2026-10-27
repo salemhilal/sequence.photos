@@ -153,6 +153,10 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
     if (e.key === 'Escape') {
       if (selected) setSelected(null);
       else close();
+    } else if (e.key.toLowerCase() === 'c' && !e.altKey && item) {
+      // C crops the selected photo, as on the desk.
+      e.preventDefault();
+      ui.set({ cropping: item.photoId });
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && item) {
       e.preventDefault();
       toPile(item.photoId);

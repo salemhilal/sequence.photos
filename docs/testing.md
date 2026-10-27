@@ -147,7 +147,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Cropping
 
-- [ ] _(e2e)_ Double-click a photo, on the desk or in the editor, for crop mode: the whole photo
+- [ ] _(e2e)_ Double-click a photo, or select it and press C, on the desk or in the editor, for crop mode: the whole photo
       shows, dimmed outside the crop, with white corners, edge bars, and thirds; a bar below
       has Original, 1:1, 4:5, 3:2, Page (Frame for frames), Free, Reset, and Done; the status
       bar says what to do.
