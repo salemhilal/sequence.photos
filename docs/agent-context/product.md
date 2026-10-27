@@ -10,7 +10,7 @@ to Instagram goes through a server).
 Photos are added to the desk, a free canvas, and placed onto spreads (or frames) in the
 sidebar. Right-click the desk to tidy photos into a grid or change the desk color. Double-
 click a spread to open it in the spread editor, where photos are moved, sized, and cropped on
-the page. Quick Look (Space) shows photos full size.
+the page. Quick Look (Space) shows photos full size. Double-click a photo (or select it and press C, or right-click → Crop… or Crop to ›) to crop it: the crop stays with the photo wherever it goes, and every export shows only the crop.
 
 The toolbar switches between three pages: the desk, Preview (every page in order, with a
 fullscreen option), and Export. The status bar at the bottom shows counts, zoom, and hints

@@ -145,6 +145,27 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       double-click resets; the width survives a reload.
 - [ ] ⌘B hides and shows it, and that survives a reload.
 
+## Cropping
+
+- [ ] _(e2e)_ Double-click a photo, or select it and press C, on the desk or in the editor, for crop mode: the whole photo
+      shows, dimmed outside the crop, with white corners, edge bars, and thirds; a bar below
+      has Original, 1:1, 4:5, 3:2, Page (Frame for frames), Free, Reset, and Done; the status
+      bar says what to do.
+- [ ] _(e2e)_ Drag an edge or corner to crop (as far as the photo goes); drag inside to move the
+      photo behind the crop; Shift keeps the shape; a shape from the bar crops to it and keeps
+      it. Done, Return, or a click elsewhere keeps the crop as one undo step; Esc puts it back.
+      Undo and other shortcuts wait while cropping.
+- [ ] _(e2e)_ In the editor, the crop's edges snap to the page's edges, center lines, and guides;
+      Option doesn't snap.
+- [ ] _(e2e)_ Right-click a photo: Crop… (on a page, opens its spread's editor in crop mode), Crop
+      to › Square, 4:5, 3:2, 16:9, The page (the current shape checked), and Reset crop when it's
+      cropped.
+- [ ] A crop is the photo's wherever it goes (desk, page, back), and in a saved project. Its
+      frame has the crop's shape: fitting to guides, the desk's size, and the resolution warning
+      all use what shows. Quick Look shows the whole photo.
+- [ ] Exports show only the crop: PDF, images, Instagram, and InDesign (the whole image linked,
+      clipped by its frame, so it can be recropped there).
+
 ## Spread and frame editor
 
 - [ ] The header has only the guides toggle and ×; the status bar says "Shift: free resize ·

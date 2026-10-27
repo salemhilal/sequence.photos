@@ -125,6 +125,8 @@ export interface UiState {
    * them clears the desk's selection, and the other way around.
    */
   spreadSelection: SpreadId[];
+  /** The photo being cropped (crop mode, on the desk or in the spread editor), if any. */
+  cropping: PhotoId | null;
 }
 
 export const ui = createStore<UiState>({
@@ -161,6 +163,7 @@ export const ui = createStore<UiState>({
   editorSelect: null,
   exportTo: null,
   spreadSelection: [],
+  cropping: null,
 });
 
 // One selection at a time: photos on the desk, or spreads in the sidebar.
@@ -261,12 +264,14 @@ export function addPageStatus(text: string | null): PageStatus {
 }
 
 /**
- * Whether the desk is out of reach (another page, a dialog, the spread editor, or Quick
- * Look), pausing desk shortcuts. The tour leaves it in reach: its sample is there to try.
+ * Whether the desk is out of reach (another page, a dialog, the spread editor, Quick Look,
+ * or crop mode), pausing desk shortcuts. The tour leaves it in reach: its sample is there to try.
  */
 export function deskCovered(): boolean {
   const s = ui.get();
-  return s.page !== 'desk' || s.modal !== null || s.editingSpreadId !== null || s.quickLook !== null;
+  return (
+    s.page !== 'desk' || s.modal !== null || s.editingSpreadId !== null || s.quickLook !== null || s.cropping !== null
+  );
 }
 
 /** Ends the tour; set by tour.ts (which this can't import). */

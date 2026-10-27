@@ -408,6 +408,23 @@ a.btn {
   left: auto;
   z-index: 60;
 }
+/* A submenu (Crop to ›), beside its item; on the left near the window's right edge. */
+.menu-sub {
+  position: relative;
+}
+.context-submenu {
+  top: -5px;
+  left: calc(100% + 4px);
+  min-width: 180px;
+}
+.context-submenu.flip {
+  left: auto;
+  right: calc(100% + 4px);
+}
+.menu-icon-space {
+  width: 16px;
+  flex: none;
+}
 .menu-caption {
   max-width: 240px;
   padding: 4px 8px 6px;
@@ -729,6 +746,13 @@ a.btn {
   object-fit: fill;
   pointer-events: none;
   user-select: none;
+}
+/* A cropped photo: the original, placed so its frame shows the crop. */
+.photo-crop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 .photo-loading {
   background: var(--border);
@@ -1746,6 +1770,7 @@ body.col-resizing * {
   box-shadow: inset 0 0 0 2px var(--accent);
 }
 .strip-item {
+  position: relative;
   height: 56px;
   flex-shrink: 0;
   box-shadow: var(--shadow);
@@ -2945,4 +2970,181 @@ img.ig-avatar {
 }
 .sidebar-count.on {
   opacity: 0.9;
+}
+
+/* Crop mode (CropFrame): the whole photo, dimmed outside the crop, under the crop's frame. */
+.item.cropping {
+  z-index: 1000;
+  box-shadow: none;
+}
+.item.cropping > .photo,
+.item.cropping > .photo-crop {
+  visibility: hidden;
+}
+.crop-frame {
+  position: absolute;
+  inset: 0;
+  --hs: calc(14px * var(--inv, 1));
+  --ht: calc(3px * var(--inv, 1));
+}
+.crop-whole {
+  position: absolute;
+  overflow: hidden;
+}
+.crop-whole > .photo {
+  position: absolute;
+  inset: 0;
+}
+.crop-dim {
+  position: absolute;
+  background: rgba(12, 12, 12, 0.72);
+  pointer-events: none;
+}
+.crop-window {
+  position: absolute;
+  outline: calc(1px * var(--inv, 1)) solid #fff;
+  touch-action: none;
+}
+/* Thirds, to line things up by. */
+.crop-thirds {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to right,
+      transparent calc(33.33% - 0.5px),
+      rgba(255, 255, 255, 0.35) 0 calc(33.33% + 0.5px),
+      transparent 0 calc(66.67% - 0.5px),
+      rgba(255, 255, 255, 0.35) 0 calc(66.67% + 0.5px),
+      transparent 0
+    ),
+    linear-gradient(
+      to bottom,
+      transparent calc(33.33% - 0.5px),
+      rgba(255, 255, 255, 0.35) 0 calc(33.33% + 0.5px),
+      transparent 0 calc(66.67% - 0.5px),
+      rgba(255, 255, 255, 0.35) 0 calc(66.67% + 0.5px),
+      transparent 0
+    );
+}
+.crop-handle {
+  position: absolute;
+  width: var(--hs);
+  height: var(--hs);
+  touch-action: none;
+}
+/* Corners: white L-shapes at the frame's corners. */
+.crop-nw,
+.crop-ne,
+.crop-sw,
+.crop-se {
+  border: 0 solid #fff;
+}
+.crop-nw {
+  left: calc(var(--ht) * -1);
+  top: calc(var(--ht) * -1);
+  border-width: var(--ht) 0 0 var(--ht);
+}
+.crop-ne {
+  right: calc(var(--ht) * -1);
+  top: calc(var(--ht) * -1);
+  border-width: var(--ht) var(--ht) 0 0;
+}
+.crop-sw {
+  left: calc(var(--ht) * -1);
+  bottom: calc(var(--ht) * -1);
+  border-width: 0 0 var(--ht) var(--ht);
+}
+.crop-se {
+  right: calc(var(--ht) * -1);
+  bottom: calc(var(--ht) * -1);
+  border-width: 0 var(--ht) var(--ht) 0;
+}
+/* Edges: short white bars at each side's middle, over a wider strip to grab. */
+.crop-n,
+.crop-s {
+  left: calc(50% - var(--hs));
+  width: calc(var(--hs) * 2);
+}
+.crop-e,
+.crop-w {
+  top: calc(50% - var(--hs));
+  height: calc(var(--hs) * 2);
+}
+.crop-n {
+  top: calc(var(--hs) / -2);
+}
+.crop-s {
+  bottom: calc(var(--hs) / -2);
+}
+.crop-w {
+  left: calc(var(--hs) / -2);
+}
+.crop-e {
+  right: calc(var(--hs) / -2);
+}
+.crop-n::before,
+.crop-s::before,
+.crop-e::before,
+.crop-w::before {
+  content: '';
+  position: absolute;
+  background: #fff;
+}
+.crop-n::before,
+.crop-s::before {
+  left: 0;
+  right: 0;
+  top: calc(50% - var(--ht) / 2);
+  height: var(--ht);
+}
+.crop-e::before,
+.crop-w::before {
+  top: 0;
+  bottom: 0;
+  left: calc(50% - var(--ht) / 2);
+  width: var(--ht);
+}
+.crop-bar {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pop);
+  background: var(--panel);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+.crop-shape {
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: 12px var(--font);
+}
+.crop-shape:hover {
+  color: var(--text);
+}
+.crop-shape.on {
+  background: var(--control);
+  box-shadow: var(--raise);
+  color: var(--text);
+}
+.crop-bar-gap {
+  width: 1px;
+  align-self: stretch;
+  margin: 3px 2px;
+  background: var(--border);
+}
+.crop-done {
+  height: 24px;
 }

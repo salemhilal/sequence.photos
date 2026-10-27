@@ -1,3 +1,4 @@
+import { cropOf } from './crop';
 import { folioLabel } from './actions';
 import { getImage, type StoredImage } from './db';
 import type { PhotoId } from './ids';
@@ -70,12 +71,16 @@ export function releaseCanvas(canvas: OffscreenCanvas): void {
 export async function decodePhoto(
   id: PhotoId,
   meta: PhotoMeta,
-  w: number,
-  h: number,
+  placedW: number,
+  placedH: number,
   stored?: StoredImage,
 ): Promise<{ bitmap: ImageBitmap; preview: boolean } | null> {
   const img = stored ?? (await getImage(id));
   if (!img) return null;
+  // The placed size is the crop's; the whole photo is decoded, so it's that much larger.
+  const crop = cropOf(meta);
+  const w = placedW / crop.w;
+  const h = placedH / crop.h;
   // Decoded at its placed size, but never past the photo's own resolution (an enlarged
   // photo has no more detail to give, so drawing it larger loses nothing), nor past about
   // 16 megapixels, which Safari (the Mac app) refuses. A photo scaled far past its page

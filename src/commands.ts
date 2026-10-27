@@ -167,7 +167,13 @@ export const commands = {
     run: () => (platform.openSettings ? platform.openSettings() : toggleModal('settings')),
   },
   toggleSidebar: { bindings: [{ key: 'b', mod: true }], scope: 'app', inFields: true, run: toggleSidebar },
-  undo: { title: 'Undo', bindings: [{ key: 'z', mod: true }], scope: 'app', run: () => projectStore.undo() },
+  // Not mid-crop (the menu bar's Undo gets here without a key): the crop is one step, after it.
+  undo: {
+    title: 'Undo',
+    bindings: [{ key: 'z', mod: true }],
+    scope: 'app',
+    run: () => ui.get().cropping === null && projectStore.undo(),
+  },
   redo: {
     title: 'Redo',
     bindings: [
@@ -176,7 +182,7 @@ export const commands = {
     ],
     scope: 'app',
     label: isMac ? '⇧⌘Z' : 'Ctrl+Y',
-    run: () => projectStore.redo(),
+    run: () => ui.get().cropping === null && projectStore.redo(),
   },
   selectAll: {
     title: 'Select all',
@@ -195,6 +201,17 @@ export const commands = {
     bindings: [{ key: 'd', mod: true }],
     scope: 'desk',
     run: withSelection((ids) => void duplicateAndSelect(ids)),
+  },
+  // C, as Photoshop and Photos have it: crop mode on the one photo selected.
+  crop: {
+    title: 'Crop…',
+    bindings: [{ key: 'c' }],
+    scope: 'desk',
+    run: () => {
+      const [id, ...more] = ui.get().selection;
+      if (!id || more.length) return false;
+      ui.set({ cropping: id });
+    },
   },
   deleteSelection: {
     title: 'Delete',

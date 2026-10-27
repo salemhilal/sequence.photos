@@ -1,4 +1,5 @@
 import { DESK_PPI } from './deskGeometry';
+import { visibleSize } from './crop';
 import type { BorderGuide, Edges, LineGuide, PageSide, PhotoMeta, Sheet, Spread, SpreadKind } from './types';
 import { UNITS } from './units';
 
@@ -125,9 +126,10 @@ export function lineOnPage(s: Sheet, l: LineGuide): boolean {
   return l.at > 0 && l.at < (l.axis === 'vertical' ? s.pageW : s.pageH);
 }
 
-/** Largest rect with the photo's aspect ratio that fits in `box`, centered in `center`. */
-export function fitCentered(photo: Pick<PhotoMeta, 'pxW' | 'pxH'>, box: Rect, center: Rect = box): Rect {
-  const aspect = photo.pxW / photo.pxH;
+/** Largest rect with the photo's aspect ratio (as cropped) that fits in `box`, centered in `center`. */
+export function fitCentered(photo: Pick<PhotoMeta, 'pxW' | 'pxH' | 'crop'>, box: Rect, center: Rect = box): Rect {
+  const { pxW, pxH } = visibleSize(photo);
+  const aspect = pxW / pxH;
   let w = box.w;
   let h = w / aspect;
   if (h > box.h) {
@@ -138,9 +140,10 @@ export function fitCentered(photo: Pick<PhotoMeta, 'pxW' | 'pxH'>, box: Rect, ce
 }
 
 export function pileSize(photo: PhotoMeta): { w: number; h: number } {
-  // Its own size if smaller than the preview; in desk inches.
-  const long = Math.min(Math.max(photo.pxW, photo.pxH), DESK_PHOTO_PX) / DESK_PPI;
-  const aspect = photo.pxW / photo.pxH;
+  // Its own size (as cropped) if smaller than the preview; in desk inches.
+  const { pxW, pxH } = visibleSize(photo);
+  const long = Math.min(Math.max(pxW, pxH), DESK_PHOTO_PX) / DESK_PPI;
+  const aspect = pxW / pxH;
   return aspect >= 1 ? { w: long, h: long / aspect } : { w: long * aspect, h: long };
 }
 

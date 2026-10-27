@@ -1,7 +1,9 @@
+import { cleanCrop } from './crop';
 import { toGuideId, toPhotoId, toSpreadId, type PhotoId } from './ids';
 import {
   CURRENT_SCHEMA,
   type BorderGuide,
+  type Crop,
   type ExportState,
   type Project,
   type Layout,
@@ -64,6 +66,18 @@ function unique<T extends string>(seen: Set<string>, id: T, where: string): T {
   return id;
 }
 
+/**
+ * A photo's crop, kept inside the photo; a damaged one is left out (the whole photo shows,
+ * in its frame's shape) rather than refusing the project.
+ */
+function cropOf(v: unknown): { crop?: Crop } {
+  if (!isRecord(v)) return {};
+  const { x, y, w, h } = v;
+  if (![x, y, w, h].every((n) => typeof n === 'number' && Number.isFinite(n))) return {};
+  const crop = cleanCrop({ x: x as number, y: y as number, w: w as number, h: h as number });
+  return crop ? { crop } : {};
+}
+
 function photo(v: unknown, key: string, where: string): PhotoMeta {
   const p = record(v, where);
   const id = toPhotoId(text(p.id, `${where}.id`));
@@ -73,6 +87,7 @@ function photo(v: unknown, key: string, where: string): PhotoMeta {
     name: typeof p.name === 'string' ? p.name : fail(`${where}.name`),
     pxW: num(p.pxW, `${where}.pxW`, { min: 0, above: true }),
     pxH: num(p.pxH, `${where}.pxH`, { min: 0, above: true }),
+    ...cropOf(p.crop),
   };
 }
 

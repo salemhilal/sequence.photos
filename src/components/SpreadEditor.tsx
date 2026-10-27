@@ -42,6 +42,8 @@ import { wheeled } from '../deskZoom';
 import { NumberField } from './NumberField';
 import { Pager } from './Pager';
 import { SoftBadge } from './SoftBadge';
+import { CropFrame } from './CropFrame';
+import { pageShape } from '../crop';
 import { PhotoImg } from './PhotoImg';
 import { SpreadCanvas } from './SpreadCanvas';
 
@@ -69,6 +71,7 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const { left: extentLeft, width: across } = sheetExtent(sheet);
   const [stageRef, stage] = useElementSize<HTMLDivElement>({ w: 800, h: 500 });
   const [selected, setSelected] = useState<PhotoId | null>(null);
+  const cropping = ui.use((s) => s.cropping);
   // A photo asked for ("Show me", from Export), whether the editor was open or not: taken once.
   const asked = ui.use((s) => s.editorSelect);
   const [seen, setSeen] = useState<PhotoId | null>(null);
@@ -150,6 +153,10 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
     if (e.key === 'Escape') {
       if (selected) setSelected(null);
       else close();
+    } else if (e.key.toLowerCase() === 'c' && !e.altKey && item) {
+      // C crops the selected photo, as on the desk.
+      e.preventDefault();
+      ui.set({ cropping: item.photoId });
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && item) {
       e.preventDefault();
       toPile(item.photoId);
@@ -273,14 +280,34 @@ export function SpreadEditor({ spreadId }: { spreadId: SpreadId }) {
   const renderItem = (p: Placement, style: CSSProperties) => (
     <div
       key={p.photoId}
-      className={`item${p.photoId === selected ? ' selected' : ''}`}
+      className={`item${p.photoId === selected && cropping !== p.photoId ? ' selected' : ''}${
+        cropping === p.photoId ? ' cropping' : ''
+      }`}
       style={style}
       onPointerDown={(e) => onItemDown(e, p)}
       onContextMenu={(e) => openPhotoMenu(e, p.photoId)}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        setSelected(p.photoId);
+        ui.set({ cropping: p.photoId });
+      }}
     >
       <PhotoImg id={p.photoId} />
-      {placedSoft(project.photos[p.photoId], p, sheet) && <SoftBadge note={softNote(p)} />}
+      {cropping === p.photoId && (
+        <CropFrame
+          photoId={p.photoId}
+          frame={p}
+          scale={scale}
+          min={units.minPhoto}
+          page={pageShape(sheet)}
+          lines={lines}
+          threshold={threshold}
+          onSnap={setSnapHit}
+        />
+      )}
+      {placedSoft(project.photos[p.photoId], p, sheet) && cropping !== p.photoId && <SoftBadge note={softNote(p)} />}
       {p.photoId === selected &&
+        cropping !== p.photoId &&
         CORNERS.map((c) => (
           <div key={c} className={`handle handle-${c}`} onPointerDown={(e) => onHandleDown(e, p, c)} />
         ))}

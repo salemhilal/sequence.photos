@@ -1,5 +1,6 @@
+import { cropOf, wholeRect } from './crop';
 import { dropGuide, edgesOf, linePosition, lineOnPage, pageRect, pageSides } from './geometry';
-import type { Project, PageSide, Sheet, Spread } from './types';
+import type { Crop, Project, PageSide, Sheet, Spread } from './types';
 import type { ZipInput } from './zip';
 import { allSpreads, sheetOf } from './spreads';
 
@@ -161,7 +162,7 @@ ${guidesXml(s, side, i, id)}
         .join('');
       const meta = project.photos[p.photoId];
       const link = links.get(p.photoId);
-      const image = link ? imageXml(id, link, { x: x1, y: y1, w: x2 - x1, h: y2 - y1 }) : '';
+      const image = link ? imageXml(id, link, { x: x1, y: y1, w: x2 - x1, h: y2 - y1 }, meta?.crop) : '';
       return `<Rectangle Self="${id()}" Name="${esc(meta?.name ?? '$ID/')}" ContentType="GraphicType" StoredState="Normal" ItemLayer="${LAYER}" Locked="false" Visible="true" AppliedObjectStyle="ObjectStyle/$ID/[None]" FillColor="Swatch/None" StrokeColor="Swatch/None" StrokeWeight="0" ItemTransform="1 0 0 1 0 0">
 <Properties><PathGeometry><GeometryPathType PathOpen="false"><PathPointArray>${points}</PathPointArray></GeometryPathType></PathGeometry></Properties>
 ${image}
@@ -212,15 +213,25 @@ function guidesXml(s: Sheet, side: PageSide, pageIndex: number, id: () => string
   ].join('\n');
 }
 
-/** A linked image filling its frame: scaled from its size at its stored resolution. */
-function imageXml(id: () => string, link: LinkedImage, frame: { x: number; y: number; w: number; h: number }): string {
+/**
+ * A linked image in its frame, scaled from its size at its stored resolution: filling it,
+ * or for a cropped photo, the whole image placed so the frame shows its crop (InDesign
+ * clips the rest, which stays there to recrop).
+ */
+function imageXml(
+  id: () => string,
+  link: LinkedImage,
+  frame: { x: number; y: number; w: number; h: number },
+  crop: Crop | undefined,
+): string {
   const gw = (link.pxW * PT_PER_INCH) / link.ppi;
   const gh = (link.pxH * PT_PER_INCH) / link.ppi;
-  const sx = frame.w / gw;
-  const sy = frame.h / gh;
+  const whole = wholeRect(frame, cropOf({ crop }));
+  const sx = whole.w / gw;
+  const sy = whole.h / gh;
   const format = link.format === 'png' ? '$ID/Portable Network Graphics (PNG)' : '$ID/JPEG';
   const ppi = n(link.ppi);
-  return `<Image Self="${id()}" ItemTransform="${n(sx)} 0 0 ${n(sy)} ${n(frame.x)} ${n(frame.y)}" ActualPpi="${ppi} ${ppi}" EffectivePpi="${Math.round(link.ppi / sx)} ${Math.round(link.ppi / sy)}">
+  return `<Image Self="${id()}" ItemTransform="${n(sx)} 0 0 ${n(sy)} ${n(whole.x)} ${n(whole.y)}" ActualPpi="${ppi} ${ppi}" EffectivePpi="${Math.round(link.ppi / sx)} ${Math.round(link.ppi / sy)}">
 <Properties><GraphicBounds Left="0" Top="0" Right="${n(gw)}" Bottom="${n(gh)}"/></Properties>
 <Link Self="${id()}" LinkResourceURI="file:${esc(link.path.split('/').map(encodeURIComponent).join('/'))}" LinkResourceFormat="${format}" StoredState="Normal" LinkClassID="35906" LinkClientID="257" LinkResourceModified="false" LinkObjectModified="false" ShowInUI="true" CanEmbed="true" CanUnembed="true" CanPackage="true" ImportPolicy="NoAutoImport" ExportPolicy="NoAutoExport"/>
 </Image>`;
