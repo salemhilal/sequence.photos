@@ -261,12 +261,27 @@ export function addPageStatus(text: string | null): PageStatus {
 }
 
 /**
- * Whether the desk is out of reach (another page, a dialog, the spread editor, Quick Look,
- * or the tour), pausing desk shortcuts.
+ * Whether the desk is out of reach (another page, a dialog, the spread editor, or Quick
+ * Look), pausing desk shortcuts. The tour leaves it in reach: its sample is there to try.
  */
 export function deskCovered(): boolean {
   const s = ui.get();
-  return s.page !== 'desk' || s.modal !== null || s.editingSpreadId !== null || s.quickLook !== null || s.tour !== null;
+  return s.page !== 'desk' || s.modal !== null || s.editingSpreadId !== null || s.quickLook !== null;
+}
+
+/** Ends the tour; set by tour.ts (which this can't import). */
+let endTour: () => void = () => {};
+export function onLeaveTour(end: () => void): void {
+  endTour = end;
+}
+
+/**
+ * Before the user's own work comes in or goes out (adding photos, opening a project,
+ * starting a new one, saving): end the tour, if it's running, so it's their project and not
+ * the sample.
+ */
+export function leaveTour(): void {
+  if (ui.get().tour !== null) endTour();
 }
 
 /** Show photos full-size, starting with the first. */

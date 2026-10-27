@@ -8,7 +8,7 @@ import { dropBox, fitCentered, pageRect, pileSize } from './geometry';
 import type { DropTarget } from './drag';
 import type { Arrangement, Project, PageSide, PhotoMeta, Placement, Spread } from './types';
 import { deskGeometry, viewToFit } from './deskGeometry';
-import { ui } from './ui';
+import { leaveTour, ui } from './ui';
 
 /** Photos per row when several land on the desk at once. */
 const DESK_COLUMNS = 6;
@@ -499,6 +499,7 @@ export const STORAGE_REFUSED =
 
 export async function importPhotos(files: File[]): Promise<void> {
   if (ui.get().importing) return;
+  leaveTour();
   try {
     const { photos, failed, storageRefused } = await importFiles(files, (done, total) =>
       ui.set({ importing: { done, total } }),

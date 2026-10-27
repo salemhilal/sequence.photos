@@ -7,7 +7,7 @@ import { InvalidProjectError } from './validate';
 import { isRecord } from './guards';
 import { projectStore, emptyProject } from './store';
 import { MOD_LABEL } from './input';
-import { ask, pageLocked, ui } from './ui';
+import { ask, leaveTour, pageLocked, ui } from './ui';
 import { createZip, readZip, type ZipInput } from './zip';
 import { platform } from '#platform';
 
@@ -82,6 +82,7 @@ export async function buildProjectFile(verb = 'Exporting'): Promise<Blob> {
 /** Replace the current project with one from a file. Undoable. */
 export async function importProject(file: File): Promise<void> {
   if (ui.get().importing) return;
+  leaveTour();
   ui.set({ busy: 'Opening project…', importing: { done: 0, total: 0, label: 'Opening project' } });
   try {
     const zip = await readZip(file).catch(() => {
@@ -232,6 +233,7 @@ export async function confirmReplace(title: string, what: string, confirmLabel: 
 
 export async function openProjectFile(file: File): Promise<void> {
   if (pageLocked()) return;
+  leaveTour();
   const hasWork = Object.keys(projectStore.project.photos).length > 0;
   if (hasWork && !(await confirmReplace('Replace your current project?', `“${file.name}”`, 'Replace'))) return;
   try {
@@ -247,6 +249,7 @@ export async function openProjectFile(file: File): Promise<void> {
 export async function newProject(): Promise<void> {
   // Not while a page's work mustn't be interrupted (see lockPage).
   if (pageLocked()) return;
+  leaveTour();
   if (!(await confirmReplace('Start a new project?', 'A new, empty project', 'New project'))) return;
   projectStore.replace(emptyProject());
   ui.set({ selection: [], editingSpreadId: null, page: 'desk', modal: null });

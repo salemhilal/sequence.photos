@@ -9,7 +9,7 @@ import { pickFiles } from './files';
 import { newProject } from './project';
 import { projectStore } from './store';
 import { startTour } from './tour';
-import { deskCovered, goToPage, openModal, toggleGuides, toggleModal, toggleSidebar, ui } from './ui';
+import { deskCovered, goToPage, leaveTour, openModal, toggleGuides, toggleModal, toggleSidebar, ui } from './ui';
 
 /**
  * Every command in one table. Each has its name, bindings, when it applies, and what
@@ -113,7 +113,10 @@ export const commands = {
     bindings: [{ key: 's', mod: true }],
     scope: 'app',
     inFields: true,
-    run: () => void platform.keepProject(),
+    run: () => {
+      leaveTour();
+      void platform.keepProject();
+    },
   },
   // Only where there are project files to save to (the Mac app).
   saveAs: {
@@ -121,7 +124,10 @@ export const commands = {
     bindings: platform.keepProjectAs ? [{ key: 's', mod: true, shift: true }] : [],
     scope: 'app',
     inFields: true,
-    run: () => void platform.keepProjectAs?.(),
+    run: () => {
+      leaveTour();
+      void platform.keepProjectAs?.();
+    },
   },
   // PDF, images, InDesign, or Instagram, chosen on the Export page.
   export: {

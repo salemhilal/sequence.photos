@@ -2586,15 +2586,13 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
 }
 
 /* Product tour */
-.tour {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-}
+/* Only the card takes the pointer: the sample project under the dimming is there to try.
+   The dimming sits under dialogs, menus, and Quick Look, so they show as they would. */
 .tour-hole {
   position: fixed;
+  z-index: 15;
   border-radius: 10px;
-  box-shadow: 0 0 0 200vmax rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 200vmax rgba(0, 0, 0, 0.4);
   outline: 2px solid var(--accent);
   outline-offset: 0;
   pointer-events: none;
@@ -2609,6 +2607,7 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
 }
 .tour-card {
   position: fixed;
+  z-index: 80;
   width: 340px;
   max-width: calc(100vw - 32px);
   padding: 18px 18px 14px;
