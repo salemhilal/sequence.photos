@@ -36,6 +36,11 @@ export const INSTAGRAM = {
   graphOrigin: GRAPH_ORIGIN,
   /** Matches the server's GRAPH_VERSION (sequence-server's wrangler.jsonc). */
   graphUrl: `${GRAPH_ORIGIN}/v26.0`,
+  /**
+   * The image servers profile pictures come from, which the Content Security Policies'
+   * img-src allow (any subdomain; see vite.config.ts and src-tauri/tauri.conf.json).
+   */
+  imageDomains: ['cdninstagram.com', 'fbcdn.net'],
   scopes: ['instagram_business_basic', 'instagram_business_content_publish'],
   /**
    * Where the server sends someone back after signing in, by the app's address: the

@@ -250,6 +250,11 @@ button {
   white-space: nowrap;
   box-shadow: var(--raise);
 }
+/* A link made a button (View on Instagram) looks like the others. */
+a.btn {
+  color: var(--text);
+  text-decoration: none;
+}
 
 /* Filled buttons answer a press, as native ones do; only ghost buttons light on hover. */
 .btn:active:not(:disabled) {
@@ -633,18 +638,18 @@ button {
   place-items: start center;
   padding-top: 24px;
   border: 2px dashed var(--accent);
-  border-radius: 10px;
+  border-radius: var(--radius-dialog);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   pointer-events: none;
   animation: file-drop-in 120ms ease-out;
 }
 .file-drop span {
-  padding: 8px 14px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pop);
   background: var(--accent);
   color: var(--on-accent);
-  font: 500 12px var(--mono);
-  letter-spacing: 0.04em;
+  font: 500 12px var(--font);
+  box-shadow: var(--shadow);
 }
 @keyframes file-drop-in {
   from {
@@ -2184,9 +2189,17 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
 .export-panel .segmented {
   display: grid;
 }
-/* The last section: nothing below it to divide from. */
+/* The export button and what it says, pinned to the panel's foot (as Layout's Apply is),
+   over the options as they scroll. */
 .export-panel .export-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
   border-bottom: 0;
+  background: var(--panel);
 }
 .export-actions .btn {
   justify-content: center;
@@ -2278,6 +2291,82 @@ input[type='range']:not(.columns-slider)::-moz-range-thumb {
 .ig-image .page {
   background: #fff;
   box-shadow: none;
+}
+/* A hairline round the image, as Instagram draws it, so a white edge doesn't run into the
+   white card. */
+.ig-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+}
+/* A profile picture in place of the initial. */
+img.ig-avatar {
+  object-fit: cover;
+  background: #ddd;
+}
+/* People tagged, as Instagram shows them: a dark bubble hanging from the spot. */
+.ig-user-tag {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 60%;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translate(-50%, 8px);
+}
+.ig-user-tag.movable {
+  touch-action: none;
+  user-select: none;
+}
+.ig-user-tag::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: calc(50% - 5px);
+  border: 5px solid transparent;
+  border-top: 0;
+  border-bottom-color: rgba(0, 0, 0, 0.78);
+}
+.ig-user-tag button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  opacity: 0.7;
+}
+.ig-user-tag button:hover {
+  opacity: 1;
+}
+.ig-user-tag .lucide {
+  width: 12px;
+  height: 12px;
+}
+.ig-user-tag input {
+  width: 120px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+.ig-user-tag input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+.ig-user-tag input.invalid {
+  color: #ff9b9b;
 }
 .ig-count {
   position: absolute;

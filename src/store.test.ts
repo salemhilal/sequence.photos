@@ -86,6 +86,37 @@ describe('replace and silent', () => {
   });
 });
 
+describe('Export choices', () => {
+  const caption = () => projectStore.project.export?.instagram?.caption;
+  const write = (text: string) =>
+    projectStore.silent((d) => {
+      d.export = { ...d.export, instagram: { ...d.export?.instagram, caption: text } };
+    });
+
+  it('stay as they are through undo and redo, which are about the project’s edits', () => {
+    write('first');
+    setPageW(11);
+    write('second');
+    projectStore.undo();
+    expect(pageW()).toBe(10);
+    expect(caption()).toBe('second');
+    projectStore.redo();
+    expect(pageW()).toBe(11);
+    expect(caption()).toBe('second');
+  });
+
+  it('go with their project when a whole project is opened, and come back when that’s undone', () => {
+    write('mine');
+    const opened: Project = { ...emptyProject(), export: { instagram: { caption: 'theirs' } } };
+    projectStore.replace(opened);
+    expect(caption()).toBe('theirs');
+    projectStore.undo();
+    expect(caption()).toBe('mine');
+    projectStore.redo();
+    expect(caption()).toBe('theirs');
+  });
+});
+
 describe('swap', () => {
   it('shows another project, then brings back the project with its history', () => {
     setPageW(11);

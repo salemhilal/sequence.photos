@@ -19,7 +19,7 @@ File → Save project saves a `.photo-sequence` file, a ZIP inside, that opens a
 
 ```
 photo-book-2026-09-26.photo-sequence
-├── project.json   # layout and settings (versioned: see src/schema.ts)
+├── project.json   # layout, settings, and Export choices (versioned: see src/schema.ts)
 ├── images/        # the original files
 └── thumbs/        # display copies
 ```

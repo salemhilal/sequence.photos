@@ -150,7 +150,7 @@ export interface Sheet extends Settings {
  * The version of the saved project's shape. Bump it (and add a migration and a
  * test sample in schema.ts / schema.test.ts) whenever what gets saved changes.
  */
-export const CURRENT_SCHEMA = 4;
+export const CURRENT_SCHEMA = 5;
 
 export interface Project {
   /** Always the current shape: older ones are upgraded on load (see schema.ts). */
@@ -164,4 +164,34 @@ export interface Project {
   layout: Layout;
   settings: Settings;
   nextZ: number;
+  /**
+   * How it was last set up to export (none until then). Saved with it, so a caption
+   * survives a restart and travels in the file, but outside undo (see ProjectStore).
+   */
+  export?: ExportState;
+}
+
+/** Where a project exports to. */
+export type ExportDestination = 'pdf' | 'images' | 'indesign' | 'instagram';
+
+/** The Export page's choices for a project, each kept once it's been made. */
+export interface ExportState {
+  to?: ExportDestination;
+  /** PDF, images, and InDesign's options (the dpi always starts from the page's). */
+  options?: {
+    per?: 'spread' | 'page';
+    format?: 'jpeg' | 'png';
+    quality?: number;
+    printAt?: number;
+  };
+  /** The Instagram post being written. */
+  instagram?: {
+    kind?: 'feed' | 'story';
+    fit?: 'crop' | 'expand';
+    caption?: string;
+    /** The slides chosen to post (`slideKey`s), in no particular order. */
+    chosen?: string[];
+    /** People tagged, by slide (`slideKey`). */
+    tags?: Record<string, { username: string; x: number; y: number }[]>;
+  };
 }

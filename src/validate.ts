@@ -2,6 +2,7 @@ import { toGuideId, toPhotoId, toSpreadId, type PhotoId } from './ids';
 import {
   CURRENT_SCHEMA,
   type BorderGuide,
+  type ExportState,
   type Project,
   type Layout,
   type LineGuide,
@@ -173,6 +174,79 @@ function layout(v: unknown, item: (p: unknown, where: string) => Placement): Lay
   return fail('layout.kind');
 }
 
+/** A value if it's one of `options`, else undefined. */
+function oneOf<T extends string>(v: unknown, options: readonly T[]): T | undefined {
+  return options.find((o) => o === v);
+}
+
+/** A finite number in [min, max], else undefined. */
+function within(v: unknown, min: number, max: number): number | undefined {
+  return typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : undefined;
+}
+
+/** Room for a caption Instagram would take, with some to spare. */
+const MAX_CAPTION = 10_000;
+const MAX_CHOSEN = 1_000;
+const TAGGED_USERNAME = /^[a-z0-9._]{1,30}$/;
+
+/**
+ * The Export choices, checked leniently: they only save retyping, so any that's damaged
+ * is left out (the app's default takes its place) rather than refusing the whole project.
+ */
+function exportState(v: unknown): ExportState | undefined {
+  if (!isRecord(v)) return undefined;
+  const state: ExportState = {};
+  const to = oneOf(v.to, ['pdf', 'images', 'indesign', 'instagram'] as const);
+  if (to) state.to = to;
+
+  if (isRecord(v.options)) {
+    const o = v.options;
+    const per = oneOf(o.per, ['spread', 'page'] as const);
+    const format = oneOf(o.format, ['jpeg', 'png'] as const);
+    const quality = within(o.quality, 0, 1);
+    const printAt = within(o.printAt, 1, 10_000);
+    state.options = {
+      ...(per && { per }),
+      ...(format && { format }),
+      ...(quality !== undefined && { quality }),
+      ...(printAt !== undefined && { printAt }),
+    };
+  }
+
+  if (isRecord(v.instagram)) {
+    const ig = v.instagram;
+    const kind = oneOf(ig.kind, ['feed', 'story'] as const);
+    const fit = oneOf(ig.fit, ['crop', 'expand'] as const);
+    const caption = typeof ig.caption === 'string' ? ig.caption.slice(0, MAX_CAPTION) : undefined;
+    const chosen = Array.isArray(ig.chosen)
+      ? ig.chosen.filter((k): k is string => typeof k === 'string').slice(0, MAX_CHOSEN)
+      : undefined;
+    const tags: Record<string, { username: string; x: number; y: number }[]> = {};
+    if (isRecord(ig.tags)) {
+      for (const [key, list] of Object.entries(ig.tags)) {
+        if (key === '__proto__' || !Array.isArray(list)) continue;
+        const kept = list.flatMap((t) => {
+          if (!isRecord(t) || typeof t.username !== 'string' || !TAGGED_USERNAME.test(t.username)) return [];
+          const x = within(t.x, 0, 1);
+          const y = within(t.y, 0, 1);
+          return x === undefined || y === undefined ? [] : [{ username: t.username, x, y }];
+        });
+        if (kept.length) tags[key] = kept.slice(0, 20);
+      }
+    }
+    state.instagram = {
+      ...(kind && { kind }),
+      ...(fit && { fit }),
+      ...(caption !== undefined && { caption }),
+      ...(chosen && { chosen }),
+      ...(Object.keys(tags).length && { tags }),
+    };
+  }
+  return state;
+}
+
+const withExport = (state: ExportState | undefined) => (state ? { export: state } : {});
+
 /** The project, checked; throws InvalidProjectError, naming the first problem, if it's damaged. */
 export function validateProject(v: unknown): Project {
   const d = record(v, 'project');
@@ -203,5 +277,6 @@ export function validateProject(v: unknown): Project {
     layout: book,
     settings: settings(d.settings, 'settings'),
     nextZ,
+    ...withExport(exportState(d.export)),
   };
 }

@@ -35,7 +35,7 @@
         "default-src": "'self'",
         "script-src": "'self'",
         "connect-src": "'self' ipc: http://ipc.localhost blob: data: https://graph.instagram.com https://sequence-server.sequence-photos.workers.dev https://sequence-server-dev.sequence-photos.workers.dev http://localhost:* http://127.0.0.1:*",
-        "img-src": "'self' blob: data:",
+        "img-src": "'self' blob: data: https://*.cdninstagram.com https://*.fbcdn.net",
         "style-src": "'self' 'unsafe-inline'",
         "font-src": "'self' data:",
         "object-src": "'none'",

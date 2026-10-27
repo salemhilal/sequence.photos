@@ -39,7 +39,8 @@ vi.mock('./instagram', async (importOriginal) => ({
   markNeedsReconnect: () => markNeedsReconnect(),
 }));
 
-const { CancelledError, graphErrorMessage, postToInstagram, quoteIds } = await import('./instagramPost');
+const { CancelledError, graphErrorMessage, isInstagramImage, postToInstagram, profilePicture, quoteIds } =
+  await import('./instagramPost');
 const { LIMITS } = await import('./instagramImage');
 
 const USER = connection.userId;
@@ -242,6 +243,61 @@ describe('postToInstagram: feed', () => {
   it('resolves to null when the link can’t be fetched (the post is up)', async () => {
     fakeServers({ permalink: () => json({ error: { code: 1 } }, 500) });
     expect(await post()).toBeNull();
+  });
+});
+
+describe('postToInstagram: people tagged', () => {
+  const tag = (username: string) => ({ username, x: 0.25, y: 0.5 });
+
+  it('tags a single image’s people on its container', async () => {
+    const server = fakeServers();
+    await post({ tags: [[tag('a'), tag('b')]] });
+    expect(JSON.parse(server.to('media')[0]!.params.user_tags ?? '')).toEqual([tag('a'), tag('b')]);
+  });
+
+  it('tags a carousel’s slides on their own items, and none on the carousel or untagged items', async () => {
+    const server = fakeServers();
+    await post({ slides: slides(3), tags: [[tag('a')], [], [tag('c')]] });
+    const media = server.to('media').map((c) => c.params.user_tags);
+    expect(media.map((t) => t && JSON.parse(t))).toEqual([[tag('a')], undefined, [tag('c')], undefined]);
+  });
+
+  it('mentions a story’s people on it', async () => {
+    const server = fakeServers();
+    await post({ kind: 'story', slides: slides(2), tags: [[], [tag('b')]] });
+    expect(server.to('media').map((c) => c.params.user_tags)).toEqual([undefined, JSON.stringify([tag('b')])]);
+  });
+});
+
+describe('isInstagramImage', () => {
+  it('takes only Instagram’s image servers', () => {
+    expect(isInstagramImage('https://scontent-lga3-1.cdninstagram.com/v/t51/p.jpg?oe=1')).toBe(true);
+    expect(isInstagramImage('https://scontent.xx.fbcdn.net/p.jpg')).toBe(true);
+    expect(isInstagramImage('http://scontent.cdninstagram.com/p.jpg')).toBe(false);
+    expect(isInstagramImage('https://cdninstagram.com.example.com/p.jpg')).toBe(false);
+    expect(isInstagramImage('https://evilcdninstagram.com/p.jpg')).toBe(false);
+    expect(isInstagramImage('not a url')).toBe(false);
+  });
+});
+
+describe('profilePicture', () => {
+  const answer = (body: unknown, status = 200) =>
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(body), { status }));
+
+  it('asks for the account’s picture, and gives its address', async () => {
+    const url = 'https://scontent.cdninstagram.com/p.jpg';
+    const fetch = answer({ profile_picture_url: url, id: '1' });
+    expect(await profilePicture('TOKEN')).toBe(url);
+    expect(String(fetch.mock.calls[0]![0])).toMatch(/\/me\?fields=profile_picture_url&access_token=TOKEN$/);
+  });
+
+  it('gives null without one, for one elsewhere, or when Instagram says no', async () => {
+    answer({ id: '1' });
+    expect(await profilePicture('TOKEN')).toBeNull();
+    answer({ profile_picture_url: 'https://example.com/p.jpg' });
+    expect(await profilePicture('TOKEN')).toBeNull();
+    answer({ error: { code: 1 } }, 400);
+    expect(await profilePicture('TOKEN')).toBeNull();
   });
 });
 

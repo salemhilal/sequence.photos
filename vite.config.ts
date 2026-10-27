@@ -38,7 +38,8 @@ function securityHeaders(env: Record<string, string>, inlineScripts: string[]): 
     "default-src 'self'",
     ['script-src', "'self'", ...hashes].join(' '),
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' blob: data:",
+    // Profile pictures: INSTAGRAM.imageDomains in src/config.ts.
+    "img-src 'self' blob: data: https://*.cdninstagram.com https://*.fbcdn.net",
     "font-src 'self' data:",
     [
       'connect-src',

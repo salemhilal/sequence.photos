@@ -2,6 +2,7 @@ import type { PostResult, UploadBatch, UploadsRequest } from '../server/src/api'
 import { INSTAGRAM } from './config';
 import { isRecord } from './guards';
 import { freshConnection, markNeedsReconnect, RECONNECT, SERVER_ERROR, type InstagramConnection } from './instagram';
+import { userTagsParam, type UserTag } from './instagramTags';
 import {
   LIMITS,
   postImageLayout,
@@ -209,6 +210,8 @@ interface PostOptions {
   kind: PostKind;
   fit: Fit;
   caption: string;
+  /** People tagged on each slide (in `slides`' order), if any. */
+  tags?: readonly (readonly UserTag[])[];
   /** Told how many photos had to be drawn from their previews (originals that wouldn't decode here). */
   onPreviews?: (count: number) => void;
   onStep: (step: PostStep) => void;
@@ -289,15 +292,24 @@ export async function postToInstagram(options: PostOptions): Promise<string | nu
     // Every container is created and processed before anything is published.
     const urls = batch.frames.map((f) => f.url);
     const create = (params: Record<string, string>) => graph(token, 'POST', `${user}/media`, params, signal).then(idOf);
+    // Each image's container carries its own tags (a carousel's, its slides').
+    const tagged = (i: number): Record<string, string> => {
+      const user_tags = userTagsParam(options.tags?.[i] ?? []);
+      return user_tags ? { user_tags } : {};
+    };
     let toPublish: string[];
     if (kind === 'story') {
       toPublish = [];
-      for (const image_url of urls) toPublish.push(await create({ image_url, media_type: 'STORIES' }));
+      for (const [i, image_url] of urls.entries()) {
+        toPublish.push(await create({ image_url, media_type: 'STORIES', ...tagged(i) }));
+      }
     } else if (urls.length === 1 && urls[0]) {
-      toPublish = [await create({ image_url: urls[0], caption })];
+      toPublish = [await create({ image_url: urls[0], caption, ...tagged(0) })];
     } else {
       const children: string[] = [];
-      for (const image_url of urls) children.push(await create({ image_url, is_carousel_item: 'true' }));
+      for (const [i, image_url] of urls.entries()) {
+        children.push(await create({ image_url, is_carousel_item: 'true', ...tagged(i) }));
+      }
       for (const child of children) await waitUntilReady(token, child, signal);
       toPublish = [await create({ media_type: 'CAROUSEL', children: children.join(','), caption })];
     }
@@ -334,5 +346,30 @@ export async function postToInstagram(options: PostOptions): Promise<string | nu
     const url = new URL(batch.delete);
     url.searchParams.set('result', result);
     void fetch(url, { method: 'DELETE' }).catch(() => undefined);
+  }
+}
+
+/** Whether `url` is an image on Instagram's servers (which the security policies allow). */
+export function isInstagramImage(url: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return protocol === 'https:' && INSTAGRAM.imageDomains.some((d) => hostname.endsWith(`.${d}`));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The account's profile picture, from Instagram, or null if it has none (or Instagram
+ * couldn't be reached). Its address is on Instagram's image servers and stops working after
+ * a while, so it's asked for each time it's shown rather than kept.
+ */
+export async function profilePicture(token: string, signal?: AbortSignal): Promise<string | null> {
+  try {
+    const me = await graph(token, 'GET', 'me', { fields: 'profile_picture_url' }, signal);
+    const url = me.profile_picture_url;
+    return typeof url === 'string' && isInstagramImage(url) ? url : null;
+  } catch {
+    return null;
   }
 }
