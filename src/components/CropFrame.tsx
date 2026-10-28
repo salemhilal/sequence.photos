@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { setCropFrame } from '../actions';
-import { cropOf, dragCropHandle, frameToRatio, panCrop, wholeRect, type CropHandle } from '../crop';
+import { cropOf, dragCropHandle, frameToRatio, moveCrop, panCrop, wholeRect, type CropHandle } from '../crop';
 import { startDrag } from '../drag';
 import type { GuideLines, Rect, SnapFeedback } from '../geometry';
 import { usePageStatus } from '../hooks';
@@ -55,7 +55,7 @@ export function CropFrame({ photoId, frame, scale, min, page, lines = null, thre
   const bar = useRef<HTMLDivElement>(null);
 
   usePageStatus(
-    `Drag the edges to crop · drag the photo to move it · Shift keeps the shape${
+    `Drag the edges to crop · drag inside to move the crop, ${isMac ? '⌘' : 'Ctrl'}-drag to move the photo · Shift keeps the shape${
       lines ? ` · ${isMac ? 'Option' : 'Alt'}: no snapping` : ''
     } · Return to finish, Esc to cancel`,
   );
@@ -128,16 +128,27 @@ export function CropFrame({ photoId, frame, scale, min, page, lines = null, thre
     });
   };
 
-  const dragPhoto = (e: React.PointerEvent) => {
+  // Dragging inside the crop moves it across the photo; with ⌘ (Ctrl), the photo moves
+  // behind it instead.
+  const dragInside = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     e.stopPropagation();
-    const start = whole;
+    const start = { frame, whole };
+    const movePhoto = e.metaKey || e.ctrlKey;
     startDrag(e, {
-      onMove: ({ dx, dy }) => {
-        const w = panCrop(frame, start, dx / scale, dy / scale);
-        setWhole(w);
-        show(frame, w);
+      onMove: ({ e: ev, dx, dy }) => {
+        if (movePhoto) {
+          const w = panCrop(start.frame, start.whole, dx / scale, dy / scale);
+          setWhole(w);
+          show(start.frame, w);
+          return;
+        }
+        const snapping = lines && !ev.altKey ? lines : null;
+        const { frame: f, hit } = moveCrop(start.frame, whole, dx / scale, dy / scale, snapping, threshold);
+        onSnap?.(hit);
+        show(f, whole);
       },
+      onEnd: () => onSnap?.(null),
     });
   };
 
@@ -185,7 +196,7 @@ export function CropFrame({ photoId, frame, scale, min, page, lines = null, thre
         <div className="crop-dim" style={at(0, b, 1, 1)} />
         <div className="crop-dim" style={at(0, t, l, b)} />
         <div className="crop-dim" style={at(r, t, 1, b)} />
-        <div className="crop-window" style={windowStyle} onPointerDown={dragPhoto} />
+        <div className="crop-window" style={windowStyle} onPointerDown={dragInside} />
       </div>
       <div className="crop-thirds" />
       {EDGES.filter((h) => ratio === null || h.length === 2).map((h) => (

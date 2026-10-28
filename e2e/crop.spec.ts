@@ -122,4 +122,25 @@ test.describe('cropping', () => {
     // Esc left crop mode, not the editor.
     await expect(page.locator('.modal.editor')).toBeVisible();
   });
+
+  test('dragging inside moves the crop across the photo; the photo stays put', async ({ page }) => {
+    await addTestImages(page, 1);
+    await page.keyboard.press('Escape');
+    const item = page.locator('.desk .item').first();
+    await item.dblclick();
+    await page.getByRole('button', { name: '1:1' }).click();
+    const photo = (await page.locator('.crop-whole').boundingBox())!;
+    const before = (await item.boundingBox())!;
+    // Square in a taller photo: room to move it down.
+    const c = { x: before.x + before.width / 2, y: before.y + before.height / 2 };
+    await page.mouse.move(c.x, c.y);
+    await page.mouse.down();
+    await page.mouse.move(c.x, c.y + 40, { steps: 6 });
+    await page.mouse.up();
+    const after = (await item.boundingBox())!;
+    expect(after.y - before.y).toBeCloseTo(Math.min(40, photo.y + photo.height - before.y - before.height), 0);
+    const still = (await page.locator('.crop-whole').boundingBox())!;
+    expect(still.y).toBeCloseTo(photo.y, 0);
+    await page.keyboard.press('Enter');
+  });
 });

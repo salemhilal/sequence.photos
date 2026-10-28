@@ -8,6 +8,7 @@ import {
   dragCropHandle,
   frameToRatio,
   isWhole,
+  moveCrop,
   panCrop,
   visibleSize,
   wholeRect,
@@ -123,6 +124,14 @@ describe('crop mode', () => {
     const r = dragCropHandle(frame, whole, 'ne', 1, -1.8, { ...free, lines, threshold: 0.3 });
     expect(r.frame).toEqual({ x: 2, y: 0.1, w: 4.8, h: 5.9 });
     expect(r.hit).toEqual({ xs: [6.8], ys: [0.1] });
+  });
+
+  it('moves the frame across the photo, as far as the photo goes, snapping to lines', () => {
+    expect(moveCrop(frame, whole, 1, -1).frame).toEqual({ x: 3, y: 1, w: 4, h: 4 });
+    expect(moveCrop(frame, whole, 20, 20).frame).toEqual({ x: 6, y: 4, w: 4, h: 4 });
+    const snapped = moveCrop(frame, whole, 0.9, 0, { xs: [3], ys: [] }, 0.3);
+    expect(snapped.frame.x).toBe(3);
+    expect(snapped.hit.xs).toEqual([3]);
   });
 
   it('pans the photo behind the frame, keeping the frame on it', () => {

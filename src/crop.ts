@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { snapPoints, type GuideLines, type Rect, type SnapFeedback } from './geometry';
+import { snapMove, snapPoints, type GuideLines, type Rect, type SnapFeedback } from './geometry';
 import type { Crop, PhotoMeta, Sheet } from './types';
 
 /**
@@ -172,6 +172,31 @@ export function dragCropHandle(
   w *= room;
   h *= room;
   return { frame: { x: ax - w * fx, y: ay - h * fy, w, h }, hit: { xs: [], ys: [] } };
+}
+
+/**
+ * Move the crop frame across the photo (which stays put) by (dx, dy), as far as the photo
+ * goes, its edges and center snapping to `lines`.
+ */
+export function moveCrop(
+  start: Rect,
+  whole: Rect,
+  dx: number,
+  dy: number,
+  lines: GuideLines | null = null,
+  threshold = 0,
+): { frame: Rect; hit: SnapFeedback } {
+  const clamp = (r: Rect): Rect => ({
+    ...r,
+    x: Math.min(whole.x + whole.w - r.w, Math.max(whole.x, r.x)),
+    y: Math.min(whole.y + whole.h - r.h, Math.max(whole.y, r.y)),
+  });
+  const moved = clamp({ ...start, x: start.x + dx, y: start.y + dy });
+  if (!lines) return { frame: moved, hit: { xs: [], ys: [] } };
+  const snapped = snapMove(moved, lines, threshold);
+  const frame = clamp(snapped.rect);
+  // A snap the photo's edge undid isn't one.
+  return { frame, hit: frame.x === snapped.rect.x && frame.y === snapped.rect.y ? snapped.hit : { xs: [], ys: [] } };
 }
 
 /** Move the photo behind its crop frame by (dx, dy), as far as the frame stays on it. */
