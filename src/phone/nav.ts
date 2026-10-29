@@ -1,5 +1,6 @@
 import type { PhotoId, SpreadId } from '../ids';
 import { createStore } from '../store';
+import { ui } from '../ui';
 import { openProject, type LibraryEntry } from './library';
 
 /**
@@ -84,6 +85,11 @@ export function dropIndex(
 
 /** Open a sequence from the list: load it, and show its frames. */
 export async function openSequence(entry: Pick<LibraryEntry, 'id' | 'name'>): Promise<void> {
-  await openProject(entry.id);
+  try {
+    await openProject(entry.id);
+  } catch (e) {
+    ui.set({ notice: `Couldn’t open “${entry.name}”: ${e instanceof Error ? e.message : String(e)}` });
+    return;
+  }
   phone.set({ screen: 'frames', name: entry.name, selecting: false, selected: [], sheet: null });
 }

@@ -17,6 +17,13 @@ import { phone } from './nav';
 // The phone's projects and photos, apart from the web app's (in development they share an
 // address, and the web app clears out photos its project doesn't use).
 setDatabaseName('sequence-phone');
+// What goes wrong unexpectedly is said, rather than a tap silently doing nothing.
+const report = (e: unknown) => {
+  const message = e instanceof Error ? e.message : String(e);
+  ui.set({ notice: `Something went wrong: ${message}` });
+};
+window.addEventListener('error', (e) => report(e.error ?? e.message));
+window.addEventListener('unhandledrejection', (e) => report(e.reason));
 platform.start();
 // Back from connecting Instagram (in Safari): finish it, and say how it went.
 platform.onSignInReturn((fragment) => {
