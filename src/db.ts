@@ -2,7 +2,7 @@ import type { Project } from './types';
 
 // Named for the app's old name (Photobook Sequencer), as are the `photobook-*` prefs: renaming
 // them would lose everyone's saved work.
-const DB_NAME = 'photobook';
+let dbName = 'photobook';
 const DB_VERSION = 1;
 const STATE = 'state';
 const IMAGES = 'images';
@@ -19,9 +19,18 @@ export interface StoredImage {
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
+/**
+ * Keep everything in a database of this name instead, before anything is stored: the phone UI
+ * keeps its own (see src/phone/library.ts), so the web app's cleanup never sees its photos.
+ */
+export function setDatabaseName(name: string): void {
+  if (dbPromise) throw new Error('The database is already open');
+  dbName = name;
+}
+
 function open(): Promise<IDBDatabase> {
   dbPromise ??= new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    const req = indexedDB.open(dbName, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STATE)) db.createObjectStore(STATE);
@@ -52,6 +61,19 @@ export async function loadSavedProject(): Promise<unknown> {
 
 export async function storeProject(project: Project): Promise<void> {
   await wrap((await store(STATE, 'readwrite')).put(project, PROJECT_KEY));
+}
+
+/** Something else kept beside the project, by key (the phone UI's projects and their list). */
+export async function loadState(key: string): Promise<unknown> {
+  return wrap((await store(STATE, 'readonly')).get(key) as IDBRequest<unknown>);
+}
+
+export async function storeState(key: string, value: unknown): Promise<void> {
+  await wrap((await store(STATE, 'readwrite')).put(value, key));
+}
+
+export async function deleteState(key: string): Promise<void> {
+  await wrap((await store(STATE, 'readwrite')).delete(key));
 }
 
 export async function putImage(id: string, img: StoredImage): Promise<void> {

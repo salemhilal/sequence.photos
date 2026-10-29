@@ -1,0 +1,22 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "build": {
+    "devUrl": "http://localhost:5177",
+    "beforeDevCommand": "npm run ios:ui:dev",
+    "beforeBuildCommand": "npm run ios:ui:build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "url": "phone/index.html",
+        "title": "Sequence"
+      }
+    ]
+  },
+  "bundle": {
+    "iOS": {
+      "minimumSystemVersion": "17.0"
+    }
+  }
+}

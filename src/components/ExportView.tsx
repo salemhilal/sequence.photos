@@ -355,7 +355,7 @@ function formatBytes(n: number): string {
 }
 
 /** Instagram's glyph (a rounded square, a lens, a flash), drawn like the other icons. */
-function InstagramGlyph() {
+export function InstagramGlyph() {
   return (
     <svg
       className="lucide"

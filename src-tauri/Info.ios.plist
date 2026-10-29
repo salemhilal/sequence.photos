@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged into the iPhone app's Info.plist by Tauri (the Mac app's is Info.plist). -->
+<plist version="1.0">
+<dict>
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
+  <!-- The share sheet's Save Image puts exports in Photos. -->
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>Sequence saves the images you export to your photo library.</string>
+  <!-- The app's link, which brings an Instagram sign-in back from Safari (see src/instagram.ts). -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>Instagram sign-in</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>sequence-photos</string>
+      </array>
+    </dict>
+  </array>
+  <!-- Portrait only, for now: the editor's layout is built for it. -->
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+  </array>
+</dict>
+</plist>
