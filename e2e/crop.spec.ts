@@ -143,4 +143,43 @@ test.describe('cropping', () => {
     expect(still.y).toBeCloseTo(photo.y, 0);
     await page.keyboard.press('Enter');
   });
+
+  test('pinned, the crop stays put, dragging moves the photo in it, and only the crop shows', async ({ page }) => {
+    await addTestImages(page, 1);
+    await page.keyboard.press('Escape');
+    const item = page.locator('.desk .item').first();
+    await item.dblclick();
+    // A smaller crop, by its corner: room to move the photo in it.
+    const corner = (await page.locator('.crop-se').boundingBox())!;
+    await page.mouse.move(corner.x + 4, corner.y + 4);
+    await page.mouse.down();
+    await page.mouse.move(corner.x - 120, corner.y - 120, { steps: 6 });
+    await page.mouse.up();
+    await page.getByRole('button', { name: 'Pin the crop' }).click();
+    await page.mouse.move(4, 300);
+    await expect(page.getByRole('button', { name: 'Pin the crop' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.crop-handle')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '4:5' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Reset' })).toBeDisabled();
+    await expect(page.locator('.statusbar .status-text')).toContainText('Crop pinned');
+    // What's cropped off is clipped away.
+    await expect(page.locator('.crop-whole')).toHaveCSS('clip-path', /inset/);
+
+    const frame = (await item.boundingBox())!;
+    const photo = (await page.locator('.crop-whole').boundingBox())!;
+    const c = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 };
+    await page.mouse.move(c.x, c.y);
+    await page.mouse.down();
+    // Up and left: the crop is at the photo's top left, so that's where there's photo to show.
+    await page.mouse.move(c.x - 30, c.y - 30, { steps: 6 });
+    await page.mouse.up();
+    const after = (await item.boundingBox())!;
+    expect(after.y).toBeCloseTo(frame.y, 0);
+    expect((await page.locator('.crop-whole').boundingBox())!.y).not.toBeCloseTo(photo.y, 0);
+
+    // Unpinned, the crop moves again, and its handles are back.
+    await page.getByRole('button', { name: 'Pin the crop' }).click();
+    await expect(page.locator('.crop-handle').first()).toBeVisible();
+    await page.keyboard.press('Enter');
+  });
 });

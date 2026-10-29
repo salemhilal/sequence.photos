@@ -155,6 +155,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       crop across the photo (⌘-drag moves the photo behind it; in the editor, it snaps); Shift keeps the shape; a shape from the bar crops to it and keeps
       it. Done, Return, or a click elsewhere keeps the crop as one undo step; Esc puts it back.
       Undo and other shortcuts wait while cropping.
+- [ ] _(e2e)_ The pin in crop mode's bar pins the crop: its handles go, its outline dashes, the
+      shapes and Reset wait, only what's in the crop shows, and dragging moves the photo in it.
+      Unpinning brings it all back.
 - [ ] _(e2e)_ In the editor, the crop's edges snap to the page's edges, center lines, and guides;
       Option doesn't snap.
 - [ ] _(e2e)_ Right-click a photo: Crop… (on a page, opens its spread's editor in crop mode), Crop
