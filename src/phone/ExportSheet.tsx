@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Image, Share } from 'lucide-react';
-import { InstagramGlyph } from '../components/ExportView';
+import { InstagramGlyph } from '../components/InstagramGlyph';
 import { DEFAULT_QUALITY } from '../exportOptions';
 import { saveExportState } from '../exportState';
 import { useConnectInstagram, useInstagram } from '../instagram';

@@ -27,6 +27,7 @@ import { NumberField } from './NumberField';
 import { Pager } from './Pager';
 import { Segmented } from './Segmented';
 import { PageCanvas } from './SpreadCanvas';
+import { InstagramGlyph } from './InstagramGlyph';
 
 const InstagramPost = lazy(() => import('./InstagramPost').then((m) => ({ default: m.InstagramPost })));
 
@@ -352,26 +353,6 @@ function formatBytes(n: number): string {
   if (n < 1e6) return `${Math.max(1, Math.round(n / 1e3))} KB`;
   if (n < 1e9) return `${Math.round(n / 1e6)} MB`;
   return `${(n / 1e9).toFixed(1)} GB`;
-}
-
-/** Instagram's glyph (a rounded square, a lens, a flash), drawn like the other icons. */
-export function InstagramGlyph() {
-  return (
-    <svg
-      className="lucide"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="2" y="2" width="20" height="20" rx="5" />
-      <circle cx="12" cy="12" r="4.5" />
-      <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" />
-    </svg>
-  );
 }
 
 /** An output page's size in pixels, at `pxPerUnit`. */
