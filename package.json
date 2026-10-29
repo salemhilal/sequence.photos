@@ -12,6 +12,7 @@
     "app:store": "node scripts/app-store.mjs",
     "app:ui:dev": "vite --mode app --port 5176 --strictPort",
     "app:ui:build": "tsc -b && vite build --mode app",
+    "tauri": "tauri",
     "ios:dev": "tauri ios dev",
     "ios:build": "tauri ios build",
     "ios:ui:dev": "vite --mode ios --port 5177 --strictPort",
