@@ -91,7 +91,9 @@ npx tauri ios build --debug --target aarch64-sim   # a Simulator build
 
 It needs Xcode (as the active developer directory: `xcode-select -p`, or `DEVELOPER_DIR`),
 the iOS Rust targets (`rustup target add aarch64-apple-ios aarch64-apple-ios-sim`), and
-XcodeGen and CocoaPods (`brew install xcodegen cocoapods`). Its Xcode project is
+XcodeGen and CocoaPods (`brew install xcodegen cocoapods`). Xcode's one-time setup has to
+have run (`sudo xcodebuild -runFirstLaunch`, or opening Xcode once), and a Simulator runtime
+installed (Xcode → Settings → Components). Its Xcode project is
 `src-tauri/gen/apple/`, its config `src-tauri/tauri.ios.conf.json` and `Info.ios.plist`,
 and its platform `src/platform/ios.ts`.
 
