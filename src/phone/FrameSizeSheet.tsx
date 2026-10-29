@@ -128,7 +128,8 @@ export function NumberField({
   onChange: (n: number) => void;
   after?: boolean;
 }) {
-  const shown = String(Math.round(value * 10) / 10);
+  // Pixels are whole, as the desktop's fields show them.
+  const shown = String(Math.round(value));
   const [text, setText] = useState<string | null>(null);
   const take = () => {
     if (text === null) return;

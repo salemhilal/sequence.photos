@@ -568,6 +568,49 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
       black in dark mode (macOS 26 and later, following System Settings → Appearance); the
       white one on older macOS.
 
+## iPhone app
+
+At `/phone/` on the dev server in a phone-sized window (the _(e2e)_ items are
+`e2e/phone.spec.ts`), and in the iOS Simulator (`npm run ios:dev`) or on a phone.
+
+- [ ] _(e2e)_ Sequences: New sequence opens an empty one (one frame, 1080 × 1350 px). Back in
+      the list it shows its first frames, "N frames · W × H px", and when it was edited;
+      after a reload or a relaunch it's all still there. ⋯ renames or deletes one (asking
+      first).
+- [ ] _(e2e)_ Frames: + → Add photos opens the photo picker; then a frame each, the empty
+      frames first, or the desk. Each lands fitted in the border guide. A frame whose photo
+      is enlarged has the amber mark.
+- [ ] _(e2e)_ Hold a frame still, then drag: it lifts and moves to the amber bar's gap (with
+      the rest of the selection, when it's chosen). A drag without holding scrolls. Select:
+      Duplicate copies frames and their photos; Delete (asking first) puts their photos on
+      the desk; at least one frame stays.
+- [ ] ⋯ → Frame size: a preset or a custom size, the border guide, center lines; the strip
+      previews every frame; Apply is one undo step; Cancel changes nothing.
+- [ ] _(e2e)_ Editor: tap a photo to select it (amber outline, corner handles); drag to move,
+      snapping by its outer edge (border included) with magenta lines; drag a corner to
+      resize, keeping its shape. Pinch zooms around the fingers.
+- [ ] _(e2e)_ Drag a placed photo down into the panel ("Put it back on the desk"): it goes to
+      the desk. Drag a desk photo up from the tray onto the frame: it lands where it's let
+      go, and the border guide lights while it's over the frame. Sideways drags scroll the
+      tray; taps do nothing.
+- [ ] _(e2e)_ Tap the frame: Background White or Black, and Use on every frame. Tap outside it
+      for the desk again.
+- [ ] _(e2e)_ A photo's panel: its name and enlargement, X/Y/W/H (whole pixels; the link keeps
+      proportions), Border (a slider and white or black; drawn outside the photo), Crop,
+      Fit (the frame or the border guide, border included), Center, Duplicate.
+- [ ] _(e2e)_ Crop: shapes, Reset, Pin. Pinned, the handles go, the outline dashes, the shapes
+      and Reset wait, only what's in the crop shows, and dragging moves the photo in it.
+      Done is one undo step; Cancel puts it back.
+- [ ] _(e2e)_ Export → Images: Make N images, then Share N images… opens the share sheet;
+      Save Images puts them in Photos (iOS asks once for access to add photos). JPEG or PNG,
+      and quality, kept with the project.
+- [ ] Export → Instagram: Connect Instagram opens Safari; signing in comes back to the app
+      (`sequence-photos://`) and Export. Feed or Stories, slides (up to 10), caption with its
+      counts, Post with its progress and Cancel.
+- [ ] Exports draw black backgrounds and borders; the web app shows them in its views too.
+- [ ] iOS: the notch and home indicator don't cover the bars; no text selection or callouts
+      on long presses; the photo picker and share sheet work.
+
 ## Landing page (web)
 
 - [ ] `/` shows the headline, Try it online (opens `/app/`), and the Mac App Store badge; paper

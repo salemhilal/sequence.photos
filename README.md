@@ -75,6 +75,26 @@ The website and the app share everything but `src/platform/`: each build imports
 `#platform`, which is `src/platform/browser.ts` for the website and `src/platform/macos/`
 for the app (see `vite.config.ts`). CI checks that neither build contains the other's code.
 
+## The iPhone app
+
+The same Tauri shell, built for iOS, around a UI of its own for the phone (`src/phone/`):
+sequences of frames only (no books), the frames grid, a frame's editor with the desk in a
+tray below it, crop (with the pin), and export as images or to Instagram. Projects are kept
+in the app (a list of them, in IndexedDB), not in files. It's at `/phone/` on the dev server
+too, for working on it in a browser at phone size.
+
+```bash
+npm run ios:dev     # run it in the iOS Simulator, reloading on changes
+npm run ios:build   # an App Store build (needs signing set up in Xcode)
+npx tauri ios build --debug --target aarch64-sim   # a Simulator build
+```
+
+It needs Xcode (as the active developer directory: `xcode-select -p`, or `DEVELOPER_DIR`),
+the iOS Rust targets (`rustup target add aarch64-apple-ios aarch64-apple-ios-sim`), and
+XcodeGen and CocoaPods (`brew install xcodegen cocoapods`). Its Xcode project is
+`src-tauri/gen/apple/`, its config `src-tauri/tauri.ios.conf.json` and `Info.ios.plist`,
+and its platform `src/platform/ios.ts`.
+
 ## Testing
 
 ```bash
@@ -107,7 +127,7 @@ public `VITE_` values only, since they ship in the website and the app. Vite rea
 | `src/`       | The app: React and TypeScript, with its unit tests beside each file                               |
 | `site/`      | The website's pages (landing, app, privacy, support), the landing page's code, and public files   |
 | `server/`    | The Cloudflare Worker for Instagram posting, with its own package and tests                       |
-| `src-tauri/` | The Mac app's native side (Rust), its config, entitlements, and icons                             |
+| `src-tauri/` | The Mac and iPhone apps' native side (Rust), their config, entitlements, and icons                |
 | `e2e/`       | Playwright interaction tests                                                                      |
 | `scripts/`   | Build and release scripts: the App Store build, version bump, icons, checks                       |
 | `assets/`    | Source art: the app icon's drawings (`npm run icons` makes the rest), and the screenshots' photos |
