@@ -26,6 +26,18 @@ export interface Crop {
   h: number;
 }
 
+/** The colors a page's background and a photo's border come in, for now. */
+export type Ink = 'white' | 'black';
+
+/**
+ * A border drawn around a placed photo, outside its edges (the photo keeps its size), in the
+ * page's unit.
+ */
+export interface PhotoBorder {
+  width: number;
+  color: Ink;
+}
+
 export interface Placement {
   photoId: PhotoId;
   x: number;
@@ -34,6 +46,8 @@ export interface Placement {
   h: number;
   /** Stacking order; the most recently touched photo has the highest z. */
   z: number;
+  /** None: no border. Only on pages (the desk shows photos plain). */
+  border?: PhotoBorder;
 }
 
 /**
@@ -50,6 +64,8 @@ interface SpreadOf<K extends string> {
   kind: K;
   id: SpreadId;
   items: Placement[];
+  /** The color behind its photos; none is white. */
+  background?: Ink;
 }
 export type FirstSpread = SpreadOf<'first'>;
 export type MiddleSpread = SpreadOf<'middle'>;
@@ -163,7 +179,7 @@ export interface Sheet extends Settings {
  * The version of the saved project's shape. Bump it (and add a migration and a
  * test sample in schema.ts / schema.test.ts) whenever what gets saved changes.
  */
-export const CURRENT_SCHEMA = 6;
+export const CURRENT_SCHEMA = 7;
 
 export interface Project {
   /** Always the current shape: older ones are upgraded on load (see schema.ts). */

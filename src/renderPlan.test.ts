@@ -160,3 +160,24 @@ describe('planPage at a size that rounds', () => {
     expect(dst.y + dst.h).toBeCloseTo(1125, 9);
   });
 });
+
+describe('planPage with a background and borders', () => {
+  it('is on white unless the page says otherwise', () => {
+    const p = book();
+    const s = sheetOf(p);
+    const out = outputPages(p, 'spread')[1]!;
+    expect(planPage(out, s, p.photos).background).toBe('white');
+    allSpreads(p)[1]!.background = 'black';
+    expect(planPage(outputPages(p, 'spread')[1]!, s, p.photos).background).toBe('black');
+  });
+
+  it('gives a border in output pixels, around the whole placed photo', () => {
+    const p = book();
+    allSpreads(p)[1]!.items[0]!.border = { width: 0.1, color: 'black' };
+    const plan = planPage(outputPages(p, 'spread')[1]!, sheetOf(p), p.photos);
+    const a = plan.draws.find((d) => d.photoId === A);
+    expect(a?.border?.color).toBe('black');
+    expect(a?.border?.width).toBeCloseTo(30, 9);
+    expect(plan.draws.find((d) => d.photoId === B)?.border).toBeUndefined();
+  });
+});
