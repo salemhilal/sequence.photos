@@ -202,16 +202,17 @@ function ImagesExport() {
         {n} {format === 'png' ? 'PNGs' : 'JPEGs'}, {n > 1 ? `${name(1)} to ${name(n)}` : name(1)}. In the share sheet,
         Save Images puts them in Photos.
       </span>
-      <div style={{ flex: 1 }} />
-      <button className="btn primary wide" onClick={() => void share()}>
-        {files ? (
-          <>
-            <Share /> Share {n} {n === 1 ? 'image' : 'images'}…
-          </>
-        ) : (
-          `Make ${n} ${n === 1 ? 'image' : 'images'}`
-        )}
-      </button>
+      <div className="pinned-foot">
+        <button className="btn primary wide" onClick={() => void share()}>
+          {files ? (
+            <>
+              <Share /> Share {n} {n === 1 ? 'image' : 'images'}…
+            </>
+          ) : (
+            `Make ${n} ${n === 1 ? 'image' : 'images'}`
+          )}
+        </button>
+      </div>
     </>
   );
 }
@@ -335,28 +336,28 @@ function InstagramExport({ onLock }: { onLock: (on: boolean) => void }) {
   return (
     <>
       <div className="account">
-        <span className="avatar">{connection?.username.slice(0, 1).toUpperCase() ?? '?'}</span>
         {ready ? (
-          <span className="mono" style={{ fontSize: 13 }}>
-            @{connection.username}
-          </span>
+          <>
+            <span className="avatar">{connection.username.slice(0, 1).toUpperCase()}</span>
+            <span className="mono" style={{ fontSize: 13 }}>
+              @{connection.username}
+            </span>
+          </>
         ) : (
-          <button className="btn raised" disabled={signIn.busy} onClick={signIn.connect}>
+          <button className="btn raised" style={{ flex: 1 }} disabled={signIn.busy} onClick={signIn.connect}>
             {signIn.busy ? 'Opening Instagram…' : connection ? 'Reconnect Instagram' : 'Connect Instagram'}
           </button>
         )}
-        <span style={{ marginLeft: 'auto', width: 160 }}>
-          <Segmented
-            label="Post as"
-            value={kind}
-            onChange={(k) => !posting && setKind(k)}
-            options={[
-              { value: 'feed', label: 'Feed post' },
-              { value: 'story', label: 'Stories' },
-            ]}
-          />
-        </span>
       </div>
+      <Segmented
+        label="Post as"
+        value={kind}
+        onChange={(k) => !posting && setKind(k)}
+        options={[
+          { value: 'feed', label: 'Feed post' },
+          { value: 'story', label: 'Stories' },
+        ]}
+      />
       {!ready && (
         <span className={`note${signIn.message?.warn ? ' warn' : ''}`}>
           {signIn.message?.text ??
@@ -453,33 +454,34 @@ function InstagramExport({ onLock }: { onLock: (on: boolean) => void }) {
       ) : (
         <span className="note">Stories have no captions.</span>
       )}
-      <div style={{ flex: 1 }} />
-      {status.kind === 'posting' && <span className="note">{stepLabel(status.step)}</span>}
-      {status.kind === 'failed' && <span className="note danger">{status.message}</span>}
-      {status.kind === 'done' && (
-        <span className="note">
-          Posted to Instagram.{' '}
-          {status.link && (
-            <a href={status.link} style={{ color: 'var(--text)' }}>
-              View on Instagram
-            </a>
-          )}
-        </span>
-      )}
-      {ready && problem && <span className="note warn">{problem}</span>}
-      {posting ? (
-        <button
-          className="btn raised wide"
-          disabled={status.step.step === 'publishing'}
-          onClick={() => abort.current?.abort()}
-        >
-          Cancel
-        </button>
-      ) : (
-        <button className="btn primary wide" disabled={!ready || !!problem} onClick={post}>
-          Post to Instagram
-        </button>
-      )}
+      <div className="pinned-foot">
+        {status.kind === 'posting' && <span className="note">{stepLabel(status.step)}</span>}
+        {status.kind === 'failed' && <span className="note danger">{status.message}</span>}
+        {status.kind === 'done' && (
+          <span className="note">
+            Posted to Instagram.{' '}
+            {status.link && (
+              <a href={status.link} style={{ color: 'var(--text)' }}>
+                View on Instagram
+              </a>
+            )}
+          </span>
+        )}
+        {ready && problem && <span className="note warn">{problem}</span>}
+        {posting ? (
+          <button
+            className="btn raised wide"
+            disabled={status.step.step === 'publishing'}
+            onClick={() => abort.current?.abort()}
+          >
+            Cancel
+          </button>
+        ) : (
+          <button className="btn primary wide" disabled={!ready || !!problem} onClick={post}>
+            Post to Instagram
+          </button>
+        )}
+      </div>
     </>
   );
 }

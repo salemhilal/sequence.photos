@@ -45,6 +45,8 @@ export function Frames() {
   const [menu, setMenu] = useState<'add' | 'more' | 'delete' | null>(null);
   const [lift, setLift] = useState<Lift | null>(null);
   const grid = useRef<HTMLDivElement>(null);
+  // A lift ends with the finger coming up on a frame: that isn't a tap on it.
+  const suppressClick = useRef(false);
   const frames = framesOf(project);
   const { page } = project;
 
@@ -62,6 +64,8 @@ export function Frames() {
   // then drag it to a gap.
   const press = (e: React.PointerEvent, id: SpreadId) => {
     if (e.button !== 0) return;
+    // A lift that ended off its frame left no tap to swallow.
+    suppressClick.current = false;
     const start = { x: e.clientX, y: e.clientY };
     let lifted: Lift | null = null;
     let moved = false;
@@ -130,7 +134,6 @@ export function Frames() {
     window.addEventListener('pointercancel', cancel);
     window.addEventListener('touchmove', still, { passive: false });
   };
-  const suppressClick = useRef(false);
 
   const tap = (id: SpreadId) => {
     if (suppressClick.current) {

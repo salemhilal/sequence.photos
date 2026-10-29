@@ -215,6 +215,8 @@ textarea {
 .page {
   position: relative;
   overflow: hidden;
+  /* Its photos' stacking order (their z) stays inside it. */
+  isolation: isolate;
   background: var(--page);
   flex: none;
 }
@@ -542,6 +544,21 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+.sheet-body > * {
+  flex: none;
+}
+/* The sheet's main action, at its foot however far it's scrolled. */
+.sheet-body > .pinned-foot {
+  position: sticky;
+  bottom: calc(-24px - var(--bottom));
+  margin: auto -16px calc(-24px - var(--bottom));
+  padding: 12px 16px calc(var(--bottom) + 16px);
+  background: var(--panel);
+  border-top: 1px solid var(--divider);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .sheet-foot {
   padding: 12px 16px calc(var(--bottom) + 16px);
