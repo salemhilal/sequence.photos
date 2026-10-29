@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Pin } from 'lucide-react';
 import { setCropFrame } from '../actions';
-import { cropOf, dragCropHandle, frameToRatio, panCrop, wholeRect, type CropHandle } from '../crop';
+import { cropOf, dragCropHandle, frameToRatio, moveCrop, panCrop, wholeRect, type CropHandle } from '../crop';
 import { startDrag } from '../drag';
 import type { GuideLines, Rect, SnapFeedback } from '../geometry';
 import { usePageStatus } from '../hooks';
@@ -51,13 +52,18 @@ export function CropFrame({ photoId, frame, scale, min, page, lines = null, thre
   // when the photo is dragged in its frame.
   const [whole, setWhole] = useState<Rect>(() => wholeRect(frame, cropOf(photo ?? {})));
   const [ratio, setRatio] = useState<number | null>(null);
+  // Pinned, the crop stays where it is and dragging moves the photo behind it, showing only
+  // what's in the crop: for fitting a photo to a place already decided.
+  const [pinned, setPinned] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
 
   usePageStatus(
-    `Drag the edges to crop · drag the photo to move it · Shift keeps the shape${
-      lines ? ` · ${isMac ? 'Option' : 'Alt'}: no snapping` : ''
-    } · Return to finish, Esc to cancel`,
+    pinned
+      ? 'Crop pinned: drag to move the photo in it · Return to finish, Esc to cancel'
+      : `Drag the edges to crop · drag inside to move the crop, ${isMac ? '⌘' : 'Ctrl'}-drag to move the photo · Shift keeps the shape${
+          lines ? ` · ${isMac ? 'Option' : 'Alt'}: no snapping` : ''
+        } · Return to finish, Esc to cancel`,
   );
 
   const show = (f: Rect, w: Rect) => projectStore.preview((d) => setCropFrame(d, photoId, f, w));
@@ -128,16 +134,27 @@ export function CropFrame({ photoId, frame, scale, min, page, lines = null, thre
     });
   };
 
-  const dragPhoto = (e: React.PointerEvent) => {
+  // Dragging inside the crop moves it across the photo; pinned, or with ⌘ (Ctrl), the photo
+  // moves behind it instead.
+  const dragInside = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     e.stopPropagation();
-    const start = whole;
+    const start = { frame, whole };
+    const movePhoto = pinned || e.metaKey || e.ctrlKey;
     startDrag(e, {
-      onMove: ({ dx, dy }) => {
-        const w = panCrop(frame, start, dx / scale, dy / scale);
-        setWhole(w);
-        show(frame, w);
+      onMove: ({ e: ev, dx, dy }) => {
+        if (movePhoto) {
+          const w = panCrop(start.frame, start.whole, dx / scale, dy / scale);
+          setWhole(w);
+          show(start.frame, w);
+          return;
+        }
+        const snapping = lines && !ev.altKey ? lines : null;
+        const { frame: f, hit } = moveCrop(start.frame, whole, dx / scale, dy / scale, snapping, threshold);
+        onSnap?.(hit);
+        show(f, whole);
       },
+      onEnd: () => onSnap?.(null),
     });
   };
 
@@ -177,29 +194,53 @@ export function CropFrame({ photoId, frame, scale, min, page, lines = null, thre
 
   return (
     // Presses stay here: the photo under crop mode (its item) would take them as a move.
-    <div ref={ref} className="crop-frame" onPointerDown={(e) => e.stopPropagation()}>
-      <div className="crop-whole" style={wholeStyle}>
+    <div ref={ref} className={`crop-frame${pinned ? ' pinned' : ''}`} onPointerDown={(e) => e.stopPropagation()}>
+      <div
+        className="crop-whole"
+        // Pinned, only what's in the crop shows: what's cropped off is out of the picture.
+        style={
+          pinned
+            ? { ...wholeStyle, clipPath: `inset(${t * 100}% ${(1 - r) * 100}% ${(1 - b) * 100}% ${l * 100}%)` }
+            : wholeStyle
+        }
+      >
         <PhotoImg id={photoId} crop={null} />
         {/* What's cropped off, dimmed: above, below, and to each side of the crop. */}
         <div className="crop-dim" style={at(0, 0, 1, t)} />
         <div className="crop-dim" style={at(0, b, 1, 1)} />
         <div className="crop-dim" style={at(0, t, l, b)} />
         <div className="crop-dim" style={at(r, t, 1, b)} />
-        <div className="crop-window" style={windowStyle} onPointerDown={dragPhoto} />
+        <div className="crop-window" style={windowStyle} onPointerDown={dragInside} />
       </div>
       <div className="crop-thirds" />
-      {EDGES.filter((h) => ratio === null || h.length === 2).map((h) => (
-        <div key={h} className={`crop-handle crop-${h}`} onPointerDown={(e) => dragHandle(e, h)} />
-      ))}
+      {!pinned &&
+        EDGES.filter((h) => ratio === null || h.length === 2).map((h) => (
+          <div key={h} className={`crop-handle crop-${h}`} onPointerDown={(e) => dragHandle(e, h)} />
+        ))}
       <CropBar anchor={ref} barRef={bar}>
         {shapes.map((s) => (
-          <button key={s.label} className={`crop-shape${chosen(s) ? ' on' : ''}`} onClick={() => choose(s)}>
+          <button
+            key={s.label}
+            className={`crop-shape${chosen(s) ? ' on' : ''}`}
+            disabled={pinned}
+            onClick={() => choose(s)}
+          >
             {s.label}
           </button>
         ))}
         <span className="crop-bar-gap" />
         <button
+          className={`crop-shape crop-pin${pinned ? ' on' : ''}`}
+          aria-label="Pin the crop"
+          aria-pressed={pinned}
+          data-tip={pinned ? 'Unpin: drag the crop again' : 'Pin the crop: dragging moves the photo in it'}
+          onClick={() => setPinned(!pinned)}
+        >
+          <Pin />
+        </button>
+        <button
           className="crop-shape"
+          disabled={pinned}
           onClick={() => {
             setRatio(null);
             show(whole, whole);

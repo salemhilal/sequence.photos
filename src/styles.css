@@ -3139,6 +3139,25 @@ img.ig-avatar {
   box-shadow: var(--raise);
   color: var(--text);
 }
+.crop-shape:disabled {
+  opacity: 0.4;
+}
+.crop-pin {
+  display: grid;
+  place-items: center;
+}
+.crop-pin .lucide {
+  width: 14px;
+  height: 14px;
+}
+/* Pinned: the crop's outline only (no handles), dashed, as it can't change until unpinned. */
+.crop-frame.pinned::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  outline: calc(1px * var(--inv, 1)) dashed #fff;
+  pointer-events: none;
+}
 .crop-bar-gap {
   width: 1px;
   align-self: stretch;
