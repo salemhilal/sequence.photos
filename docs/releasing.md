@@ -48,3 +48,21 @@ skill in `.claude/skills/`. Before a release, go through [testing.md](testing.md
 `Cargo.toml`, and their lockfiles). `npm run app:store` builds the `.pkg` locally and uploads
 it given an App Store Connect API key; [setup.md](setup.md#building-for-the-app-store-locally-optional)
 lists what it needs. It says what's missing.
+
+## The iPhone app
+
+Not yet on the App Store: builds go to TestFlight for internal testers, from `main`. It's a
+listing of its own, `io.salem.SequencePhotosMobile`, iPhone only, with its own version (in
+`src-tauri/tauri.ios.conf.json`, starting at 1.0.0) apart from the website's and the Mac
+app's. `npm run bump` doesn't change it.
+
+```bash
+npm run ios:store   # build a signed .ipa, and upload it given an App Store Connect API key
+```
+
+It needs Xcode signed in to the team's account (Xcode → Settings → Accounts) so it can make the
+app's distribution profile, and an Apple Distribution certificate; it says what's missing. The
+build number is the commit count, so each upload must come from a later commit (or set
+`BUILD_NUMBER`). Without an API key in the environment, upload the `.ipa` it prints with
+Transporter. In App Store Connect the build shows under TestFlight; add it to the internal
+testing group. `scripts/ios-store.mjs`'s header lists the environment it reads.

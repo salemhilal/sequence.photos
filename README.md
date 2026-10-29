@@ -85,9 +85,13 @@ too, for working on it in a browser at phone size.
 
 ```bash
 npm run ios:dev     # run it in the iOS Simulator, reloading on changes
-npm run ios:build   # an App Store build (needs signing set up in Xcode)
+npm run ios:store   # a signed build for TestFlight (see docs/releasing.md)
 npx tauri ios build --debug --target aarch64-sim   # a Simulator build
 ```
+
+It's iPhone only, portrait, with its own bundle ID (`io.salem.SequencePhotosMobile`) and
+version (1.0.0, in `tauri.ios.conf.json`). Its icons come from `npm run icons`; its privacy
+manifest is `src-tauri/gen/apple/sequence_iOS/PrivacyInfo.xcprivacy`.
 
 It needs Xcode (as the active developer directory: `xcode-select -p`, or `DEVELOPER_DIR`),
 the iOS Rust targets (`rustup target add aarch64-apple-ios aarch64-apple-ios-sim`), and

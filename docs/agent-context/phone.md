@@ -1,6 +1,7 @@
 # The iPhone app
 
-A first pass, not yet released. It's the Tauri shell built for iOS around a UI of its own
+A first pass, going to TestFlight (internal testers) as `io.salem.SequencePhotosMobile`, iPhone
+only, version 1.0.0; see `docs/releasing.md`. It's the Tauri shell built for iOS around a UI of its own
 (`src/phone/`), sharing the model, crop, render plan, exports, and Instagram posting with
 the web and Mac apps. In development it's also at `/phone/` on the dev server.
 

@@ -1,5 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "identifier": "io.salem.SequencePhotosMobile",
+  "version": "1.0.0",
   "build": {
     "devUrl": "http://localhost:5177",
     "beforeDevCommand": "npm run ios:ui:dev",
@@ -16,7 +18,8 @@
   },
   "bundle": {
     "iOS": {
-      "minimumSystemVersion": "17.0"
+      "minimumSystemVersion": "17.0",
+      "bundleVersion": "1"
     },
     "fileAssociations": []
   }

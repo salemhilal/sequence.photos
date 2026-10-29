@@ -1,6 +1,6 @@
 name: sequence
 options:
-  bundleIdPrefix: io.salem.PhotobookSequencer
+  bundleIdPrefix: io.salem.SequencePhotosMobile
   deploymentTarget:
     iOS: 17.0
 fileGroups: [../../src]
@@ -11,7 +11,7 @@ settingGroups:
   app:
     base:
       PRODUCT_NAME: Sequence
-      PRODUCT_BUNDLE_IDENTIFIER: io.salem.PhotobookSequencer
+      PRODUCT_BUNDLE_IDENTIFIER: io.salem.SequencePhotosMobile
 targetTemplates:
   app:
     type: application
@@ -49,15 +49,8 @@ targets:
         UIRequiredDeviceCapabilities: [arm64, metal]
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-          - UIInterfaceOrientationLandscapeLeft
-          - UIInterfaceOrientationLandscapeRight
-        UISupportedInterfaceOrientations~ipad:
-          - UIInterfaceOrientationPortrait
-          - UIInterfaceOrientationPortraitUpsideDown
-          - UIInterfaceOrientationLandscapeLeft
-          - UIInterfaceOrientationLandscapeRight
-        CFBundleShortVersionString: 1.1.0
-        CFBundleVersion: "1.1.0"
+        CFBundleShortVersionString: 1.0.0
+        CFBundleVersion: "1"
     entitlements:
       path: sequence_iOS/sequence_iOS.entitlements
     scheme:
@@ -66,6 +59,8 @@ targets:
         RUST_LOG: info
     settings:
       base:
+        # iPhone only, for now.
+        TARGETED_DEVICE_FAMILY: "1"
         ENABLE_BITCODE: false
         ARCHS: [arm64]
         VALID_ARCHS: arm64 

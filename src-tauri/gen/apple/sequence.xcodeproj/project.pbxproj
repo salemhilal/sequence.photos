@@ -19,6 +19,7 @@
 		B22C7F3B678D4884E3A0EF97 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CF06A3048B7D90E8DDDD8C63 /* Assets.xcassets */; };
 		BDBBD8BA2F29E1C8DEA1A04B /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 7B96868FEACB1FDC4891F2D0 /* assets */; };
 		DAA408F9BCE29513E350D143 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1B0F4C5A66DD4B7AA330EB28 /* main.mm */; };
+		DE3BECE5AEF893ECB295B684 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D764CA284AD19656DAFA4B05 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +40,7 @@
 		B71D1CAA4106DEA7EFC73118 /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
 		BF6DED1618ABF5B47DFB88E8 /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
 		CF06A3048B7D90E8DDDD8C63 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D764CA284AD19656DAFA4B05 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		FC3D48990FF65AAEF3D2F22D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -120,6 +122,7 @@
 			isa = PBXGroup;
 			children = (
 				B0654CE3A7696CACC489D09B /* Info.plist */,
+				D764CA284AD19656DAFA4B05 /* PrivacyInfo.xcprivacy */,
 				A8EE0BB73289B4C7E5FAD01F /* sequence_iOS.entitlements */,
 			);
 			path = sequence_iOS;
@@ -210,6 +213,7 @@
 			files = (
 				B22C7F3B678D4884E3A0EF97 /* Assets.xcassets in Resources */,
 				1F19C2D14242E64E528FC100 /* LaunchScreen.storyboard in Resources */,
+				DE3BECE5AEF893ECB295B684 /* PrivacyInfo.xcprivacy in Resources */,
 				BDBBD8BA2F29E1C8DEA1A04B /* assets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -275,11 +279,12 @@
 				);
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = io.salem.PhotobookSequencer;
+				PRODUCT_BUNDLE_IDENTIFIER = io.salem.SequencePhotosMobile;
 				PRODUCT_NAME = "Sequence";
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				VALID_ARCHS = arm64;
+				DEVELOPMENT_TEAM = "S3979WFPKR";
 			};
 			name = release;
 		};
@@ -369,11 +374,12 @@
 				);
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = io.salem.PhotobookSequencer;
+				PRODUCT_BUNDLE_IDENTIFIER = io.salem.SequencePhotosMobile;
 				PRODUCT_NAME = "Sequence";
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				VALID_ARCHS = arm64;
+				DEVELOPMENT_TEAM = "S3979WFPKR";
 			};
 			name = debug;
 		};

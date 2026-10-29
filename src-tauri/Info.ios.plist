@@ -5,6 +5,9 @@
 <dict>
   <key>ITSAppUsesNonExemptEncryption</key>
   <false/>
+  <!-- The photo picker also offers Take Photo. -->
+  <key>NSCameraUsageDescription</key>
+  <string>Sequence uses the camera to take photos for your sequences.</string>
   <!-- The share sheet's Save Image puts exports in Photos. -->
   <key>NSPhotoLibraryAddUsageDescription</key>
   <string>Sequence saves the images you export to your photo library.</string>

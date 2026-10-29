@@ -610,6 +610,8 @@ At `/phone/` on the dev server in a phone-sized window (the _(e2e)_ items are
 - [ ] Exports draw black backgrounds and borders; the web app shows them in its views too.
 - [ ] iOS: the notch and home indicator don't cover the bars; no text selection or callouts
       on long presses; the photo picker and share sheet work.
+- [ ] iOS: the home screen shows Sequence's icon; the photo picker's Take Photo asks for the
+      camera with Sequence's reason; it's iPhone only (not offered on iPad) and portrait only.
 
 ## Landing page (web)
 

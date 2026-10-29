@@ -15,6 +15,7 @@
     "tauri": "tauri",
     "ios:dev": "tauri ios dev",
     "ios:build": "tauri ios build",
+    "ios:store": "node scripts/ios-store.mjs",
     "ios:ui:dev": "vite --mode ios --port 5177 --strictPort",
     "ios:ui:build": "tsc -b && vite build --mode ios",
     "server:dev": "npm --prefix server run dev",
