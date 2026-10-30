@@ -889,17 +889,53 @@ html[data-motion='pop']::view-transition-old(root) {
 html[data-motion='pop']::view-transition-new(root) {
   animation-name: from-left-part;
 }
-html[data-motion='next']::view-transition-old(root) {
-  animation-name: to-left;
+/* Paging in the editor moves only the frame: the bars and tools stay put. */
+html[data-motion='next'] .stage,
+html[data-motion='prev'] .stage {
+  view-transition-name: frame;
 }
-html[data-motion='next']::view-transition-new(root) {
-  animation-name: from-right;
-}
-html[data-motion='prev']::view-transition-old(root) {
-  animation-name: to-right;
-}
+html[data-motion='next']::view-transition-old(root),
+html[data-motion='next']::view-transition-new(root),
+html[data-motion='prev']::view-transition-old(root),
 html[data-motion='prev']::view-transition-new(root) {
-  animation-name: from-left;
+  animation: none;
+}
+::view-transition-old(frame),
+::view-transition-new(frame) {
+  animation-duration: 0.34s;
+  animation-timing-function: var(--ease);
+}
+@keyframes screen-to-left {
+  to {
+    transform: translateX(-100vw);
+  }
+}
+@keyframes screen-from-right {
+  from {
+    transform: translateX(100vw);
+  }
+}
+@keyframes screen-to-right {
+  to {
+    transform: translateX(100vw);
+  }
+}
+@keyframes screen-from-left {
+  from {
+    transform: translateX(-100vw);
+  }
+}
+html[data-motion='next']::view-transition-old(frame) {
+  animation-name: screen-to-left;
+}
+html[data-motion='next']::view-transition-new(frame) {
+  animation-name: screen-from-right;
+}
+html[data-motion='prev']::view-transition-old(frame) {
+  animation-name: screen-to-right;
+}
+html[data-motion='prev']::view-transition-new(frame) {
+  animation-name: screen-from-left;
 }
 html[data-motion='up']::view-transition-old(root) {
   animation-name: none;
@@ -1162,16 +1198,11 @@ html[data-motion='down']::view-transition-new(root) {
   background: #4a4a4a;
 }
 .drawer-body {
-  display: grid;
-  grid-template-rows: 1fr;
-  transition: grid-template-rows var(--drawer) var(--ease);
-}
-.panel.closed .drawer-body {
-  grid-template-rows: 0fr;
+  /* Its height is its tools' (Editor sets it), animated as they change or tuck away. */
+  overflow: hidden;
+  transition: height var(--drawer) var(--ease);
 }
 .drawer-inner {
-  min-height: 0;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 10px;

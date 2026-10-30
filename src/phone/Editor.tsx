@@ -24,13 +24,15 @@ const SNAP = 10;
 const MAX_ZOOM = 6;
 /** How far the drawer's handle is dragged before it opens or closes, in screen pixels. */
 const FLICK = 24;
+/** How far across the screen a swipe on the background goes before it changes frames. */
+const SWIPE = 0.22;
 /** How long the drawer takes to open or close (phone.css's --drawer), in ms. */
 const DRAWER_MS = 300;
 
 type Gesture =
   | { kind: 'move'; id: PhotoId; start: Rect; from: { x: number; y: number }; moved: boolean }
   | { kind: 'resize'; id: PhotoId; corner: Corner; start: Rect; from: { x: number; y: number } }
-  | { kind: 'tap'; on: 'frame' | 'outside'; from: { x: number; y: number }; moved: boolean }
+  | { kind: 'tap'; on: 'frame' | 'outside'; from: { x: number; y: number }; moved: boolean; swiping: boolean }
   | { kind: 'pinch'; dist: number; mid: { x: number; y: number }; view: View };
 
 interface View {
@@ -74,15 +76,7 @@ export function Editor() {
       {cropping ? (
         <CropMode key={cropping} photoId={cropping} frame={frame} />
       ) : (
-        <FrameCanvas
-          key={frame.id}
-          frame={frame}
-          index={index}
-          count={frames.length}
-          editing={editing}
-          guides={guides}
-          onGo={go}
-        />
+        <FrameCanvas frame={frame} index={index} count={frames.length} editing={editing} guides={guides} onGo={go} />
       )}
       {sheetOpen === 'size' && <FrameSizeSheet onDone={() => phone.set({ sheet: null })} />}
     </div>
@@ -170,6 +164,12 @@ function FrameCanvas({
   const canvas = useRef<HTMLDivElement | null>(null);
   const panel = useRef<HTMLDivElement | null>(null);
   const [view, setView] = useState<View>(HOME);
+  // Another frame opens fitted (the panel below stays, so the drawer keeps its height).
+  const [shown, setShown] = useState(frame.id);
+  if (shown !== frame.id) {
+    setShown(frame.id);
+    setView(HOME);
+  }
   const [hit, setHit] = useState<{ xs: number[]; ys: number[] } | null>(null);
   const [overPanel, setOverPanel] = useState(false);
   const [trayOver, setTrayOver] = useState(false);
@@ -178,6 +178,18 @@ function FrameCanvas({
   // (a tool's panel changing size, an undo) it moves and resizes smoothly.
   const [live, setLive] = useState(false);
   const [sliding, setSliding] = useState(false);
+  // How far a swipe on the background has carried the frame sideways, in screen pixels.
+  const [swipe, setSwipe] = useState(0);
+  // The drawer is as tall as its tools, animated as they change (or 0, tucked away). While it
+  // slides, the canvas shrinks or grows with it frame by frame, and the frame follows at once.
+  const slideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const slide = () => {
+    setSliding(true);
+    clearTimeout(slideTimer.current);
+    slideTimer.current = setTimeout(() => setSliding(false), DRAWER_MS + 50);
+  };
+  const [innerRef, inner] = useSize<HTMLDivElement>(slide);
+  const drawerHeight = drawer ? inner.h : 0;
   const gesture = useRef<Gesture | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
 
@@ -245,7 +257,7 @@ function FrameCanvas({
       return;
     }
     const onFrame = u.x >= 0 && u.y >= 0 && u.x <= sheet.pageW && u.y <= sheet.pageH;
-    gesture.current = { kind: 'tap', on: onFrame ? 'frame' : 'outside', from, moved: false };
+    gesture.current = { kind: 'tap', on: onFrame ? 'frame' : 'outside', from, moved: false, swiping: false };
   };
 
   const move = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -272,6 +284,13 @@ function FrameCanvas({
     const dys = e.clientY - g.from.y;
     if (g.kind === 'tap') {
       if (Math.hypot(dxs, dys) > SLOP) g.moved = true;
+      // Sideways on the background (not zoomed in): the frame follows the finger, to swipe
+      // to the next or previous one.
+      if (g.on === 'outside' && view.zoom === 1 && (g.swiping || (g.moved && Math.abs(dxs) > Math.abs(dys)))) {
+        g.swiping = true;
+        const end = (dxs < 0 && index === count - 1) || (dxs > 0 && index === 0);
+        setSwipe(end ? dxs / 3 : dxs);
+      }
       return;
     }
     if (g.kind === 'move' && !g.moved) {
@@ -319,6 +338,14 @@ function FrameCanvas({
     gesture.current = null;
     setHit(null);
     if (g.kind === 'tap') {
+      if (g.swiping) {
+        const dx = e.clientX - g.from.x;
+        const to = dx < 0 ? index + 1 : index - 1;
+        if (e.type === 'pointerup' && Math.abs(dx) > size.w * SWIPE && to >= 0 && to < count) onGo(to);
+        // Back where it was, smoothly (or under the next frame sliding in).
+        setSwipe(0);
+        return;
+      }
       if (!g.moved) phone.set({ editing: g.on === 'frame' ? { kind: 'frame' } : { kind: 'none' } });
       return;
     }
@@ -352,9 +379,8 @@ function FrameCanvas({
   // The drawer: tap its handle, or drag it down to tuck the tools away (and up for them back).
   const setDrawer = (open: boolean) => {
     if (open === drawer) return;
-    setSliding(true);
+    slide();
     phone.set({ drawer: open });
-    setTimeout(() => setSliding(false), DRAWER_MS + 50);
   };
   const pull = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (e.button !== 0) return;
@@ -392,7 +418,7 @@ function FrameCanvas({
         onPointerCancel={up}
       >
         {size.w > 0 && (
-          <div className="stage" style={{ left, top }}>
+          <div className="stage" style={{ left: left + swipe, top }}>
             <FrameView
               frame={frame}
               page={project.page}
@@ -471,9 +497,10 @@ function FrameCanvas({
         >
           <span />
         </button>
-        <div className="drawer-body">
+        {/* Not animated to its first height, only to later ones. */}
+        <div className="drawer-body" style={{ height: drawerHeight, transition: inner.h ? undefined : 'none' }}>
           {/* Keyed by what's selected, so each set of tools fades in as it arrives. */}
-          <div className="drawer-inner" key={editing.kind === 'photo' ? editing.id : editing.kind}>
+          <div className="drawer-inner" ref={innerRef} key={editing.kind === 'photo' ? editing.id : editing.kind}>
             {editing.kind === 'photo' && selected ? (
               <PhotoPanel item={selected} frame={frame} />
             ) : editing.kind === 'frame' ? (

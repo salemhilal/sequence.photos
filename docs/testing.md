@@ -589,11 +589,15 @@ At `/phone/` on the dev server in a phone-sized window (the _(e2e)_ items are
       previews every frame; Apply is one undo step; Cancel changes nothing.
 - [ ] _(e2e)_ Editor: the eye in the top bar hides and shows the guides. The drawer's handle
       (tap, or drag down and up) tucks the tools away and back; the frame grows into the room
-      when it can. When the tools change (desk, frame, photo), the frame resizes smoothly.
+      when it can. When the tools change (desk, frame, photo), the drawer's height and the
+      frame resize smoothly together.
+- [ ] _(e2e)_ Swipe sideways on the background beside the frame: the frame follows the finger
+      and goes on to the next or previous one (or springs back, at the ends or for a short
+      swipe). Paging (swipe or ‹ ›) slides only the frame: the bars and tools stay still.
 - [ ] _(e2e)_ Preview (▷ in the frames' bar, or ⋯ → Preview in the editor, from that frame):
       every frame full size, swiped through, "n / N"; a tap hides the controls; × goes back.
 - [ ] Screens slide in and out (deeper in from the right, back out to the right); the
-      editor's ‹ › slide frames sideways; the preview rises; sheets and menus slide up and
+      editor's ‹ › slide just the frame sideways; the preview rises; sheets and menus slide up and
       back down; crop mode crossfades. With Reduce Motion on, they change at once.
 - [ ] _(e2e)_ Editor: tap a photo to select it (amber outline, corner handles); drag to move,
       snapping by its outer edge (border included) with magenta lines; drag a corner to

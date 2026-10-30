@@ -170,6 +170,23 @@ test('the editor: guides hide, the tools tuck away, and the preview shows every 
   await page.getByRole('button', { name: 'Show the tools' }).click();
   await expect(page.getByLabel('Desk')).toBeVisible();
 
+  // A swipe on the background, beside the frame, goes to the next frame and back.
+  const canvas = (await page.locator('.canvas').boundingBox())!;
+  const pager = page.locator('.pager span');
+  await expect(pager).toHaveText('2 / 3');
+  await drag(
+    page,
+    { x: canvas.x + canvas.width - 6, y: canvas.y + canvas.height / 2 },
+    { x: canvas.x + 40, y: canvas.y + canvas.height / 2 },
+  );
+  await expect(pager).toHaveText('3 / 3');
+  await drag(
+    page,
+    { x: canvas.x + 6, y: canvas.y + canvas.height / 2 },
+    { x: canvas.x + canvas.width - 40, y: canvas.y + canvas.height / 2 },
+  );
+  await expect(pager).toHaveText('2 / 3');
+
   // The preview, from this frame (the second); closing it comes back here.
   await page.getByRole('button', { name: 'More' }).click();
   await page.getByRole('button', { name: 'Preview' }).click();
