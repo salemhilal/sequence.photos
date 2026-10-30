@@ -154,14 +154,26 @@ private struct Editor: View {
     }
 
     private var pager: some View {
-        HStack(spacing: 18) {
-            Button("Previous frame", systemImage: "chevron.left") { go(index - 1) }.disabled(index == 0)
+        HStack(spacing: 6) {
+            pagerButton("Previous frame", icon: "chevron.left", to: index - 1)
             Text("\(index + 1) / \(frames.count)").font(.mono(13)).foregroundStyle(Theme.muted)
                 .contentTransition(.numericText())
-            Button("Next frame", systemImage: "chevron.right") { go(index + 1) }.disabled(index >= frames.count - 1)
+            pagerButton("Next frame", icon: "chevron.right", to: index + 1)
         }
-        .labelStyle(.iconOnly)
-        .padding(.bottom, 12)
+        .padding(.bottom, 1)
+    }
+
+    /** An arrow with a whole fingertip's room to tap, not just its small icon's. */
+    private func pagerButton(_ title: String, icon: String, to i: Int) -> some View {
+        Button {
+            go(i)
+        } label: {
+            Label(title, systemImage: icon)
+                .labelStyle(.iconOnly)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .disabled(!frames.indices.contains(i))
     }
 
     private func go(_ i: Int) {
