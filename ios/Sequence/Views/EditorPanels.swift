@@ -123,7 +123,7 @@ struct FramePanel: View {
             PanelRow {
                 Text("Frame \(String(format: "%02d", index + 1))").font(.subheadline.weight(.semibold))
                 Spacer()
-                Text("\(Int(p.page.w)) × \(Int(p.page.h)) px").font(.mono(12)).foregroundStyle(Theme.muted)
+                Text(verbatim: "\(Int(p.page.w)) × \(Int(p.page.h)) px").font(.mono(12)).foregroundStyle(Theme.muted)
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text("Background").font(.footnote).foregroundStyle(Theme.muted)
@@ -196,7 +196,7 @@ struct PhotoPanel: View {
                     if began { store.begin() } else { store.end() }
                 }
                 .accessibilityLabel("Border width")
-                Text("\(Int(border.rounded())) px").font(.mono(12)).frame(width: 46, alignment: .trailing)
+                Text(verbatim: "\(Int(border.rounded())) px").font(.mono(12)).frame(width: 46, alignment: .trailing)
                 InkPicker(
                     label: "Border color", ink: Binding(get: { color }, set: { v in
                         picked = v
@@ -228,7 +228,7 @@ struct PhotoPanel: View {
     private func tool(_ title: String, _ icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
-                Image(systemName: icon).font(.system(size: 20))
+                Image(systemName: icon).font(.system(size: 20)).frame(height: 26)
                 Text(title).font(.caption)
             }
             .frame(maxWidth: .infinity, minHeight: 52)

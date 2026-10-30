@@ -631,6 +631,47 @@ At `/phone/` on the dev server in a phone-sized window (the _(e2e)_ items are
 - [ ] iOS: the home screen shows Sequence's icon; the photo picker's Take Photo asks for the
       camera with Sequence's reason; it's iPhone only (not offered on iPad) and portrait only.
 
+## iPhone app (native)
+
+In the iOS Simulator or on a phone, from `ios/` (see `ios/README.md`). _(unit)_ items are
+`ios/SequenceTests`, _(UI)_ items `ios/SequenceUITests`; the rest is by hand. The web-view
+app above is the reference: the native one should do the same, natively.
+
+- [ ] Sequences: New starts one empty 1080 × 1350 frame _(UI)_; the list shows each
+      sequence's first three frames, its frame count and size, and when it was edited; a
+      long press or a swipe renames, duplicates (photos and all), or deletes (after asking).
+- [ ] Frames: + adds photos from the library (their names kept), a photo from the camera,
+      or an empty frame _(UI)_; the add choices (a frame each, fill the empty first, the
+      desk) _(unit)_; a press lifts a frame (with the selection, if it's chosen) and drops it
+      in a new place; Select duplicates or deletes several (their photos go to the desk).
+- [ ] The editor: frames page with a swipe on the background or ‹ ›, and only the frame
+      slides (the bars stay); photos move and snap (by their outer edge) and resize from
+      their corners _(unit for the math)_; pinch zooms the frame, and a drag pans it while
+      zoomed; a press on a desk photo lifts it, and it lands centered where it's dropped on
+      the frame; a placed photo dragged into the drawer goes back to the desk; the drawer's
+      handle tucks the tools away, and the frame grows to fill the space smoothly.
+- [ ] Panels: the frame's background (white, black, every frame); a photo's X, Y, W, H
+      (proportions kept or not), border (slider, white or black), Crop, Fit (the frame, the
+      border guide), Center, Duplicate; the enlarged warning shows on the photo and in its
+      panel.
+- [ ] Crop: handles, moving the crop, shapes, Reset, the pin (the crop holds; the photo
+      moves behind it); Done is one undo step, Cancel puts it back _(unit for the math)_.
+- [ ] Frame size: presets and a custom size, the border, center lines; Apply is one undo
+      step and photos keep their place relative to the frame _(unit)_.
+- [ ] Preview: every frame full screen, swiped through, starting at the one asked for; a
+      tap hides the controls.
+- [ ] Export, images: some or all frames, JPEG (quality) or PNG, named 01.jpg on; the share
+      sheet's Save Images puts them in Photos, drawn as the frames show (crops, borders,
+      backgrounds) at the frame's size.
+- [ ] Export, Instagram: connect (Instagram's sign-in in a sheet, back in the app),
+      reconnect when it expires, disconnect; slides above the preview; feed (a carousel,
+      caption and hashtag counts) and stories (previewed as a story); crop or expand for
+      shapes Instagram doesn't take _(unit)_; posting shows each step, can be cancelled until
+      it publishes, and links to the post.
+- [ ] Saved: a change is saved a moment later and when the app goes to the background;
+      the project file opens in the web and Mac apps as is _(unit: the shared fixtures)_.
+- [ ] Both iPhone apps install side by side: "Sequence" and "Sequence (web)".
+
 ## Landing page (web)
 
 - [ ] `/` shows the headline, Try it online (opens `/app/`), and the Mac App Store badge; paper

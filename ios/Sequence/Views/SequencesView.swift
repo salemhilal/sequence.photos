@@ -87,7 +87,7 @@ struct SequenceRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.name).font(.body.weight(.medium)).foregroundStyle(Theme.text)
                 Text(
-                    "\(entry.frameCount) \(entry.frameCount == 1 ? "frame" : "frames") · \(Int(entry.page.w)) × \(Int(entry.page.h)) px"
+                    verbatim: "\(entry.frameCount) \(entry.frameCount == 1 ? "frame" : "frames") · \(Int(entry.page.w)) × \(Int(entry.page.h)) px"
                 )
                 .font(.mono(12)).foregroundStyle(Theme.muted)
                 Text(editedLabel(entry.updated)).font(.caption).foregroundStyle(Theme.faint)

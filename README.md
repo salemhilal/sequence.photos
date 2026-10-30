@@ -77,27 +77,28 @@ for the app (see `vite.config.ts`). CI checks that neither build contains the ot
 
 ## The iPhone app
 
-The same Tauri shell, built for iOS, around a UI of its own for the phone (`src/phone/`):
-sequences of frames only (no books), the frames grid, a frame's editor with the desk in a
-tray below it, crop (with the pin), and export as images or to Instagram. Projects are kept
-in the app (a list of them, in IndexedDB), not in files. It's at `/phone/` on the dev server
-too, for working on it in a browser at phone size.
+A native SwiftUI app in `ios/` (see `ios/README.md`): sequences of frames only (no books),
+the frames grid, a frame's editor with the desk in a drawer below it, crop (with the pin), a
+preview, and export as images or to Instagram. Projects are kept in the app (a list of them),
+in the same JSON the web and Mac apps save; `shared/fixtures/` holds projects both apps'
+tests read. It's `io.salem.SequencePhotosMobile`, iPhone only, portrait, iOS 17 and later.
+
+```bash
+cd ios && xcodegen generate && open Sequence.xcodeproj
+```
+
+The first pass, the Tauri shell built for iOS around a UI of its own (`src/phone/`), is
+kept for now to compare side by side: it installs as "Sequence (web)",
+`io.salem.SequencePhotosMobile.web`, and is at `/phone/` on the dev server too.
 
 ```bash
 npm run ios:dev     # run it in the iOS Simulator, reloading on changes
 npm run ios:store   # a signed build for TestFlight (see docs/releasing.md)
-npx tauri ios build --debug --target aarch64-sim   # a Simulator build
 ```
-
-It's iPhone only, portrait, with its own bundle ID (`io.salem.SequencePhotosMobile`) and
-version (1.0.0, in `tauri.ios.conf.json`). Its icons come from `npm run icons`; its privacy
-manifest is `src-tauri/gen/apple/sequence_iOS/PrivacyInfo.xcprivacy`.
 
 It needs Xcode (as the active developer directory: `xcode-select -p`, or `DEVELOPER_DIR`),
 the iOS Rust targets (`rustup target add aarch64-apple-ios aarch64-apple-ios-sim`), and
-XcodeGen and CocoaPods (`brew install xcodegen cocoapods`). Xcode's one-time setup has to
-have run (`sudo xcodebuild -runFirstLaunch`, or opening Xcode once), and a Simulator runtime
-installed (Xcode → Settings → Components). Its Xcode project is
+XcodeGen and CocoaPods (`brew install xcodegen cocoapods`). Its Xcode project is
 `src-tauri/gen/apple/`, its config `src-tauri/tauri.ios.conf.json` and `Info.ios.plist`,
 and its platform `src/platform/ios.ts`.
 

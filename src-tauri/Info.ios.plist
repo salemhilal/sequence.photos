@@ -3,6 +3,9 @@
 <!-- Merged into the iPhone app's Info.plist by Tauri (the Mac app's is Info.plist). -->
 <plist version="1.0">
 <dict>
+  <!-- Beside the native app (ios/), which is "Sequence" and io.salem.SequencePhotosMobile. -->
+  <key>CFBundleDisplayName</key>
+  <string>Sequence (web)</string>
   <key>ITSAppUsesNonExemptEncryption</key>
   <false/>
   <!-- The photo picker also offers Take Photo. -->

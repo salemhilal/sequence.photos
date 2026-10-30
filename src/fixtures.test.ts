@@ -1,4 +1,3 @@
-import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { migrateProject } from './schema';
 
@@ -7,14 +6,14 @@ import { migrateProject } from './schema';
  * current schema, and comes back exactly as it was saved. The iPhone app's tests read the
  * same files (ios/SequenceTests/FixtureTests.swift).
  */
-const dir = new URL('../shared/fixtures/', import.meta.url);
-const fixtures = readdirSync(dir).filter((f) => f.endsWith('.json'));
+const fixtures = Object.entries(
+  import.meta.glob<unknown>('../shared/fixtures/*.json', { eager: true, import: 'default' }),
+);
 
 describe('shared fixtures', () => {
   it('has some', () => expect(fixtures.length).toBeGreaterThan(1));
 
-  it.each(fixtures)('%s reads back exactly as saved', (name) => {
-    const saved: unknown = JSON.parse(readFileSync(new URL(name, dir), 'utf8'));
+  it.each(fixtures)('%s reads back exactly as saved', (_name, saved) => {
     expect(JSON.parse(JSON.stringify(migrateProject(structuredClone(saved))))).toEqual(saved);
   });
 });

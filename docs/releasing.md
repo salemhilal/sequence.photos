@@ -52,7 +52,7 @@ lists what it needs. It says what's missing.
 ## The iPhone app
 
 Not yet on the App Store: builds go to TestFlight for internal testers, from `main`. It's a
-listing of its own, `io.salem.SequencePhotosMobile`, iPhone only, with its own version (in
+listing of its own, `io.salem.SequencePhotosMobile` (the native app, `ios/`, archived from Xcode; `npm run ios:store` below builds the web-view app, now `io.salem.SequencePhotosMobile.web`, for testing beside it), iPhone only, with its own version (in
 `src-tauri/tauri.ios.conf.json`, starting at 1.0.0) apart from the website's and the Mac
 app's. `npm run bump` doesn't change it.
 

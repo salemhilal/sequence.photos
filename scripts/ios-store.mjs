@@ -1,10 +1,11 @@
-// Builds the iPhone app for App Store Connect (npm run ios:store): an arm64 release build,
+// Builds the web-view iPhone app (src/phone/, kept to compare with the native one in ios/)
+// for App Store Connect (npm run ios:store): an arm64 release build,
 // signed for distribution, exported as an .ipa ready for TestFlight. With an App Store
 // Connect API key in the environment, it uploads it too.
 //
 // Needs Xcode signed in to the team's Apple account (Xcode → Settings → Accounts), or an
 // App Store Connect API key (below), so Xcode can make the app's distribution profile for
-// io.salem.SequencePhotosMobile; and an "Apple Distribution" certificate in this Mac's
+// io.salem.SequencePhotosMobile.web; and an "Apple Distribution" certificate in this Mac's
 // keychain (Xcode → Settings → Accounts → Manage Certificates → +).
 //
 // Optional environment:

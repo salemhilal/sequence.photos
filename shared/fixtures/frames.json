@@ -15,7 +15,15 @@
         "kind": "frame",
         "id": "f2",
         "items": [
-          { "photoId": "b", "x": 140, "y": 400, "w": 800, "h": 530, "z": 2, "border": { "width": 24, "color": "white" } }
+          {
+            "photoId": "b",
+            "x": 140,
+            "y": 400,
+            "w": 800,
+            "h": 530,
+            "z": 2,
+            "border": { "width": 24, "color": "white" }
+          }
         ],
         "background": "black"
       },

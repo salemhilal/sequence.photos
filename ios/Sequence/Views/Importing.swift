@@ -17,9 +17,12 @@ func importPicked(_ items: [PhotosPickerItem], into store: PhotoStore, progress:
     var failed = 0
     for (n, item) in items.enumerated() {
         progress(n, items.count)
-        let name = item.itemIdentifier.map { "\($0.prefix(8)).jpg" } ?? "Photo \(n + 1).jpg"
-        if let data = try? await item.loadTransferable(type: Data.self),
-            let meta = await Task.detached(operation: { store.add(data: data, name: name) }).value
+        if let file = try? await item.loadTransferable(type: PickedFile.self),
+            let meta = await Task.detached(operation: { () -> PhotoMeta? in
+                defer { try? FileManager.default.removeItem(at: file.url) }
+                guard let data = try? Data(contentsOf: file.url) else { return nil }
+                return store.add(data: data, name: file.url.lastPathComponent)
+            }).value
         {
             photos.append(meta)
         } else {
@@ -27,6 +30,21 @@ func importPicked(_ items: [PhotosPickerItem], into store: PhotoStore, progress:
         }
     }
     return PendingPhotos(photos: photos, failed: failed)
+}
+
+/** A photo from the picker as a file, so it keeps its name (IMG_0042.HEIC). */
+struct PickedFile: Transferable {
+    let url: URL
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(importedContentType: .image) { received in
+            let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let url = dir.appendingPathComponent(received.file.lastPathComponent)
+            try FileManager.default.copyItem(at: received.file, to: url)
+            return PickedFile(url: url)
+        }
+    }
 }
 
 /** The camera, for Take photo: hands back a JPEG of what was taken. */

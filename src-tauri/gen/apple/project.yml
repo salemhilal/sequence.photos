@@ -1,6 +1,6 @@
 name: sequence
 options:
-  bundleIdPrefix: io.salem.SequencePhotosMobile
+  bundleIdPrefix: io.salem.SequencePhotosMobile.web
   deploymentTarget:
     iOS: 17.0
 fileGroups: [../../src]
@@ -11,7 +11,7 @@ settingGroups:
   app:
     base:
       PRODUCT_NAME: Sequence
-      PRODUCT_BUNDLE_IDENTIFIER: io.salem.SequencePhotosMobile
+      PRODUCT_BUNDLE_IDENTIFIER: io.salem.SequencePhotosMobile.web
 targetTemplates:
   app:
     type: application

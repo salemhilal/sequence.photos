@@ -1,9 +1,12 @@
 # The iPhone app
 
-A first pass, going to TestFlight (internal testers) as `io.salem.SequencePhotosMobile`, iPhone
-only, version 1.0.0; see `docs/releasing.md`. It's the Tauri shell built for iOS around a UI of its own
-(`src/phone/`), sharing the model, crop, render plan, exports, and Instagram posting with
-the web and Mac apps. In development it's also at `/phone/` on the dev server.
+The iPhone app is native (SwiftUI, in `ios/`; see `ios/README.md`), as
+`io.salem.SequencePhotosMobile`, iPhone only, version 1.0.0. It reads and writes the web
+app's project JSON (schema 7) and ports its logic (geometry, crop, the render plan,
+Instagram's image layout and posting) to Swift. The first pass, the Tauri shell built for iOS
+around a UI of its own (`src/phone/`), is kept to compare side by side as "Sequence (web)",
+`io.salem.SequencePhotosMobile.web`; it's also at `/phone/` on the dev server. Both do what
+follows; where the native app differs, it says so.
 
 ## What it does
 
@@ -27,7 +30,10 @@ the web and Mac apps. In development it's also at `/phone/` on the dev server.
   editor's menu).
 - **Motion**: screens change with the View Transitions API (`navigate` in `nav.ts`; the
   motions are in `phone.css`); sheets slide; the frame in the editor resizes smoothly as the
-  tools below it change, and the tools are a drawer that tucks away.
+  tools below it change, and the tools are a drawer that tucks away. Natively, it's iOS's
+  own: navigation pushes, sheets, the editor's frames in a paging scroll view (a swipe on
+  the background, or ‹ ›, slides only the frames), and drag and drop for the desk's photos
+  and the grid's frames (a press lifts them).
 - **Crop**: as on the desktop, with shapes, Reset, and the pin: pinned, the crop holds still
   and dragging moves the photo in it.
 - **Export**: images (JPEG or PNG; all the frames, or some) through the share sheet (Save Images puts them in

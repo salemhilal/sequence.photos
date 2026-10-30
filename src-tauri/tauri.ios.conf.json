@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "identifier": "io.salem.SequencePhotosMobile",
+  "identifier": "io.salem.SequencePhotosMobile.web",
   "version": "1.0.0",
   "build": {
     "devUrl": "http://localhost:5177",

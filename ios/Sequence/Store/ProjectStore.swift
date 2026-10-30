@@ -45,6 +45,22 @@ final class ProjectStore {
         changed()
     }
 
+    /**
+     * Keep how the project was last exported: saved, but not an undo step (undo leaves it as
+     * it is, as the desktop does).
+     */
+    func setExport(_ value: JSONValue) {
+        guard project.export != value else { return }
+        project.export = value
+        past = past.map { var p = $0; p.export = value; return p }
+        future = future.map { var p = $0; p.export = value; return p }
+        if var start = gestureStart {
+            start.export = value
+            gestureStart = start
+        }
+        changed()
+    }
+
     /** Start a gesture: its changes are one undo step, made when it ends. */
     func begin() {
         if gestureStart == nil { gestureStart = project }

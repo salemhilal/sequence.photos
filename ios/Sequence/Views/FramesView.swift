@@ -44,7 +44,7 @@ private struct FramesGrid: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(Int(project.page.w)) × \(Int(project.page.h)) px frames")
+                Text(verbatim: "\(Int(project.page.w)) × \(Int(project.page.h)) px frames")
                     .font(.mono(12)).foregroundStyle(Theme.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

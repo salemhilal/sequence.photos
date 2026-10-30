@@ -50,7 +50,7 @@ struct FrameSizeSheet: View {
                             HStack {
                                 Text(s.label).foregroundStyle(Theme.text)
                                 Spacer()
-                                Text("\(Int(s.w)) × \(Int(s.h))").font(.mono(13)).foregroundStyle(Theme.muted)
+                                Text(verbatim: "\(Int(s.w)) × \(Int(s.h))").font(.mono(13)).foregroundStyle(Theme.muted)
                                 Image(systemName: "checkmark").foregroundStyle(Theme.accent).opacity(on ? 1 : 0)
                             }
                         }
