@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, Image, Share } from 'lucide-react';
 import { InstagramGlyph } from '../components/InstagramGlyph';
 import { DEFAULT_QUALITY } from '../exportOptions';
@@ -32,9 +33,9 @@ export function ExportSheet() {
   const { project } = useProject();
   const [to, setTo] = useState<To>(project.export?.to === 'instagram' ? 'instagram' : 'images');
   const [locked, setLocked] = useState(false);
-  const close = () => {
-    if (!locked) phone.set({ sheet: null });
-  };
+  // Where each destination's main button goes: the sheet's foot, which stays put (clear of the
+  // screen's rounded corners) while the rest scrolls.
+  const [foot, setFoot] = useState<HTMLDivElement | null>(null);
   const choose = (t: To) => {
     setTo(t);
     saveExportState((s) => ({ ...s, to: t }));
@@ -43,11 +44,13 @@ export function ExportSheet() {
     <Sheet
       full
       title="Export"
-      left={
-        <button className="btn" aria-label="Close" disabled={locked} onClick={close}>
+      onDismiss={() => phone.set({ sheet: null })}
+      left={(close) => (
+        <button className="btn" aria-label="Close" disabled={locked} onClick={() => close()}>
           Close
         </button>
-      }
+      )}
+      foot={<div className="foot-slot" ref={setFoot} />}
     >
       <Segmented
         label="Export to"
@@ -72,8 +75,47 @@ export function ExportSheet() {
           },
         ]}
       />
-      {to === 'images' ? <ImagesExport /> : <InstagramExport onLock={setLocked} />}
+      {to === 'images' ? <ImagesExport foot={foot} /> : <InstagramExport foot={foot} onLock={setLocked} />}
     </Sheet>
+  );
+}
+
+/** What goes in the sheet's foot, once it's there. */
+function Foot({ at, children }: { at: HTMLDivElement | null; children: ReactNode }) {
+  return at ? createPortal(children, at) : null;
+}
+
+/** A frame to choose (or not) in a strip, with its check. */
+function Pick({
+  frame,
+  width,
+  on,
+  label,
+  name,
+  disabled = false,
+  onToggle,
+}: {
+  frame: Frame;
+  width: number;
+  on: boolean;
+  label: string;
+  name?: string;
+  disabled?: boolean;
+  onToggle: () => void;
+}) {
+  const { project } = useProject();
+  return (
+    <button
+      className={`strip-item${on ? '' : ' off'}`}
+      aria-pressed={on}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onToggle}
+    >
+      <FrameView frame={frame} page={project.page} photos={project.photos} width={width} />
+      <span className={`strip-check${on ? '' : ' off'}`}>{on && <Check />}</span>
+      {name && <span>{name}</span>}
+    </button>
   );
 }
 
@@ -97,16 +139,19 @@ async function shareFiles(files: File[]): Promise<boolean> {
   return true;
 }
 
-function ImagesExport() {
+function ImagesExport({ foot }: { foot: HTMLDivElement | null }) {
   const { project } = useProject();
+  // Which frames to make: all of them, until some are left out.
+  const [off, setOff] = useState<ReadonlySet<string>>(new Set());
   const saved = project.export?.options;
   const [format, setFormat] = useState<'jpeg' | 'png'>(saved?.format ?? 'jpeg');
   const [quality, setQuality] = useState(saved?.quality ?? DEFAULT_QUALITY);
   // Made images, for the choices they were made with.
   const [made, setMade] = useState<{ files: File[]; for: unknown[] } | null>(null);
-  const choices = [project, format, quality];
+  const choices = [project, format, quality, off];
   const files = made && made.for.every((c, i) => c === choices[i]) ? made.files : null;
-  const pages = outputPages(project, 'page');
+  const all = outputPages(project, 'page');
+  const pages = all.filter((p) => !off.has(slideKey(p)));
   const ext = format === 'png' ? 'png' : 'jpg';
   const n = pages.length;
   const digits = Math.max(2, String(n).length);
@@ -144,13 +189,36 @@ function ImagesExport() {
 
   return (
     <>
-      <div className="strip">
-        {pages.map((p, i) => (
-          <div key={slideKey(p)} className="strip-item">
-            <FrameView frame={p.spread as Frame} page={project.page} photos={project.photos} width={72} />
-            <span>{name(i + 1)}</span>
-          </div>
-        ))}
+      <div>
+        <div className="label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          Frames
+          <button className="link" onClick={() => setOff(off.size ? new Set() : new Set(all.map(slideKey).slice(1)))}>
+            {off.size ? 'All' : 'Just the first'}
+          </button>
+        </div>
+        <div className="strip">
+          {all.map((p, i) => {
+            const key = slideKey(p);
+            const on = !off.has(key);
+            const position = pages.indexOf(p);
+            return (
+              <Pick
+                key={key}
+                frame={p.spread as Frame}
+                width={72}
+                on={on}
+                label={`Frame ${i + 1}`}
+                name={on ? name(position + 1) : '—'}
+                onToggle={() => {
+                  const next = new Set(off);
+                  if (on) next.add(key);
+                  else next.delete(key);
+                  setOff(next);
+                }}
+              />
+            );
+          })}
+        </div>
       </div>
       <div className="group">
         <div className="group-row" style={{ cursor: 'default' }}>
@@ -199,11 +267,14 @@ function ImagesExport() {
         </div>
       </div>
       <span className="note">
-        {n} {format === 'png' ? 'PNGs' : 'JPEGs'}, {n > 1 ? `${name(1)} to ${name(n)}` : name(1)}. In the share sheet,
-        Save Images puts them in Photos.
+        {n === 0
+          ? 'Choose at least one frame.'
+          : `${n} ${format === 'png' ? (n === 1 ? 'PNG' : 'PNGs') : n === 1 ? 'JPEG' : 'JPEGs'}, ${
+              n > 1 ? `${name(1)} to ${name(n)}` : name(1)
+            }. In the share sheet, Save Images puts them in Photos.`}
       </span>
-      <div className="pinned-foot">
-        <button className="btn primary wide" onClick={() => void share()}>
+      <Foot at={foot}>
+        <button className="btn primary wide" disabled={n === 0} onClick={() => void share()}>
           {files ? (
             <>
               <Share /> Share {n} {n === 1 ? 'image' : 'images'}…
@@ -212,7 +283,7 @@ function ImagesExport() {
             `Make ${n} ${n === 1 ? 'image' : 'images'}`
           )}
         </button>
-      </div>
+      </Foot>
     </>
   );
 }
@@ -236,7 +307,7 @@ function stepLabel(step: PostStep): string {
   }
 }
 
-function InstagramExport({ onLock }: { onLock: (on: boolean) => void }) {
+function InstagramExport({ foot, onLock }: { foot: HTMLDivElement | null; onLock: (on: boolean) => void }) {
   const { project } = useProject();
   const connection = useInstagram();
   const signIn = useConnectInstagram({ returnToExport: true });
@@ -364,31 +435,65 @@ function InstagramExport({ onLock }: { onLock: (on: boolean) => void }) {
             'Posting goes through your Instagram account. It needs a Business or Creator account.'}
         </span>
       )}
-      {current && (
-        <div className="post-card">
-          <div
-            style={{ position: 'relative' }}
-            onClick={() => setShown((shown + 1) % Math.max(1, slides.length))}
-            role="button"
-            aria-label="Next slide"
-          >
-            <FrameView frame={current.spread as Frame} page={project.page} photos={project.photos} width={240} />
-            {slides.length > 1 && (
-              <span className="post-count">
-                {Math.min(shown, slides.length - 1) + 1}/{slides.length}
-              </span>
-            )}
-          </div>
-          {slides.length > 1 && (
-            <div className="post-dots">
-              {slides.map((p, i) => (
-                <span key={slideKey(p)} className={i === Math.min(shown, slides.length - 1) ? 'on' : ''} />
-              ))}
-            </div>
-          )}
-          {kind === 'feed' && caption && <div className="post-caption">{caption}</div>}
+      <div>
+        <div className="label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          Slides
+          <span className={full ? 'note warn' : 'note'} style={{ padding: 0, fontWeight: 400 }}>
+            {slides.length} of {LIMITS.maxItems} chosen
+          </span>
         </div>
-      )}
+        <div className="strip">
+          {all.map((p, i) => {
+            const key = slideKey(p);
+            const on = chosen.has(key);
+            return (
+              <Pick
+                key={key}
+                frame={p.spread as Frame}
+                width={44}
+                on={on}
+                label={`Slide ${i + 1}`}
+                disabled={posting || (!on && full)}
+                onToggle={() => toggle(key)}
+              />
+            );
+          })}
+        </div>
+      </div>
+      {current &&
+        (kind === 'story' ? (
+          <StoryPreview
+            slide={current}
+            at={Math.min(shown, slides.length - 1)}
+            count={slides.length}
+            username={connection?.username ?? 'you'}
+            onNext={() => setShown((shown + 1) % Math.max(1, slides.length))}
+          />
+        ) : (
+          <div className="post-card">
+            <div
+              style={{ position: 'relative' }}
+              onClick={() => setShown((shown + 1) % Math.max(1, slides.length))}
+              role="button"
+              aria-label="Next slide"
+            >
+              <FrameView frame={current.spread as Frame} page={project.page} photos={project.photos} width={240} />
+              {slides.length > 1 && (
+                <span className="post-count">
+                  {Math.min(shown, slides.length - 1) + 1}/{slides.length}
+                </span>
+              )}
+            </div>
+            {slides.length > 1 && (
+              <div className="post-dots">
+                {slides.map((p, i) => (
+                  <span key={slideKey(p)} className={i === Math.min(shown, slides.length - 1) ? 'on' : ''} />
+                ))}
+              </div>
+            )}
+            {caption && <div className="post-caption">{caption}</div>}
+          </div>
+        ))}
       {!fits(size, kind) && (
         <div>
           <div className="label">Size</div>
@@ -406,33 +511,6 @@ function InstagramExport({ onLock }: { onLock: (on: boolean) => void }) {
           </span>
         </div>
       )}
-      <div>
-        <div className="label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          Slides
-          <span className={full ? 'note warn' : 'note'} style={{ padding: 0, fontWeight: 400 }}>
-            {slides.length} of {LIMITS.maxItems} chosen
-          </span>
-        </div>
-        <div className="strip">
-          {all.map((p, i) => {
-            const key = slideKey(p);
-            const on = chosen.has(key);
-            return (
-              <button
-                key={key}
-                className={`strip-item${on ? '' : ' off'}`}
-                aria-pressed={on}
-                aria-label={`Slide ${i + 1}`}
-                disabled={posting || (!on && full)}
-                onClick={() => toggle(key)}
-              >
-                <FrameView frame={p.spread as Frame} page={project.page} photos={project.photos} width={44} />
-                <span className={`strip-check${on ? '' : ' off'}`}>{on && <Check />}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
       {kind === 'feed' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label className="label" htmlFor="caption" style={{ padding: '0 4px' }}>
@@ -454,7 +532,7 @@ function InstagramExport({ onLock }: { onLock: (on: boolean) => void }) {
       ) : (
         <span className="note">Stories have no captions.</span>
       )}
-      <div className="pinned-foot">
+      <Foot at={foot}>
         {status.kind === 'posting' && <span className="note">{stepLabel(status.step)}</span>}
         {status.kind === 'failed' && <span className="note danger">{status.message}</span>}
         {status.kind === 'done' && (
@@ -481,7 +559,51 @@ function InstagramExport({ onLock }: { onLock: (on: boolean) => void }) {
             Post to Instagram
           </button>
         )}
-      </div>
+      </Foot>
     </>
+  );
+}
+
+/** Where a story preview's slide sits: a 9:16 screen, like Instagram's. */
+const STORY_W = 210;
+const STORY_H = (STORY_W * 16) / 9;
+
+/** A story as Instagram shows it: a tall dark screen, progress bars, the account, the slide. */
+function StoryPreview({
+  slide,
+  at,
+  count,
+  username,
+  onNext,
+}: {
+  slide: OutputPage;
+  at: number;
+  count: number;
+  username: string;
+  onNext: () => void;
+}) {
+  const { project } = useProject();
+  const width = Math.min(STORY_W, (STORY_H * project.page.w) / project.page.h);
+  return (
+    <div
+      className="story"
+      style={{ width: STORY_W, height: STORY_H }}
+      onClick={onNext}
+      role="button"
+      aria-label="Next story"
+    >
+      <FrameView frame={slide.spread as Frame} page={project.page} photos={project.photos} width={width} />
+      <div className="story-top">
+        <div className="story-bars">
+          {Array.from({ length: count }, (_, i) => (
+            <span key={i} className={i < at ? 'done' : i === at ? 'on' : ''} />
+          ))}
+        </div>
+        <div className="story-account">
+          <span className="avatar">{username.slice(0, 1).toUpperCase()}</span>
+          {username}
+        </div>
+      </div>
+    </div>
   );
 }

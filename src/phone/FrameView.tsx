@@ -3,11 +3,11 @@ import { TriangleAlert } from 'lucide-react';
 import { PhotoImg } from '../components/PhotoImg';
 import { placedSoft } from '../resolution';
 import type { Frame, PageSetup, PhotoMeta } from '../types';
-import { itemStyle } from './layout';
+import { itemStyle, markAt } from './layout';
 
 /**
  * A frame, as it exports: its background, and its photos cropped and bordered, at `width`
- * screen pixels. `soft` marks it when a photo has less detail than the frame asks for.
+ * screen pixels. `soft` marks each photo that has less detail than the frame asks for.
  */
 export function FrameView({
   frame,
@@ -27,7 +27,9 @@ export function FrameView({
   children?: ReactNode;
 }) {
   const scale = width / page.w;
-  const marked = soft && frame.items.some((i) => placedSoft(photos[i.photoId], i, page));
+  const marked = soft ? frame.items.filter((i) => placedSoft(photos[i.photoId], i, page)) : [];
+  // The mark grows with the frame, within reason.
+  const mark = Math.max(12, Math.min(22, width / 9));
   return (
     <div
       className={`page${frame.background === 'black' ? ' black' : ''} ${className}`}
@@ -38,11 +40,17 @@ export function FrameView({
           <PhotoImg id={item.photoId} />
         </div>
       ))}
-      {marked && (
-        <span className="soft-mark" role="img" aria-label="A photo is enlarged">
-          <TriangleAlert />
+      {marked.map((item) => (
+        <span
+          key={item.photoId}
+          className="soft-mark"
+          role="img"
+          aria-label={`${photos[item.photoId]?.name ?? 'A photo'} is enlarged`}
+          style={{ ...markAt(item, page, scale, mark), width: mark, height: mark }}
+        >
+          <TriangleAlert style={{ width: mark * 0.65, height: mark * 0.65 }} />
         </span>
-      )}
+      ))}
       {children}
     </div>
   );

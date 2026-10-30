@@ -11,7 +11,7 @@ import type { Frame, Ink, Placement } from '../types';
 import { centerPhoto, deskPhotos, fitPhoto, framesOf, setBackground, setBorder } from './frameActions';
 import { NumberField } from './FrameSizeSheet';
 import { addPhotoFiles, pickPhotos } from './importing';
-import { phone } from './nav';
+import { navigate, phone } from './nav';
 import { ActionSheet, Segmented } from './Sheets';
 
 /** How far a finger goes up before a desk photo comes off the tray, in screen pixels. */
@@ -312,7 +312,7 @@ export function PhotoPanel({ item, frame }: { item: Placement; frame: Frame }) {
         />
       </div>
       <div className="tools">
-        <button className="tool" onClick={() => phone.set({ cropping: id })}>
+        <button className="tool" onClick={() => navigate('fade', () => phone.set({ cropping: id }))}>
           <Crop />
           Crop
         </button>

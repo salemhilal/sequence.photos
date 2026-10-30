@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import type { PhotoId, SpreadId } from '../ids';
 import { createStore } from '../store';
 import { ui } from '../ui';
@@ -8,7 +9,7 @@ import { openProject, type LibraryEntry } from './library';
  * Sequences (the list) → a sequence's frames → one frame's editor, with sheets over them.
  */
 
-export type Screen = 'library' | 'frames' | 'editor';
+export type Screen = 'library' | 'frames' | 'editor' | 'preview';
 
 /** A sheet over the screen: where new photos go, the frame size, exporting, or a name. */
 export type Sheet = 'add' | 'size' | 'export' | 'rename' | null;
@@ -33,6 +34,10 @@ export interface PhoneState {
   cropping: PhotoId | null;
   /** Whether the editor shows the guides. */
   guides: boolean;
+  /** Whether the editor's tools are open below the frame, or tucked away to show it larger. */
+  drawer: boolean;
+  /** Where the preview starts (a frame's index), and the screen it goes back to. */
+  preview: { from: number; back: Screen };
 }
 
 const NONE: Editing = { kind: 'none' };
@@ -48,16 +53,57 @@ export const phone = createStore<PhoneState>({
   editing: NONE,
   cropping: null,
   guides: true,
+  drawer: true,
+  preview: { from: 0, back: 'frames' },
 });
 
-/** Open a frame in the editor, with nothing selected. */
-export function openEditor(frameId: SpreadId): void {
-  phone.set({ screen: 'editor', frameId, editing: NONE, cropping: null, selecting: false, selected: [] });
+/**
+ * How a change of screen moves: deeper in (push) or back out (pop), to the next or previous
+ * frame, up into a preview and back, or a crossfade (into crop mode and out).
+ */
+export type Motion = 'push' | 'pop' | 'next' | 'prev' | 'up' | 'down' | 'fade';
+
+/**
+ * Change screens with a transition (the View Transitions API: WebKit draws the old screen and
+ * the new one, and phone.css says how they move). Without it, or with reduced motion, it
+ * just changes.
+ */
+export function navigate(motion: Motion, change: () => void): void {
+  const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (typeof document === 'undefined' || !('startViewTransition' in document) || still) return change();
+  const root = document.documentElement;
+  root.dataset.motion = motion;
+  const t = document.startViewTransition(() => flushSync(change));
+  // A transition cut short (the app hidden, another one starting) is no problem: the change
+  // itself has still happened.
+  const done = () => {
+    if (root.dataset.motion === motion) delete root.dataset.motion;
+  };
+  t.ready.catch(() => {});
+  t.finished.then(done, done);
+}
+
+/** Open a frame in the editor, with nothing selected (from the grid, or another frame). */
+export function openEditor(frameId: SpreadId, motion: Motion = 'push'): void {
+  navigate(motion, () =>
+    phone.set({ screen: 'editor', frameId, editing: NONE, cropping: null, selecting: false, selected: [] }),
+  );
 }
 
 /** Back to the frames grid. */
 export function showFrames(): void {
-  phone.set({ screen: 'frames', editing: NONE, cropping: null });
+  navigate('pop', () => phone.set({ screen: 'frames', editing: NONE, cropping: null }));
+}
+
+/** Show every frame, one at a time and full size, from the frame at `from`. */
+export function showPreview(from = 0): void {
+  const back = phone.get().screen;
+  navigate('up', () => phone.set({ screen: 'preview', preview: { from, back }, sheet: null }));
+}
+
+/** Leave the preview, back where it was opened. */
+export function closePreview(): void {
+  navigate('down', () => phone.set({ screen: phone.get().preview.back }));
 }
 
 /** `selected` with `id` added, or taken out if it was there. */
@@ -91,5 +137,7 @@ export async function openSequence(entry: Pick<LibraryEntry, 'id' | 'name'>): Pr
     ui.set({ notice: `Couldn’t open “${entry.name}”: ${e instanceof Error ? e.message : String(e)}` });
     return;
   }
-  phone.set({ screen: 'frames', name: entry.name, selecting: false, selected: [], sheet: null });
+  navigate('push', () =>
+    phone.set({ screen: 'frames', name: entry.name, selecting: false, selected: [], sheet: null }),
+  );
 }

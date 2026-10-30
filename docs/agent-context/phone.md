@@ -23,10 +23,15 @@ the web and Mac apps. In development it's also at `/phone/` on the dev server.
   Tap the frame for its background (white or black, for it or every frame); tap a photo for
   its place and size, its border (0 to 6% of the frame's width, white or black, drawn
   outside the photo), Crop, Fit, Center, Duplicate. Undo and Redo are in the top bar.
+- **Preview**: every frame full size, swiped through (▷ in the frames' bar, or from the
+  editor's menu).
+- **Motion**: screens change with the View Transitions API (`navigate` in `nav.ts`; the
+  motions are in `phone.css`); sheets slide; the frame in the editor resizes smoothly as the
+  tools below it change, and the tools are a drawer that tucks away.
 - **Crop**: as on the desktop, with shapes, Reset, and the pin: pinned, the crop holds still
   and dragging moves the photo in it.
-- **Export**: images (JPEG or PNG) through the share sheet (Save Images puts them in
-  Photos), or a post to Instagram (feed or stories, slides, caption). Tagging people isn't
+- **Export**: images (JPEG or PNG; all the frames, or some) through the share sheet (Save Images puts them in
+  Photos), or a post to Instagram (feed or stories, previewed as Instagram shows them; slides; caption). Tagging people isn't
   there yet.
 
 ## Backgrounds and borders

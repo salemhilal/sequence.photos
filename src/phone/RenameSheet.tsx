@@ -16,16 +16,16 @@ export function RenameSheet({
     <Sheet
       title="Rename"
       onDismiss={onCancel}
-      left={
-        <button className="btn" onClick={onCancel}>
+      left={(close) => (
+        <button className="btn" onClick={() => close()}>
           Cancel
         </button>
-      }
-      right={
-        <button className="btn" style={{ fontWeight: 600 }} onClick={() => onDone(value)}>
+      )}
+      right={(close) => (
+        <button className="btn" style={{ fontWeight: 600 }} onClick={() => close(() => onDone(value))}>
           Done
         </button>
-      }
+      )}
     >
       <input
         className="text-input"

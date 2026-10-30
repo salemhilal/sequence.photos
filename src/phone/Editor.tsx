@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, CircleEllipsis, Redo2, Undo2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleEllipsis, Eye, EyeOff, Redo2, Undo2 } from 'lucide-react';
 import { borderBox, dropGuide, pageRect, resizeRect, snapLines, type Corner, type Rect } from '../geometry';
 import type { PhotoId } from '../ids';
 import { sheetOf } from '../spreads';
@@ -12,7 +12,7 @@ import { FrameSizeSheet } from './FrameSizeSheet';
 import { FrameView } from './FrameView';
 import { DeskTray, FramePanel, PhotoPanel } from './EditorPanels';
 import { useSize } from './hooks';
-import { openEditor, phone, showFrames } from './nav';
+import { openEditor, phone, showFrames, showPreview } from './nav';
 import { ActionSheet } from './Sheets';
 
 /** Room around the frame on the canvas, and under it for the pager, in screen pixels. */
@@ -22,6 +22,10 @@ const PAGER = 60;
 const SLOP = 6;
 const SNAP = 10;
 const MAX_ZOOM = 6;
+/** How far the drawer's handle is dragged before it opens or closes, in screen pixels. */
+const FLICK = 24;
+/** How long the drawer takes to open or close (phone.css's --drawer), in ms. */
+const DRAWER_MS = 300;
 
 type Gesture =
   | { kind: 'move'; id: PhotoId; start: Rect; from: { x: number; y: number }; moved: boolean }
@@ -61,12 +65,12 @@ export function Editor() {
 
   const go = (i: number) => {
     const f = frames[i];
-    if (f) openEditor(f.id);
+    if (f) openEditor(f.id, i > index ? 'next' : 'prev');
   };
 
   return (
     <div className="screen">
-      <EditorNav canUndo={canUndo && !cropping} canRedo={canRedo && !cropping} cropping={!!cropping} />
+      <EditorNav canUndo={canUndo && !cropping} canRedo={canRedo && !cropping} cropping={!!cropping} index={index} />
       {cropping ? (
         <CropMode key={cropping} photoId={cropping} frame={frame} />
       ) : (
@@ -85,7 +89,17 @@ export function Editor() {
   );
 }
 
-function EditorNav({ canUndo, canRedo, cropping }: { canUndo: boolean; canRedo: boolean; cropping: boolean }) {
+function EditorNav({
+  canUndo,
+  canRedo,
+  cropping,
+  index,
+}: {
+  canUndo: boolean;
+  canRedo: boolean;
+  cropping: boolean;
+  index: number;
+}) {
   const [menu, setMenu] = useState(false);
   const guides = phone.use((s) => s.guides);
   if (cropping)
@@ -109,6 +123,14 @@ function EditorNav({ canUndo, canRedo, cropping }: { canUndo: boolean; canRedo: 
         <button className="btn" aria-label="Redo" disabled={!canRedo} onClick={() => projectStore.redo()}>
           <Redo2 />
         </button>
+        <button
+          className="btn"
+          aria-label={guides ? 'Hide guides' : 'Show guides'}
+          aria-pressed={guides}
+          onClick={() => phone.set({ guides: !guides })}
+        >
+          {guides ? <Eye /> : <EyeOff />}
+        </button>
         <button className="btn" aria-label="More" onClick={() => setMenu(true)}>
           <CircleEllipsis />
         </button>
@@ -117,10 +139,7 @@ function EditorNav({ canUndo, canRedo, cropping }: { canUndo: boolean; canRedo: 
         <ActionSheet
           onCancel={() => setMenu(false)}
           actions={[
-            {
-              label: guides ? 'Hide guides' : 'Show guides',
-              run: () => (setMenu(false), phone.set({ guides: !guides })),
-            },
+            { label: 'Preview', run: () => (setMenu(false), showPreview(index)) },
             { label: 'Frame size…', run: () => (setMenu(false), phone.set({ sheet: 'size' })) },
             { label: 'Export…', run: () => (setMenu(false), phone.set({ sheet: 'export' })) },
           ]}
@@ -154,6 +173,11 @@ function FrameCanvas({
   const [hit, setHit] = useState<{ xs: number[]; ys: number[] } | null>(null);
   const [overPanel, setOverPanel] = useState(false);
   const [trayOver, setTrayOver] = useState(false);
+  const drawer = phone.use((s) => s.drawer);
+  // While a finger moves things, or the drawer slides, the frame follows at once; otherwise
+  // (a tool's panel changing size, an undo) it moves and resizes smoothly.
+  const [live, setLive] = useState(false);
+  const [sliding, setSliding] = useState(false);
   const gesture = useRef<Gesture | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
 
@@ -188,6 +212,7 @@ function FrameCanvas({
     if (e.button !== 0) return;
     canvas.current?.setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    setLive(true);
     const ps = [...pointers.current.values()];
     if (ps.length === 2) {
       // A second finger: pinch and pan, dropping whatever the first had started.
@@ -284,6 +309,7 @@ function FrameCanvas({
 
   const up = (e: React.PointerEvent<HTMLDivElement>) => {
     pointers.current.delete(e.pointerId);
+    if (pointers.current.size === 0) setLive(false);
     const g = gesture.current;
     if (!g) return;
     if (g.kind === 'pinch') {
@@ -323,6 +349,30 @@ function FrameCanvas({
     phone.set({ editing: { kind: 'photo', id } });
   };
 
+  // The drawer: tap its handle, or drag it down to tuck the tools away (and up for them back).
+  const setDrawer = (open: boolean) => {
+    if (open === drawer) return;
+    setSliding(true);
+    phone.set({ drawer: open });
+    setTimeout(() => setSliding(false), DRAWER_MS + 50);
+  };
+  const pull = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return;
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+    const y = e.clientY;
+    const end = (ev: PointerEvent) => {
+      el.removeEventListener('pointerup', end);
+      el.removeEventListener('pointercancel', end);
+      if (ev.type !== 'pointerup') return;
+      const dy = ev.clientY - y;
+      if (Math.abs(dy) < FLICK) setDrawer(!drawer);
+      else setDrawer(dy < 0);
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+  };
+
   const guide = dropGuide(sheet);
   const box = guide ? borderBox('whole', sheet, guide) : null;
   const page = pageRect('whole', sheet);
@@ -331,7 +381,7 @@ function FrameCanvas({
   return (
     <>
       <div
-        className="canvas"
+        className={`canvas${live || sliding ? ' live' : ''}`}
         ref={(el) => {
           canvas.current = el;
           sizeRef(el);
@@ -349,6 +399,7 @@ function FrameCanvas({
               photos={project.photos}
               width={page.w * scale}
               className={editing.kind === 'frame' ? 'selected' : ''}
+              soft
             >
               {(guides || trayOver) && (
                 <div className="guides" style={{ zIndex: 1e6 }}>
@@ -410,15 +461,28 @@ function FrameCanvas({
           </button>
         </div>
       </div>
-      <div className="panel" ref={panel}>
+      <div className={`panel drawer${drawer ? '' : ' closed'}`} ref={panel}>
         {overPanel && <div className="panel-drop">Put it back on the desk</div>}
-        {editing.kind === 'photo' && selected ? (
-          <PhotoPanel item={selected} frame={frame} />
-        ) : editing.kind === 'frame' ? (
-          <FramePanel frame={frame} index={index} />
-        ) : (
-          <DeskTray onDrag={trayDrag} onDrop={trayDrop} onCancel={() => setTrayOver(false)} />
-        )}
+        <button
+          className="drawer-handle"
+          aria-label={drawer ? 'Hide the tools' : 'Show the tools'}
+          aria-expanded={drawer}
+          onPointerDown={pull}
+        >
+          <span />
+        </button>
+        <div className="drawer-body">
+          {/* Keyed by what's selected, so each set of tools fades in as it arrives. */}
+          <div className="drawer-inner" key={editing.kind === 'photo' ? editing.id : editing.kind}>
+            {editing.kind === 'photo' && selected ? (
+              <PhotoPanel item={selected} frame={frame} />
+            ) : editing.kind === 'frame' ? (
+              <FramePanel frame={frame} index={index} />
+            ) : (
+              <DeskTray onDrag={trayDrag} onDrop={trayDrop} onCancel={() => setTrayOver(false)} />
+            )}
+          </div>
+        </div>
       </div>
     </>
   );

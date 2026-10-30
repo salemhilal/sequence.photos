@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Check, ChevronLeft, CircleEllipsis, Copy, Plus, Share, Trash2 } from 'lucide-react';
+import { Check, ChevronLeft, CircleEllipsis, Copy, Play, Plus, Share, Trash2 } from 'lucide-react';
 import { deleteSpreads, moveSpreads } from '../actions';
 import type { SpreadId } from '../ids';
 import { projectStore, useProject } from '../store';
@@ -11,7 +11,7 @@ import { fitWidth } from './layout';
 import { useSize } from './hooks';
 import { addPhotoFiles, pickPhotos } from './importing';
 import { closeAndSave, openProjectId, renameProject } from './library';
-import { dropIndex, openEditor, phone, toggled } from './nav';
+import { dropIndex, navigate, openEditor, phone, showPreview, toggled } from './nav';
 import { RenameSheet } from './RenameSheet';
 import { ActionSheet } from './Sheets';
 
@@ -51,7 +51,9 @@ export function Frames() {
   const { page } = project;
 
   const back = () => {
-    void closeAndSave().then(() => phone.set({ screen: 'library', selecting: false, selected: [] }));
+    void closeAndSave().then(() =>
+      navigate('pop', () => phone.set({ screen: 'library', selecting: false, selected: [] })),
+    );
   };
 
   const choosePhotos = async () => {
@@ -170,6 +172,9 @@ export function Frames() {
               Sequences
             </button>
             <div className="nav-group">
+              <button className="btn" aria-label="Preview" onClick={() => showPreview(0)}>
+                <Play />
+              </button>
               <button className="btn" aria-label="Export" onClick={() => phone.set({ sheet: 'export' })}>
                 <Share />
               </button>

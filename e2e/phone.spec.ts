@@ -12,6 +12,8 @@ const photo = (name: string) => fileURLToPath(new URL(`../src/tour/${name}.jpg`,
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  // Screens change at once (no transitions, which take no taps while they run).
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('../phone/');
   await expect(page.getByRole('heading', { name: 'Sequences' })).toBeVisible();
 });
@@ -91,8 +93,12 @@ test('the editor: drag a photo to the desk and back, border it, and crop it pinn
 
   // Undo takes the crop back whole.
   await page.getByRole('button', { name: 'Undo' }).click();
-  const back = (await item.boundingBox())!;
-  expect(back.height).toBeGreaterThan(back.width * 1.2);
+  await expect
+    .poll(async () => {
+      const back = (await item.boundingBox())!;
+      return back.height / back.width;
+    })
+    .toBeGreaterThan(1.2);
 });
 
 test('the frame selected: a black background, for it or every frame', async ({ page }) => {
@@ -129,13 +135,45 @@ test('frames: hold and drag one to move it; select two to delete them', async ({
   await expect(cells).toHaveCount(2);
 });
 
-test('export: images are made, then shared', async ({ page }) => {
+test('export: images are made from the frames chosen, then shared; Instagram previews a story', async ({ page }) => {
   await newSequenceWith(page, ['door', 'lily']);
   await page.getByRole('button', { name: 'Export' }).click();
   await expect(page.getByText('3 JPEGs, 01.jpg to 03.jpg.')).toBeVisible();
-  await page.getByRole('button', { name: 'Make 3 images' }).click();
-  await expect(page.getByRole('button', { name: 'Share 3 images…' })).toBeVisible({ timeout: 30_000 });
+  // The empty first frame left out.
+  await page.getByRole('dialog', { name: 'Export' }).getByRole('button', { name: 'Frame 1', exact: true }).click();
+  await expect(page.getByText('2 JPEGs, 01.jpg to 02.jpg.')).toBeVisible();
+  await page.getByRole('button', { name: 'Make 2 images' }).click();
+  await expect(page.getByRole('button', { name: 'Share 2 images…' })).toBeVisible({ timeout: 30_000 });
+
   await page.getByRole('button', { name: 'Instagram' }).click();
   await expect(page.getByRole('button', { name: 'Connect Instagram' })).toBeVisible();
   await expect(page.getByText('2 of 10 chosen')).toBeVisible();
+  await page.getByRole('button', { name: 'Stories' }).click();
+  await expect(page.locator('.story .story-bars span')).toHaveCount(2);
+});
+
+test('the editor: guides hide, the tools tuck away, and the preview shows every frame', async ({ page }) => {
+  await newSequenceWith(page, ['door', 'lily']);
+  await page.locator('.cell').nth(1).click();
+  await expect(page.locator('.guide-box')).toBeVisible();
+  await page.getByRole('button', { name: 'Hide guides' }).click();
+  await expect(page.locator('.guide-box')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Show guides' }).click();
+  await expect(page.locator('.guide-box')).toBeVisible();
+
+  // The drawer: tucked away, the frame gets more room.
+  const before = (await page.locator('.canvas').boundingBox())!;
+  await page.getByRole('button', { name: 'Hide the tools' }).click();
+  await expect
+    .poll(async () => (await page.locator('.canvas').boundingBox())!.height)
+    .toBeGreaterThan(before.height + 100);
+  await page.getByRole('button', { name: 'Show the tools' }).click();
+  await expect(page.getByLabel('Desk')).toBeVisible();
+
+  // The preview, from this frame (the second); closing it comes back here.
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.getByText('2 / 3')).toBeVisible();
+  await page.getByRole('button', { name: 'Close the preview' }).click();
+  await expect(page.getByRole('button', { name: 'Frames' })).toBeVisible();
 });

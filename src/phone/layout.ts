@@ -31,3 +31,20 @@ export function photoAt(items: readonly Placement[], x: number, y: number): Plac
       return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
     });
 }
+
+/**
+ * Where a photo's warning mark goes on a frame drawn `scale` screen pixels per unit: inside its
+ * top-right corner, kept on the frame where the photo hangs off it. `size` is the mark's side.
+ */
+export function markAt(
+  item: Pick<Placement, 'x' | 'y' | 'w'>,
+  page: Pick<PageSetup, 'w'>,
+  scale: number,
+  size: number,
+): { left: number; top: number } {
+  const inset = size / 4;
+  return {
+    left: Math.max(0, Math.min(item.x + item.w, page.w) * scale - size - inset),
+    top: Math.max(0, item.y) * scale + inset,
+  };
+}

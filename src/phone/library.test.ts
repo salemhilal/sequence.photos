@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { toPhotoId, toSpreadId } from '../ids';
 import { validateProject } from '../validate';
 import { addPhotos, framesOf } from './frameActions';
-import { photoAt } from './layout';
+import { markAt, photoAt } from './layout';
 import { editedLabel, entryFor, newSequence, withEntry, type LibraryEntry } from './library';
 import { dropIndex, toggled } from './nav';
 import { produce } from 'immer';
@@ -85,5 +85,17 @@ describe('photoAt', () => {
     expect(photoAt(items, 20, 20)?.photoId).toBe(A);
     expect(photoAt(items, 155, 155)?.photoId).toBe(B);
     expect(photoAt(items, 170, 170)).toBeUndefined();
+  });
+});
+
+describe('markAt', () => {
+  const page = { w: 1080 };
+  it('puts the mark inside a photo’s top-right corner', () => {
+    // A photo 100–600 across, from 200 down, drawn at a tenth: its corner at (60, 20).
+    expect(markAt({ x: 100, y: 200, w: 500 }, page, 0.1, 20)).toEqual({ left: 35, top: 25 });
+  });
+
+  it('keeps it on the frame when the photo hangs off', () => {
+    expect(markAt({ x: 900, y: -100, w: 500 }, page, 0.1, 20)).toEqual({ left: 83, top: 5 });
   });
 });

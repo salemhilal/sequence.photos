@@ -20,13 +20,18 @@
   --warn: #f0a44b;
   --danger: #f07a62;
   --desk: #787878;
-  --page: #efede8;
+  /* White as it exports (the desktop's dark theme dims it; here it's what's posted). */
+  --page: #ffffff;
   --guide: rgba(74, 178, 214, 0.55);
   --guide-hit: #1f9fcc;
   --guide-center: rgba(206, 70, 170, 0.75);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 3px 10px rgba(0, 0, 0, 0.2);
   --font: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* How things move: quick, and easing out like iOS's own. */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --quick: 0.22s;
+  --drawer: 0.3s;
   --top: env(safe-area-inset-top, 0px);
   --bottom: env(safe-area-inset-bottom, 0px);
   color-scheme: dark;
@@ -261,11 +266,8 @@ textarea {
   position: absolute;
   /* Above every photo (their stacking order is their z). */
   z-index: 1000000;
-  top: 6px;
-  right: 6px;
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
+  border-radius: 25%;
+  pointer-events: none;
   background: var(--accent);
   color: var(--on-accent);
   display: flex;
@@ -273,8 +275,6 @@ textarea {
   justify-content: center;
 }
 .soft-mark .lucide {
-  width: 13px;
-  height: 13px;
   stroke-width: 2.6;
 }
 
@@ -344,7 +344,8 @@ textarea {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 12px;
   row-gap: 14px;
-  padding: 0 16px 24px;
+  /* Room at the top for a selected cell's outline. */
+  padding: 3px 16px 24px;
   position: relative;
   touch-action: pan-y;
 }
@@ -548,20 +549,9 @@ textarea {
 .sheet-body > * {
   flex: none;
 }
-/* The sheet's main action, at its foot however far it's scrolled. */
-.sheet-body > .pinned-foot {
-  position: sticky;
-  bottom: calc(-24px - var(--bottom));
-  margin: auto -16px calc(-24px - var(--bottom));
-  padding: 12px 16px calc(var(--bottom) + 16px);
-  background: var(--panel);
-  border-top: 1px solid var(--divider);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+/* The sheet's main action, outside what scrolls, clear of the home indicator and corners. */
 .sheet-foot {
-  padding: 12px 16px calc(var(--bottom) + 16px);
+  padding: 12px 16px calc(max(var(--bottom), 12px) + 12px);
   background: var(--panel);
   border-top: 1px solid var(--divider);
   display: flex;
@@ -740,6 +730,257 @@ textarea.caption {
   outline: none;
 }
 
+/* A sheet's main action goes in its foot (see ExportSheet's Foot). */
+.foot-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.foot-slot:empty {
+  display: none;
+}
+.link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+/* --- Motion ------------------------------------------------------------------------------ */
+
+/* Sheets slide up over a fading dim, and back down when closed (.leaving). */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes sink {
+  to {
+    transform: translateY(100%);
+  }
+}
+.dim {
+  animation: fade-in var(--quick) var(--ease);
+}
+.dim.leaving {
+  animation: fade-out var(--quick) var(--ease) forwards;
+}
+.sheet,
+.actions {
+  animation: rise 0.32s var(--ease);
+}
+.sheet.leaving,
+.actions.leaving {
+  animation: sink var(--quick) cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+.toast {
+  animation: rise-a-little var(--quick) var(--ease);
+}
+@keyframes rise-a-little {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.progress {
+  animation: fade-in var(--quick) var(--ease);
+}
+/* Pressed controls give a little. */
+.btn:active:not(:disabled),
+.cell:active,
+.act:active,
+.tool:active,
+.chip:active:not(:disabled) {
+  opacity: 0.6;
+  transition: opacity 0.05s;
+}
+.cell .well,
+.check,
+.strip-check,
+.strip-item .page,
+.seg button,
+.chip,
+.switch {
+  transition:
+    background var(--quick) var(--ease),
+    box-shadow var(--quick) var(--ease),
+    opacity var(--quick) var(--ease),
+    color var(--quick) var(--ease);
+}
+.soft-mark,
+.drawer-inner {
+  animation: fade-in var(--quick) var(--ease);
+}
+
+/* Screens (navigate in nav.ts): deeper in slides in from the right over the last, which
+   drifts left; back out slides it away to the right. Frames slide sideways to the next or
+   previous; the preview rises and sinks. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.34s;
+  animation-timing-function: var(--ease);
+}
+@keyframes from-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes to-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes from-left-part {
+  from {
+    transform: translateX(-30%);
+    filter: brightness(0.7);
+  }
+}
+@keyframes to-left-part {
+  to {
+    transform: translateX(-30%);
+    filter: brightness(0.7);
+  }
+}
+@keyframes from-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes to-left {
+  to {
+    transform: translateX(-100%);
+  }
+}
+@keyframes from-below {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes to-below {
+  to {
+    transform: translateY(100%);
+  }
+}
+html[data-motion='push']::view-transition-old(root) {
+  animation-name: to-left-part;
+}
+html[data-motion='push']::view-transition-new(root) {
+  animation-name: from-right;
+}
+html[data-motion='pop']::view-transition-old(root) {
+  animation-name: to-right;
+  z-index: 1;
+}
+html[data-motion='pop']::view-transition-new(root) {
+  animation-name: from-left-part;
+}
+html[data-motion='next']::view-transition-old(root) {
+  animation-name: to-left;
+}
+html[data-motion='next']::view-transition-new(root) {
+  animation-name: from-right;
+}
+html[data-motion='prev']::view-transition-old(root) {
+  animation-name: to-right;
+}
+html[data-motion='prev']::view-transition-new(root) {
+  animation-name: from-left;
+}
+html[data-motion='up']::view-transition-old(root) {
+  animation-name: none;
+}
+html[data-motion='up']::view-transition-new(root) {
+  animation-name: from-below;
+}
+html[data-motion='down']::view-transition-old(root) {
+  animation-name: to-below;
+  z-index: 1;
+}
+html[data-motion='down']::view-transition-new(root) {
+  animation-name: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --- Instagram's story ------------------------------------------------------------------- */
+
+.story {
+  align-self: center;
+  position: relative;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+}
+.story .page {
+  background: #fff;
+}
+.story .page.black {
+  background: #000;
+}
+.story-top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: 8px 8px 16px;
+  background: linear-gradient(rgba(0, 0, 0, 0.45), transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.story-bars {
+  display: flex;
+  gap: 3px;
+}
+.story-bars span {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.35);
+}
+.story-bars span.done,
+.story-bars span.on {
+  background: #fff;
+}
+.story-account {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+.story-account .avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+}
+
 .toast {
   position: absolute;
   left: 16px;
@@ -790,6 +1031,25 @@ textarea.caption {
   left: 0;
   top: 0;
   transform-origin: 0 0;
+}
+/* The frame grows and shrinks smoothly as the tools below it change size (and photos glide on
+   undo); while a finger moves things, or the drawer slides, it follows at once. */
+.stage,
+.stage .page,
+.stage .item,
+.stage .soft-mark,
+.stage .selection,
+.stage .guide-box {
+  transition:
+    left var(--quick) var(--ease),
+    top var(--quick) var(--ease),
+    width var(--quick) var(--ease),
+    height var(--quick) var(--ease),
+    box-shadow var(--quick) var(--ease);
+}
+.canvas.live .stage,
+.canvas.live .stage * {
+  transition: none;
 }
 .stage .page {
   box-shadow: var(--shadow);
@@ -873,6 +1133,53 @@ textarea.caption {
   gap: 10px;
   flex: none;
   position: relative;
+}
+/* The editor's tools, in a drawer: its handle tucks them away to show the frame larger. */
+.panel.drawer {
+  padding-top: 0;
+  gap: 0;
+}
+.panel.drawer.closed {
+  padding-bottom: var(--bottom);
+}
+.drawer-handle {
+  appearance: none;
+  border: 0;
+  background: none;
+  width: 100%;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+  flex: none;
+}
+.drawer-handle span {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: #4a4a4a;
+}
+.drawer-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--drawer) var(--ease);
+}
+.panel.closed .drawer-body {
+  grid-template-rows: 0fr;
+}
+.drawer-inner {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 2px;
+  transition: opacity var(--drawer) var(--ease);
+}
+.panel.closed .drawer-inner {
+  opacity: 0;
 }
 .panel-row {
   display: flex;
@@ -958,6 +1265,53 @@ textarea.caption {
   justify-content: center;
   cursor: pointer;
   border-radius: 8px;
+}
+
+/* --- Preview -------------------------------------------------------------------------- */
+
+.screen.preview {
+  background: #000;
+}
+.preview-strip {
+  flex: 1;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+.preview-strip::-webkit-scrollbar {
+  display: none;
+}
+.preview-slide {
+  flex: none;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.preview-chrome {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: calc(var(--top) + 6px) 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(rgba(0, 0, 0, 0.55), transparent);
+  transition: opacity var(--quick) var(--ease);
+}
+.preview-chrome .mono {
+  font-size: 13px;
+}
+.preview-chrome.hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* --- Crop --------------------------------------------------------------------------------- */

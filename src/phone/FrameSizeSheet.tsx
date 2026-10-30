@@ -29,16 +29,16 @@ export function FrameSizeSheet({ onDone }: { onDone: () => void }) {
     <Sheet
       title="Frame size"
       onDismiss={onDone}
-      left={
-        <button className="btn" onClick={onDone}>
+      left={(close) => (
+        <button className="btn" onClick={() => close()}>
           Cancel
         </button>
-      }
-      right={
-        <button className="btn" style={{ fontWeight: 600 }} onClick={apply}>
+      )}
+      right={(close) => (
+        <button className="btn" style={{ fontWeight: 600 }} onClick={() => close(apply)}>
           Apply
         </button>
-      }
+      )}
     >
       <div className="strip" style={{ alignItems: 'flex-end' }}>
         {framesOf(preview).map((f) => (

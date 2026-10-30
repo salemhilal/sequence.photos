@@ -3,6 +3,7 @@ import { ui } from '../ui';
 import { Editor } from './Editor';
 import { ExportSheet } from './ExportSheet';
 import { Frames } from './Frames';
+import { Preview } from './Preview';
 import { Sequences } from './Sequences';
 import { phone } from './nav';
 
@@ -26,6 +27,7 @@ export function PhoneApp() {
       {screen === 'library' && <Sequences />}
       {screen === 'frames' && <Frames />}
       {screen === 'editor' && <Editor />}
+      {screen === 'preview' && <Preview />}
       {sheet === 'export' && screen !== 'library' && <ExportSheet />}
       {notice && (
         <div className="toast" role="status">

@@ -578,14 +578,23 @@ At `/phone/` on the dev server in a phone-sized window (the _(e2e)_ items are
       after a reload or a relaunch it's all still there. ⋯ renames or deletes one (asking
       first).
 - [ ] _(e2e)_ Frames: + → Add photos opens the photo picker; then a frame each, the empty
-      frames first, or the desk. Each lands fitted in the border guide. A frame whose photo
-      is enlarged has the amber mark.
+      frames first, or the desk. Each lands fitted in the border guide. Each enlarged photo
+      has the amber mark at its top right, in the grid and the editor alike. White frames are
+      white (#fff), as they export.
 - [ ] _(e2e)_ Hold a frame still, then drag: it lifts and moves to the amber bar's gap (with
       the rest of the selection, when it's chosen). A drag without holding scrolls. Select:
       Duplicate copies frames and their photos; Delete (asking first) puts their photos on
       the desk; at least one frame stays.
 - [ ] ⋯ → Frame size: a preset or a custom size, the border guide, center lines; the strip
       previews every frame; Apply is one undo step; Cancel changes nothing.
+- [ ] _(e2e)_ Editor: the eye in the top bar hides and shows the guides. The drawer's handle
+      (tap, or drag down and up) tucks the tools away and back; the frame grows into the room
+      when it can. When the tools change (desk, frame, photo), the frame resizes smoothly.
+- [ ] _(e2e)_ Preview (▷ in the frames' bar, or ⋯ → Preview in the editor, from that frame):
+      every frame full size, swiped through, "n / N"; a tap hides the controls; × goes back.
+- [ ] Screens slide in and out (deeper in from the right, back out to the right); the
+      editor's ‹ › slide frames sideways; the preview rises; sheets and menus slide up and
+      back down; crop mode crossfades. With Reduce Motion on, they change at once.
 - [ ] _(e2e)_ Editor: tap a photo to select it (amber outline, corner handles); drag to move,
       snapping by its outer edge (border included) with magenta lines; drag a corner to
       resize, keeping its shape. Pinch zooms around the fingers.
@@ -601,9 +610,14 @@ At `/phone/` on the dev server in a phone-sized window (the _(e2e)_ items are
 - [ ] _(e2e)_ Crop: shapes, Reset, Pin. Pinned, the handles go, the outline dashes, the shapes
       and Reset wait, only what's in the crop shows, and dragging moves the photo in it.
       Done is one undo step; Cancel puts it back.
+- [ ] _(e2e)_ Export → Images: tap frames to leave them out ("All" or "Just the first"); the
+      names follow those chosen. The main button stays at the sheet's foot, clear of the
+      screen's corners, however the rest scrolls.
 - [ ] _(e2e)_ Export → Images: Make N images, then Share N images… opens the share sheet;
       Save Images puts them in Photos (iOS asks once for access to add photos). JPEG or PNG,
       and quality, kept with the project.
+- [ ] _(e2e)_ Export → Instagram: Slides come before the preview; Stories previews a story
+      (a tall dark screen, a bar per slide, the account), and a tap goes to the next.
 - [ ] Export → Instagram: Connect Instagram opens Safari; signing in comes back to the app
       (`sequence-photos://`) and Export. Feed or Stories, slides (up to 10), caption with its
       counts, Post with its progress and Cancel.

@@ -9,7 +9,7 @@ import { sheetOf } from '../spreads';
 import { projectStore, useProject } from '../store';
 import type { Frame } from '../types';
 import { useSize } from './hooks';
-import { phone } from './nav';
+import { navigate, phone } from './nav';
 
 const PAD = 28;
 const SNAP = 10;
@@ -53,7 +53,7 @@ export function CropMode({ photoId, frame }: { photoId: PhotoId; frame: Frame })
     finished.current = true;
     if (keep) projectStore.end();
     else projectStore.cancel();
-    phone.set({ cropping: null });
+    navigate('fade', () => phone.set({ cropping: null }));
   };
 
   if (!item || !photo) return null;
