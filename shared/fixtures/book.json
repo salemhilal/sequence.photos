@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 7,
+  "photos": {
+    "a": { "id": "a", "name": "a.jpg", "pxW": 3000, "pxH": 2000 },
+    "b": { "id": "b", "name": "b.jpg", "pxW": 2000, "pxH": 3000, "crop": { "x": 0.1, "y": 0, "w": 0.8, "h": 1 } }
+  },
+  "pile": [],
+  "page": { "w": 10, "h": 8, "unit": "in", "pxPerUnit": 300 },
+  "layout": {
+    "kind": "spreads",
+    "firstSpread": { "kind": "first", "id": "s1", "items": [] },
+    "spreads": [
+      {
+        "kind": "middle",
+        "id": "s2",
+        "items": [
+          { "photoId": "a", "x": -9, "y": 1, "w": 6, "h": 4, "z": 1 },
+          { "photoId": "b", "x": -2, "y": 1, "w": 4, "h": 6, "z": 2, "border": { "width": 0.1, "color": "black" } }
+        ]
+      }
+    ],
+    "lastSpread": { "kind": "last", "id": "s3", "items": [], "background": "black" }
+  },
+  "settings": {
+    "centerV": true,
+    "centerH": false,
+    "keepRelative": true,
+    "borders": [
+      { "id": "m", "kind": "even", "inset": 0.5 },
+      { "id": "e", "kind": "edges", "top": 0.5, "bottom": 1, "inside": 1.5, "outside": 0.75 }
+    ],
+    "lines": [
+      { "id": "v", "axis": "vertical", "at": 2 },
+      { "id": "h", "axis": "horizontal", "at": 3 }
+    ],
+    "dropBorder": "m"
+  },
+  "nextZ": 3
+}

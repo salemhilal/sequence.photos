@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 7,
+  "photos": {
+    "a": { "id": "a", "name": "door.jpg", "pxW": 795, "pxH": 1200 },
+    "b": { "id": "b", "name": "taxi.jpg", "pxW": 795, "pxH": 1200, "crop": { "x": 0, "y": 0.1, "w": 1, "h": 0.6625 } },
+    "c": { "id": "c", "name": "lily.jpg", "pxW": 795, "pxH": 1200 }
+  },
+  "pile": [{ "photoId": "c", "x": 0.5, "y": 0.5, "w": 16.5625, "h": 25, "z": 3 }],
+  "page": { "w": 1080, "h": 1350, "unit": "px", "pxPerUnit": 1 },
+  "layout": {
+    "kind": "frames",
+    "frames": [
+      { "kind": "frame", "id": "f1", "items": [{ "photoId": "a", "x": 126, "y": 54, "w": 828, "h": 1242, "z": 1 }] },
+      {
+        "kind": "frame",
+        "id": "f2",
+        "items": [
+          { "photoId": "b", "x": 140, "y": 400, "w": 800, "h": 530, "z": 2, "border": { "width": 24, "color": "white" } }
+        ],
+        "background": "black"
+      },
+      { "kind": "frame", "id": "f3", "items": [] }
+    ]
+  },
+  "settings": {
+    "centerV": true,
+    "centerH": true,
+    "keepRelative": true,
+    "borders": [{ "id": "g1", "kind": "even", "inset": 54 }],
+    "lines": [],
+    "dropBorder": "g1"
+  },
+  "nextZ": 4,
+  "export": {
+    "to": "instagram",
+    "options": { "format": "jpeg", "quality": 0.9 },
+    "instagram": { "kind": "feed", "fit": "crop", "caption": "Walks #35mm", "chosen": ["f1:whole", "f2:whole"] }
+  }
+}
