@@ -46,17 +46,17 @@ struct DeskTray: View {
         let ids = store.project.deskPhotos
         VStack(alignment: .leading, spacing: 6) {
             PanelRow {
-                Text("Desk").font(.subheadline.weight(.semibold))
-                    + Text(" · \(ids.count)").font(.subheadline).foregroundColor(Theme.muted)
+                Text("Desk").font(.sans(.subheadline, .semibold))
+                    + Text(" · \(ids.count)").font(.sans(.subheadline)).foregroundColor(Theme.muted)
                 Spacer()
                 if importing { ProgressView().controlSize(.small) }
-                Button("Add photos", systemImage: "plus") { picking = true }.font(.subheadline)
+                Button("Add photos", systemImage: "plus") { picking = true }.font(.sans(.subheadline))
             }
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 8) {
                     if ids.isEmpty {
                         Text("Photos not on a frame wait here.")
-                            .font(.footnote).foregroundStyle(Theme.muted)
+                            .font(.sans(.footnote)).foregroundStyle(Theme.muted)
                             .frame(height: 108)
                     }
                     ForEach(ids, id: \.self) { id in
@@ -69,7 +69,7 @@ struct DeskTray: View {
             .frame(height: 108)
             .accessibilityLabel("Desk")
             Text("Drag a photo onto the frame to place it. Drag a placed photo down here to take it off.")
-                .font(.footnote).foregroundStyle(Theme.muted)
+                .font(.sans(.footnote)).foregroundStyle(Theme.muted)
                 .padding(.horizontal, 16)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -121,12 +121,12 @@ struct FramePanel: View {
         let everyFrame = p.frames.allSatisfy { ($0.background ?? .white) == ink }
         VStack(alignment: .leading, spacing: 6) {
             PanelRow {
-                Text("Frame \(String(format: "%02d", index + 1))").font(.subheadline.weight(.semibold))
+                Text("Frame \(String(format: "%02d", index + 1))").font(.sans(.subheadline, .semibold))
                 Spacer()
                 Text(verbatim: "\(Int(p.page.w)) × \(Int(p.page.h)) px").font(.mono(12)).foregroundStyle(Theme.muted)
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text("Background").font(.footnote).foregroundStyle(Theme.muted)
+                Text("Background").font(.sans(.footnote)).foregroundStyle(Theme.muted)
                 InkPicker(
                     label: "Background",
                     ink: Binding(get: { ink }, set: { v in store.apply { $0.setBackground([frame.id], v) } }))
@@ -139,7 +139,7 @@ struct FramePanel: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
             Text("Tap outside the frame for the desk.")
-                .font(.footnote).foregroundStyle(Theme.muted)
+                .font(.sans(.footnote)).foregroundStyle(Theme.muted)
                 .padding(.horizontal, 16)
         }
     }
@@ -165,10 +165,10 @@ struct PhotoPanel: View {
         let color = item.border?.color ?? picked
         VStack(alignment: .leading, spacing: 4) {
             PanelRow {
-                Text(p.photos[id]?.name ?? "Photo").font(.mono(12).weight(.medium)).lineLimit(1).truncationMode(.middle)
+                Text(p.photos[id]?.name ?? "Photo").font(.mono(12, .medium)).lineLimit(1).truncationMode(.middle)
                 Spacer()
                 if let photo = p.photos[id], let note = enlargedNote(photo, item, p.page) {
-                    Text(note).font(.footnote).foregroundStyle(Theme.warn).lineLimit(1)
+                    Text(note).font(.sans(.footnote)).foregroundStyle(Theme.warn).lineLimit(1)
                 }
             }
             PanelRow {
@@ -186,7 +186,7 @@ struct PhotoPanel: View {
                 .accessibilityAddTraits(lock ? .isSelected : [])
             }
             PanelRow {
-                Text("Border").font(.footnote).foregroundStyle(Theme.muted)
+                Text("Border").font(.sans(.footnote)).foregroundStyle(Theme.muted)
                 Slider(
                     value: Binding(
                         get: { min(border, maxBorder) },
@@ -229,7 +229,7 @@ struct PhotoPanel: View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: icon).font(.system(size: 20)).frame(height: 26)
-                Text(title).font(.caption)
+                Text(title).font(.sans(.caption))
             }
             .frame(maxWidth: .infinity, minHeight: 52)
             .contentShape(Rectangle())
@@ -279,7 +279,7 @@ struct NumberField: View {
 
     var body: some View {
         HStack(spacing: 3) {
-            Text(label).font(.caption2).foregroundStyle(Theme.muted)
+            Text(label).font(.sans(.caption2)).foregroundStyle(Theme.muted)
             TextField(label, text: $text)
                 .font(.mono(12))
                 .keyboardType(.numbersAndPunctuation)

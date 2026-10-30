@@ -209,7 +209,7 @@ private struct Editor: View {
         .overlay {
             if overDrawer {
                 Text("Put it back on the desk")
-                    .font(.subheadline.weight(.medium))
+                    .font(.sans(.subheadline, .medium))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Theme.panel.opacity(0.92))
                     .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.accent, style: .init(lineWidth: 2, dash: [6])).padding(8))

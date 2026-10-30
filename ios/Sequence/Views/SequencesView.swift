@@ -85,12 +85,12 @@ struct SequenceRow: View {
             }
             .frame(minWidth: 60, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
-                Text(entry.name).font(.body.weight(.medium)).foregroundStyle(Theme.text)
+                Text(entry.name).font(.sans(.body, .medium)).foregroundStyle(Theme.text)
                 Text(
                     verbatim: "\(entry.frameCount) \(entry.frameCount == 1 ? "frame" : "frames") · \(Int(entry.page.w)) × \(Int(entry.page.h)) px"
                 )
                 .font(.mono(12)).foregroundStyle(Theme.muted)
-                Text(editedLabel(entry.updated)).font(.caption).foregroundStyle(Theme.faint)
+                Text(editedLabel(entry.updated)).font(.sans(.caption)).foregroundStyle(Theme.faint)
             }
             Spacer(minLength: 0)
         }

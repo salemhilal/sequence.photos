@@ -32,7 +32,7 @@ struct PreviewView: View {
             if chrome {
                 HStack {
                     Button("Close the preview", systemImage: "xmark") { dismiss() }
-                        .labelStyle(.iconOnly).font(.title3)
+                        .labelStyle(.iconOnly).font(.sans(.title3))
                         .frame(width: 44, height: 44)
                     Spacer()
                     Text("\(min(at ?? start, frames.count - 1) + 1) / \(frames.count)").font(.mono(13))

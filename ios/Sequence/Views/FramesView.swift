@@ -119,7 +119,7 @@ private struct FramesGrid: View {
                 Button("Cancel") { withAnimation(Theme.quick) { selecting = false; selected = [] } }
             }
             ToolbarItem(placement: .principal) {
-                Text(selected.isEmpty ? "Select frames" : "\(selected.count) selected").font(.headline)
+                Text(selected.isEmpty ? "Select frames" : "\(selected.count) selected").font(.sans(.headline, .semibold))
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button(selected.count == frames.count ? "None" : "All") {
@@ -150,7 +150,7 @@ private struct FramesGrid: View {
                 Button("Duplicate", systemImage: "plus.square.on.square") { duplicate() }
                     .disabled(selected.isEmpty)
                 Spacer()
-                Text("Hold and drag to move").font(.caption).foregroundStyle(Theme.muted)
+                Text("Hold and drag to move").font(.sans(.caption)).foregroundStyle(Theme.muted)
                 Spacer()
                 Button("Delete", systemImage: "trash", role: .destructive) { confirmDelete = true }
                     .tint(Theme.danger)
@@ -170,7 +170,7 @@ private struct FramesGrid: View {
                         store.apply { $0.addFrame() }
                     }
                 } label: {
-                    Image(systemName: "plus").font(.title3)
+                    Image(systemName: "plus").font(.sans(.title3))
                 }
                 .accessibilityLabel("Add")
             }
@@ -194,7 +194,7 @@ private struct FramesGrid: View {
                         RoundedRectangle(cornerRadius: 8).strokeBorder(on ? Theme.accent : .clear, lineWidth: 2.5))
                 if selecting {
                     Image(systemName: on ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
+                        .font(.sans(.title3))
                         .foregroundStyle(on ? Theme.accent : Theme.muted, on ? Theme.onAccent : .clear)
                         .padding(8)
                         .transition(.scale.combined(with: .opacity))
@@ -220,7 +220,7 @@ private struct FramesGrid: View {
                 .overlay(alignment: .topTrailing) {
                     let n = selecting && selected.contains(f.id) ? selected.count : 1
                     if n > 1 {
-                        Text("\(n)").font(.caption.bold()).padding(6).background(Theme.accent, in: Circle())
+                        Text("\(n)").font(.sans(.caption, .bold)).padding(6).background(Theme.accent, in: Circle())
                             .foregroundStyle(Theme.onAccent).offset(x: 8, y: -8)
                     }
                 }

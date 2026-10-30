@@ -133,7 +133,7 @@ private struct ImagesExport: View {
                     Button(off.isEmpty ? "Just the first" : "All") {
                         off = off.isEmpty ? Set(p.frames.dropFirst().map(\.id)) : []
                     }
-                    .font(.footnote)
+                    .font(.sans(.footnote))
                     .textCase(nil)
                 }
             }
@@ -173,7 +173,7 @@ private struct ImagesExport: View {
             VStack(spacing: 6) {
                 if let making {
                     ProgressView(value: Double(making.done), total: Double(making.total)) {
-                        Text("Making images… \(making.done) of \(making.total)").font(.footnote)
+                        Text("Making images… \(making.done) of \(making.total)").font(.sans(.footnote))
                     }
                 }
                 Button {
@@ -289,7 +289,7 @@ private struct InstagramExport: View {
             Section {
                 if let c = instagram.connection, c.ready {
                     HStack(spacing: 10) {
-                        Text(c.username.prefix(1).uppercased()).font(.subheadline.bold())
+                        Text(c.username.prefix(1).uppercased()).font(.sans(.subheadline, .bold))
                             .frame(width: 30, height: 30).background(Theme.control, in: Circle())
                         Text(verbatim: "@\(c.username)").font(.mono(13))
                         Spacer()
@@ -410,14 +410,14 @@ private struct InstagramExport: View {
     private var foot: some View {
         VStack(spacing: 8) {
             if let step {
-                Text(step.label).font(.footnote).foregroundStyle(Theme.muted)
+                Text(step.label).font(.sans(.footnote)).foregroundStyle(Theme.muted)
             } else if let result {
                 HStack(spacing: 6) {
-                    Text(result.message).font(.footnote).foregroundStyle(result.ok ? Theme.text : Theme.danger)
-                    if let link = result.link { Button("View on Instagram") { openURL(link) }.font(.footnote) }
+                    Text(result.message).font(.sans(.footnote)).foregroundStyle(result.ok ? Theme.text : Theme.danger)
+                    if let link = result.link { Button("View on Instagram") { openURL(link) }.font(.sans(.footnote)) }
                 }
             }
-            if ready, let problem, !posting { Text(problem).font(.footnote).foregroundStyle(Theme.warn) }
+            if ready, let problem, !posting { Text(problem).font(.sans(.footnote)).foregroundStyle(Theme.warn) }
             if posting {
                 Button("Cancel") { task?.cancel() }
                     .buttonStyle(.bordered)
@@ -492,7 +492,7 @@ private struct PostPreview: View {
             FrameView(frame: frame, page: project.page, photos: project.photos, width: 240)
                 .overlay(alignment: .topTrailing) {
                     if count > 1 {
-                        Text(verbatim: "\(at + 1)/\(count)").font(.caption2.bold()).padding(.horizontal, 7).padding(.vertical, 3)
+                        Text(verbatim: "\(at + 1)/\(count)").font(.sans(.caption2, .bold)).padding(.horizontal, 7).padding(.vertical, 3)
                             .background(.black.opacity(0.6), in: Capsule()).foregroundStyle(.white).padding(8)
                     }
                 }
@@ -507,7 +507,7 @@ private struct PostPreview: View {
                 .frame(maxWidth: .infinity)
             }
             if !caption.isEmpty {
-                Text(caption).font(.footnote).lineLimit(3)
+                Text(caption).font(.sans(.footnote)).lineLimit(3)
             }
         }
         .frame(width: 240)
@@ -539,9 +539,9 @@ private struct StoryPreview: View {
                     }
                 }
                 HStack(spacing: 6) {
-                    Text(username.prefix(1).uppercased()).font(.caption2.bold())
+                    Text(username.prefix(1).uppercased()).font(.sans(.caption2, .bold))
                         .frame(width: 22, height: 22).background(Theme.control, in: Circle())
-                    Text(verbatim: username).font(.caption.weight(.semibold)).foregroundStyle(.white)
+                    Text(verbatim: username).font(.sans(.caption, .semibold)).foregroundStyle(.white)
                 }
             }
             .padding(10)

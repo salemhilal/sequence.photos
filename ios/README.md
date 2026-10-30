@@ -33,7 +33,9 @@ The Xcode project is generated and not committed: change `project.yml`, not the 
 - `Sequence/Instagram/`: sign-in (ASWebAuthenticationSession; the server's `mac` client,
   whose return URL `sequence-photos://instagram` the session catches), the connection in the
   Keychain, and posting (src/instagramPost.ts).
-- `Sequence/Views/`: the screens.
+- `Sequence/Views/`: the screens. `Theme.swift` has the colors and fonts.
+- `Sequence/Fonts/`: Inter Tight and IBM Plex Mono, as the web app has them (made from its
+  @fontsource packages by `node scripts/ios-fonts.mjs`; OFL).
 - `SequenceTests/`: unit tests, including the fixtures in `shared/fixtures/` that the web
   app's tests read too (`src/fixtures.test.ts`): both apps read and write them the same.
 - `SequenceUITests/`: UI tests (launched with `-uiTesting`: a fresh library each time, and no

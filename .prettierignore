@@ -8,3 +8,5 @@ src-tauri/gen
 server
 # Icon Composer writes its own JSON style (made by scripts/icons.mjs)
 assets/icon/AppIcon.icon
+# The native iPhone app's build output (xcodebuild -derivedDataPath build)
+ios/build

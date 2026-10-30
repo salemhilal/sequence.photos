@@ -203,7 +203,7 @@ struct CropView: View {
     private var panel: some View {
         VStack(spacing: 12) {
             Text(pinned ? "Crop pinned: drag to move the photo in it" : "Drag an edge or corner to crop · drag inside to move the crop")
-                .font(.footnote).foregroundStyle(Theme.muted)
+                .font(.sans(.footnote)).foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 16)
                 .contentTransition(.opacity)
@@ -215,7 +215,7 @@ struct CropView: View {
                             ratio = sh.ratio
                             if let r = sh.ratio { withAnimation(Theme.quick) { show(frameToRatio(crop, whole, r), whole) } }
                         }
-                        .font(.subheadline)
+                        .font(.sans(.subheadline))
                         .padding(.horizontal, 14).padding(.vertical, 7)
                         .background(on ? Theme.accent : Theme.control, in: Capsule())
                         .foregroundStyle(on ? Theme.onAccent : Theme.text)
@@ -251,7 +251,7 @@ struct CropView: View {
                 .tint(.white)
                 .foregroundStyle(.black)
             }
-            .font(.subheadline)
+            .font(.sans(.subheadline))
             .padding(.horizontal, 12)
         }
         .padding(.vertical, 12)

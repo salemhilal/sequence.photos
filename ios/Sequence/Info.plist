@@ -57,6 +57,16 @@
     <key>UIApplicationSupportsMultipleScenes</key>
     <false/>
   </dict>
+  <!-- The web app's fonts (Fonts/, made by scripts/ios-fonts.mjs). -->
+  <key>UIAppFonts</key>
+  <array>
+    <string>InterTight-Regular.ttf</string>
+    <string>InterTight-Medium.ttf</string>
+    <string>InterTight-SemiBold.ttf</string>
+    <string>InterTight-Bold.ttf</string>
+    <string>IBMPlexMono-Regular.ttf</string>
+    <string>IBMPlexMono-Medium.ttf</string>
+  </array>
   <key>UILaunchScreen</key>
   <dict/>
   <!-- Portrait only, for now: the editor's layout is built for it. -->

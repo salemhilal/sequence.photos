@@ -41,8 +41,49 @@ extension Color {
 }
 
 extension Font {
-    /** Numbers and sizes, as the web app's mono. */
-    static func mono(_ size: CGFloat) -> Font {
-        .system(size: size, design: .monospaced)
+    /**
+     * The web app's Inter Tight (bundled in Fonts/, by scripts/ios-fonts.mjs), at a text
+     * style's size and scaling with it. Named by weight: each weight is its own family.
+     */
+    static func sans(_ style: TextStyle, _ weight: Weight = .regular) -> Font {
+        let name =
+            switch weight {
+            case .bold, .heavy, .black: "InterTight-Bold"
+            case .semibold: "InterTight-SemiBold"
+            case .medium: "InterTight-Medium"
+            default: "InterTight-Regular"
+            }
+        return .custom(name, size: style.size, relativeTo: style)
+    }
+
+    /** Numbers and sizes, as the web app's mono (IBM Plex Mono). */
+    static func mono(_ size: CGFloat, _ weight: Weight = .regular) -> Font {
+        .custom(weight == .regular ? "IBMPlexMono-Regular" : "IBMPlexMono-Medium", fixedSize: size)
+    }
+}
+
+extension Font.TextStyle {
+    /** iOS's size for the style at the default text size. */
+    var size: CGFloat {
+        switch self {
+        case .largeTitle: 34
+        case .title: 28
+        case .title2: 22
+        case .title3: 20
+        case .body, .headline: 17
+        case .callout: 16
+        case .subheadline: 15
+        case .footnote: 13
+        case .caption: 12
+        default: 11
+        }
+    }
+}
+
+extension UIFont {
+    /** Inter Tight for UIKit's own text (navigation titles), scaling with the text size. */
+    static func sans(_ style: UIFont.TextStyle, _ name: String = "InterTight-SemiBold", size: CGFloat) -> UIFont {
+        guard let font = UIFont(name: name, size: size) else { return .preferredFont(forTextStyle: style) }
+        return UIFontMetrics(forTextStyle: style).scaledFont(for: font)
     }
 }
