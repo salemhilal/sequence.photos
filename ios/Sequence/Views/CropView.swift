@@ -111,6 +111,7 @@ struct CropView: View {
         ZStack(alignment: .topLeading) {
             Rectangle()
                 .strokeBorder(pinned ? Theme.accent : .white, lineWidth: pinned ? 2 : 1.5)
+                .shadow(color: .black.opacity(0.7), radius: 1)
                 .contentShape(Rectangle())
                 .gesture(insideDrag(scale: s))
                 .accessibilityLabel(pinned ? "Drag to move the photo in the crop" : "Drag to move the crop")
@@ -140,6 +141,8 @@ struct CropView: View {
         let vertical = h == .e || h == .w
         return RoundedRectangle(cornerRadius: 2).fill(.white)
             .frame(width: corner ? 14 : (vertical ? 5 : 22), height: corner ? 14 : (vertical ? 22 : 5))
+            // Seen against a white frame, or a pale photo.
+            .shadow(color: .black.opacity(0.7), radius: 1.5)
             .frame(width: 44, height: 44)
             .contentShape(Rectangle())
     }
@@ -227,7 +230,7 @@ struct CropView: View {
             .scrollIndicators(.hidden)
             .disabled(pinned)
             .opacity(pinned ? 0.4 : 1)
-            HStack(spacing: 4) {
+            HStack(spacing: 16) {
                 Button("Reset", systemImage: "arrow.counterclockwise") {
                     ratio = nil
                     withAnimation(Theme.quick) { show(whole, whole) }
@@ -252,7 +255,7 @@ struct CropView: View {
                 .foregroundStyle(.black)
             }
             .font(.sans(.subheadline))
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 16)
         }
         .padding(.vertical, 12)
         .background(Theme.panel)

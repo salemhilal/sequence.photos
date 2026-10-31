@@ -2,11 +2,12 @@ import SwiftUI
 
 /** A stored photo's shown copy, filling its box; grey while missing. */
 struct PhotoImage: View {
-    @Environment(AppModel.self) private var model
+    /** Optional: iOS draws lift and drag previews apart from the app, where it may be missing. */
+    @Environment(AppModel.self) private var model: AppModel?
     let id: String
 
     var body: some View {
-        if let img = model.library.photos.thumb(id) {
+        if let img = model?.library.photos.thumb(id) {
             Image(uiImage: img).resizable().interpolation(.high)
         } else {
             Rectangle().fill(Theme.faint)

@@ -8,6 +8,11 @@ enum AddTo: String {
     case frames, fill, desk
 }
 
+extension Ink {
+    /** The color that shows up against this one: a border's first color on a background. */
+    var opposite: Ink { self == .white ? .black : .white }
+}
+
 /** Instagram's portrait size: where a new sequence starts. */
 let newPage = PageSetup(w: 1080, h: 1350, unit: .px, pxPerUnit: 1)
 
@@ -184,21 +189,13 @@ extension Project {
         updatePlacement(photoId) { $0.rect = crop == nil ? whole : frame }
     }
 
-    /** A copy of a placed photo (`copy` its new id, its image already stored), just down and right of it, on top. */
+    /** A copy of a placed photo (`copy` its new id, its image already stored), on the desk, crop and all. */
     mutating func duplicatePhoto(_ photoId: String, as copy: String) {
-        guard var meta = photos[photoId], let at = placed(photoId) else { return }
+        guard var meta = photos[photoId], placed(photoId) != nil else { return }
         meta.id = copy
         meta.name = copyName(meta.name)
         photos[copy] = meta
-        var item = frames[at.frame].items[at.item]
-        let step = page.w / 40
-        item.photoId = copy
-        item.x += step
-        item.y += step
-        item.z = takeZ()
-        var all = frames
-        all[at.frame].items.append(item)
-        frames = all
+        toDesk(copy)
     }
 
     /** Delete frames, their photos going to the desk; the first is kept if all were asked for. */

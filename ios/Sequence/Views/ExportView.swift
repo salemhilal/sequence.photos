@@ -389,8 +389,6 @@ private struct InstagramExport: View {
                         .font(.mono(11))
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-            } else {
-                Section { } footer: { Text("Stories have no captions.") }
             }
         }
         .scrollContentBackground(.hidden)

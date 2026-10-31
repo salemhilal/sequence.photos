@@ -79,7 +79,7 @@ struct FrameSizeSheet: View {
                         NumberField(label: "px", value: setup.inset) { setup.inset = max(0, $0.rounded()) }
                             .frame(width: 110)
                     }
-                    Toggle("Center lines", isOn: $setup.center)
+                    Toggle("Center lines", isOn: $setup.center).tint(Theme.accent)
                 } header: {
                     Text("Guides")
                 } footer: {

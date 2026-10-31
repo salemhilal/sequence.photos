@@ -365,4 +365,46 @@ final class RenderTests: XCTestCase {
         XCTAssertEqual(ratioLabel(1.91), "1.91:1")
         XCTAssertEqual(hashtagCount("Walks #35mm #film and#not"), 2)
     }
+
+    func testDuplicatingAPlacedPhotoPutsTheCopyOnTheDesk() {
+        var p = Project.newSequence()
+        let photo = PhotoMeta(id: "a", name: "a.jpg", pxW: 1000, pxH: 1000, crop: Crop(x: 0, y: 0, w: 0.5, h: 0.5))
+        p.addPhotos([photo], to: .fill)
+        p.duplicatePhoto("a", as: "b")
+        XCTAssertEqual(p.frames[0].items.map(\.photoId), ["a"])
+        XCTAssertEqual(p.deskPhotos, ["b"])
+        XCTAssertEqual(p.photos["b"]?.name, "a copy.jpg")
+        XCTAssertEqual(p.photos["b"]?.crop, photo.crop)
+    }
+
+    func testRemovingAPhotoTakesItOffTheFrameOrDesk() {
+        var p = Project.newSequence()
+        p.addPhotos(
+            [PhotoMeta(id: "a", name: "a.jpg", pxW: 100, pxH: 100), PhotoMeta(id: "b", name: "b.jpg", pxW: 100, pxH: 100)],
+            to: .fill)
+        p.removePhoto("a")
+        XCTAssertNil(p.photos["a"])
+        XCTAssertNil(p.placed("a"))
+        p.toDesk("b")
+        p.removePhoto("b")
+        XCTAssertTrue(p.deskPhotos.isEmpty)
+        XCTAssertTrue(p.photos.isEmpty)
+    }
+
+    func testABordersFirstColorIsOppositeTheBackground() {
+        XCTAssertEqual(Ink.white.opposite, .black)
+        XCTAssertEqual(Ink.black.opposite, .white)
+    }
+
+    func testAddingPhotosWaitsForBothTheChoiceAndTheReading() {
+        var a = AddingPhotos(total: 1)
+        XCTAssertNil(a.ready)
+        a.to = .desk
+        XCTAssertNil(a.ready)
+        a.read = []
+        XCTAssertEqual(a.ready?.to, .desk)
+        var b = AddingPhotos(total: 1)
+        b.read = []
+        XCTAssertNil(b.ready)
+    }
 }

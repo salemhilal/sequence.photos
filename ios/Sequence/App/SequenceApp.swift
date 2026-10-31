@@ -18,7 +18,7 @@ struct SequenceApp: App {
                 .environment(model)
                 .font(.sans(.body))
                 .preferredColorScheme(.dark)
-                .tint(Theme.accent)
+                .tint(Theme.text)
         }
         .onChange(of: phase) { _, now in
             // Saved before iOS may end the app in the background.

@@ -15,29 +15,57 @@ private struct PanelRow<Content: View>: View {
     }
 }
 
-/** White or black, as swatches. */
+/** White or black, by name. */
 struct InkPicker: View {
     let label: String
     @Binding var ink: Ink
-    var showNames = true
 
     var body: some View {
         Picker(label, selection: $ink) {
             ForEach(Ink.allCases, id: \.self) { i in
-                Text(showNames ? (i == .white ? "White" : "Black") : (i == .white ? "○" : "●")).tag(i)
+                Text(i == .white ? "White" : "Black").tag(i)
             }
         }
         .pickerStyle(.segmented)
     }
 }
 
+/** White or black, as swatches, where there's no room for the names. */
+struct InkSwatches: View {
+    let label: String
+    let ink: Ink
+    let onPick: (Ink) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Ink.allCases, id: \.self) { i in
+                Button {
+                    onPick(i)
+                } label: {
+                    Circle().fill(Theme.ink(i))
+                        .overlay(Circle().strokeBorder(.white.opacity(0.35), lineWidth: 1))
+                        .frame(width: 22, height: 22)
+                        .padding(3)
+                        .overlay(Circle().strokeBorder(i == ink ? Theme.accent : .clear, lineWidth: 2))
+                        .frame(width: 40, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(label): \(i == .white ? "white" : "black")")
+                .accessibilityAddTraits(i == ink ? .isSelected : [])
+            }
+        }
+    }
+}
+
 /**
- * The desk, under the frame: photos not on any frame. Drag one up onto the frame to place it
- * (the tray scrolls sideways; a press lifts a photo).
+ * The desk, under the frame: photos not on any frame. Drag one up onto the frame to place it,
+ * or hold it for its menu, as an app on the Home Screen (the tray scrolls sideways).
  */
 struct DeskTray: View {
     @Environment(AppModel.self) private var model
     let store: ProjectStore
+    let frameId: String
     @State private var picking = false
     @State private var picked: [PhotosPickerItem] = []
     @State private var importing = false
@@ -54,22 +82,29 @@ struct DeskTray: View {
             }
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 8) {
-                    if ids.isEmpty {
-                        Text("Photos not on a frame wait here.")
-                            .font(.sans(.footnote)).foregroundStyle(Theme.muted)
-                            .frame(height: 108)
-                    }
                     ForEach(ids, id: \.self) { id in
-                        TrayPhoto(id: id, photo: store.project.photos[id])
+                        TrayPhoto(id: id, photo: store.project.photos[id]) {
+                            withAnimation(Theme.quick) { store.apply { $0.placeOnFrame(id, frameId) } }
+                        } onDelete: {
+                            withAnimation(Theme.quick) { store.apply { $0.removePhoto(id) } }
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
             }
             .scrollIndicators(.hidden)
             .frame(height: 108)
+            .overlay {
+                if ids.isEmpty {
+                    Text("Photos not on a frame wait here.")
+                        .font(.sans(.footnote)).foregroundStyle(Theme.muted)
+                }
+            }
             .accessibilityLabel("Desk")
-            Text("Drag a photo onto the frame to place it. Drag a placed photo down here to take it off.")
+            Text("Drag a photo onto the frame to place it, or hold it for more. Drag a placed photo down here to take it off.")
                 .font(.sans(.footnote)).foregroundStyle(Theme.muted)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, 16)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -88,23 +123,32 @@ struct DeskTray: View {
     }
 }
 
-/** A desk photo in the tray, as cropped; pressed, it lifts to be dragged onto the frame. */
+/** A desk photo in the tray, as cropped; held, it shows its menu, and can be dragged from there. */
 private struct TrayPhoto: View {
+    @Environment(AppModel.self) private var model
     let id: String
     let photo: PhotoMeta?
+    let onPlace: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         let size: (w: Double, h: Double) = photo.map(visibleSize) ?? (2, 3)
         let crop = photo.map(cropOf) ?? .whole
         let w = 108 * min(1.5, size.w / size.h)
         let whole = wholeRect(Rect(x: 0, y: 0, w: w, h: 108), crop)
-        PhotoImage(id: id)
+        let image = PhotoImage(id: id)
             .frame(width: whole.w, height: whole.h)
             .offset(x: whole.x, y: whole.y)
             .frame(width: w, height: 108, alignment: .topLeading)
             .clipShape(RoundedRectangle(cornerRadius: 4))
+        image
             .contentShape(.dragPreview, RoundedRectangle(cornerRadius: 4))
-            .draggable(PhotoDrag(id: id))
+            .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 4))
+            .draggable(PhotoDrag(id: id)) { image.environment(model) }
+            .contextMenu {
+                Button("Place on this frame", systemImage: "square.and.arrow.down", action: onPlace)
+                Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
+            }
             .accessibilityLabel(photo?.name ?? "Photo")
     }
 }
@@ -150,25 +194,28 @@ struct PhotoPanel: View {
     @Environment(AppModel.self) private var model
     let store: ProjectStore
     let item: Placement
+    /** The frame's background: a border starts as its opposite. */
+    let background: Ink
     @Binding var editing: Editing
+    @Binding var adjustingBorder: Bool
     let onCrop: () -> Void
     @State private var lock = true
     @State private var fitting = false
-    /** The color a border gets: its own, or the one last picked. */
-    @State private var picked: Ink = .white
+    /** The color last picked here, for a border that's been taken off. */
+    @State private var picked: Ink?
 
     var body: some View {
         let p = store.project
         let id = item.photoId
         let border = item.border?.width ?? 0
         let maxBorder = (p.page.w * maxBorderShare).rounded()
-        let color = item.border?.color ?? picked
+        let color = item.border?.color ?? picked ?? background.opposite
         VStack(alignment: .leading, spacing: 4) {
             PanelRow {
                 Text(p.photos[id]?.name ?? "Photo").font(.mono(12, .medium)).lineLimit(1).truncationMode(.middle)
                 Spacer()
                 if let photo = p.photos[id], let note = enlargedNote(photo, item, p.page) {
-                    Text(note).font(.sans(.footnote)).foregroundStyle(Theme.warn).lineLimit(1)
+                    Text(note).font(.sans(.footnote)).foregroundStyle(Theme.warn).lineLimit(1).layoutPriority(1)
                 }
             }
             PanelRow {
@@ -179,8 +226,10 @@ struct PhotoPanel: View {
                 Button {
                     lock.toggle()
                 } label: {
-                    Image(systemName: lock ? "link" : "link.badge.plus")
+                    Image(systemName: lock ? "lock" : "lock.open")
                         .foregroundStyle(lock ? Theme.accent : Theme.muted)
+                        .frame(width: 28, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Keep proportions")
                 .accessibilityAddTraits(lock ? .isSelected : [])
@@ -194,23 +243,27 @@ struct PhotoPanel: View {
                     in: 0...max(1, maxBorder), step: 1
                 ) { began in
                     if began { store.begin() } else { store.end() }
+                    withAnimation(Theme.quick) { adjustingBorder = began }
                 }
                 .accessibilityLabel("Border width")
                 Text(verbatim: "\(Int(border.rounded())) px").font(.mono(12)).frame(width: 46, alignment: .trailing)
-                InkPicker(
-                    label: "Border color", ink: Binding(get: { color }, set: { v in
-                        picked = v
-                        let w = border > 0 ? border : (p.page.w / 90).rounded()
-                        store.apply { $0.setBorder(id, PhotoBorder(width: w, color: v)) }
-                    }), showNames: false
-                )
-                .frame(width: 84)
+                InkSwatches(label: "Border color", ink: color) { v in
+                    picked = v
+                    let w = border > 0 ? border : (p.page.w / 90).rounded()
+                    store.apply { $0.setBorder(id, PhotoBorder(width: w, color: v)) }
+                }
             }
             HStack(spacing: 0) {
                 tool("Crop", "crop", action: onCrop)
                 tool("Fit", "arrow.up.left.and.arrow.down.right") { fitting = true }
                 tool("Center", "scope") { withAnimation(Theme.quick) { store.apply { $0.centerPhoto(id) } } }
                 tool("Duplicate", "plus.square.on.square") { duplicate(id) }
+                tool("Delete", "trash", color: Theme.danger) {
+                    withAnimation(Theme.quick) {
+                        store.apply { $0.removePhoto(id) }
+                        editing = .none
+                    }
+                }
             }
             .padding(.horizontal, 8)
             .padding(.top, 4)
@@ -225,7 +278,7 @@ struct PhotoPanel: View {
         }
     }
 
-    private func tool(_ title: String, _ icon: String, action: @escaping () -> Void) -> some View {
+    private func tool(_ title: String, _ icon: String, color: Color = Theme.text, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: icon).font(.system(size: 20)).frame(height: 26)
@@ -235,7 +288,7 @@ struct PhotoPanel: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Theme.text)
+        .foregroundStyle(color)
     }
 
     private func setBox(_ key: WritableKeyPath<Placement, Double>, _ v: Double) {
@@ -264,7 +317,8 @@ struct PhotoPanel: View {
         guard model.library.photos.copy(id, to: copy) else { return }
         withAnimation(Theme.quick) {
             store.apply { $0.duplicatePhoto(id, as: copy) }
-            editing = .photo(copy)
+            // Back to the desk, where the copy is.
+            editing = .none
         }
     }
 }

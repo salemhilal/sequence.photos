@@ -1,6 +1,34 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/** Where in the drawer a placed photo is being dragged to: its left half, or its right. */
+enum DrawerDrop {
+    case desk, delete
+}
+
+/** The show-guides button's icon: a grid, with a slash through it when they're hidden. */
+struct GridIcon: View {
+    let off: Bool
+
+    var body: some View {
+        Image(systemName: "squareshape.split.3x3")
+            .overlay {
+                if off {
+                    GeometryReader { g in
+                        let line = Path { p in
+                            p.move(to: CGPoint(x: -1, y: -1))
+                            p.addLine(to: CGPoint(x: g.size.width + 1, y: g.size.height + 1))
+                        }
+                        // Cut out around the slash, so it reads against the grid's lines.
+                        line.stroke(.black, style: .init(lineWidth: 5, lineCap: .round)).blendMode(.destinationOut)
+                        line.stroke(.foreground, style: .init(lineWidth: 1.7, lineCap: .round))
+                    }
+                }
+            }
+            .compositingGroup()
+    }
+}
+
 /** What's selected in the editor, and so what the drawer shows. */
 enum Editing: Hashable {
     case none
@@ -29,7 +57,8 @@ extension UTType {
 
 /**
  * One frame, edited: photos move and resize (by their corners) with snapping, the desk's
- * photos come on by dragging, and go back by dragging into the drawer. Pinch zooms. Frames
+ * photos come on by dragging, and dragged into the drawer they go back or are deleted. Pinch
+ * zooms. Frames
  * page sideways (a swipe on the background, or the pager); the bars stay put. Below, in a
  * drawer: the desk, or what's selected (the frame, or a photo).
  */
@@ -61,8 +90,10 @@ private struct Editor: View {
     @State private var zoomed = false
     /** Where the drawer's top is on screen, for dropping photos back on the desk. */
     @State private var drawerTop: CGFloat = .infinity
-    /** A placed photo being dragged over the drawer. */
-    @State private var overDrawer = false
+    /** Where in the drawer a placed photo is being dragged, if it is. */
+    @State private var overDrawer: DrawerDrop?
+    /** A border's thickness being dragged: the photo shows plain, to judge it. */
+    @State private var adjustingBorder = false
 
     init(store: ProjectStore, startFrame: String) {
         self.store = store
@@ -113,9 +144,12 @@ private struct Editor: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("Undo", systemImage: "arrow.uturn.backward") { store.undo() }.disabled(!store.canUndo)
                 Button("Redo", systemImage: "arrow.uturn.forward") { store.redo() }.disabled(!store.canRedo)
-                Button(guides ? "Hide guides" : "Show guides", systemImage: guides ? "eye" : "eye.slash") {
+                Button {
                     guides.toggle()
+                } label: {
+                    Label { Text(guides ? "Hide guides" : "Show guides") } icon: { GridIcon(off: !guides) }
                 }
+                .accessibilityLabel(guides ? "Hide guides" : "Show guides")
                 Menu("More", systemImage: "ellipsis.circle") {
                     Button("Preview", systemImage: "play") { previewAt = index }
                     Button("Frame size…", systemImage: "aspectratio") { sizing = true }
@@ -128,12 +162,14 @@ private struct Editor: View {
     /** Every frame, side by side, paging: only the frames slide. */
     private var pages: some View {
         GeometryReader { geo in
+            ScrollViewReader { proxy in
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 0) {
                     ForEach(frames) { f in
                         FrameCanvas(
                             store: store, frame: f, editing: f.id == current ? $editing : .constant(.none),
-                            guides: guides, drawerTop: drawerTop, overDrawer: $overDrawer, zoomed: $zoomed
+                            guides: guides, drawerTop: drawerTop, overDrawer: $overDrawer, zoomed: $zoomed,
+                            plain: f.id == current && adjustingBorder
                         )
                         .frame(width: geo.size.width, height: geo.size.height)
                         .id(f.id)
@@ -146,6 +182,12 @@ private struct Editor: View {
             .scrollIndicators(.hidden)
             .scrollDisabled(zoomed)
             .overlay(alignment: .bottom) { pager }
+            // A scroll position set before the first layout moves nothing: go there too.
+            .onAppear {
+                let start = current
+                DispatchQueue.main.async { proxy.scrollTo(start, anchor: .leading) }
+            }
+            }
         }
         .onChange(of: current) { _, _ in
             editing = .none
@@ -201,14 +243,17 @@ private struct Editor: View {
                     switch editing {
                     case let .photo(id):
                         if let item = frame.items.first(where: { $0.photoId == id }) {
-                            PhotoPanel(store: store, item: item, editing: $editing) {
+                            PhotoPanel(
+                                store: store, item: item, background: frame.background ?? .white, editing: $editing,
+                                adjustingBorder: $adjustingBorder
+                            ) {
                                 withAnimation(Theme.quick) { cropping = id }
                             }
                         }
                     case .frame:
                         FramePanel(store: store, frame: frame, index: index)
                     case .none:
-                        DeskTray(store: store)
+                        DeskTray(store: store, frameId: frame.id)
                     }
                 }
                 .id(editing)
@@ -219,13 +264,15 @@ private struct Editor: View {
         .frame(maxWidth: .infinity)
         .background(Theme.panel)
         .overlay {
-            if overDrawer {
-                Text("Put it back on the desk")
-                    .font(.sans(.subheadline, .medium))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Theme.panel.opacity(0.92))
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.accent, style: .init(lineWidth: 2, dash: [6])).padding(8))
-                    .allowsHitTesting(false)
+            if let overDrawer {
+                HStack(spacing: 8) {
+                    dropZone("To the desk", "tray.and.arrow.down", color: Theme.accent, on: overDrawer == .desk)
+                    dropZone("Delete", "trash", color: Theme.danger, on: overDrawer == .delete)
+                }
+                .padding(8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Theme.panel)
+                .allowsHitTesting(false)
             }
         }
         .background(
@@ -236,6 +283,18 @@ private struct Editor: View {
             }
         )
         .animation(Theme.drawer, value: editing)
+    }
+
+    /** One half of the drawer, while a photo's dragged over it; lit when it would land there. */
+    private func dropZone(_ title: String, _ icon: String, color: Color, on: Bool) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon).font(.system(size: 22))
+            Text(title).font(.sans(.subheadline, .medium))
+        }
+        .foregroundStyle(on ? color : Theme.muted)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(on ? color.opacity(0.14) : .clear, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(on ? color : Theme.faint, style: .init(lineWidth: on ? 2 : 1, dash: on ? [] : [6])))
     }
 }
 
@@ -253,8 +312,10 @@ private struct FrameCanvas: View {
     @Binding var editing: Editing
     let guides: Bool
     let drawerTop: CGFloat
-    @Binding var overDrawer: Bool
+    @Binding var overDrawer: DrawerDrop?
     @Binding var zoomed: Bool
+    /** No selection drawn on the photo (its border's being adjusted). */
+    let plain: Bool
 
     @State private var zoom = 1.0
     @State private var pan = CGSize.zero
@@ -289,6 +350,7 @@ private struct FrameCanvas: View {
                         }
                     }
                     .gesture(zoomPan, including: zoom > 1 ? .all : .none)
+                    .accessibilityIdentifier("canvas-\(frame.id)")
 
                 FrameView(frame: frame, page: page, photos: project.photos, width: page.w * scale, soft: true)
                     .shadow(color: .black.opacity(0.35), radius: 6, y: 2)
@@ -306,14 +368,14 @@ private struct FrameCanvas: View {
                     Color.clear.contentShape(Rectangle())
                         .frame(width: r.w * scale, height: r.h * scale)
                         .offset(x: left + r.x * scale, y: top + r.y * scale)
-                        .highPriorityGesture(moveGesture(item, layout: layout))
+                        .highPriorityGesture(moveGesture(item, layout: layout, width: geo.size.width))
                         .accessibilityElement()
                         .accessibilityLabel(project.photos[item.photoId]?.name ?? "Photo")
                         .accessibilityAddTraits(.isButton)
                         .accessibilityAction { editing = .photo(item.photoId) }
                 }
 
-                if let id = editing.photoId, let item = frame.items.first(where: { $0.photoId == id }) {
+                if !plain, let id = editing.photoId, let item = frame.items.first(where: { $0.photoId == id }) {
                     selection(item, layout: layout)
                 }
             }
@@ -385,8 +447,11 @@ private struct FrameCanvas: View {
         .offset(x: layout.left + r.x * s, y: layout.top + r.y * s)
     }
 
-    private func moveGesture(_ item: Placement, layout: CanvasLayout) -> some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .global)
+    private func moveGesture(_ item: Placement, layout: CanvasLayout, width: Double) -> some Gesture {
+        let dropAt = { (at: CGPoint) -> DrawerDrop? in
+            at.y < drawerTop ? nil : at.x < width / 2 ? .desk : .delete
+        }
+        return         DragGesture(minimumDistance: 0, coordinateSpace: .global)
             .onChanged { v in
                 if moving == nil {
                     moving = (item.photoId, item.rect, false)
@@ -413,20 +478,23 @@ private struct FrameCanvas: View {
                     }
                     p.raise(m.id)
                 }
-                overDrawer = v.location.y >= drawerTop
+                let over = dropAt(v.location)
+                if over != overDrawer { withAnimation(Theme.quick) { overDrawer = over } }
             }
             .onEnded { v in
                 defer {
                     moving = nil
                     hit = nil
-                    overDrawer = false
+                    overDrawer = nil
                 }
                 guard let m = moving, m.moved else { return }
-                if v.location.y >= drawerTop {
-                    // Dropped on the drawer: back to the desk, as part of the same step.
+                if let drop = dropAt(v.location) {
+                    // Dropped on the drawer: off the frame, as part of the same step.
                     store.preview { p in
-                        p.updatePlacement(m.id) { $0.rect = Rect(x: m.start.x, y: m.start.y, w: m.start.w, h: m.start.h) }
-                        p.toDesk(m.id)
+                        switch drop {
+                        case .desk: p.toDesk(m.id)
+                        case .delete: p.removePhoto(m.id)
+                        }
                     }
                     store.end()
                     withAnimation(Theme.quick) { editing = .none }

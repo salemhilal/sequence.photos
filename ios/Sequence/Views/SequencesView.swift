@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 /** Sequences: every project on the phone, most recently changed first. */
@@ -7,6 +8,9 @@ struct SequencesView: View {
     @State private var renaming: LibraryEntry?
     @State private var newName = ""
     @State private var deleting: LibraryEntry?
+    @State private var creating = false
+    /** The sequence just made: opened once the sheet has gone. */
+    @State private var made: String?
 
     var body: some View {
         List {
@@ -36,17 +40,23 @@ struct SequencesView: View {
                 ContentUnavailableView {
                     Label("No sequences yet", systemImage: "square.stack")
                 } actions: {
-                    Button("New sequence", systemImage: "plus", action: create).buttonStyle(.bordered)
+                    Button("New sequence", systemImage: "plus", action: { creating = true }).buttonStyle(.bordered)
                 }
             }
         }
         .navigationTitle("Sequences")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("New sequence", systemImage: "plus", action: create)
+                Button("New sequence", systemImage: "plus", action: { creating = true })
             }
         }
         .onAppear { model.close() }
+        .sheet(isPresented: $creating, onDismiss: {
+            if let made { path.append(.frames(made)) }
+            made = nil
+        }) {
+            NewSequenceSheet { made = $0 }
+        }
         .alert("Rename sequence", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Name", text: $newName)
             Button("Cancel", role: .cancel) {}
@@ -60,13 +70,68 @@ struct SequencesView: View {
         }
     }
 
-    private func create() {
-        if let id = model.create() { path.append(.frames(id)) }
-    }
-
     private func startRename(_ e: LibraryEntry) {
         newName = e.name
         renaming = e
+    }
+}
+
+/** A new sequence: its name, and photos to start with. */
+private struct NewSequenceSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let onMade: (String) -> Void
+    @State private var name = ""
+    @State private var photos: [PhotosPickerItem] = []
+    @State private var to = AddTo.fill
+    @FocusState private var naming: Bool
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Name") {
+                    TextField(untitled, text: $name)
+                        .focused($naming)
+                        .submitLabel(.done)
+                        .accessibilityLabel("Name")
+                }
+                Section("Photos") {
+                    PhotosPicker(selection: $photos, matching: .images, photoLibrary: .shared()) {
+                        HStack {
+                            Text(photos.isEmpty ? "Choose photos" : "\(photos.count) \(photos.count == 1 ? "photo" : "photos") chosen")
+                            Spacer()
+                            Image(systemName: "photo.on.rectangle").foregroundStyle(Theme.muted)
+                        }
+                    }
+                    if !photos.isEmpty {
+                        Picker("Put them", selection: $to) {
+                            Text(photos.count == 1 ? "On a frame" : "A frame for each").tag(AddTo.fill)
+                            Text("On the desk").tag(AddTo.desk)
+                        }
+                        .pickerStyle(.segmented)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets())
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.panel)
+            .navigationTitle("New sequence")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        if let id = model.create(name: name, photos: photos, to: to) { onMade(id) }
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .onAppear { naming = true }
     }
 }
 

@@ -637,22 +637,29 @@ In the iOS Simulator or on a phone, from `ios/` (see `ios/README.md`). _(unit)_ 
 `ios/SequenceTests`, _(UI)_ items `ios/SequenceUITests`; the rest is by hand. The web-view
 app above is the reference: the native one should do the same, natively.
 
-- [ ] Sequences: New starts one empty 1080 × 1350 frame _(UI)_; the list shows each
+- [ ] Sequences: New asks for a name and photos to start with (a frame for each, or the
+      desk), then starts at 1080 × 1350 _(UI for the name)_; the list shows each
       sequence's first three frames, its frame count and size, and when it was edited; a
       long press or a swipe renames, duplicates (photos and all), or deletes (after asking).
 - [ ] Frames: + adds photos from the library (their names kept), a photo from the camera,
-      or an empty frame _(UI)_; the add choices (a frame each, fill the empty first, the
-      desk) _(unit)_; a press lifts a frame (with the selection, if it's chosen) and drops it
-      in a new place; Select duplicates or deletes several (their photos go to the desk).
-- [ ] The editor: frames page with a swipe on the background or ‹ ›, and only the frame
+      or an empty frame _(UI)_; where photos go is asked as soon as they're picked, while
+      they load, and they're added when both are done _(unit)_; the add choices (a frame
+      each, fill the empty first, the desk) _(unit)_; a frame held shows its menu (preview,
+      duplicate, delete: its photos go to the desk) _(UI)_, and dragged it moves (with the
+      selection, if it's chosen); Select duplicates or deletes several.
+- [ ] The editor: opens on the frame tapped, on screen and in the counter _(UI)_; the grid
+      button shows and hides the guides; frames page with a swipe on the background or ‹ ›, and only the frame
       slides (the bars stay); photos move and snap (by their outer edge) and resize from
       their corners _(unit for the math)_; pinch zooms the frame, and a drag pans it while
-      zoomed; a press on a desk photo lifts it, and it lands centered where it's dropped on
-      the frame; a placed photo dragged into the drawer goes back to the desk; the drawer's
+      zoomed; a desk photo held shows its menu (place on this frame, delete), and dragged it
+      lands centered where it's dropped on the frame; a placed photo dragged into the
+      drawer's left half goes back to the desk, into its right half is deleted, and undo
+      brings it back; the drawer's
       handle tucks the tools away, and the frame grows to fill the space smoothly.
 - [ ] Panels: the frame's background (white, black, every frame); a photo's X, Y, W, H
-      (proportions kept or not), border (slider, white or black), Crop, Fit (the frame, the
-      border guide), Center, Duplicate; the enlarged warning shows on the photo and in its
+      (proportions kept or not), border (slider, white or black; starts opposite the
+      background; the handles hide while the slider's dragged), Crop, Fit (the frame, the
+      border guide), Center, Duplicate (the copy goes to the desk _(unit)_), Delete; the enlarged warning shows on the photo and in its
       panel.
 - [ ] Crop: handles, moving the crop, shapes, Reset, the pin (the crop holds; the photo
       moves behind it); Done is one undo step, Cancel puts it back _(unit for the math)_.
@@ -665,7 +672,8 @@ app above is the reference: the native one should do the same, natively.
       backgrounds) at the frame's size.
 - [ ] Export, Instagram: connect (Instagram's sign-in in a sheet, back in the app),
       reconnect when it expires, disconnect; slides above the preview; feed (a carousel,
-      caption and hashtag counts) and stories (previewed as a story); crop or expand for
+      caption and hashtag counts) and stories (previewed as a story, with no caption box or
+      text); crop or expand for
       shapes Instagram doesn't take _(unit)_; posting shows each step, can be cancelled until
       it publishes, and links to the post.
 - [ ] Saved: a change is saved a moment later and when the app goes to the background;

@@ -8,6 +8,24 @@ struct PendingPhotos: Identifiable {
     var failed: Int
 }
 
+/**
+ * Photos on their way in: being read, and asked about at the same time. They're added once
+ * they're read and it's known where they go, whichever comes last.
+ */
+struct AddingPhotos: Equatable {
+    let id = UUID()
+    var total: Int
+    var done = 0
+    var to: AddTo?
+    var read: [PhotoMeta]?
+
+    /** What to add and where, when both are known. */
+    var ready: (photos: [PhotoMeta], to: AddTo)? {
+        guard let read, let to else { return nil }
+        return (read, to)
+    }
+}
+
 /** Read photos chosen in the picker and store them; returns those read, and how many couldn't be. */
 @MainActor
 func importPicked(_ items: [PhotosPickerItem], into store: PhotoStore, progress: (Int, Int) -> Void) async
@@ -16,6 +34,7 @@ func importPicked(_ items: [PhotosPickerItem], into store: PhotoStore, progress:
     var photos: [PhotoMeta] = []
     var failed = 0
     for (n, item) in items.enumerated() {
+        if Task.isCancelled { break }
         progress(n, items.count)
         if let file = try? await item.loadTransferable(type: PickedFile.self),
             let meta = await Task.detached(operation: { () -> PhotoMeta? in

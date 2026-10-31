@@ -12,6 +12,7 @@ struct PreviewView: View {
         let frames = project.frames
         ZStack(alignment: .top) {
             Color.black.ignoresSafeArea()
+            ScrollViewReader { proxy in
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 0) {
                     ForEach(Array(frames.enumerated()), id: \.offset) { i, f in
@@ -29,6 +30,12 @@ struct PreviewView: View {
             .scrollIndicators(.hidden)
             .onTapGesture { withAnimation(Theme.quick) { chrome.toggle() } }
             .accessibilityLabel("Preview")
+            // A scroll position set before the first layout moves nothing: go there too.
+            .onAppear {
+                at = start
+                DispatchQueue.main.async { proxy.scrollTo(start, anchor: .leading) }
+            }
+            }
             if chrome {
                 HStack {
                     Button {
@@ -51,6 +58,5 @@ struct PreviewView: View {
             }
         }
         .statusBarHidden(!chrome)
-        .onAppear { at = start }
     }
 }

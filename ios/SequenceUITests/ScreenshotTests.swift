@@ -24,11 +24,11 @@ final class ScreenshotTests: XCTestCase {
         XCTAssertTrue(sequence.waitForExistence(timeout: 10))
         sequence.tap()
 
-        XCTAssertTrue(app.images["Frame 1"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Frame 1"].firstMatch.waitForExistence(timeout: 5))
         try shot("1-frames")
 
         // The editor, with a photo waiting on the desk.
-        app.images["Frame 1"].tap()
+        app.buttons["Frame 1"].firstMatch.tap()
         XCTAssertTrue(app.buttons["Next frame"].waitForExistence(timeout: 5))
         try shot("2-editor")
 
@@ -55,7 +55,7 @@ final class ScreenshotTests: XCTestCase {
         XCTAssertTrue(app.buttons["Close the preview"].waitForNonExistence(timeout: 5))
 
         // Back on the frames' grid, for its export button.
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["BackButton"].firstMatch.tap()
         XCTAssertTrue(app.buttons["Export"].waitForExistence(timeout: 5))
         app.buttons["Export"].tap()
         XCTAssertTrue(app.buttons["Close"].waitForExistence(timeout: 5))

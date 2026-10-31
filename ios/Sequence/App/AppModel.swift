@@ -1,5 +1,14 @@
 import Foundation
 import Observation
+import PhotosUI
+import SwiftUI
+
+/** Photos chosen when making a sequence, and where they go. */
+struct StartingPhotos {
+    let sequence: String
+    let items: [PhotosPickerItem]
+    let to: AddTo
+}
 
 /** The app's state: the list of sequences, and the one open, if any. */
 @Observable
@@ -10,6 +19,8 @@ final class AppModel {
     private(set) var store: ProjectStore?
     /** Something went wrong, to say. */
     var notice: String?
+    /** Photos chosen for a sequence just made, which its frames screen brings in. */
+    var startingPhotos: StartingPhotos?
 
     init(library: Library) {
         self.library = library
@@ -42,11 +53,13 @@ final class AppModel {
         library.collectGarbage()
     }
 
-    /** Start a new sequence; returns its id. */
-    func create() -> String? {
+    /** Start a new sequence, with photos to bring in once it's open; returns its id. */
+    func create(name: String, photos: [PhotosPickerItem] = [], to: AddTo = .fill) -> String? {
         do {
-            let id = try library.create()
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let id = try library.create(name: trimmed.isEmpty ? untitled : trimmed)
             refresh()
+            if !photos.isEmpty { startingPhotos = StartingPhotos(sequence: id, items: photos, to: to) }
             return id
         } catch {
             notice = "Couldn’t start a sequence: \(error.localizedDescription)"
