@@ -2,7 +2,10 @@ import { cropPixels } from './crop';
 import { intersects, pageRect, pageSides, spreadLeft, spreadWidth, type Rect } from './geometry';
 import type { PhotoId } from './ids';
 import { allSpreads } from './spreads';
-import type { PageSide, PhotoMeta, Project, Sheet, Spread } from './types';
+import type { Ink, PageSide, PhotoBorder, PhotoMeta, Project, Sheet, Spread } from './types';
+
+/** How an ink is drawn. */
+export const INK_COLOR: Record<Ink, string> = { white: '#ffffff', black: '#000000' };
 
 /**
  * What exports draw, worked out apart from drawing it. A plan says, for one output image,
@@ -58,12 +61,16 @@ export interface Draw {
   /** The whole placed photo, in output pixels, including what's off the image. */
   placed: Rect;
   z: number;
+  /** Its border, around `placed`, in output pixels. */
+  border?: PhotoBorder;
 }
 
 export interface PagePlan {
   /** The image's size, in whole pixels. */
   pxW: number;
   pxH: number;
+  /** What's behind the photos. */
+  background: Ink;
   /** Output pixels per unit: the page's, or less. */
   pxPerUnit: number;
   /** Back to front. Photos entirely off the image are left out. */
@@ -99,6 +106,7 @@ export function planPage(
     const photo = photos[item.photoId];
     if (!photo) continue;
     const placed = { x: (item.x - region.x) * kx, y: (item.y - region.y) * ky, w: item.w * kx, h: item.h * ky };
+    const border = item.border && { ...item.border, width: item.border.width * kx };
     const x1 = Math.max(0, placed.x);
     const y1 = Math.max(0, placed.y);
     const x2 = Math.min(pxW, placed.x + placed.w);
@@ -110,9 +118,9 @@ export function planPage(
     const sx = crop.w / placed.w;
     const sy = crop.h / placed.h;
     const src = { x: crop.x + (x1 - placed.x) * sx, y: crop.y + (y1 - placed.y) * sy, w: dst.w * sx, h: dst.h * sy };
-    draws.push({ photoId: item.photoId, src, dst, placed, z: item.z });
+    draws.push({ photoId: item.photoId, src, dst, placed, z: item.z, ...(border ? { border } : {}) });
   }
-  return { pxW, pxH, pxPerUnit: k, draws };
+  return { pxW, pxH, background: page.spread.background ?? 'white', pxPerUnit: k, draws };
 }
 
 /** The largest pxPerUnit, no more than the plan's, whose image has at most `maxPixels`. */

@@ -98,7 +98,7 @@ function webSecurityHeaders(mode: string): Plugin {
 }
 
 export default defineConfig(({ mode }) => {
-  // `--mode app` builds for the native Mac app (see src-tauri), which has no service worker.
+  // `--mode app` builds for the native Mac app (see src-tauri), which has no service worker;
   const app = mode === 'app';
   let resolved: ResolvedConfig;
   return {

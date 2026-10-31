@@ -95,6 +95,8 @@ const migrations: Record<number, (project: Raw) => Raw> = {
   4: (project) => project,
   /** 5 → 6: photos can be cropped; a project from before has none cropped. */
   5: (project) => project,
+  /** 6 → 7: pages can have a background color, and photos a border; a project from before has neither. */
+  6: (project) => project,
 };
 
 export class NewerProjectError extends Error {

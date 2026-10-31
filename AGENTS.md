@@ -3,7 +3,7 @@
 Sequence is a tool for sequencing photos into a book (spreads of facing pages) or a run of
 frames (slides, an Instagram carousel), and exporting them as a PDF, images, an InDesign file,
 or an Instagram post. It's a React + TypeScript web app at sequence.photos, also shipped as a
-Tauri Mac app (WebKit) on the App Store. Instagram posting goes through a Cloudflare Worker in
+Tauri Mac app (WebKit) on the App Store. The iPhone app is native (SwiftUI, in `ios/`), frames only. Instagram posting goes through a Cloudflare Worker in
 `server/`, a separate package with its own README, tests, and deploy.
 
 What the app does, from the user's side, is in `docs/agent-context/` by topic (the product,
@@ -22,6 +22,7 @@ npm run test:app       # Mac app end to end (builds Tauri; a few minutes)
 npm run check          # secrets, format, lint, types, unit tests in one
 npm run app:dev        # the Mac app, reloading on changes
 npm run server:check   # the server's checks (server:dev, server:test, …)
+# the native iPhone app: cd ios && xcodegen generate, then xcodebuild test -scheme Sequence (ios/README.md)
 ```
 
 Run tests, build, lint, and format before calling work done; run `test:e2e` when the UI's
@@ -42,7 +43,10 @@ when the Mac app, saving, or exports change. The first `test:e2e` needs
   crop mode is `src/components/CropFrame.tsx`.
 - `src/renderPlan.ts`: what every export draws, in output pixels; `src/pdf.ts`,
   `src/rasterExport.ts`, `src/idml.ts`, `src/instagramImage.ts` draw from it.
-- `src/platform/`: web vs Mac differences (`#platform` import).
+- `src/platform/`: web vs Mac vs iPhone differences (`#platform` import).
+- `ios/`: the native iPhone app (SwiftUI; `ios/README.md`). Its model reads and writes the
+  same project JSON; `shared/fixtures/` are projects both apps' tests read, so a change to
+  `src/schema.ts` means changing `ios/Sequence/Model/Project.swift` and the fixtures too.
 - `docs/testing.md`: the manual and automated checklist. Update it with any behavior change.
 - `docs/proposals/`: design proposals and plans (layout model, print and color).
 - `site/`: the website's pages (landing, `app/`, privacy, support), the landing page's code

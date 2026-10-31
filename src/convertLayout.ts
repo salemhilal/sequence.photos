@@ -44,7 +44,7 @@ export function rearrange(project: Project, arrangement: Arrangement): Project {
     items.map((p) => ({ ...p, x: p.x - shift - (toLeftPage ? from.pageW : 0) }));
 
   if (arrangement === 'frames') {
-    const pages: { id: Frame['id']; items: Placement[] }[] = [];
+    const pages: { id: Frame['id']; items: Placement[]; background?: Frame['background'] }[] = [];
     for (const spread of allSpreads(project)) {
       const sides = pageSides(spread.kind);
       for (const [i, side] of sides.entries()) {
@@ -54,10 +54,14 @@ export function rearrange(project: Project, arrangement: Arrangement): Project {
           return sides.length === 1 || at === side;
         });
         const shift = side === 'left' ? pageRect('left', from).x : 0;
-        pages.push({ id: i === 0 ? spread.id : newSpreadId(), items: fit(mine, shift, false) });
+        pages.push({
+          id: i === 0 ? spread.id : newSpreadId(),
+          items: fit(mine, shift, false),
+          ...(spread.background ? { background: spread.background } : {}),
+        });
       }
     }
-    const frames = pages.map((p): Frame => ({ kind: 'frame', id: p.id, items: p.items }));
+    const frames = pages.map((p): Frame => ({ kind: 'frame', ...p }));
     // A book always has at least its first and last pages.
     if (!hasFrames(frames)) return project;
     return { ...project, layout: { kind: 'frames', frames } };
@@ -99,7 +103,15 @@ export function scaleProject(project: Project, f: number, unit: Unit, pxPerUnit:
       ? { ...g, inset: g.inset * f }
       : { ...g, top: g.top * f, bottom: g.bottom * f, inside: g.inside * f, outside: g.outside * f },
   );
-  const scaled = (items: Placement[]) => items.map((p) => ({ ...p, x: p.x * f, y: p.y * f, w: p.w * f, h: p.h * f }));
+  const scaled = (items: Placement[]) =>
+    items.map((p) => ({
+      ...p,
+      x: p.x * f,
+      y: p.y * f,
+      w: p.w * f,
+      h: p.h * f,
+      ...(p.border ? { border: { ...p.border, width: p.border.width * f } } : {}),
+    }));
   const page: PageSetup = { w: project.page.w * f, h: project.page.h * f, unit, pxPerUnit };
   return {
     ...project,

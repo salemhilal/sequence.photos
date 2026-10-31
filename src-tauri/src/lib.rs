@@ -1,6 +1,9 @@
 // The Mac app: a native window around the same web app as the website, plus what
 // browsers can't do: the plugins and project files (see src/platform/macos/).
 
+// The project files' commands are the Mac app's alone (see `handlers`).
+#![cfg_attr(not(target_os = "macos"), allow(dead_code, unused_imports))]
+
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
@@ -175,7 +178,7 @@ mod e2e {
   }
 }
 
-#[cfg(not(feature = "e2e"))]
+#[cfg(all(target_os = "macos", not(feature = "e2e")))]
 fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
   tauri::generate_handler![
     take_opened_files,
@@ -189,7 +192,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
   ]
 }
 
-#[cfg(feature = "e2e")]
+#[cfg(all(target_os = "macos", feature = "e2e"))]
 fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
   tauri::generate_handler![
     take_opened_files,
@@ -207,7 +210,12 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
   ]
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// Off the Mac, which nothing ships for: only the links that bring an Instagram sign-in back.
+#[cfg(not(target_os = "macos"))]
+fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
+  tauri::generate_handler![take_opened_links]
+}
+
 pub fn run() {
   let app = tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
@@ -220,7 +228,7 @@ pub fn run() {
     .expect("error while building Sequence");
 
   app.run(|handle, event| {
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     if let tauri::RunEvent::Opened { urls } = event {
       let paths = urls
         .iter()
@@ -238,7 +246,7 @@ pub fn run() {
         let _ = handle.emit("opened-links", ());
       }
     }
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(target_os = "macos"))]
     let _ = (handle, event);
   });
 }

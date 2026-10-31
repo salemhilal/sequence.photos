@@ -568,6 +568,54 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
       black in dark mode (macOS 26 and later, following System Settings → Appearance); the
       white one on older macOS.
 
+## iPhone app
+
+In the iOS Simulator or on a phone, from `ios/` (see `ios/README.md`). _(unit)_ items are
+`ios/SequenceTests`, _(UI)_ items `ios/SequenceUITests`; the rest is by hand.
+
+- [ ] Sequences: New asks for a name and photos to start with (a frame for each, or the
+      desk), then starts at 1080 × 1350 _(UI for the name)_; the list shows each
+      sequence's first three frames, its frame count and size, and when it was edited; a
+      long press or a swipe renames, duplicates (photos and all), or deletes (after asking).
+- [ ] Frames: + adds photos from the library (their names kept), a photo from the camera,
+      or an empty frame _(UI)_; where photos go is asked as soon as they're picked, while
+      they load, and they're added when both are done _(unit)_; the add choices (a frame
+      each, fill the empty first, the desk) _(unit)_; a frame held shows its menu (preview,
+      duplicate, delete: its photos go to the desk) _(UI)_, and dragged it moves (with the
+      selection, if it's chosen); Select duplicates or deletes several.
+- [ ] The editor: opens on the frame tapped, on screen and in the counter _(UI)_; the grid
+      button shows and hides the guides; frames page with a swipe on the background or ‹ ›, and only the frame
+      slides (the bars stay); photos move and snap (by their outer edge) and resize from
+      their corners _(unit for the math)_; two fingers hold the frame: it zooms and moves
+      with them, what's under them staying under them _(unit for the math)_, and settles
+      back at the fitted size; a drag on the background pans it while zoomed; a desk photo held shows its menu (place on this frame, delete), and dragged it
+      lands centered where it's dropped on the frame; a placed photo dragged into the
+      drawer's left half goes back to the desk, into its right half is deleted, and undo
+      brings it back; the drawer's
+      handle tucks the tools away, and the frame grows to fill the space smoothly.
+- [ ] Panels: the frame's background (white, black, every frame); a photo's X, Y, W, H
+      (proportions kept or not), border (slider, white or black; starts opposite the
+      background; the handles hide while the slider's dragged), Crop, Fit (a dialog: the frame, the
+      border guide), Center, Duplicate (the copy goes to the desk _(unit)_), Delete; the enlarged warning shows on the photo and in its
+      panel.
+- [ ] Crop: the guides show, and the crop snaps to them and to the photo's edges; it can be bigger than the photo, as far as the frame, and exports leave that room empty _(unit for the math)_; it follows the finger smoothly; handles, moving the crop, shapes, Reset, the pin (the crop holds; the photo
+      moves behind it); Done is one undo step, Cancel puts it back _(unit for the math)_.
+- [ ] Frame settings: from New sequence too, with a preview; Refit all photos fits what's on the frames, as one undo step, and leaves the desk _(unit)_; presets and a custom size, the margin, center lines; Apply is one undo
+      step and photos keep their place relative to the frame _(unit)_.
+- [ ] Preview: every frame full screen, swiped through, starting at the one asked for; a
+      tap hides the controls.
+- [ ] Export, images: some or all frames, JPEG (quality) or PNG, named 01.jpg on; the share
+      sheet's Save Images puts them in Photos, drawn as the frames show (crops, borders,
+      backgrounds) at the frame's size.
+- [ ] Export, Instagram: connect (Instagram's sign-in in a sheet, back in the app),
+      reconnect when it expires, disconnect; slides above the preview; feed (a carousel,
+      caption and hashtag counts) and stories (previewed as a story, with no caption box or
+      text); crop or expand for
+      shapes Instagram doesn't take _(unit)_; posting shows each step, can be cancelled until
+      it publishes, and links to the post.
+- [ ] Saved: a change is saved a moment later and when the app goes to the background;
+      the project file opens in the web and Mac apps as is _(unit: the shared fixtures)_.
+
 ## Landing page (web)
 
 - [ ] `/` shows the headline, Try it online (opens `/app/`), and the Mac App Store badge; paper

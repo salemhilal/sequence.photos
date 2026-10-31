@@ -48,3 +48,19 @@ skill in `.claude/skills/`. Before a release, go through [testing.md](testing.md
 `Cargo.toml`, and their lockfiles). `npm run app:store` builds the `.pkg` locally and uploads
 it given an App Store Connect API key; [setup.md](setup.md#building-for-the-app-store-locally-optional)
 lists what it needs. It says what's missing.
+
+## The iPhone app
+
+Not yet on the App Store: builds go to TestFlight for internal testers, from `main`. It's a
+listing of its own, `io.salem.SequencePhotosMobile` (`ios/`), iPhone only, with its own version
+(in `ios/project.yml`) apart from the website's and the Mac app's. `npm run bump` doesn't
+change it. The build number is the commit count, so each upload must come from a later commit.
+
+```bash
+npm run ios:native:store            # archive a signed .ipa (--upload, or an API key, uploads it too)
+npm run ios:screenshots             # retake its App Store screenshots
+npm run ios:store-art               # redraw the product page header and search results images
+```
+
+The store listing's text, screenshots, and images are in `docs/app-store/iphone/` (`listing.md`
+lists them). `scripts/ios-native-store.mjs`'s header lists the environment it reads.

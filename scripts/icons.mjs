@@ -8,6 +8,7 @@
 //   src-tauri/icons/  the Mac app's icons: Assets.car (light and dark, macOS 26 and later)
 //                     and the light icon for older macOS and the other bundle formats
 //   site/public/      the website's favicon (light and dark) and its home-screen icons
+//   ios/Sequence/Assets.xcassets/AppIcon.appiconset/  the iPhone app's icon
 //
 // Where an icon can't follow the light or dark appearance, it's the light one.
 // Rendering uses the Tauri CLI; Assets.car needs Xcode (for actool), and is skipped without it.
@@ -147,6 +148,23 @@ function bundleIcons() {
   }
 }
 
+/**
+ * The iPhone app's icon, from the light drawing cut to a full-bleed square: iOS rounds the
+ * corners itself, and wants no transparency.
+ */
+function iosIcon() {
+  const dir = mkdtempSync(join(tmp, 'ios-'));
+  const flat = join(dir, 'in.png');
+  png(square(LIGHT), 1024, flat);
+  // Through JPEG and back, which drops the alpha channel the App Store refuses in an app icon.
+  const jpeg = join(dir, 'in.jpg');
+  execFileSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '100', flat, '--out', jpeg], {
+    stdio: 'ignore',
+  });
+  const out = 'ios/Sequence/Assets.xcassets/AppIcon.appiconset/AppIcon.png';
+  execFileSync('sips', ['-s', 'format', 'png', jpeg, '--out', out], { stdio: 'ignore' });
+}
+
 try {
   for (const [look, svg] of [
     ['light', LIGHT],
@@ -160,13 +178,14 @@ try {
   iconComposer();
   assetCatalog();
   bundleIcons();
+  iosIcon();
 
   writeFileSync('site/public/favicon.svg', favicon());
   png(square(LIGHT), 180, 'site/public/apple-touch-icon.png');
   png(rounded(LIGHT), 192, 'site/public/icons/icon-192.png');
   png(rounded(LIGHT), 512, 'site/public/icons/icon-512.png');
   png(square(LIGHT), 512, 'site/public/icons/maskable-512.png');
-  console.log('Icons written to assets/icon/, src-tauri/icons/, and site/public/.');
+  console.log("Icons written to assets/icon/, src-tauri/icons/, the iPhone app's AppIcon set, and site/public/.");
 } finally {
   rmSync(tmp, { recursive: true, force: true });
 }
