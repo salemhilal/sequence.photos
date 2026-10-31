@@ -9,8 +9,8 @@ private struct Shape: Identifiable {
 
 /**
  * Crop mode, for a photo on the frame: the whole photo shows, dimmed outside the crop. Drag
- * the crop's edges and corners to crop, or inside it to move it across the photo; pick a
- * shape below. Pinned, the crop stays where it is and dragging moves the photo behind it,
+ * the crop's edges and corners to crop, or inside it to move it, snapping to the frame's
+ * guides; it can be bigger than the photo, as far as the frame. Pick a shape below. Pinned, the crop stays where it is and dragging moves the photo behind it,
  * showing only what's in the crop. Done keeps the crop (one undo step); Cancel puts it back.
  */
 struct CropView: View {
@@ -19,14 +19,15 @@ struct CropView: View {
     let frame: Spread
     let onDone: () -> Void
 
-    /** Where the whole photo is, from the crop as crop mode started (the view holds still). */
-    @State private var start: Rect
     /** Where it is now: it moves only when dragged behind a pinned crop. */
     @State private var whole: Rect
     @State private var ratio: Double?
     @State private var pinned = false
     /** What a drag started from: the crop and the whole photo. */
     @State private var dragFrom: (crop: Rect, whole: Rect)?
+    @State private var hit: SnapHit?
+    /** How far the crop can go, and what the view shows: the frame and the photo, as it started. */
+    private let reach: Rect
 
     private let padding = 28.0
     private let snap = 10.0
@@ -39,8 +40,12 @@ struct CropView: View {
         let p = store.project
         let item = frame.items.first { $0.photoId == photoId }
         let w = item.map { wholeRect($0.rect, p.photos[photoId].map(cropOf) ?? .whole) } ?? Rect(x: 0, y: 0, w: 1, h: 1)
-        _start = State(initialValue: w)
         _whole = State(initialValue: w)
+        let all = [pageRect(p.page), w, item?.rect ?? w]
+        let left = all.map(\.x).min() ?? 0
+        let top = all.map(\.y).min() ?? 0
+        reach = Rect(
+            x: left, y: top, w: (all.map(\.right).max() ?? 1) - left, h: (all.map(\.bottom).max() ?? 1) - top)
     }
 
     private var project: Project { store.project }
@@ -59,21 +64,22 @@ struct CropView: View {
     }
 
     private func canvas(_ size: CGSize) -> some View {
-        let ext = (
-            x: min(0, start.x), y: min(0, start.y), r: max(page.w, start.right), b: max(page.h, start.bottom)
-        )
-        let s = max(0.01, min((size.width - 2 * padding) / (ext.r - ext.x), (size.height - 2 * padding) / (ext.b - ext.y)))
-        let left = (size.width - (ext.r - ext.x) * s) / 2 - ext.x * s
-        let top = (size.height - (ext.b - ext.y) * s) / 2 - ext.y * s
+        // The view holds still, whatever's dragged.
+        let s = max(0.01, min((size.width - 2 * padding) / reach.w, (size.height - 2 * padding) / reach.h))
+        let left = (size.width - reach.w * s) / 2 - reach.x * s
+        let top = (size.height - reach.h * s) / 2 - reach.y * s
         func box(_ r: Rect) -> (CGSize, CGSize) {
             (CGSize(width: r.w * s, height: r.h * s), CGSize(width: left + r.x * s, height: top + r.y * s))
         }
         let c = crop
+        // The photo outside the crop, which can reach past the photo.
+        let midTop = max(c.y, whole.y)
+        let midHeight = min(c.bottom, whole.bottom) - midTop
         let dims = [
             Rect(x: whole.x, y: whole.y, w: whole.w, h: c.y - whole.y),
             Rect(x: whole.x, y: c.bottom, w: whole.w, h: whole.bottom - c.bottom),
-            Rect(x: whole.x, y: c.y, w: c.x - whole.x, h: c.h),
-            Rect(x: c.right, y: c.y, w: whole.right - c.right, h: c.h),
+            Rect(x: whole.x, y: midTop, w: c.x - whole.x, h: midHeight),
+            Rect(x: c.right, y: midTop, w: whole.right - c.right, h: midHeight),
         ].filter { $0.w > 0 && $0.h > 0 }
 
         return ZStack(alignment: .topLeading) {
@@ -99,6 +105,8 @@ struct CropView: View {
                     Color.black.opacity(0.55).frame(width: ds.width, height: ds.height).offset(d)
                 }
             }
+            FrameGuides(page: page, settings: project.settings, scale: s, showing: true, hit: hit)
+                .offset(po)
             let (cs, co) = box(c)
             cropWindow(cs, scale: s)
                 .offset(co)
@@ -151,21 +159,32 @@ struct CropView: View {
         store.preview { $0.setCropFrame(photoId, frame: f, whole: w) }
     }
 
+    /** The frame's guides, and the photo's own edges, to come back to. */
+    private func lines(_ w: Rect) -> GuideLines {
+        let g = snapLines(page, project.settings)
+        return GuideLines(xs: g.xs + [w.x, w.right], ys: g.ys + [w.y, w.bottom])
+    }
+
+    // Measured on the screen: the crop itself moves, so its own space would shift under the finger.
     private func handleDrag(_ h: CropHandle, scale s: Double) -> some Gesture {
-        DragGesture(minimumDistance: 0)
+        DragGesture(minimumDistance: 0, coordinateSpace: .global)
             .onChanged { v in
                 if dragFrom == nil { dragFrom = (crop, whole) }
                 guard let from = dragFrom else { return }
                 let r = dragCropHandle(
                     from.crop, from.whole, h, v.translation.width / s, v.translation.height / s, ratio: ratio, min: 10,
-                    lines: snapLines(page, project.settings), threshold: snap / s)
+                    lines: lines(from.whole), threshold: snap / s, within: reach)
+                hit = r.hit
                 show(r.frame, from.whole)
             }
-            .onEnded { _ in dragFrom = nil }
+            .onEnded { _ in
+                dragFrom = nil
+                hit = nil
+            }
     }
 
     private func insideDrag(scale s: Double) -> some Gesture {
-        DragGesture(minimumDistance: 0)
+        DragGesture(minimumDistance: 0, coordinateSpace: .global)
             .onChanged { v in
                 if dragFrom == nil { dragFrom = (crop, whole) }
                 guard let from = dragFrom else { return }
@@ -176,11 +195,15 @@ struct CropView: View {
                     whole = w
                     show(from.crop, w)
                 } else {
-                    let r = moveCrop(from.crop, from.whole, dx, dy, lines: snapLines(page, project.settings), threshold: snap / s)
+                    let r = moveCrop(from.crop, from.whole, dx, dy, lines: lines(from.whole), threshold: snap / s, within: reach)
+                    hit = r.hit
                     show(r.frame, from.whole)
                 }
             }
-            .onEnded { _ in dragFrom = nil }
+            .onEnded { _ in
+                dragFrom = nil
+                hit = nil
+            }
     }
 
     private var shapes: [Shape] {
@@ -205,7 +228,7 @@ struct CropView: View {
 
     private var panel: some View {
         VStack(spacing: 12) {
-            Text(pinned ? "Crop pinned: drag to move the photo in it" : "Drag an edge or corner to crop · drag inside to move the crop")
+            Text(pinned ? "The crop is pinned. Drag to move the photo in it." : "Drag an edge or corner to crop. Drag inside to move the crop.")
                 .font(.sans(.footnote)).foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 16)

@@ -87,21 +87,6 @@ tests read. It's `io.salem.SequencePhotosMobile`, iPhone only, portrait, iOS 17 
 cd ios && xcodegen generate && open Sequence.xcodeproj
 ```
 
-The first pass, the Tauri shell built for iOS around a UI of its own (`src/phone/`), is
-kept for now to compare side by side: it installs as "Sequence (web)",
-`io.salem.SequencePhotosMobile.web`, and is at `/phone/` on the dev server too.
-
-```bash
-npm run ios:dev     # run it in the iOS Simulator, reloading on changes
-npm run ios:store   # a signed build for TestFlight (see docs/releasing.md)
-```
-
-It needs Xcode (as the active developer directory: `xcode-select -p`, or `DEVELOPER_DIR`),
-the iOS Rust targets (`rustup target add aarch64-apple-ios aarch64-apple-ios-sim`), and
-XcodeGen and CocoaPods (`brew install xcodegen cocoapods`). Its Xcode project is
-`src-tauri/gen/apple/`, its config `src-tauri/tauri.ios.conf.json` and `Info.ios.plist`,
-and its platform `src/platform/ios.ts`.
-
 ## Testing
 
 ```bash

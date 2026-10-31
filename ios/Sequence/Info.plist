@@ -30,8 +30,16 @@
   <!-- The share sheet's Save Image puts exports in Photos. -->
   <key>NSPhotoLibraryAddUsageDescription</key>
   <string>Sequence saves the images you export to your photo library.</string>
-  <!-- No URL scheme: the Instagram sign-in comes back through ASWebAuthenticationSession,
-       which catches sequence-photos:// itself (so the web-view app can keep the scheme). -->
+  <!-- The link an Instagram sign-in comes back through, as the Mac app's. -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>io.salem.SequencePhotosMobile.link</string>
+      <key>CFBundleURLSchemes</key>
+      <array><string>sequence-photos</string></array>
+    </dict>
+  </array>
   <!-- What's dragged within the app: frames in the grid, and desk photos onto a frame. -->
   <key>UTExportedTypeDeclarations</key>
   <array>

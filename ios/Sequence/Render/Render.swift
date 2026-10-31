@@ -50,12 +50,18 @@ func planFrame(_ frame: Spread, _ page: PageSetup, _ photos: [String: PhotoMeta]
         let x2 = min(Double(pxW), placed.right)
         let y2 = min(Double(pxH), placed.bottom)
         if x2 <= x1 || y2 <= y1 { continue }
-        let dst = Rect(x: x1, y: y1, w: x2 - x1, h: y2 - y1)
         let c = cropOf(photo)
         let crop = Rect(x: c.x * photo.pxW, y: c.y * photo.pxH, w: c.w * photo.pxW, h: c.h * photo.pxH)
         let sx = crop.w / placed.w
         let sy = crop.h / placed.h
-        let src = Rect(x: crop.x + (x1 - placed.x) * sx, y: crop.y + (y1 - placed.y) * sy, w: dst.w * sx, h: dst.h * sy)
+        // Only what's on the photo: a crop's frame can be bigger than it, leaving room around it.
+        let sx1 = max(0, crop.x + (x1 - placed.x) * sx)
+        let sy1 = max(0, crop.y + (y1 - placed.y) * sy)
+        let sx2 = min(photo.pxW, crop.x + (x2 - placed.x) * sx)
+        let sy2 = min(photo.pxH, crop.y + (y2 - placed.y) * sy)
+        let src = Rect(x: sx1, y: sy1, w: max(0, sx2 - sx1), h: max(0, sy2 - sy1))
+        let dst = Rect(
+            x: placed.x + (sx1 - crop.x) / sx, y: placed.y + (sy1 - crop.y) / sy, w: src.w / sx, h: src.h / sy)
         draws.append(Draw(photoId: item.photoId, src: src, dst: dst, placed: placed, border: border))
     }
     return PagePlan(pxW: pxW, pxH: pxH, background: frame.background ?? .white, pxPerUnit: k, draws: draws)

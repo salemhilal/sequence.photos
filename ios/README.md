@@ -2,9 +2,7 @@
 
 The iPhone app in SwiftUI: sequences of frames, the frames grid, a frame's editor with the
 desk in a drawer below it, crop (with the pin), a preview, and export as images or to
-Instagram. It does what the web-view app in `src/phone/` does (kept for now, to compare
-side by side; it installs as "Sequence (web)", `io.salem.SequencePhotosMobile.web`), but
-natively: paging, gestures, drag and drop, sheets, and motion are iOS's own.
+Instagram. Paging, gestures, drag and drop, sheets, and motion are iOS's own.
 
 It's `io.salem.SequencePhotosMobile`, iPhone only, portrait, iOS 17 and later, version 1.0.0
 (`project.yml`).

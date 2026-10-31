@@ -54,10 +54,10 @@ final class AppModel {
     }
 
     /** Start a new sequence, with photos to bring in once it's open; returns its id. */
-    func create(name: String, photos: [PhotosPickerItem] = [], to: AddTo = .fill) -> String? {
+    func create(name: String, setup: FrameSetup? = nil, photos: [PhotosPickerItem] = [], to: AddTo = .fill) -> String? {
         do {
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            let id = try library.create(name: trimmed.isEmpty ? untitled : trimmed)
+            let id = try library.create(name: trimmed.isEmpty ? untitled : trimmed, setup: setup)
             refresh()
             if !photos.isEmpty { startingPhotos = StartingPhotos(sequence: id, items: photos, to: to) }
             return id

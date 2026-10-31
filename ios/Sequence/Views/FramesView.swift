@@ -35,6 +35,7 @@ private struct FramesGrid: View {
     @State private var asking = false
     @State private var confirmDelete = false
     @State private var renaming = false
+    @State private var refitting = false
     @State private var newName = ""
     @State private var sizing = false
     @State private var exporting = false
@@ -113,12 +114,21 @@ private struct FramesGrid: View {
                 selected = []
             }
         }
+        .alert("Refit all photos", isPresented: $refitting) {
+            Button("Fit to the frame") { withAnimation(Theme.quick) { store.apply { $0.refitAll(toMargin: false) } } }
+            if dropGuide(project.settings) != nil {
+                Button("Fit to the margin") { withAnimation(Theme.quick) { store.apply { $0.refitAll(toMargin: true) } } }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Every photo on a frame is resized and centered. Photos on the desk stay as they are.")
+        }
         .alert("Rename sequence", isPresented: $renaming) {
             TextField("Name", text: $newName)
             Button("Cancel", role: .cancel) {}
             Button("Rename") { model.rename(store.id, to: newName) }
         }
-        .sheet(isPresented: $sizing) { FrameSizeSheet(store: store) }
+        .sheet(isPresented: $sizing) { FrameSettingsSheet(store: store) }
         .sheet(isPresented: $exporting) { ExportView(store: store) }
         .fullScreenCover(item: Binding(get: { previewAt.map(PreviewStart.init) }, set: { previewAt = $0?.index })) {
             PreviewView(project: project, start: $0.index)
@@ -149,7 +159,9 @@ private struct FramesGrid: View {
                 Button("Preview", systemImage: "play") { previewAt = 0 }
                 Button("Export", systemImage: "square.and.arrow.up") { exporting = true }
                 Menu("More", systemImage: "ellipsis.circle") {
-                    Button("Frame size…", systemImage: "aspectratio") { sizing = true }
+                    Button("Frame settings…", systemImage: "aspectratio") { sizing = true }
+                    Button("Refit all photos…", systemImage: "arrow.up.left.and.arrow.down.right") { refitting = true }
+                        .disabled(frames.allSatisfy(\.items.isEmpty))
                     Button("Rename…", systemImage: "pencil") {
                         newName = model.name(store.id)
                         renaming = true

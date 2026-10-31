@@ -99,9 +99,7 @@ function webSecurityHeaders(mode: string): Plugin {
 
 export default defineConfig(({ mode }) => {
   // `--mode app` builds for the native Mac app (see src-tauri), which has no service worker;
-  // `--mode ios`, the iPhone app (the phone UI, src/phone/), which hasn't either.
-  const ios = mode === 'ios';
-  const app = mode === 'app' || ios;
+  const app = mode === 'app';
   let resolved: ResolvedConfig;
   return {
     // The website's pages are in site/; the app's code in src/, and .env, at the repository's root.
@@ -183,10 +181,7 @@ export default defineConfig(({ mode }) => {
         {
           find: '#platform',
           replacement: fileURLToPath(
-            new URL(
-              ios ? './src/platform/ios.ts' : app ? './src/platform/macos/index.ts' : './src/platform/browser.ts',
-              import.meta.url,
-            ),
+            new URL(app ? './src/platform/macos/index.ts' : './src/platform/browser.ts', import.meta.url),
           ),
         },
         // The app's page (site/app/index.html) loads /src/main.tsx: the repository's src/,
@@ -200,17 +195,14 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         // The website: a landing page (/), the app (/app/), a privacy policy (/privacy/, which
         // the Mac app links to), and a support page (/support/). The Mac app is just the app.
-        // The iPhone app is just the phone UI. (In development, it's at /phone/ beside the app.)
-        input: ios
-          ? resolve(site, 'phone/index.html')
-          : app
-            ? resolve(site, 'app/index.html')
-            : {
-                landing: resolve(site, 'index.html'),
-                app: resolve(site, 'app/index.html'),
-                privacy: resolve(site, 'privacy/index.html'),
-                support: resolve(site, 'support/index.html'),
-              },
+        input: app
+          ? resolve(site, 'app/index.html')
+          : {
+              landing: resolve(site, 'index.html'),
+              app: resolve(site, 'app/index.html'),
+              privacy: resolve(site, 'privacy/index.html'),
+              support: resolve(site, 'support/index.html'),
+            },
       },
     },
     // site/public/ is the website's (its icons, share image, and old service worker's

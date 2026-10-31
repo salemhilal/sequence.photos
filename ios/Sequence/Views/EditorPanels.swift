@@ -75,7 +75,7 @@ struct DeskTray: View {
         VStack(alignment: .leading, spacing: 6) {
             PanelRow {
                 Text("Desk").font(.sans(.subheadline, .semibold))
-                    + Text(" · \(ids.count)").font(.sans(.subheadline)).foregroundColor(Theme.muted)
+                    + Text(" (\(ids.count))").font(.sans(.subheadline)).foregroundColor(Theme.muted)
                 Spacer()
                 if importing { ProgressView().controlSize(.small) }
                 Button("Add photos", systemImage: "plus") { picking = true }.font(.sans(.subheadline))
@@ -257,7 +257,7 @@ struct PhotoPanel: View {
                 tool("Crop", "crop", action: onCrop)
                 tool("Fit", "arrow.up.left.and.arrow.down.right") { fitting = true }
                 tool("Center", "scope") { withAnimation(Theme.quick) { store.apply { $0.centerPhoto(id) } } }
-                tool("Duplicate", "plus.square.on.square") { duplicate(id) }
+                tool("Copy to desk", "plus.square.on.square") { duplicate(id) }
                 tool("Delete", "trash", color: Theme.danger) {
                     withAnimation(Theme.quick) {
                         store.apply { $0.removePhoto(id) }
@@ -268,13 +268,14 @@ struct PhotoPanel: View {
             .padding(.horizontal, 8)
             .padding(.top, 4)
         }
-        .confirmationDialog("Fit", isPresented: $fitting) {
-            Button("Fit the frame") { withAnimation(Theme.quick) { store.apply { $0.fitPhoto(id, pageRect($0.page)) } } }
+        .alert("Fit photo", isPresented: $fitting) {
+            Button("Fit to the frame") { withAnimation(Theme.quick) { store.apply { $0.fitPhoto(id, pageRect($0.page)) } } }
             if let g = dropGuide(p.settings) {
-                Button("Fit the border guide") {
+                Button("Fit to the margin") {
                     withAnimation(Theme.quick) { store.apply { $0.fitPhoto(id, borderBox($0.page, g)) } }
                 }
             }
+            Button("Cancel", role: .cancel) {}
         }
     }
 

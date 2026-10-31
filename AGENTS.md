@@ -3,9 +3,7 @@
 Sequence is a tool for sequencing photos into a book (spreads of facing pages) or a run of
 frames (slides, an Instagram carousel), and exporting them as a PDF, images, an InDesign file,
 or an Instagram post. It's a React + TypeScript web app at sequence.photos, also shipped as a
-Tauri Mac app (WebKit) on the App Store. An iPhone app (Tauri for iOS, frames only, with its
-own UI in `src/phone/`) is being replaced by a native one (SwiftUI, in `ios/`), kept until
-the native one is ready, to compare. Instagram posting goes through a Cloudflare Worker in
+Tauri Mac app (WebKit) on the App Store. The iPhone app is native (SwiftUI, in `ios/`), frames only. Instagram posting goes through a Cloudflare Worker in
 `server/`, a separate package with its own README, tests, and deploy.
 
 What the app does, from the user's side, is in `docs/agent-context/` by topic (the product,
@@ -23,7 +21,6 @@ npm run format:check   # prettier
 npm run test:app       # Mac app end to end (builds Tauri; a few minutes)
 npm run check          # secrets, format, lint, types, unit tests in one
 npm run app:dev        # the Mac app, reloading on changes
-npm run ios:dev        # the iPhone app in the Simulator (the phone UI is also at /phone/ on the dev server)
 npm run server:check   # the server's checks (server:dev, server:test, …)
 # the native iPhone app: cd ios && xcodegen generate, then xcodebuild test -scheme Sequence (ios/README.md)
 ```
@@ -50,8 +47,6 @@ when the Mac app, saving, or exports change. The first `test:e2e` needs
 - `ios/`: the native iPhone app (SwiftUI; `ios/README.md`). Its model reads and writes the
   same project JSON; `shared/fixtures/` are projects both apps' tests read, so a change to
   `src/schema.ts` means changing `ios/Sequence/Model/Project.swift` and the fixtures too.
-- `src/phone/`: the web-view iPhone app's UI (sequences, frames, the editor and its desk, crop,
-  export); its projects are a list kept in its own database (`library.ts`), not files.
 - `docs/testing.md`: the manual and automated checklist. Update it with any behavior change.
 - `docs/proposals/`: design proposals and plans (layout model, print and color).
 - `site/`: the website's pages (landing, `app/`, privacy, support), the landing page's code

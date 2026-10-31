@@ -3,10 +3,7 @@
 The iPhone app is native (SwiftUI, in `ios/`; see `ios/README.md`), as
 `io.salem.SequencePhotosMobile`, iPhone only, version 1.0.0. It reads and writes the web
 app's project JSON (schema 7) and ports its logic (geometry, crop, the render plan,
-Instagram's image layout and posting) to Swift. The first pass, the Tauri shell built for iOS
-around a UI of its own (`src/phone/`), is kept to compare side by side as "Sequence (web)",
-`io.salem.SequencePhotosMobile.web`; it's also at `/phone/` on the dev server. Both do what
-follows; where the native app differs, it says so.
+Instagram's image layout and posting) to Swift.
 
 ## What it does
 
@@ -17,7 +14,7 @@ follows; where the native app differs, it says so.
   projects rather than the web app's one; there are no project files yet.
 - **Frames**: the sidebar as a grid. Tap a frame to edit it; hold and drag to move it; Select
   to duplicate or delete several. + adds photos from the library, each on a new frame, into
-  the empty frames first, or onto the desk; or an empty frame. More: Frame size (presets or
+  the empty frames first, or onto the desk; or an empty frame. More: Frame settings (presets or
   custom, the border guide, center lines; one undo step), Rename, Undo, Redo.
 - **The editor**: one frame, with ‹ n / N › to the others. Photos move (snapping to the
   frame's edges and guides by their outer edge, border and all) and resize from their

@@ -136,7 +136,7 @@ private struct Editor: View {
         .toolbar { toolbar }
         .toolbarBackground(Theme.header, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .sheet(isPresented: $sizing) { FrameSizeSheet(store: store) }
+        .sheet(isPresented: $sizing) { FrameSettingsSheet(store: store) }
         .sheet(isPresented: $exporting) { ExportView(store: store) }
         .fullScreenCover(item: Binding(get: { previewAt.map(PreviewStart.init) }, set: { previewAt = $0?.index })) {
             PreviewView(project: project, start: $0.index)
@@ -164,7 +164,7 @@ private struct Editor: View {
                 .accessibilityLabel(guides ? "Hide guides" : "Show guides")
                 Menu("More", systemImage: "ellipsis.circle") {
                     Button("Preview", systemImage: "play") { previewAt = index }
-                    Button("Frame size…", systemImage: "aspectratio") { sizing = true }
+                    Button("Frame settings…", systemImage: "aspectratio") { sizing = true }
                     Button("Export…", systemImage: "square.and.arrow.up") { exporting = true }
                 }
             }
@@ -372,7 +372,12 @@ private struct FrameCanvas: View {
                             Rectangle().strokeBorder(Theme.accent, lineWidth: 2).padding(-3)
                         }
                     }
-                    .overlay(alignment: .topLeading) { guideLayer(scale: scale) }
+                    .overlay(alignment: .topLeading) {
+                        if guides || trayOver {
+                            FrameGuides(
+                                page: page, settings: project.settings, scale: scale, showing: guides, dropping: trayOver, hit: hit)
+                        }
+                    }
                     .offset(x: left, y: top)
                     .allowsHitTesting(false)
 
@@ -413,35 +418,6 @@ private struct FrameCanvas: View {
                 }
                 return true
             } isTargeted: { trayOver = $0 }
-        }
-    }
-
-    @ViewBuilder private func guideLayer(scale: Double) -> some View {
-        if guides || trayOver {
-            ZStack(alignment: .topLeading) {
-                if let g = dropGuide(project.settings) {
-                    let b = borderBox(page, g)
-                    Rectangle()
-                        .strokeBorder(trayOver ? Theme.accent : Theme.guide, style: .init(lineWidth: trayOver ? 2 : 1, dash: trayOver ? [] : [4, 3]))
-                        .frame(width: b.w * scale, height: b.h * scale)
-                        .offset(x: b.x * scale, y: b.y * scale)
-                }
-                if guides, project.settings.centerV {
-                    Rectangle().fill(Theme.guideCenter.opacity(0.35)).frame(width: 1, height: page.h * scale)
-                        .offset(x: page.w / 2 * scale - 0.5)
-                }
-                if guides, project.settings.centerH {
-                    Rectangle().fill(Theme.guideCenter.opacity(0.35)).frame(width: page.w * scale, height: 1)
-                        .offset(y: page.h / 2 * scale - 0.5)
-                }
-                ForEach(hit?.xs ?? [], id: \.self) { x in
-                    Rectangle().fill(Theme.guideHit).frame(width: 1, height: page.h * scale).offset(x: x * scale - 0.5)
-                }
-                ForEach(hit?.ys ?? [], id: \.self) { y in
-                    Rectangle().fill(Theme.guideHit).frame(width: page.w * scale, height: 1).offset(y: y * scale - 0.5)
-                }
-            }
-            .frame(width: page.w * scale, height: page.h * scale, alignment: .topLeading)
         }
     }
 
@@ -593,6 +569,47 @@ private struct FrameCanvas: View {
                 pan = CGSize(width: s.width + v.translation.width, height: s.height + v.translation.height)
             }
             .onEnded { _ in panStart = nil }
+    }
+}
+
+/**
+ * A frame's guides, over it: the margin, the center lines when `showing`, the margin
+ * alone when something's being dropped, and the lines a drag has snapped to.
+ */
+struct FrameGuides: View {
+    let page: PageSetup
+    let settings: Settings
+    let scale: Double
+    let showing: Bool
+    var dropping = false
+    let hit: SnapHit?
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if let g = dropGuide(settings) {
+                let b = borderBox(page, g)
+                Rectangle()
+                    .strokeBorder(dropping ? Theme.accent : Theme.guide, style: .init(lineWidth: dropping ? 2 : 1, dash: dropping ? [] : [4, 3]))
+                    .frame(width: b.w * scale, height: b.h * scale)
+                    .offset(x: b.x * scale, y: b.y * scale)
+            }
+            if showing, settings.centerV {
+                Rectangle().fill(Theme.guideCenter.opacity(0.35)).frame(width: 1, height: page.h * scale)
+                    .offset(x: page.w / 2 * scale - 0.5)
+            }
+            if showing, settings.centerH {
+                Rectangle().fill(Theme.guideCenter.opacity(0.35)).frame(width: page.w * scale, height: 1)
+                    .offset(y: page.h / 2 * scale - 0.5)
+            }
+            ForEach(hit?.xs ?? [], id: \.self) { x in
+                Rectangle().fill(Theme.guideHit).frame(width: 1, height: page.h * scale).offset(x: x * scale - 0.5)
+            }
+            ForEach(hit?.ys ?? [], id: \.self) { y in
+                Rectangle().fill(Theme.guideHit).frame(width: page.w * scale, height: 1).offset(y: y * scale - 0.5)
+            }
+        }
+        .frame(width: page.w * scale, height: page.h * scale, alignment: .topLeading)
+        .allowsHitTesting(false)
     }
 }
 

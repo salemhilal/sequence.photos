@@ -1,6 +1,6 @@
 import Foundation
 
-// What the phone does to a sequence's frames and photos (src/phone/frameActions.ts), as
+// What the phone does to a sequence's frames and photos, as
 // changes to a Project, so it's tested apart from the screens.
 
 /** Where photos being added go: a new frame each, the empty frames first, or the desk. */
@@ -168,6 +168,15 @@ extension Project {
         updatePlacement(photoId) { $0.rect = fitCentered(photo, inner) }
     }
 
+    /** Fit every photo on a frame into its frame, or the margin. One step, whatever's on the desk stays. */
+    mutating func refitAll(toMargin: Bool) {
+        let guide = toMargin ? dropGuide(settings).map { borderBox(page, $0) } : nil
+        let box = guide ?? pageRect(page)
+        for frame in frames {
+            for item in frame.items { fitPhoto(item.photoId, box) }
+        }
+    }
+
     /** Center a placed photo on its frame. */
     mutating func centerPhoto(_ photoId: String) {
         let page = self.page
@@ -310,7 +319,7 @@ extension Project {
     }
 }
 
-/** What the frame size sheet sets: the size, the border guide's distance in, and the center lines. */
+/** What the frame settings set: the size, the border guide's distance in, and the center lines. */
 struct FrameSetup: Equatable {
     var w: Double
     var h: Double
@@ -322,7 +331,6 @@ struct FrameSetup: Equatable {
 let frameSizes: [(label: String, w: Double, h: Double)] = [
     ("Instagram portrait", 1080, 1350),
     ("Square", 1080, 1080),
-    ("Instagram landscape", 1080, 566),
     ("Story", 1080, 1920),
     ("Slides", 1920, 1080),
 ]

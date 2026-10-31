@@ -99,9 +99,10 @@ final class Library {
 
     /** Start a project and list it; returns its id. */
     @discardableResult
-    func create(page: PageSetup = newPage, name: String = untitled) throws -> String {
+    func create(page: PageSetup = newPage, name: String = untitled, setup: FrameSetup? = nil) throws -> String {
         let id = newId()
-        let project = Project.newSequence(page)
+        let start = Project.newSequence(page)
+        let project = setup.map { start.withFrameSetup($0) } ?? start
         try project.encoded().write(to: projectURL(id), options: .atomic)
         try putList(withEntry(list(), LibraryEntry(id: id, name: name, project: project, updated: Date())))
         return id

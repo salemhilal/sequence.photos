@@ -1,6 +1,5 @@
 // The Mac app: a native window around the same web app as the website, plus what
-// browsers can't do: the plugins and project files (see src/platform/macos/). The iPhone
-// app is the phone UI (src/phone/) in the same shell, with less of it (see `handlers`).
+// browsers can't do: the plugins and project files (see src/platform/macos/).
 
 // The project files' commands are the Mac app's alone (see `handlers`).
 #![cfg_attr(not(target_os = "macos"), allow(dead_code, unused_imports))]
@@ -211,14 +210,12 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
   ]
 }
 
-/// The iPhone app keeps its projects in its own storage (see src/phone/library.ts), so it
-/// only needs the links that bring an Instagram sign-in back.
+/// Off the Mac, which nothing ships for: only the links that bring an Instagram sign-in back.
 #[cfg(not(target_os = "macos"))]
 fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
   tauri::generate_handler![take_opened_links]
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let app = tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
@@ -231,7 +228,7 @@ pub fn run() {
     .expect("error while building Sequence");
 
   app.run(|handle, event| {
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     if let tauri::RunEvent::Opened { urls } = event {
       let paths = urls
         .iter()
@@ -249,7 +246,7 @@ pub fn run() {
         let _ = handle.emit("opened-links", ());
       }
     }
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(target_os = "macos"))]
     let _ = (handle, event);
   });
 }

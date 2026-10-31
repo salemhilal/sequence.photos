@@ -19,7 +19,13 @@ struct SequencesView: View {
                     path.append(.frames(e.id))
                 } label: {
                     SequenceRow(entry: e)
+                        .padding(.horizontal, 16)
+                        // Every divider the full width, whatever the thumbnails' widths.
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                        .alignmentGuide(.listRowSeparatorTrailing) { $0.width }
                 }
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(e.id == model.entries.first?.id ? .hidden : .visible, edges: .top)
                 .listRowBackground(Theme.bg)
                 .contextMenu {
                     Button("Rename", systemImage: "pencil") { startRename(e) }
@@ -84,6 +90,7 @@ private struct NewSequenceSheet: View {
     @State private var name = ""
     @State private var photos: [PhotosPickerItem] = []
     @State private var to = AddTo.fill
+    @State private var setup = Project.newSequence(newPage).frameSetup
     @FocusState private var naming: Bool
 
     var body: some View {
@@ -103,7 +110,9 @@ private struct NewSequenceSheet: View {
                             Image(systemName: "photo.on.rectangle").foregroundStyle(Theme.muted)
                         }
                     }
-                    if !photos.isEmpty {
+                }
+                if !photos.isEmpty {
+                    Section {
                         Picker("Put them", selection: $to) {
                             Text(photos.count == 1 ? "On a frame" : "A frame for each").tag(AddTo.fill)
                             Text("On the desk").tag(AddTo.desk)
@@ -111,6 +120,30 @@ private struct NewSequenceSheet: View {
                         .pickerStyle(.segmented)
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets())
+                    }
+                }
+                Section("Frame") {
+                    FramePreview(setup: setup)
+                        .frame(maxWidth: .infinity)
+                        .listRowBackground(Color.clear)
+                }
+                Section {
+                    NavigationLink {
+                        FrameSettingsForm(setup: $setup) {
+                            Section {
+                                FramePreview(setup: setup)
+                                    .frame(maxWidth: .infinity)
+                                    .listRowBackground(Color.clear)
+                            }
+                        }
+                        .navigationTitle("Frame settings")
+                        .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        HStack {
+                            Text("Frame settings")
+                            Spacer()
+                            Text(verbatim: "\(Int(setup.w)) × \(Int(setup.h)) px").font(.mono(12)).foregroundStyle(Theme.muted)
+                        }
                     }
                 }
             }
@@ -124,13 +157,13 @@ private struct NewSequenceSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
-                        if let id = model.create(name: name, photos: photos, to: to) { onMade(id) }
+                        if let id = model.create(name: name, setup: setup, photos: photos, to: to) { onMade(id) }
                         dismiss()
                     }
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
         .onAppear { naming = true }
     }
 }
@@ -152,14 +185,14 @@ struct SequenceRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.name).font(.sans(.body, .medium)).foregroundStyle(Theme.text)
                 Text(
-                    verbatim: "\(entry.frameCount) \(entry.frameCount == 1 ? "frame" : "frames") · \(Int(entry.page.w)) × \(Int(entry.page.h)) px"
+                    verbatim: "\(entry.frameCount) \(entry.frameCount == 1 ? "frame" : "frames"), \(Int(entry.page.w)) × \(Int(entry.page.h)) px"
                 )
                 .font(.mono(12)).foregroundStyle(Theme.muted)
                 Text(editedLabel(entry.updated)).font(.sans(.caption)).foregroundStyle(Theme.faint)
             }
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 12)
         .contentShape(Rectangle())
     }
 }

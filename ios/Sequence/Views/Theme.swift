@@ -1,7 +1,7 @@
 import SwiftUI
 
 /**
- * The desktop app's dark theme (src/phone/phone.css), at touch sizes: grey controls, amber
+ * The desktop app's dark theme, at touch sizes: grey controls, amber
  * only for selection, checkmarks, warnings, and the main export actions.
  */
 enum Theme {

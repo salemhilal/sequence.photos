@@ -385,7 +385,7 @@ private struct InstagramExport: View {
                 } header: {
                     Text("Caption")
                 } footer: {
-                    Text(verbatim: "\(caption.count.formatted()) / \(PostLimits.captionLength.formatted()) · \(hashtagCount(caption)) / \(PostLimits.hashtags) hashtags")
+                    Text(verbatim: "\(caption.count.formatted()) / \(PostLimits.captionLength.formatted()) characters, \(hashtagCount(caption)) / \(PostLimits.hashtags) hashtags")
                         .font(.mono(11))
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }

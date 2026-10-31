@@ -16,7 +16,6 @@ private func ids(_ p: Project) -> [[String]] {
     p.frames.map { $0.items.map(\.photoId) }
 }
 
-/** The same as src/phone/frameActions.test.ts. */
 final class FrameActionTests: XCTestCase {
     func testNewSequence() throws {
         let p = seq()
@@ -174,6 +173,22 @@ final class FrameActionTests: XCTestCase {
         XCTAssertNil(none.settings.dropBorder)
     }
 
+    func testRefitAllFitsOnlyPlacedPhotos() throws {
+        var p = Project.newSequence(newPage)
+        let id = try XCTUnwrap(p.frames.first?.id)
+        p.addPhotos([PhotoMeta(id: "a", name: "a.jpg", pxW: 1000, pxH: 1000)], to: .desk)
+        p.addPhotos([PhotoMeta(id: "b", name: "b.jpg", pxW: 1000, pxH: 1000)], to: .desk)
+        p.placeOnFrame("a", id)
+        p.updatePlacement("a") { $0.rect = Rect(x: 1, y: 1, w: 10, h: 10) }
+        let desk = p.placement("b")
+        p.refitAll(toMargin: false)
+        XCTAssertEqual(p.placement("a")?.w, p.page.w)
+        XCTAssertEqual(p.placement("b"), desk)
+        let guide = try XCTUnwrap(dropGuide(p.settings))
+        p.refitAll(toMargin: true)
+        XCTAssertEqual(p.placement("a")?.w, borderBox(p.page, guide).w)
+    }
+
     func testCropFrameSetsTheCropAndThePlacement() throws {
         var p = seq()
         p.addPhotos([photo("a")], to: .fill)
@@ -197,9 +212,30 @@ final class FrameActionTests: XCTestCase {
 }
 
 final class CropTests: XCTestCase {
+    func testACropCanBeBiggerThanThePhoto() {
+        let whole = Rect(x: 100, y: 100, w: 100, h: 100)
+        let page = Rect(x: 0, y: 0, w: 400, h: 400)
+        // A handle goes past the photo, as far as it's let.
+        let wider = dragCropHandle(whole, whole, .e, 50, 0, ratio: nil, min: 10, within: page).frame
+        XCTAssertEqual(wider.right, 250)
+        XCTAssertEqual(dragCropHandle(whole, whole, .e, 500, 0, ratio: nil, min: 10, within: page).frame.right, 400)
+        // Without room, it stops at the photo, as it always has.
+        XCTAssertEqual(dragCropHandle(whole, whole, .e, 50, 0, ratio: nil, min: 10).frame.right, 200)
+        // Some of the photo always shows.
+        XCTAssertEqual(moveCrop(whole, whole, 500, 0, within: page).frame.x, 190)
+        // The crop keeps the room, and comes back whole.
+        let crop = cleanCrop(cropFrom(wider, whole))
+        XCTAssertEqual(crop, Crop(x: 0, y: 0, w: 1.5, h: 1))
+        XCTAssertNil(cleanCrop(cropFrom(whole, whole)))
+        // The photo moves inside a bigger crop, and stays in it.
+        XCTAssertEqual(panCrop(wider, whole, 20, 0).x, 120)
+        XCTAssertEqual(panCrop(wider, whole, 500, 0).x, 150)
+        XCTAssertEqual(panCrop(wider, whole, -500, 0).x, 100)
+    }
+
     func testCleanCrop() {
         XCTAssertNil(cleanCrop(Crop(x: 0, y: 0, w: 1, h: 1)))
-        XCTAssertEqual(cleanCrop(Crop(x: -1, y: 0.5, w: 0.001, h: 0.8)), Crop(x: 0, y: 0.2, w: 0.02, h: 0.8))
+        XCTAssertEqual(cleanCrop(Crop(x: -1, y: 0.5, w: 0.001, h: 0.8)), Crop(x: 0, y: 0.5, w: 0.02, h: 0.8))
     }
 
     func testWholeAndCropFromAreInverses() {

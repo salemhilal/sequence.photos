@@ -570,72 +570,8 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
 
 ## iPhone app
 
-At `/phone/` on the dev server in a phone-sized window (the _(e2e)_ items are
-`e2e/phone.spec.ts`), and in the iOS Simulator (`npm run ios:dev`) or on a phone.
-
-- [ ] _(e2e)_ Sequences: New sequence opens an empty one (one frame, 1080 × 1350 px). Back in
-      the list it shows its first frames, "N frames · W × H px", and when it was edited;
-      after a reload or a relaunch it's all still there. ⋯ renames or deletes one (asking
-      first).
-- [ ] _(e2e)_ Frames: + → Add photos opens the photo picker; then a frame each, the empty
-      frames first, or the desk. Each lands fitted in the border guide. Each enlarged photo
-      has the amber mark at its top right, in the grid and the editor alike. White frames are
-      white (#fff), as they export.
-- [ ] _(e2e)_ Hold a frame still, then drag: it lifts and moves to the amber bar's gap (with
-      the rest of the selection, when it's chosen). A drag without holding scrolls. Select:
-      Duplicate copies frames and their photos; Delete (asking first) puts their photos on
-      the desk; at least one frame stays.
-- [ ] ⋯ → Frame size: a preset or a custom size, the border guide, center lines; the strip
-      previews every frame; Apply is one undo step; Cancel changes nothing.
-- [ ] _(e2e)_ Editor: the eye in the top bar hides and shows the guides. The drawer's handle
-      (tap, or drag down and up) tucks the tools away and back; the frame grows into the room
-      when it can. When the tools change (desk, frame, photo), the drawer's height and the
-      frame resize smoothly together.
-- [ ] _(e2e)_ Swipe sideways on the background beside the frame: the frame follows the finger
-      and goes on to the next or previous one (or springs back, at the ends or for a short
-      swipe). Paging (swipe or ‹ ›) slides only the frame: the bars and tools stay still.
-- [ ] _(e2e)_ Preview (▷ in the frames' bar, or ⋯ → Preview in the editor, from that frame):
-      every frame full size, swiped through, "n / N"; a tap hides the controls; × goes back.
-- [ ] Screens slide in and out (deeper in from the right, back out to the right); the
-      editor's ‹ › slide just the frame sideways; the preview rises; sheets and menus slide up and
-      back down; crop mode crossfades. With Reduce Motion on, they change at once.
-- [ ] _(e2e)_ Editor: tap a photo to select it (amber outline, corner handles); drag to move,
-      snapping by its outer edge (border included) with magenta lines; drag a corner to
-      resize, keeping its shape. Pinch zooms around the fingers.
-- [ ] _(e2e)_ Drag a placed photo down into the panel ("Put it back on the desk"): it goes to
-      the desk. Drag a desk photo up from the tray onto the frame: it lands where it's let
-      go, and the border guide lights while it's over the frame. Sideways drags scroll the
-      tray; taps do nothing.
-- [ ] _(e2e)_ Tap the frame: Background White or Black, and Use on every frame. Tap outside it
-      for the desk again.
-- [ ] _(e2e)_ A photo's panel: its name and enlargement, X/Y/W/H (whole pixels; the link keeps
-      proportions), Border (a slider and white or black; drawn outside the photo), Crop,
-      Fit (the frame or the border guide, border included), Center, Duplicate.
-- [ ] _(e2e)_ Crop: shapes, Reset, Pin. Pinned, the handles go, the outline dashes, the shapes
-      and Reset wait, only what's in the crop shows, and dragging moves the photo in it.
-      Done is one undo step; Cancel puts it back.
-- [ ] _(e2e)_ Export → Images: tap frames to leave them out ("All" or "Just the first"); the
-      names follow those chosen. The main button stays at the sheet's foot, clear of the
-      screen's corners, however the rest scrolls.
-- [ ] _(e2e)_ Export → Images: Make N images, then Share N images… opens the share sheet;
-      Save Images puts them in Photos (iOS asks once for access to add photos). JPEG or PNG,
-      and quality, kept with the project.
-- [ ] _(e2e)_ Export → Instagram: Slides come before the preview; Stories previews a story
-      (a tall dark screen, a bar per slide, the account), and a tap goes to the next.
-- [ ] Export → Instagram: Connect Instagram opens Safari; signing in comes back to the app
-      (`sequence-photos://`) and Export. Feed or Stories, slides (up to 10), caption with its
-      counts, Post with its progress and Cancel.
-- [ ] Exports draw black backgrounds and borders; the web app shows them in its views too.
-- [ ] iOS: the notch and home indicator don't cover the bars; no text selection or callouts
-      on long presses; the photo picker and share sheet work.
-- [ ] iOS: the home screen shows Sequence's icon; the photo picker's Take Photo asks for the
-      camera with Sequence's reason; it's iPhone only (not offered on iPad) and portrait only.
-
-## iPhone app (native)
-
 In the iOS Simulator or on a phone, from `ios/` (see `ios/README.md`). _(unit)_ items are
-`ios/SequenceTests`, _(UI)_ items `ios/SequenceUITests`; the rest is by hand. The web-view
-app above is the reference: the native one should do the same, natively.
+`ios/SequenceTests`, _(UI)_ items `ios/SequenceUITests`; the rest is by hand.
 
 - [ ] Sequences: New asks for a name and photos to start with (a frame for each, or the
       desk), then starts at 1080 × 1350 _(UI for the name)_; the list shows each
@@ -659,12 +595,12 @@ app above is the reference: the native one should do the same, natively.
       handle tucks the tools away, and the frame grows to fill the space smoothly.
 - [ ] Panels: the frame's background (white, black, every frame); a photo's X, Y, W, H
       (proportions kept or not), border (slider, white or black; starts opposite the
-      background; the handles hide while the slider's dragged), Crop, Fit (the frame, the
+      background; the handles hide while the slider's dragged), Crop, Fit (a dialog: the frame, the
       border guide), Center, Duplicate (the copy goes to the desk _(unit)_), Delete; the enlarged warning shows on the photo and in its
       panel.
-- [ ] Crop: handles, moving the crop, shapes, Reset, the pin (the crop holds; the photo
+- [ ] Crop: the guides show, and the crop snaps to them and to the photo's edges; it can be bigger than the photo, as far as the frame, and exports leave that room empty _(unit for the math)_; it follows the finger smoothly; handles, moving the crop, shapes, Reset, the pin (the crop holds; the photo
       moves behind it); Done is one undo step, Cancel puts it back _(unit for the math)_.
-- [ ] Frame size: presets and a custom size, the border, center lines; Apply is one undo
+- [ ] Frame settings: from New sequence too, with a preview; Refit all photos fits what's on the frames, as one undo step, and leaves the desk _(unit)_; presets and a custom size, the margin, center lines; Apply is one undo
       step and photos keep their place relative to the frame _(unit)_.
 - [ ] Preview: every frame full screen, swiped through, starting at the one asked for; a
       tap hides the controls.
@@ -679,7 +615,6 @@ app above is the reference: the native one should do the same, natively.
       it publishes, and links to the post.
 - [ ] Saved: a change is saved a moment later and when the app goes to the background;
       the project file opens in the web and Mac apps as is _(unit: the shared fixtures)_.
-- [ ] Both iPhone apps install side by side: "Sequence" and "Sequence (web)".
 
 ## Landing page (web)
 
