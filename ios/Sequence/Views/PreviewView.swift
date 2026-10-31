@@ -31,9 +31,15 @@ struct PreviewView: View {
             .accessibilityLabel("Preview")
             if chrome {
                 HStack {
-                    Button("Close the preview", systemImage: "xmark") { dismiss() }
-                        .labelStyle(.iconOnly).font(.sans(.title3))
-                        .frame(width: 44, height: 44)
+                    Button {
+                        dismiss()
+                    } label: {
+                        Label("Close the preview", systemImage: "xmark")
+                            .labelStyle(.iconOnly)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .font(.sans(.title3))
                     Spacer()
                     Text("\(min(at ?? start, frames.count - 1) + 1) / \(frames.count)").font(.mono(13))
                         .contentTransition(.numericText())

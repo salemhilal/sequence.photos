@@ -52,7 +52,7 @@ lists what it needs. It says what's missing.
 ## The iPhone app
 
 Not yet on the App Store: builds go to TestFlight for internal testers, from `main`. It's a
-listing of its own, `io.salem.SequencePhotosMobile` (the native app, `ios/`, archived from Xcode; `npm run ios:store` below builds the web-view app, now `io.salem.SequencePhotosMobile.web`, for testing beside it), iPhone only, with its own version (in
+listing of its own, `io.salem.SequencePhotosMobile` (the native app, `ios/`; `npm run ios:store` below builds the web-view app, now `io.salem.SequencePhotosMobile.web`, for testing beside it), iPhone only, with its own version (in
 `src-tauri/tauri.ios.conf.json`, starting at 1.0.0) apart from the website's and the Mac
 app's. `npm run bump` doesn't change it.
 
@@ -66,3 +66,14 @@ build number is the commit count, so each upload must come from a later commit (
 `BUILD_NUMBER`). Without an API key in the environment, upload the `.ipa` it prints with
 Transporter. In App Store Connect the build shows under TestFlight; add it to the internal
 testing group. `scripts/ios-store.mjs`'s header lists the environment it reads.
+
+The native app has its own commands:
+
+```bash
+npm run ios:native:store            # archive a signed .ipa (--upload, or an API key, uploads it too)
+npm run ios:screenshots             # retake its App Store screenshots
+npm run ios:store-art               # redraw the product page header and search results images
+```
+
+The store listing's text, screenshots, and images are in `docs/app-store/iphone/` (`listing.md`
+lists them). `scripts/ios-native-store.mjs`'s header lists the environment it reads.
