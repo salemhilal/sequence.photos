@@ -3,6 +3,21 @@ import XCTest
 @testable import Sequence
 
 final class InstagramTests: XCTestCase {
+    func testConnectionDecodesTheServersResponse() throws {
+        // What /auth/redeem sends: no `server`, which only this app keeps.
+        let json = #"{"token":"t","expiresAt":2,"refreshedAt":1,"userId":"123","username":"sal.em","enrollment":"e"}"#
+        let c = try JSONDecoder().decode(InstagramConnection.self, from: Data(json.utf8))
+        XCTAssertTrue(c.isValid)
+        XCTAssertEqual(c.server, InstagramConfig.server)
+        XCTAssertNil(c.needsReconnect)
+    }
+
+    func testConnectionKeepsItsServerWhenSaved() throws {
+        var c = InstagramConnection(token: "t", expiresAt: 2, refreshedAt: 1, userId: "123", username: "sal.em", enrollment: "e")
+        c.server = "https://example.test"
+        XCTAssertEqual(try JSONDecoder().decode(InstagramConnection.self, from: JSONEncoder().encode(c)), c)
+    }
+
     func testPlansASignInWithPKCE() throws {
         let plan = try XCTUnwrap(planSignIn())
         let parts = plan.state.split(separator: ".")

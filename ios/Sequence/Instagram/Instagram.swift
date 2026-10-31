@@ -44,6 +44,21 @@ struct InstagramConnection: Codable, Equatable {
     }
 }
 
+extension InstagramConnection {
+    /** The server's response has no `server` or `needsReconnect`: only this app keeps those. */
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        token = try c.decode(String.self, forKey: .token)
+        expiresAt = try c.decode(Int.self, forKey: .expiresAt)
+        refreshedAt = try c.decode(Int.self, forKey: .refreshedAt)
+        userId = try c.decode(String.self, forKey: .userId)
+        username = try c.decode(String.self, forKey: .username)
+        enrollment = try c.decode(String.self, forKey: .enrollment)
+        server = try c.decodeIfPresent(String.self, forKey: .server) ?? InstagramConfig.server
+        needsReconnect = try c.decodeIfPresent(Bool.self, forKey: .needsReconnect)
+    }
+}
+
 /** Why posting or signing in stopped, to say. */
 struct InstagramError: LocalizedError, Equatable {
     let message: String
