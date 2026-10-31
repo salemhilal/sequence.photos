@@ -650,8 +650,9 @@ app above is the reference: the native one should do the same, natively.
 - [ ] The editor: opens on the frame tapped, on screen and in the counter _(UI)_; the grid
       button shows and hides the guides; frames page with a swipe on the background or ‹ ›, and only the frame
       slides (the bars stay); photos move and snap (by their outer edge) and resize from
-      their corners _(unit for the math)_; pinch zooms the frame, and a drag pans it while
-      zoomed; a desk photo held shows its menu (place on this frame, delete), and dragged it
+      their corners _(unit for the math)_; two fingers hold the frame: it zooms and moves
+      with them, what's under them staying under them _(unit for the math)_, and settles
+      back at the fitted size; a drag on the background pans it while zoomed; a desk photo held shows its menu (place on this frame, delete), and dragged it
       lands centered where it's dropped on the frame; a placed photo dragged into the
       drawer's left half goes back to the desk, into its right half is deleted, and undo
       brings it back; the drawer's

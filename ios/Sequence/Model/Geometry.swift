@@ -188,3 +188,22 @@ func photoAt(_ items: [Placement], _ x: Double, _ y: Double) -> Placement? {
 func fitWidth(_ page: PageSetup, w: Double, h: Double) -> Double {
     Swift.min(w, h * page.w / page.h)
 }
+
+/**
+ * Where a frame goes as two fingers move on it: its size follows how far apart they are, and
+ * the spot between them stays under them, so they seem to hold the frame. `pan` is the frame's
+ * offset from where it sits fitted (`baseLeft`, `baseTop`), at `fit` points per unit.
+ */
+func anchoredZoom(
+    zoom: Double, pan: CGSize, fit: Double, baseLeft: Double, baseTop: Double, maxZoom: Double,
+    from: (a: CGPoint, b: CGPoint), to: (a: CGPoint, b: CGPoint)
+) -> (zoom: Double, pan: CGSize) {
+    let apart = { (a: CGPoint, b: CGPoint) in hypot(a.x - b.x, a.y - b.y) }
+    let middle = { (a: CGPoint, b: CGPoint) in CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2) }
+    let z = max(1, min(maxZoom, zoom * apart(to.a, to.b) / max(1, apart(from.a, from.b))))
+    let was = middle(from.a, from.b)
+    let now = middle(to.a, to.b)
+    let ux = (was.x - baseLeft - pan.width) / (fit * zoom)
+    let uy = (was.y - baseTop - pan.height) / (fit * zoom)
+    return (z, CGSize(width: now.x - baseLeft - ux * fit * z, height: now.y - baseTop - uy * fit * z))
+}

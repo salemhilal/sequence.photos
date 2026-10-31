@@ -11,21 +11,33 @@ struct GridIcon: View {
     let off: Bool
 
     var body: some View {
-        Image(systemName: "squareshape.split.3x3")
-            .overlay {
-                if off {
-                    GeometryReader { g in
-                        let line = Path { p in
-                            p.move(to: CGPoint(x: -1, y: -1))
-                            p.addLine(to: CGPoint(x: g.size.width + 1, y: g.size.height + 1))
-                        }
-                        // Cut out around the slash, so it reads against the grid's lines.
-                        line.stroke(.black, style: .init(lineWidth: 5, lineCap: .round)).blendMode(.destinationOut)
-                        line.stroke(.foreground, style: .init(lineWidth: 1.7, lineCap: .round))
-                    }
-                }
-            }
-            .compositingGroup()
+        Image(uiImage: off ? Self.crossedOut : Self.grid)
+    }
+
+    private static let grid = drawn(slash: false)
+    private static let crossedOut = drawn(slash: true)
+
+    /** One image, slash included: a toolbar keeps only the image of a label's icon. */
+    private static func drawn(slash: Bool) -> UIImage {
+        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .regular)
+        guard let symbol = UIImage(systemName: "squareshape.split.3x3", withConfiguration: config) else { return UIImage() }
+        let inset = 3.0
+        let size = CGSize(width: symbol.size.width + 2 * inset, height: symbol.size.height + 2 * inset)
+        let image = UIGraphicsImageRenderer(size: size).image { c in
+            symbol.withTintColor(.black, renderingMode: .alwaysOriginal).draw(at: CGPoint(x: inset, y: inset))
+            guard slash else { return }
+            let line = UIBezierPath()
+            line.move(to: CGPoint(x: 1, y: 1))
+            line.addLine(to: CGPoint(x: size.width - 1, y: size.height - 1))
+            line.lineCapStyle = .round
+            // Cut out around the slash, so it reads against the grid's lines.
+            line.lineWidth = 5.5
+            line.stroke(with: .clear, alpha: 1)
+            line.lineWidth = 2
+            UIColor.black.setStroke()
+            line.stroke()
+        }
+        return image.withRenderingMode(.alwaysTemplate)
     }
 }
 
@@ -57,8 +69,8 @@ extension UTType {
 
 /**
  * One frame, edited: photos move and resize (by their corners) with snapping, the desk's
- * photos come on by dragging, and dragged into the drawer they go back or are deleted. Pinch
- * zooms. Frames
+ * photos come on by dragging, and dragged into the drawer they go back or are deleted. Two
+ * fingers hold the frame, to zoom and move it. Frames
  * page sideways (a swipe on the background, or the pager); the bars stay put. Below, in a
  * drawer: the desk, or what's selected (the frame, or a photo).
  */
@@ -319,7 +331,8 @@ private struct FrameCanvas: View {
 
     @State private var zoom = 1.0
     @State private var pan = CGSize.zero
-    @State private var pinchStart: (zoom: Double, pan: CGSize)?
+    /** Where the frame was, and where the two fingers were, when they came down. */
+    @State private var pinchStart: (zoom: Double, pan: CGSize, a: CGPoint, b: CGPoint)?
     @State private var panStart: CGSize?
     @State private var hit: SnapHit?
     @State private var trayOver = false
@@ -382,7 +395,12 @@ private struct FrameCanvas: View {
             .frame(width: geo.size.width, height: geo.size.height)
             .clipped()
             .contentShape(Rectangle())
-            .simultaneousGesture(pinch(fit: fit, baseLeft: baseLeft, baseTop: baseTop))
+            .background {
+                TwoFingers(
+                    began: pinchBegan,
+                    changed: { a, b in pinchChanged(a, b, fit: fit, baseLeft: baseLeft, baseTop: baseTop) },
+                    ended: pinchEnded)
+            }
             .dropDestination(for: PhotoDrag.self) { drags, at in
                 trayOver = false
                 guard let d = drags.first else { return false }
@@ -454,6 +472,8 @@ private struct FrameCanvas: View {
         return         DragGesture(minimumDistance: 0, coordinateSpace: .global)
             .onChanged { v in
                 if moving == nil {
+                    // A finger left over from two isn't the start of a move.
+                    guard pinchStart == nil, hypot(v.translation.width, v.translation.height) <= 6 else { return }
                     moving = (item.photoId, item.rect, false)
                     if editing != .photo(item.photoId) { withAnimation(Theme.quick) { editing = .photo(item.photoId) } }
                 }
@@ -508,6 +528,7 @@ private struct FrameCanvas: View {
         DragGesture(minimumDistance: 0)
             .onChanged { v in
                 if resizing == nil {
+                    guard pinchStart == nil, hypot(v.translation.width, v.translation.height) <= 6 else { return }
                     resizing = (item.photoId, corner, item.rect)
                     store.begin()
                 }
@@ -520,50 +541,53 @@ private struct FrameCanvas: View {
                 store.preview { p in p.updatePlacement(r0.id) { $0.rect = r.rect } }
             }
             .onEnded { _ in
+                guard resizing != nil else { return }
                 resizing = nil
                 hit = nil
                 store.end()
             }
     }
 
-    /** Two fingers zoom the frame (not the photos), the point between them staying put. */
-    private func pinch(fit: Double, baseLeft: Double, baseTop: Double) -> some Gesture {
-        MagnifyGesture()
-            .onChanged { v in
-                if pinchStart == nil {
-                    pinchStart = (zoom, pan)
-                    // A second finger drops whatever the first had started.
-                    if moving?.moved == true || resizing != nil { store.cancel() }
-                    moving = nil
-                    resizing = nil
-                    hit = nil
-                }
-                guard let s = pinchStart else { return }
-                let z = max(1, min(maxZoom, s.zoom * v.magnification))
-                let at = v.startLocation
-                let ux = (at.x - baseLeft - s.pan.width) / (fit * s.zoom)
-                let uy = (at.y - baseTop - s.pan.height) / (fit * s.zoom)
-                zoom = z
-                pan = z == 1 ? .zero : CGSize(width: at.x - baseLeft - ux * fit * z, height: at.y - baseTop - uy * fit * z)
-                zoomed = z > 1
+    /** Two fingers down: they drop whatever the first had started, and the frame stops paging. */
+    private func pinchBegan(_ a: CGPoint, _ b: CGPoint) {
+        pinchStart = (zoom, pan, a, b)
+        if moving?.moved == true || resizing != nil { store.cancel() }
+        moving = nil
+        resizing = nil
+        panStart = nil
+        hit = nil
+        zoomed = true
+    }
+
+    /** The frame follows the fingers, as if each were holding its spot on it. */
+    private func pinchChanged(_ a: CGPoint, _ b: CGPoint, fit: Double, baseLeft: Double, baseTop: Double) {
+        guard let s = pinchStart else { return }
+        let next = anchoredZoom(
+            zoom: s.zoom, pan: s.pan, fit: fit, baseLeft: baseLeft, baseTop: baseTop, maxZoom: maxZoom,
+            from: (s.a, s.b), to: (a, b))
+        zoom = next.zoom
+        pan = next.pan
+    }
+
+    /** Fingers up: at the fitted size, the frame settles back in place. */
+    private func pinchEnded() {
+        pinchStart = nil
+        if zoom <= 1.01 {
+            withAnimation(Theme.quick) {
+                zoom = 1
+                pan = .zero
             }
-            .onEnded { _ in
-                pinchStart = nil
-                if zoom <= 1.01 {
-                    withAnimation(Theme.quick) {
-                        zoom = 1
-                        pan = .zero
-                    }
-                    zoomed = false
-                }
-            }
+            zoomed = false
+        }
     }
 
     /** Zoomed in, a drag on the background pans. */
     private var zoomPan: some Gesture {
         DragGesture()
             .onChanged { v in
-                if panStart == nil { panStart = pan }
+                guard pinchStart == nil else { return }
+                // Measured from here, so a finger left over from two doesn't make the frame jump.
+                if panStart == nil { panStart = CGSize(width: pan.width - v.translation.width, height: pan.height - v.translation.height) }
                 guard let s = panStart else { return }
                 pan = CGSize(width: s.width + v.translation.width, height: s.height + v.translation.height)
             }

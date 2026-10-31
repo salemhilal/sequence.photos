@@ -407,4 +407,29 @@ final class RenderTests: XCTestCase {
         b.read = []
         XCTAssertNil(b.ready)
     }
+
+    func testTwoFingersHoldTheFrame() {
+        let at = { (zoom: Double, pan: CGSize, x: Double, y: Double) in
+            CGPoint(x: 20 + pan.width + x * 2 * zoom, y: 30 + pan.height + y * 2 * zoom)
+        }
+        let move = { (zoom: Double, pan: CGSize, a: CGPoint, b: CGPoint, a2: CGPoint, b2: CGPoint) in
+            anchoredZoom(
+                zoom: zoom, pan: pan, fit: 2, baseLeft: 20, baseTop: 30, maxZoom: 6, from: (a, b), to: (a2, b2))
+        }
+        // Spreading them doubles the size, and what's under each finger stays under it.
+        let a = at(1, .zero, 10, 10)
+        let b = at(1, .zero, 30, 10)
+        let wide = move(1, .zero, a, b, CGPoint(x: a.x - 20, y: a.y), CGPoint(x: b.x + 20, y: b.y))
+        XCTAssertEqual(wide.zoom, 2, accuracy: 0.001)
+        XCTAssertEqual(at(wide.zoom, wide.pan, 10, 10).x, a.x - 20, accuracy: 0.001)
+        XCTAssertEqual(at(wide.zoom, wide.pan, 30, 10).x, b.x + 20, accuracy: 0.001)
+        // Moving them together moves the frame, at the same size.
+        let moved = move(2, CGSize(width: 5, height: 5), a, b, CGPoint(x: a.x + 30, y: a.y - 12), CGPoint(x: b.x + 30, y: b.y - 12))
+        XCTAssertEqual(moved.zoom, 2, accuracy: 0.001)
+        XCTAssertEqual(moved.pan.width, 35, accuracy: 0.001)
+        XCTAssertEqual(moved.pan.height, -7, accuracy: 0.001)
+        // Size stays within its limits.
+        XCTAssertEqual(move(1, .zero, a, b, CGPoint(x: a.x + 15, y: a.y), CGPoint(x: b.x - 15, y: b.y)).zoom, 1)
+        XCTAssertEqual(move(5, .zero, a, b, CGPoint(x: a.x - 200, y: a.y), CGPoint(x: b.x + 200, y: b.y)).zoom, 6)
+    }
 }
