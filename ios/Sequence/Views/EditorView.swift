@@ -392,7 +392,8 @@ private struct FrameCanvas: View {
                     selection(item, layout: layout)
                 }
             }
-            .frame(width: geo.size.width, height: geo.size.height)
+            // Pinned to the corner: zoomed past the canvas, centering would shift all of it.
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
             .clipped()
             .contentShape(Rectangle())
             .background {
