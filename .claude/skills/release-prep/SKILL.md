@@ -16,7 +16,8 @@ ready and hands the user the decisions. It never publishes by itself.
   `gh release list --limit 3`.
 - Unmerged work: open PRs (`gh pr list`), and branches ahead of `main`
   (`git branch -r --no-merged origin/main`). Ask which of them belong in the release.
-- CI on what will ship: `gh run list --branch <branch> --limit 4` (CI and Mac app both green).
+- CI on what will ship: `gh run list --branch <branch> --limit 4`: CI green, and Mac app too
+  if it ran (only pull requests touching the Mac side run it; step 4's `test:app` covers the rest).
 - The new version: ask the user whether this is a **major**, **minor**, or **patch** bump,
   saying the current version and what each would make it (e.g. "Now 1.2.3: major → 2.0.0,
   minor → 1.3.0, patch → 1.2.4"), with a recommendation from what changed (major for a new
@@ -97,8 +98,7 @@ When the real run finishes, check it did everything: both jobs green
 GitHub release published (`gh release view vX.Y.Z`), and the App Store job's upload step
 succeeded. If anything failed, report it in full instead, with the failing step's log.
 
-Then open the screenshots folder in Finder (the `reveal_path` tool on `docs/app-store`, or
-`open docs/app-store`), and make the **last message** of the run everything the user needs
+Then open the screenshots folder in Finder (`open docs/app-store`), and make the **last message** of the run everything the user needs
 for App Store Connect, ready to paste, and nothing else after it:
 
 - **Version:** X.Y.Z, and the build to pick (it appears under TestFlight, then in the

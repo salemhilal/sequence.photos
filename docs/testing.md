@@ -4,7 +4,8 @@ What to check before a release: the automated checks, then a pass through the ap
 Tick items off as you go.
 
 Tags: **[S]** spreads only, **[F]** frames only, **[S≠F]** behaves differently in each;
-**[in]** and **[px]** for a page in inches or pixels. Untagged items apply to all. Test the
+**[in]** and **[px]** for a page in inches or pixels; **[Mac]** the Mac app only. Untagged
+items apply to all. Test the
 combinations where it matters: make a book, then switch it to frames, and to pixels, in Layout
 (and back). Pixel spreads and frames in inches work too.
 
@@ -21,8 +22,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       Mac app's engine): pages and their shortcuts, Esc staying on a page, Layout's
       unapplied-changes prompt, Preview's fullscreen option, the status bar (counts, selection,
       hints, page text, zoom), Settings (tabs, persisted toggles), shortcut badges, the spread
-      editor (pager, zoom and pan, strip, Go to next error, Return to desk), scrubbing number
-      fields, test images, and the private-window notice. CI runs them on every pull request.
+      editor (pager, zoom and pan, strip, Go to next error, Return to desk), crop mode, the
+      tour, Instagram's tags and kept post, scrubbing number fields, test images, and the
+      private-window notice. CI runs them on every pull request.
       Items below marked _(e2e)_ are among them; check the rest by hand.
 - [ ] `npm run test:app`: the Mac app end-to-end test passes (open, Save, Save As, relaunch,
       sandboxed, Preview's fullscreen, the Settings window and its sync with the main window).
@@ -31,13 +33,14 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 
 ## Desktop feel
 
-- [ ] The arrow cursor everywhere, including buttons, tabs, swatches, and sidebar cells; the
-      hand only on links that open a web page (About's links, "Layout" in the empty desk).
-      Text fields show the text cursor.
+- [ ] The arrow cursor everywhere, including buttons, tabs, swatches, sidebar cells, photos,
+      and marks (no grab or help cursors); the hand only on links (About's, and "add them" and
+      "Layout" on the empty desk). Text fields show the text cursor; resize handles, guides,
+      panel edges, and scrubbable labels show resize cursors.
 - [ ] Double-clicking or dragging across labels, headings, or the toolbar selects nothing;
       text fields, the caption, and About's version can still be selected.
 - [ ] Photos and thumbnails don't drag out as image files.
-- [ ] Filled buttons (Layout, Preview, Export, Apply) don't change on hover and darken while
+- [ ] Filled buttons (Export, Apply, crop's Done) don't change on hover and darken while
       pressed; ghost and icon buttons light on hover.
 - [ ] The desk's colors (Settings → General, or the desk's right-click menu) are true black,
       neutral grays, and true white. One saved before they were neutral (a warm gray) comes
@@ -101,7 +104,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Right-click the desk: Tidy up (or "Tidy up N photos") makes a grid; the desk color
       swatches change it at once.
 - [ ] Right-click a photo: Quick Look, Copy image, Duplicate, Return to desk (placed photos),
-      Delete ("Deleted … Undo to bring it back").
+      the crop items (see Cropping), Delete ("Deleted … Undo to bring it back").
 - [ ] With every photo placed: "Every photo is placed." above the same line.
 - [ ] _(e2e)_ The status bar along the window's foot: what's selected ("2 photos selected", "1
       spread selected" / "1 frame selected"), else "4 on desk, 2 placed"; and while it's under way,
@@ -152,8 +155,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       has Original, 1:1, 4:5, 3:2, Page (Frame for frames), Free, Reset, and Done; the status
       bar says what to do.
 - [ ] _(e2e)_ Drag an edge or corner to crop (as far as the photo goes); drag inside to move the
-      crop across the photo (⌘-drag moves the photo behind it; in the editor, it snaps); Shift keeps the shape; a shape from the bar crops to it and keeps
-      it. Done, Return, or a click elsewhere keeps the crop as one undo step; Esc puts it back.
+      crop across the photo (in the editor, it snaps); ⌘-drag (Ctrl elsewhere) moves the photo
+      behind it (check this by hand); Shift keeps the shape; a shape from the bar crops to it and keeps it
+      (corner handles only). Done, Return, or a click elsewhere keeps the crop as one undo step; Esc puts it back.
       Undo and other shortcuts wait while cropping.
 - [ ] _(e2e)_ The pin in crop mode's bar pins the crop: its handles go, its outline dashes, the
       shapes and Reset wait, only what's in the crop shows, and dragging moves the photo in it.
@@ -161,7 +165,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] _(e2e)_ In the editor, the crop's edges snap to the page's edges, center lines, and guides;
       Option doesn't snap.
 - [ ] _(e2e)_ Right-click a photo: Crop… (on a page, opens its spread's editor in crop mode), Crop
-      to › Square, 4:5, 3:2, 16:9, The page (the current shape checked), and Reset crop when it's
+      to › Square, 4:5, 3:2, 16:9, The page or The frame (the current shape checked), and Reset crop when it's
       cropped.
 - [ ] A crop is the photo's wherever it goes (desk, page, back), and in a saved project. Its
       frame has the crop's shape: fitting to guides, the desk's size, and the resolution warning
@@ -226,10 +230,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       it's closed (×, Esc, ⌥⌘P, a page switch, a menu; **[Mac]** its window's close button);
       Cancel stays.
 - [ ] Settings or About over a page close when going to another page.
-- [ ] No grab or help cursors over photos or marks: the arrow throughout.
 - [ ] A soft photo's "Show me" (Export) goes to the desk with it open in the editor.
-- [ ] The tour's Layout step opens Layout on its Page tab; its Preview and Export steps show
-      those pages.
 
 ## Hints
 
@@ -255,8 +256,6 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       The stage always shows the real spreads or frames, with ‹ › and ←/→ through them: as
       they are, or as they'd be after Apply once something changes, without the view
       switching. Revert drops the draft. The draft survives switching to Guides and back.
-      Leaving Layout (the switcher, ⌥⌘ shortcuts, a menu) with changes waiting asks: Cancel, Discard, or
-      Apply.
 - [ ] With changes waiting, the Guides tab asks first, as closing does: Cancel stays on Page,
       Discard drops them, Apply applies them, then Guides opens.
 - [ ] The pager says only "1 / 6". Apply and Revert stay at the panel's foot while the settings
@@ -305,13 +304,13 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] The Guides section's buttons add a guide at a third; its field moves it (whole px **[px]**).
 - [ ] Sections fold by their titles; folding survives a reload.
 - [ ] No hint in the title bar. The note at the panel's foot starts "Guides apply to every
-      spread/frame" and ends "Drag a guide off the page/frame to remove it.
+      spread/frame" and ends "Drag a guide off the page/frame to remove it."
 
 ## Preview
 
 - [ ] _(e2e)_ The switcher, ⌥⌘2, or ⌘P: opens on the spread being edited, else the first. The
       toolbar and status bar stay; the controls don't fade. The status bar says "← → to turn
-      pages · F for fullscreen"; "2 / 4" sits just below the spread (no folio).
+      pages · F for fullscreen" ("go through frames" **[F]**); "2 / 4" sits just below the spread (no folio).
 - [ ] →, Space, PageDown forward; ←, PageUp back; Home and End; arrow buttons disable at the
       ends. **[S]** Single pages on their side, with gutter shading.
 - [ ] _(e2e)_ Fullscreen (or F) covers the window, toolbar and status bar too: the browser goes
@@ -331,8 +330,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       with ‹ › and ←/→ (not while Layout or Settings is over it), and the destination and its
       options on the right. Destinations: PDF,
       Images, InDesign, and Instagram. It opens on PDF for inches, Instagram for
-      1080 px frames, else Images; then on the last one picked, with the last choices
-      (spread or page, format, Print at), while the app is open.
+      1080 px frames, else Images; after that, on the project's last choices (see Instagram →
+      Posting).
 - [ ] A conversion note (not a warning) shows only where the units differ: **[in]** Images:
       "Pages are measured in inches, so they're turned into pixels: 3000 × 2400 px a page" with
       At ___ dpi (up to the page's); Instagram: slides are made at Instagram's size. **[px]**
@@ -343,7 +342,7 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] Photos below the export's resolution: "N photos are below 300 dpi." (or "are
       enlarged") above the button, with Show me opening the first in the editor, selected.
       Lowering the dpi updates it.
-- [ ] Instagram shows Instagram's glyph. **[F]** Images has no "One image per" choice.
+- [ ] Instagram shows Instagram's glyph.
 - [ ] Images: JPEG has a Quality slider (50–100%, 92% to start); PNG says it's lossless. Under
       it, "N images, ~X MB total", updating a moment after a change.
 - [ ] The button names the result (Export PDF, Export N images, Export for InDesign) and shows
@@ -421,7 +420,7 @@ Posts made while testing are real and public. Use a test account, or delete them
       Export, it reopens Export on Instagram. A sign-in finished after the app was quit is
       ignored ("started in another tab or window").
 - [ ] Running locally with the Sequence server chosen: "Couldn't connect to the Sequence
-      server. Check the server in the Advanced tab."
+      server. Check the server in Settings → Advanced."
 - [ ] A sign-in finished in a different tab (or opened twice): ignored, with a notice to
       connect from here.
 - [ ] Back from Instagram's page without signing in: the Connect button is ready again.
@@ -463,7 +462,7 @@ Posts made while testing are real and public. Use a test account, or delete them
       and fit survive a reload or a relaunch, travel in a saved project file, and aren't undo
       steps (undoing a move leaves the caption). Posting clears the caption, slides, and tags.
       Export's destination and options (pages per, format, quality, print size) are kept the
-      same way, per project.
+      same way, per project. Only opening Export or its Instagram pane marks nothing as edited.
 - [ ] The preview's image has a hairline edge, so a white page doesn't run into the card.
 - [ ] Post (or Export), its progress, Cancel, and the result stay at the panel's foot while
       the options scroll, as Layout's Apply does.
@@ -553,10 +552,10 @@ For each of `https://sequence-server.sequence-photos.workers.dev` and the `-dev`
 - [ ] Menus in title case with shortcuts. File: New Project, Open…, Save, Save As… (⌘⇧S),
       Close; Add Photos…; Export… (⌘⇧E). The web File menu matches: New project…, Open
       project…, Save project; Add photos…; Export…; the tour and About.
-- [ ] View: Preview, Layout…, Hide/Show Guides, Hide/Show Spreads [S] or Frames [F], following
-      their state.
-- [ ] Edit: Cut, Copy, Paste in text fields; Copy with photos selected copies them; Undo
-      follows the project (and text fields while typing).
+- [ ] View: Desk, Preview, Export; Layout…, Hide/Show Guides, Hide/Show Spreads [S] or Frames
+      [F], following their state; fullscreen. Help: Take the Tour, Sequence on GitHub.
+- [ ] Edit: Cut, Copy, Paste in text fields; Copy with photos selected copies them; Duplicate,
+      Delete, Select All; Undo follows the project (and text fields while typing).
 - [ ] Save writes the file and clears "Edited"; Save As… asks where; Open… and double-clicking
       a `.photo-sequence` open it; after a relaunch, Save still writes the same file.
 - [ ] Quitting or closing with unsaved changes asks to save; unsaved changes survive a quit
