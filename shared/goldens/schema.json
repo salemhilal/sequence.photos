@@ -1,0 +1,3923 @@
+[
+  {
+    "name": "fixture book.json",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 3000,
+          "pxH": 2000
+        },
+        "b": {
+          "id": "b",
+          "name": "b.jpg",
+          "pxW": 2000,
+          "pxH": 3000,
+          "crop": {
+            "x": 0.1,
+            "y": 0,
+            "w": 0.8,
+            "h": 1
+          }
+        }
+      },
+      "pile": [],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [
+          {
+            "kind": "middle",
+            "id": "s2",
+            "items": [
+              {
+                "photoId": "a",
+                "x": -9,
+                "y": 1,
+                "w": 6,
+                "h": 4,
+                "z": 1
+              },
+              {
+                "photoId": "b",
+                "x": -2,
+                "y": 1,
+                "w": 4,
+                "h": 6,
+                "z": 2,
+                "border": {
+                  "width": 0.1,
+                  "color": "black"
+                }
+              }
+            ]
+          }
+        ],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s3",
+          "items": [],
+          "background": "black"
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          },
+          {
+            "id": "e",
+            "kind": "edges",
+            "top": 0.5,
+            "bottom": 1,
+            "inside": 1.5,
+            "outside": 0.75
+          }
+        ],
+        "lines": [
+          {
+            "id": "v",
+            "axis": "vertical",
+            "at": 2
+          },
+          {
+            "id": "h",
+            "axis": "horizontal",
+            "at": 3
+          }
+        ],
+        "dropBorder": "m"
+      },
+      "nextZ": 3
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 3000,
+          "pxH": 2000
+        },
+        "b": {
+          "id": "b",
+          "name": "b.jpg",
+          "pxW": 2000,
+          "pxH": 3000,
+          "crop": {
+            "x": 0.1,
+            "y": 0,
+            "w": 0.8,
+            "h": 1
+          }
+        }
+      },
+      "pile": [],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [
+          {
+            "kind": "middle",
+            "id": "s2",
+            "items": [
+              {
+                "photoId": "a",
+                "x": -9,
+                "y": 1,
+                "w": 6,
+                "h": 4,
+                "z": 1
+              },
+              {
+                "photoId": "b",
+                "x": -2,
+                "y": 1,
+                "w": 4,
+                "h": 6,
+                "z": 2,
+                "border": {
+                  "width": 0.1,
+                  "color": "black"
+                }
+              }
+            ]
+          }
+        ],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s3",
+          "items": [],
+          "background": "black"
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          },
+          {
+            "id": "e",
+            "kind": "edges",
+            "top": 0.5,
+            "bottom": 1,
+            "inside": 1.5,
+            "outside": 0.75
+          }
+        ],
+        "lines": [
+          {
+            "id": "v",
+            "axis": "vertical",
+            "at": 2
+          },
+          {
+            "id": "h",
+            "axis": "horizontal",
+            "at": 3
+          }
+        ],
+        "dropBorder": "m"
+      },
+      "nextZ": 3
+    }
+  },
+  {
+    "name": "fixture frames.json",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "door.jpg",
+          "pxW": 795,
+          "pxH": 1200
+        },
+        "b": {
+          "id": "b",
+          "name": "taxi.jpg",
+          "pxW": 795,
+          "pxH": 1200,
+          "crop": {
+            "x": 0,
+            "y": 0.1,
+            "w": 1,
+            "h": 0.6625
+          }
+        },
+        "c": {
+          "id": "c",
+          "name": "lily.jpg",
+          "pxW": 795,
+          "pxH": 1200
+        }
+      },
+      "pile": [
+        {
+          "photoId": "c",
+          "x": 0.5,
+          "y": 0.5,
+          "w": 16.5625,
+          "h": 25,
+          "z": 3
+        }
+      ],
+      "page": {
+        "w": 1080,
+        "h": 1350,
+        "unit": "px",
+        "pxPerUnit": 1
+      },
+      "layout": {
+        "kind": "frames",
+        "frames": [
+          {
+            "kind": "frame",
+            "id": "f1",
+            "items": [
+              {
+                "photoId": "a",
+                "x": 126,
+                "y": 54,
+                "w": 828,
+                "h": 1242,
+                "z": 1
+              }
+            ]
+          },
+          {
+            "kind": "frame",
+            "id": "f2",
+            "items": [
+              {
+                "photoId": "b",
+                "x": 140,
+                "y": 400,
+                "w": 800,
+                "h": 530,
+                "z": 2,
+                "border": {
+                  "width": 24,
+                  "color": "white"
+                }
+              }
+            ],
+            "background": "black"
+          },
+          {
+            "kind": "frame",
+            "id": "f3",
+            "items": []
+          }
+        ]
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": true,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "g1",
+            "kind": "even",
+            "inset": 54
+          }
+        ],
+        "lines": [],
+        "dropBorder": "g1"
+      },
+      "nextZ": 4,
+      "export": {
+        "to": "instagram",
+        "options": {
+          "format": "jpeg",
+          "quality": 0.9
+        },
+        "instagram": {
+          "kind": "feed",
+          "fit": "crop",
+          "caption": "Walks #35mm",
+          "chosen": [
+            "f1:whole",
+            "f2:whole"
+          ]
+        }
+      }
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "door.jpg",
+          "pxW": 795,
+          "pxH": 1200
+        },
+        "b": {
+          "id": "b",
+          "name": "taxi.jpg",
+          "pxW": 795,
+          "pxH": 1200,
+          "crop": {
+            "x": 0,
+            "y": 0.1,
+            "w": 1,
+            "h": 0.6625
+          }
+        },
+        "c": {
+          "id": "c",
+          "name": "lily.jpg",
+          "pxW": 795,
+          "pxH": 1200
+        }
+      },
+      "pile": [
+        {
+          "photoId": "c",
+          "x": 0.5,
+          "y": 0.5,
+          "w": 16.5625,
+          "h": 25,
+          "z": 3
+        }
+      ],
+      "page": {
+        "w": 1080,
+        "h": 1350,
+        "unit": "px",
+        "pxPerUnit": 1
+      },
+      "layout": {
+        "kind": "frames",
+        "frames": [
+          {
+            "kind": "frame",
+            "id": "f1",
+            "items": [
+              {
+                "photoId": "a",
+                "x": 126,
+                "y": 54,
+                "w": 828,
+                "h": 1242,
+                "z": 1
+              }
+            ]
+          },
+          {
+            "kind": "frame",
+            "id": "f2",
+            "items": [
+              {
+                "photoId": "b",
+                "x": 140,
+                "y": 400,
+                "w": 800,
+                "h": 530,
+                "z": 2,
+                "border": {
+                  "width": 24,
+                  "color": "white"
+                }
+              }
+            ],
+            "background": "black"
+          },
+          {
+            "kind": "frame",
+            "id": "f3",
+            "items": []
+          }
+        ]
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": true,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "g1",
+            "kind": "even",
+            "inset": 54
+          }
+        ],
+        "lines": [],
+        "dropBorder": "g1"
+      },
+      "nextZ": 4,
+      "export": {
+        "to": "instagram",
+        "options": {
+          "format": "jpeg",
+          "quality": 0.9
+        },
+        "instagram": {
+          "kind": "feed",
+          "fit": "crop",
+          "caption": "Walks #35mm",
+          "chosen": [
+            "f1:whole",
+            "f2:whole"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "version 0",
+    "input": {
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "spreads": [
+        {
+          "id": "s1",
+          "kind": "first",
+          "items": []
+        },
+        {
+          "id": "s2",
+          "kind": "last",
+          "items": []
+        }
+      ],
+      "settings": {
+        "pageW": 10,
+        "pageH": 8,
+        "centerV": true,
+        "centerH": false,
+        "borders": [
+          0.5
+        ]
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "g7",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "g7"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "version 0 without border guides",
+    "input": {
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "spreads": [
+        {
+          "id": "s1",
+          "kind": "first",
+          "items": []
+        },
+        {
+          "id": "s2",
+          "kind": "last",
+          "items": []
+        }
+      ],
+      "settings": {
+        "pageW": 10,
+        "pageH": 8
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": true,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "g14",
+            "kind": "even",
+            "inset": 0.5
+          },
+          {
+            "id": "g15",
+            "kind": "even",
+            "inset": 1.25
+          }
+        ],
+        "lines": [],
+        "dropBorder": "g14"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "version 0 with three guides",
+    "input": {
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "spreads": [
+        {
+          "id": "s1",
+          "kind": "first",
+          "items": []
+        },
+        {
+          "id": "s2",
+          "kind": "last",
+          "items": []
+        }
+      ],
+      "settings": {
+        "borders": [
+          1,
+          0.25,
+          0.25
+        ]
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": true,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "g22",
+            "kind": "even",
+            "inset": 1
+          },
+          {
+            "id": "g23",
+            "kind": "even",
+            "inset": 0.25
+          },
+          {
+            "id": "g24",
+            "kind": "even",
+            "inset": 0.25
+          }
+        ],
+        "lines": [],
+        "dropBorder": "g23"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "version 1",
+    "input": {
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "spreads": [
+        {
+          "id": "s1",
+          "kind": "first",
+          "items": []
+        },
+        {
+          "id": "s2",
+          "kind": "last",
+          "items": []
+        }
+      ],
+      "settings": {
+        "pageW": 10,
+        "pageH": 8,
+        "centerV": true,
+        "centerH": false,
+        "borders": [
+          0.5
+        ],
+        "keepRelative": true
+      },
+      "nextZ": 2,
+      "schemaVersion": 1
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "g25",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "g25"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "version 2",
+    "input": {
+      "schemaVersion": 2,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "firstSpread": {
+        "kind": "first",
+        "id": "s1",
+        "items": []
+      },
+      "lastSpread": {
+        "kind": "last",
+        "id": "s2",
+        "items": []
+      },
+      "spreads": [],
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m",
+        "pageW": 10,
+        "pageH": 8
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "version 3",
+    "input": {
+      "schemaVersion": 3,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "layout": {
+        "kind": "print",
+        "page": {
+          "w": 10,
+          "h": 8
+        },
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        },
+        "spreads": []
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m",
+        "sizes": {
+          "print": {
+            "w": 10,
+            "h": 8
+          },
+          "digital": {
+            "w": 1080,
+            "h": 1350
+          }
+        }
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "version 3 digital",
+    "input": {
+      "schemaVersion": 3,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [],
+      "layout": {
+        "kind": "digital",
+        "frame": {
+          "w": 1080,
+          "h": 1440
+        },
+        "frames": [
+          {
+            "kind": "frame",
+            "id": "s",
+            "items": []
+          }
+        ]
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m",
+        "sizes": {
+          "print": {
+            "w": 10,
+            "h": 8
+          },
+          "digital": {
+            "w": 1080,
+            "h": 1350
+          }
+        }
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [],
+      "page": {
+        "w": 1080,
+        "h": 1440,
+        "unit": "px",
+        "pxPerUnit": 1
+      },
+      "layout": {
+        "kind": "frames",
+        "frames": [
+          {
+            "kind": "frame",
+            "id": "s",
+            "items": []
+          }
+        ]
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "version 3 unknown layout",
+    "input": {
+      "schemaVersion": 3,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [],
+      "layout": {
+        "kind": "scroll",
+        "frame": {
+          "w": 1080,
+          "h": 1440
+        },
+        "frames": [
+          {
+            "kind": "frame",
+            "id": "s",
+            "items": []
+          }
+        ]
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m",
+        "sizes": {
+          "print": {
+            "w": 10,
+            "h": 8
+          },
+          "digital": {
+            "w": 1080,
+            "h": 1350
+          }
+        }
+      },
+      "nextZ": 2
+    },
+    "error": "Damaged project (layout.kind)"
+  },
+  {
+    "name": "version 4",
+    "input": {
+      "schemaVersion": 4,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "version 5",
+    "input": {
+      "schemaVersion": 5,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "version 6",
+    "input": {
+      "schemaVersion": 6,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "current",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "newer",
+    "input": {
+      "schemaVersion": 8,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "error": "This project was saved by a newer version of Sequence."
+  },
+  {
+    "name": "version 1 with damaged spreads",
+    "input": {
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "spreads": "none",
+      "settings": {
+        "pageW": 10,
+        "pageH": 8,
+        "centerV": true,
+        "centerH": false,
+        "borders": [
+          0.5
+        ]
+      },
+      "nextZ": 2,
+      "schemaVersion": 1
+    },
+    "error": "Damaged project (layout.firstSpread.id)"
+  },
+  {
+    "name": "damaged pile",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": "none",
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "error": "Damaged project (pile)"
+  },
+  {
+    "name": "photo in two places",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        },
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "error": "Damaged project (pile[1].photoId: repeated id)"
+  },
+  {
+    "name": "placement of a missing photo",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "zz",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "error": "Damaged project (pile[0].photoId: no such photo)"
+  },
+  {
+    "name": "placement with no width",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 0,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "error": "Damaged project (pile[0].w)"
+  },
+  {
+    "name": "photo id unlike its key",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "b",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "error": "Damaged project (photos.a.id)"
+  },
+  {
+    "name": "photo with damaged crop",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800,
+          "crop": {
+            "x": "no"
+          }
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "photo with crop outside",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800,
+          "crop": {
+            "x": 0.9,
+            "y": -1,
+            "w": 0.5,
+            "h": 0.333333333
+          }
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800,
+          "crop": {
+            "x": 0.5,
+            "y": 0,
+            "w": 0.5,
+            "h": 0.33333
+          }
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "placement with damaged border",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1,
+          "border": {
+            "width": -1,
+            "color": "white"
+          }
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "placement with border",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1,
+          "border": {
+            "width": 0.25,
+            "color": "black"
+          }
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1,
+          "border": {
+            "width": 0.25,
+            "color": "black"
+          }
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "unknown unit",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "cm",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "error": "Damaged project (page.unit)"
+  },
+  {
+    "name": "no frames",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "frames",
+        "frames": []
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "error": "Damaged project (layout.frames: none)"
+  },
+  {
+    "name": "repeated spread id",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s1",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "error": "Damaged project (layout.lastSpread.id: repeated id)"
+  },
+  {
+    "name": "spread of the wrong kind",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [
+          {
+            "kind": "frame",
+            "id": "s3",
+            "items": []
+          }
+        ],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "error": "Damaged project (layout.spreads[0].kind)"
+  },
+  {
+    "name": "white and unknown backgrounds",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": [],
+          "background": "white"
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": [],
+          "background": "teal"
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "nextZ below a placement",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 5
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 0
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 5
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 6
+    }
+  },
+  {
+    "name": "drop guide gone",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "gone"
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "gone"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "no drop guide",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": null
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": null
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "repeated guide id",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [
+          {
+            "id": "m",
+            "axis": "vertical",
+            "at": 1
+          }
+        ],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "error": "Damaged project (settings.lines[0].id: repeated id)"
+  },
+  {
+    "name": "edges guide",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "e",
+            "kind": "edges",
+            "top": 1,
+            "bottom": 2,
+            "inside": 0.5,
+            "outside": 0.75
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "e",
+            "kind": "edges",
+            "top": 1,
+            "bottom": 2,
+            "inside": 0.5,
+            "outside": 0.75
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "Export choices",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2,
+      "export": {
+        "to": "instagram",
+        "options": {
+          "per": "page",
+          "format": "png",
+          "quality": 0.8,
+          "printAt": 150
+        },
+        "instagram": {
+          "kind": "story",
+          "fit": "expand",
+          "caption": "Hi #film",
+          "chosen": [
+            "s1:whole"
+          ],
+          "tags": {
+            "s1:whole": [
+              {
+                "username": "salemhilal",
+                "x": 0.5,
+                "y": 0.25
+              }
+            ]
+          }
+        }
+      }
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2,
+      "export": {
+        "to": "instagram",
+        "options": {
+          "per": "page",
+          "format": "png",
+          "quality": 0.8,
+          "printAt": 150
+        },
+        "instagram": {
+          "kind": "story",
+          "fit": "expand",
+          "caption": "Hi #film",
+          "chosen": [
+            "s1:whole"
+          ],
+          "tags": {
+            "s1:whole": [
+              {
+                "username": "salemhilal",
+                "x": 0.5,
+                "y": 0.25
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "damaged Export choices",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2,
+      "export": {
+        "to": "fax",
+        "options": {
+          "per": "both",
+          "quality": 7
+        },
+        "instagram": {
+          "caption": 3,
+          "chosen": [
+            "ok",
+            4
+          ],
+          "tags": {
+            "a": [
+              {
+                "username": "Has Space",
+                "x": 0.5,
+                "y": 0.5
+              },
+              {
+                "username": "ok",
+                "x": 2,
+                "y": 0
+              },
+              "x"
+            ],
+            "b": "no"
+          }
+        }
+      }
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2,
+      "export": {
+        "options": {},
+        "instagram": {
+          "chosen": [
+            "ok"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "nonsense Export choices",
+    "input": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2,
+      "export": "nonsense"
+    },
+    "output": {
+      "schemaVersion": 7,
+      "photos": {
+        "a": {
+          "id": "a",
+          "name": "a.jpg",
+          "pxW": 1200,
+          "pxH": 800
+        }
+      },
+      "pile": [
+        {
+          "photoId": "a",
+          "x": 1,
+          "y": 1,
+          "w": 2,
+          "h": 1.33,
+          "z": 1
+        }
+      ],
+      "page": {
+        "w": 10,
+        "h": 8,
+        "unit": "in",
+        "pxPerUnit": 300
+      },
+      "layout": {
+        "kind": "spreads",
+        "firstSpread": {
+          "kind": "first",
+          "id": "s1",
+          "items": []
+        },
+        "spreads": [],
+        "lastSpread": {
+          "kind": "last",
+          "id": "s2",
+          "items": []
+        }
+      },
+      "settings": {
+        "centerV": true,
+        "centerH": false,
+        "keepRelative": true,
+        "borders": [
+          {
+            "id": "m",
+            "kind": "even",
+            "inset": 0.5
+          }
+        ],
+        "lines": [],
+        "dropBorder": "m"
+      },
+      "nextZ": 2
+    }
+  },
+  {
+    "name": "not a project",
+    "input": "nonsense",
+    "error": "Damaged project (version 1: TypeError: spreads is not iterable)"
+  }
+]

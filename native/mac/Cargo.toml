@@ -1,0 +1,24 @@
+[package]
+name = "sequence-mac"
+description = "Sequence for the Mac, in GPUI"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "Sequence"
+path = "src/main.rs"
+
+[dependencies]
+sequence-core = { path = "../core" }
+serde.workspace = true
+serde_json.workspace = true
+# GPUI and its components, pinned: GPUI's releases change its API often.
+gpui-kit = "=0.9.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSArray", "NSData", "NSError", "NSString", "NSURL"] }

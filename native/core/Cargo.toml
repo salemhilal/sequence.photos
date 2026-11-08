@@ -1,0 +1,20 @@
+[package]
+name = "sequence-core"
+description = "Sequence's project model and logic, without a window"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+indexmap = { version = "2", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+zip = { version = "9.4.2", default-features = false, features = ["deflate"] }
+
+# In the browser, fresh ids take their randomness from crypto.getRandomValues.
+[target.'cfg(target_family = "wasm")'.dependencies]
+uuid = { version = "1", features = ["v4", "js"] }

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The GPUI app's Info.plist (see ../../scripts/bundle.sh, which fills in the version and
+  identifier). While it's an experiment it has its own identifier; it takes the Tauri
+  app's (io.salem.PhotobookSequencer) when it ships as that app's update.
+-->
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleDisplayName</key>
+  <string>Sequence</string>
+  <key>CFBundleName</key>
+  <string>Sequence</string>
+  <key>CFBundleExecutable</key>
+  <string>Sequence</string>
+  <key>CFBundleIdentifier</key>
+  <string>__IDENTIFIER__</string>
+  <key>CFBundleShortVersionString</key>
+  <string>__VERSION__</string>
+  <key>CFBundleVersion</key>
+  <string>__BUILD__</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleIconFile</key>
+  <string>icon.icns</string>
+  <key>CFBundleIconName</key>
+  <string>AppIcon</string>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.photography</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>14.0</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSHumanReadableCopyright</key>
+  <string>© 2026 Salem Hilal</string>
+  <!-- No encryption beyond what macOS provides, so App Store uploads skip export compliance questions. -->
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
+  <!-- The app's link, which brings an Instagram sign-in back. -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>Instagram sign-in</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>sequence-photos</string>
+      </array>
+    </dict>
+  </array>
+  <!-- Project files, the same type as the Tauri app's. -->
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>Sequence Project</string>
+      <key>CFBundleTypeExtensions</key>
+      <array>
+        <string>photo-sequence</string>
+      </array>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>LSHandlerRank</key>
+      <string>Owner</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>io.salem.PhotobookSequencer.project</string>
+      </array>
+    </dict>
+  </array>
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>io.salem.PhotobookSequencer.project</string>
+      <key>UTTypeDescription</key>
+      <string>Sequence Project</string>
+      <key>UTTypeConformsTo</key>
+      <array>
+        <string>public.data</string>
+        <string>public.content</string>
+      </array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key>
+        <array>
+          <string>photo-sequence</string>
+        </array>
+        <key>public.mime-type</key>
+        <string>application/x-photo-sequence</string>
+      </dict>
+    </dict>
+  </array>
+</dict>
+</plist>
