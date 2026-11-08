@@ -57,8 +57,9 @@ its drags), `geometry`, `renderPlan`, and the project file (`project.ts`'s forma
 files go both ways: Rust opens one the web app wrote, and the web app's reader opens one
 Rust wrote. It builds for `wasm32-unknown-unknown`.
 
-Still to port: `convertLayout`, `pageSetup`, `actions` and undo, `duplicate`, the clipboard
-format, `resolution`, the crop drags, the desk's geometry, and Instagram's slide plans.
+Since then: `convertLayout` and `pageSetup` (`page_setup`), `actions` and undo (`actions`,
+`store`), duplicating, the crop drags, the desk's geometry (`desk`), and dates (`time`).
+Still to port: the clipboard format, `resolution`, and Instagram's slide plans.
 
 A port of the pure modules: `types`, `schema` (migrations), `validate`, `geometry`, `crop`,
 `convertLayout`, `pageSetup`, `units`, `resolution`, `actions` and undo, `duplicate`, the
@@ -85,6 +86,12 @@ shortcut (from `src/commands.ts`), undo and redo, documents (title with unsaved 
 Save, Save As, Open, Open Recent, bookmarks), Settings, and holding ⌘ for shortcut badges.
 
 ### 4. Where the work happens
+
+Status (November 2026): the window, toolbar, status bar, menus, undo, and saving and
+opening files work; so do the desk, the sidebar, the spread editor, crop mode, Preview and
+presenting, and Layout (both tabs, rulers, presets, the draft applied as one step). Still to
+come: Settings, every export, copy and paste, the tour, resolution badges, the editor's
+number fields, sidebar columns, shortcut badges, and an unsaved-changes prompt on quit.
 
 In about this order: the desk (pan, zoom, drag, Option-drag to duplicate, tidy, desk color,
 drops); the sidebar (spreads or frames, reordered by dragging); the spread editor (rulers,

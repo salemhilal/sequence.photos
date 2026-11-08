@@ -26,9 +26,12 @@ pub use frames::{Cell, EditorFrame, Frames};
 pub use gestures::{Drag, SNAP_PX, Source, Surface};
 
 use crate::crop::Cropping;
+use crate::fields::Fields;
+use crate::layout::LayoutState;
 use crate::library::{Imported, Library, is_image_name};
 use crate::prefs::Prefs;
 use crate::theme::{Theme, desk_is_light};
+use sequence_core::page_setup::PageRun;
 
 /// Under the toolbar: the desk, Preview, or Export.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -38,11 +41,10 @@ pub enum Page {
   Export,
 }
 
-/// The dialogs over a page (to come: Layout, Settings, About).
+/// The dialogs over a page (to come: Settings, About).
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Modal {
-  Layout,
   Settings,
   About,
 }
@@ -97,6 +99,9 @@ pub struct Ui {
   pub cmd_held: bool,
   pub fitted_once: bool,
   pub cropping: Option<Cropping>,
+  /// The Layout view, while it's open, and the label beside a guide being dragged.
+  pub layout: Option<LayoutState>,
+  pub guide_label: Option<(String, f64, f64)>,
 }
 
 impl Default for Ui {
@@ -132,6 +137,8 @@ impl Default for Ui {
       cmd_held: false,
       fitted_once: false,
       cropping: None,
+      layout: None,
+      guide_label: None,
     }
   }
 }
@@ -159,6 +166,9 @@ pub struct Workspace {
   pub drag: Option<Drag>,
   pub frames: Frames,
   pub focus: FocusHandle,
+  /// The Layout view's run of page changes, and the number fields' inputs.
+  pub page_run: PageRun,
+  pub fields: Fields,
   saved_to_library: u64,
   /// A save to the library is coming (saves wait a moment, so held keys don't write each step).
   save_scheduled: bool,
@@ -191,6 +201,8 @@ impl Workspace {
       drag: None,
       frames: Frames::default(),
       focus: cx.focus_handle(),
+      page_run: PageRun::default(),
+      fields: Fields::default(),
       saved_to_library: 0,
       save_scheduled: false,
       importing: 0,

@@ -8,6 +8,7 @@ pub mod desk;
 pub mod geometry;
 pub mod ids;
 pub mod model;
+pub mod page_setup;
 pub mod project_file;
 pub mod render_plan;
 pub mod schema;

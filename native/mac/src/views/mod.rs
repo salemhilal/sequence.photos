@@ -5,6 +5,7 @@
 pub mod crop;
 pub mod desk;
 pub mod editor;
+pub mod layout;
 pub mod paint;
 pub mod preview;
 pub mod sidebar;
@@ -154,6 +155,8 @@ impl Render for Workspace {
       }));
     root = if self.ui.cropping.is_some() {
       self.bind_crop_commands(root, cx)
+    } else if self.ui.layout.is_some() && self.ui.page == Page::Desk {
+      self.bind_layout_commands(root, cx)
     } else {
       self.bind_commands(root, cx)
     };
@@ -170,6 +173,21 @@ impl Render for Workspace {
     );
     if status_h > 0.0 {
       root = root.child(self.render_status(&theme, cx));
+    }
+    if self.ui.page == Page::Desk
+      && let Some(layout) = self.render_layout(&theme, window, cx)
+    {
+      root = root.child(
+        div()
+          .absolute()
+          .left_0()
+          .top(x(self.frames.main.y))
+          .w_full()
+          .h(x(self.frames.main.h))
+          .child(layout),
+      );
+    } else {
+      self.frames.layout = None;
     }
     if let Some(overlay) = self.render_crop(&theme, cx) {
       root = root.child(overlay);
@@ -359,10 +377,7 @@ impl Workspace {
         theme,
         true,
         false,
-        cx.listener(|ws, _, _, cx| {
-          ws.ui.notice = Some("Layout comes in the next pass.".into());
-          cx.notify();
-        }),
+        cx.listener(|ws, _, _, cx| ws.open_layout(cx)),
       ))
       .child(icon_button(
         "settings",

@@ -78,6 +78,7 @@ pub enum Drag {
     start: f64,
     w0: f64,
   },
+  Guide(crate::layout::GuideDrag),
   Crop {
     grip: CropGrip,
     start: (f64, f64),
@@ -519,6 +520,7 @@ impl Workspace {
           self.ui.reorder = Some((ids.clone().unwrap_or_default(), di));
         }
       }
+      Drag::Guide(g) => self.guide_drag(g, at, ev.modifiers),
       Drag::Crop {
         grip,
         start,
@@ -661,6 +663,7 @@ impl Workspace {
         _ => cx.notify(),
       },
       Drag::Crop { .. } => cx.notify(),
+      Drag::Guide(g) => self.guide_up(g, at, ev.modifiers, cx),
       Drag::Pan { .. } | Drag::Marquee { .. } | Drag::SidebarWidth { .. } => {
         if matches!(drag, Drag::SidebarWidth { .. }) {
           self.prefs.save();
@@ -688,9 +691,11 @@ impl Workspace {
     if matches!(
       drag,
       Drag::Photos { moved: true, .. } | Drag::Resize { moved: true, .. }
-    ) {
+    ) || matches!(&drag, Drag::Guide(g) if g.moved)
+    {
       self.history.cancel();
     }
+    self.ui.guide_label = None;
     self.clear_drag_feedback();
     cx.notify();
     true

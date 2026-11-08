@@ -43,6 +43,8 @@ pub struct Frames {
   pub cells: Vec<Cell>,
   pub gaps: Vec<(usize, Rect)>,
   pub editor: Option<EditorFrame>,
+  /// The Layout view's stage, while it shows the guides.
+  pub layout: Option<crate::layout::LayoutFrame>,
   /// While cropping: the whole photo on screen (as clipped), and where the crop bar landed.
   pub crop_zone: Option<Rect>,
   pub crop_bar: std::rc::Rc<std::cell::Cell<Option<Rect>>>,

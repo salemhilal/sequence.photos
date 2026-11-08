@@ -248,6 +248,35 @@ impl Workspace {
       .on_action(cx.listener(|_, _: &ToggleFullScreen, window, _| window.toggle_fullscreen()))
   }
 
+  /// In the Layout view: Esc and Delete work on guides, arrows flip the preview; page
+  /// switches close it first.
+  pub fn bind_layout_commands(&mut self, root: Stateful<Div>, cx: &mut Context<Self>) -> Stateful<Div> {
+    root
+      .on_action(cx.listener(|ws, _: &Undo, _, cx| ws.undo(cx)))
+      .on_action(cx.listener(|ws, _: &Redo, _, cx| ws.redo(cx)))
+      .on_action(cx.listener(|ws, _: &Escape, window, cx| ws.layout_escape(window, cx)))
+      .on_action(cx.listener(|ws, _: &Delete, _, cx| ws.remove_selected_guide(cx)))
+      .on_action(cx.listener(|ws, _: &NudgeLeft, _, cx| ws.layout_go(-1, cx)))
+      .on_action(cx.listener(|ws, _: &NudgeRight, _, cx| ws.layout_go(1, cx)))
+      .on_action(
+        cx.listener(|ws, _: &ShowPreview, window, cx| {
+          ws.close_layout(window, cx, |ws, cx| ws.go_to(Page::Preview, cx))
+        }),
+      )
+      .on_action(
+        cx.listener(|ws, _: &ShowExport, window, cx| ws.close_layout(window, cx, |ws, cx| ws.go_to(Page::Export, cx))),
+      )
+      .on_action(cx.listener(|ws, _: &SaveProject, window, cx| ws.save(false, window, cx)))
+      .on_action(cx.listener(|ws, _: &SaveProjectAs, window, cx| ws.save(true, window, cx)))
+      .on_action(cx.listener(|ws, _: &ToggleGuides, _, cx| {
+        ws.ui.guides_hidden = !ws.ui.guides_hidden;
+        cx.notify();
+      }))
+      .on_action(cx.listener(|_, _: &Minimize, window, _| window.minimize_window()))
+      .on_action(cx.listener(|_, _: &Zoom, window, _| window.zoom_window()))
+      .on_action(cx.listener(|_, _: &ToggleFullScreen, window, _| window.toggle_fullscreen()))
+  }
+
   /// Arrow keys: in Preview, turn pages; elsewhere nudge.
   fn arrow(&mut self, dx: f64, dy: f64, big: bool, cx: &mut Context<Self>) {
     match self.ui.page {

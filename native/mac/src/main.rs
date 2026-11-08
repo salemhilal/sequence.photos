@@ -6,8 +6,10 @@ mod assets;
 mod bookmarks;
 mod commands;
 mod crop;
+mod fields;
 #[cfg(target_os = "macos")]
 mod imageio;
+mod layout;
 mod library;
 mod prefs;
 mod theme;
@@ -75,6 +77,18 @@ fn main() {
     let window = cx
       .open_window(options, |window, cx| {
         let ws = cx.new(|cx| Workspace::new(lib, prefs, cx));
+        // A debug build can open with the Layout view showing, for a quick look.
+        #[cfg(debug_assertions)]
+        if let Some(tab) = std::env::var_os("SEQUENCE_OPEN_LAYOUT") {
+          ws.update(cx, |ws, cx| {
+            ws.open_layout(cx);
+            if tab == "guides"
+              && let Some(l) = &mut ws.ui.layout
+            {
+              l.tab = layout::LayoutTab::Guides;
+            }
+          });
+        }
         let focus = ws.read(cx).focus.clone();
         window.focus(&focus, cx);
         ws
