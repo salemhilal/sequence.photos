@@ -205,7 +205,11 @@ impl Workspace {
         ..
       })
     );
-    for p in items.iter().filter(|p| self.ui.selection.contains(&p.photo_id)) {
+    let cropping = self.ui.cropping.as_ref().map(|c| c.photo.clone());
+    for p in items
+      .iter()
+      .filter(|p| self.ui.selection.contains(&p.photo_id) && cropping.as_ref() != Some(&p.photo_id))
+    {
       let r = view.to_screen(Rect::from(*p));
       let handles =
         single.as_ref() == Some(&p.photo_id) && (self.ui.hover_photo.as_ref() == single.as_ref() || resizing);

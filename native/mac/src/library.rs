@@ -20,6 +20,9 @@ use crate::imageio;
 /// The open project's photos on disk, and their display copies in memory.
 pub struct Library {
   pub dir: PathBuf,
+  /// Bumped whenever the library is emptied or replaced, so work started before (an
+  /// import in the background) can tell its files went away.
+  pub epoch: u64,
   thumbs: HashMap<PhotoId, Arc<Image>>,
   missing: HashSet<PhotoId>,
 }
@@ -27,6 +30,8 @@ pub struct Library {
 /// Photos read from files: the ones that worked, and the names of those that didn't.
 pub struct Imported {
   pub photos: Vec<PhotoMeta>,
+  /// Each photo's display copy, to show without reading it back.
+  pub thumbs: Vec<(PhotoId, Vec<u8>)>,
   pub failed: Vec<String>,
 }
 
@@ -68,6 +73,7 @@ impl Library {
     let _ = fs::create_dir_all(dir.join("thumbs"));
     Self {
       dir,
+      epoch: 0,
       thumbs: HashMap::new(),
       missing: HashSet::new(),
     }
@@ -114,42 +120,69 @@ impl Library {
       .insert(id.clone(), Arc::new(Image::from_bytes(ImageFormat::Jpeg, thumb)));
   }
 
-  /// Read image files into the library, sorted by name (numbers in order), as the web
-  /// app does. Photos that won't decode are named in `failed`.
-  pub fn import(&mut self, paths: &[PathBuf]) -> Imported {
-    let mut files: Vec<&PathBuf> = paths
-      .iter()
-      .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(is_image_name))
-      .collect();
-    files.sort_by(|a, b| natural_cmp(&name_of(a), &name_of(b)));
-    let mut photos = Vec::new();
-    let mut failed = Vec::new();
-    for path in files {
-      let name = name_of(path);
-      match self.import_one(path, &name) {
-        Some(meta) => photos.push(meta),
-        None => failed.push(name),
-      }
+  /// Remove photos' files (an import that came back to a library that moved on).
+  pub fn discard(&mut self, ids: impl IntoIterator<Item = PhotoId>) {
+    for id in ids {
+      let _ = fs::remove_file(self.image_path(&id));
+      let _ = fs::remove_file(self.thumb_path(&id));
+      self.thumbs.remove(&id);
     }
-    Imported { photos, failed }
   }
 
-  fn import_one(&mut self, path: &Path, name: &str) -> Option<PhotoMeta> {
-    let bytes = fs::read(path).ok()?;
-    let decoded = imageio::decode(&bytes, DESK_PHOTO_PX)?;
-    let id = PhotoId::new();
-    fs::write(self.image_path(&id), &bytes).ok()?;
-    fs::write(self.thumb_path(&id), &decoded.thumb).ok()?;
-    self.remember(&id, decoded.thumb);
-    Some(PhotoMeta {
-      id,
-      name: name.to_string(),
-      px_w: decoded.px_w,
-      px_h: decoded.px_h,
-      crop: None,
-    })
+  /// Keep display copies made elsewhere (by an import in the background).
+  pub fn remember_all(&mut self, thumbs: Vec<(PhotoId, Vec<u8>)>) {
+    for (id, t) in thumbs {
+      self.remember(&id, t);
+    }
   }
+}
 
+/// Read image files into the library at `dir`, sorted by name (numbers in order), as the
+/// web app does. Photos that won't decode are named in `failed`. Safe to run off the main
+/// thread: it only writes new files.
+pub fn import_files(dir: &Path, paths: &[PathBuf]) -> Imported {
+  let mut files: Vec<&PathBuf> = paths
+    .iter()
+    .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(is_image_name))
+    .collect();
+  files.sort_by(|a, b| natural_cmp(&name_of(a), &name_of(b)));
+  let mut photos = Vec::new();
+  let mut thumbs = Vec::new();
+  let mut failed = Vec::new();
+  for path in files {
+    let name = name_of(path);
+    match import_one(dir, path, &name) {
+      Some((meta, thumb)) => {
+        thumbs.push((meta.id.clone(), thumb));
+        photos.push(meta);
+      }
+      None => failed.push(name),
+    }
+  }
+  Imported { photos, thumbs, failed }
+}
+
+fn import_one(dir: &Path, path: &Path, name: &str) -> Option<(PhotoMeta, Vec<u8>)> {
+  let bytes = fs::read(path).ok()?;
+  let decoded = imageio::decode(&bytes, DESK_PHOTO_PX)?;
+  let id = PhotoId::new();
+  let image = dir.join("images").join(&id.0);
+  fs::write(&image, &bytes).ok()?;
+  if fs::write(dir.join("thumbs").join(format!("{id}.jpg")), &decoded.thumb).is_err() {
+    let _ = fs::remove_file(image);
+    return None;
+  }
+  let meta = PhotoMeta {
+    id,
+    name: name.to_string(),
+    px_w: decoded.px_w,
+    px_h: decoded.px_h,
+    crop: None,
+  };
+  Some((meta, decoded.thumb))
+}
+
+impl Library {
   /// Copy a photo's files to a new id (a duplicate is its own photo).
   pub fn copy(&mut self, from: &PhotoId, to: &PhotoId) -> bool {
     let ok = fs::copy(self.image_path(from), self.image_path(to)).is_ok();
@@ -174,8 +207,14 @@ impl Library {
       let _ = fs::create_dir_all(self.dir.join(sub));
     }
     let _ = fs::remove_file(self.project_path());
+    self.forget();
+  }
+
+  /// Drop what's cached about the files, which have changed under it.
+  fn forget(&mut self) {
     self.thumbs.clear();
     self.missing.clear();
+    self.epoch += 1;
   }
 
   /// Remove the files of photos no project in `keep` refers to.
@@ -184,7 +223,11 @@ impl Library {
       return;
     };
     for e in entries.flatten() {
-      let id = PhotoId(e.file_name().to_string_lossy().into_owned());
+      let name = e.file_name().to_string_lossy().into_owned();
+      if !sequence_core::validate::is_safe_id(&name) {
+        continue;
+      }
+      let id = PhotoId(name);
       if !keep.contains(&id) {
         let _ = fs::remove_file(e.path());
         let _ = fs::remove_file(self.thumb_path(&id));
@@ -201,18 +244,65 @@ impl Library {
     fs::rename(tmp, self.project_path())
   }
 
-  /// The project kept in the library, if there is one that opens.
-  pub fn load_project(&self) -> Option<Project> {
-    let text = fs::read(self.project_path()).ok()?;
-    let value: serde_json::Value = serde_json::from_slice(&text).ok()?;
-    migrate_project(&value).ok()
+  /// The project kept in the library: none if there isn't one, an error if there's one
+  /// that won't open (it's moved aside, so it isn't overwritten).
+  pub fn load_project(&self) -> Result<Option<Project>, PathBuf> {
+    let Ok(text) = fs::read(self.project_path()) else {
+      return Ok(None);
+    };
+    let project = serde_json::from_slice::<serde_json::Value>(&text)
+      .ok()
+      .and_then(|v| migrate_project(&v).ok());
+    match project {
+      Some(p) => Ok(Some(p)),
+      None => {
+        let stamp = std::time::SystemTime::now()
+          .duration_since(std::time::UNIX_EPOCH)
+          .map_or(0, |d| d.as_secs());
+        let aside = self.dir.join(format!("project.unreadable-{stamp}.json"));
+        let _ = fs::rename(self.project_path(), &aside);
+        Err(aside)
+      }
+    }
   }
 
-  /// Read a project file into the (emptied) library. Photos it lacks are left out.
+  /// Read a project file in place of the library's project. Photos it lacks are left
+  /// out. It's read into a folder beside the library, which replaces it only once the
+  /// whole file is read: a file that fails partway leaves the library as it was.
   pub fn open_file(&mut self, path: &Path) -> Result<Project, OpenError> {
     let file = File::open(path).map_err(OpenError::Io)?;
     let mut opened = OpenedProject::open(BufReader::new(file))?;
-    self.clear();
+    let staging = self.dir.with_extension("opening");
+    let _ = fs::remove_dir_all(&staging);
+    let stage = Library::at(staging.clone());
+    match stage.fill_from(&mut opened) {
+      Ok(project) => {
+        self.swap_in(&staging).map_err(OpenError::Io)?;
+        Ok(project)
+      }
+      Err(e) => {
+        let _ = fs::remove_dir_all(&staging);
+        Err(e)
+      }
+    }
+  }
+
+  /// Replace the library's folder with `staging`.
+  fn swap_in(&mut self, staging: &Path) -> io::Result<()> {
+    let old = self.dir.with_extension("old");
+    let _ = fs::remove_dir_all(&old);
+    fs::rename(&self.dir, &old)?;
+    if let Err(e) = fs::rename(staging, &self.dir) {
+      let _ = fs::rename(&old, &self.dir);
+      return Err(e);
+    }
+    let _ = fs::remove_dir_all(&old);
+    self.forget();
+    Ok(())
+  }
+
+  /// Copy an opened project file's photos into this (new, empty) library.
+  fn fill_from<R: io::Read + io::Seek>(&self, opened: &mut OpenedProject<R>) -> Result<Project, OpenError> {
     let missing = opened.missing_photos();
     let mut project = opened.project.clone();
     sequence_core::project_file::remove_photos(&mut project, &missing);
@@ -248,8 +338,10 @@ impl Library {
   pub fn save_file(&self, path: &Path, project: &Project, exported_at: &str) -> io::Result<()> {
     let mut images = Vec::new();
     let mut thumbs = Vec::new();
-    for id in project.photos.keys() {
-      images.push(BufReader::new(File::open(self.image_path(id))?));
+    for (id, meta) in &project.photos {
+      let image = File::open(self.image_path(id))
+        .map_err(|e| io::Error::new(e.kind(), format!("{} is missing from the app’s storage", meta.name)))?;
+      images.push(BufReader::new(image));
       thumbs.push(File::open(self.thumb_path(id)).ok().map(BufReader::new));
     }
     let mut sources: Vec<PhotoSource> = Vec::new();
@@ -261,19 +353,22 @@ impl Library {
         thumb: thumb.as_mut().map(|t| t as &mut dyn io::Read),
       });
     }
-    let tmp = path.with_extension("photo-sequence.saving");
+    // Written in full to a temporary file first, then copied over the file: the sandbox
+    // lets the app write the file the user chose but not make or rename others beside it.
+    let tmp = std::env::temp_dir().join(format!("{}.saving", uuid_name()));
     let out = BufWriter::new(File::create(&tmp)?);
     let result = write_project(out, project, &mut sources, exported_at, |_| {})
       .and_then(|w| w.into_inner().map_err(|e| e.into_error()))
-      .and_then(|f| f.sync_all());
-    match result {
-      Ok(()) => fs::rename(&tmp, path),
-      Err(e) => {
-        let _ = fs::remove_file(&tmp);
-        Err(e)
-      }
-    }
+      .and_then(|f| f.sync_all())
+      .and_then(|()| fs::copy(&tmp, path).map(|_| ()));
+    let _ = fs::remove_file(&tmp);
+    result
   }
+}
+
+/// A fresh, unique file name.
+fn uuid_name() -> String {
+  PhotoId::new().0
 }
 
 fn name_of(p: &Path) -> String {
@@ -333,9 +428,9 @@ mod tests {
   #[test]
   fn a_project_file_round_trips() {
     let dir = std::env::temp_dir().join(format!("sequence-lib-{}", PhotoId::new()));
-    let mut lib = Library::at(dir.join("a"));
+    let lib = Library::at(dir.join("a"));
     let tour = concat!(env!("CARGO_MANIFEST_DIR"), "/../../src/tour/taxi.jpg");
-    let imported = lib.import(&[PathBuf::from(tour)]);
+    let imported = import_files(&lib.dir, &[PathBuf::from(tour)]);
     assert_eq!(imported.photos.len(), 1);
     let mut p = Project::empty();
     let visible = sequence_core::geometry::Rect::new(0.0, 0.0, 20.0, 12.0);
@@ -347,6 +442,14 @@ mod tests {
     assert_eq!(back, p);
     let id = back.photos.keys().next().cloned().expect("a photo");
     assert!(other.thumb(&id).is_some());
+
+    // A file that won't open leaves the library as it was.
+    other.save_project(&back).expect("keeps");
+    let bad = dir.join("bad.photo-sequence");
+    fs::write(&bad, b"not a zip").expect("writes");
+    assert!(other.open_file(&bad).is_err());
+    assert_eq!(other.load_project(), Ok(Some(back)));
+    assert!(other.image_path(&id).exists());
     let _ = fs::remove_dir_all(dir);
   }
 }

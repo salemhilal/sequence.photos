@@ -69,6 +69,7 @@ impl Workspace {
     self.frames.editor = Some(EditorFrame {
       stage,
       scale,
+      origin: (stage.x + origin.0, stage.y + origin.1),
       pages: pic
         .pages()
         .into_iter()
@@ -190,6 +191,7 @@ impl Workspace {
       }
     }
     if let Some(sel) = &selected
+      && self.ui.cropping.as_ref().is_none_or(|c| &c.photo != sel)
       && let Some(p) = spread.items.iter().find(|i| &i.photo_id == sel)
     {
       let r = pic.at(Rect::from(p));

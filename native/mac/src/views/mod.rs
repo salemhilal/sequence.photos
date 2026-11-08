@@ -2,6 +2,7 @@
 //! bar, and what floats over them. Each region also records where it drew things
 //! (`Frames`) for the pointer's gestures.
 
+pub mod crop;
 pub mod desk;
 pub mod editor;
 pub mod paint;
@@ -98,6 +99,7 @@ impl Render for Workspace {
     self.frames.sidebar = None;
     self.frames.cells.clear();
     self.frames.gaps.clear();
+    self.frames.crop_zone = None;
 
     let main = match self.ui.page {
       Page::Desk => self.render_desk_page(&theme, cx),
@@ -113,6 +115,14 @@ impl Render for Workspace {
         window.on_mouse_event(move |ev: &MouseMoveEvent, phase, _, cx| {
           if phase == DispatchPhase::Bubble {
             let _ = t.update(cx, |ws, cx| ws.pointer_move(ev, cx));
+          }
+        });
+        // A press anywhere but the photo being cropped or its bar keeps the crop (and goes
+        // on to what was pressed).
+        let t = this.clone();
+        window.on_mouse_event(move |ev: &MouseDownEvent, phase, _, cx| {
+          if phase == DispatchPhase::Capture {
+            let _ = t.update(cx, |ws, cx| ws.crop_press(ev, cx));
           }
         });
         let t = this.clone();
@@ -142,7 +152,11 @@ impl Render for Workspace {
         ws.ui.cmd_held = ev.modifiers.platform;
         cx.notify();
       }));
-    root = self.bind_commands(root, cx);
+    root = if self.ui.cropping.is_some() {
+      self.bind_crop_commands(root, cx)
+    } else {
+      self.bind_commands(root, cx)
+    };
     if !presenting {
       root = root.child(self.render_toolbar(&theme, window, cx));
     }
@@ -156,6 +170,9 @@ impl Render for Workspace {
     );
     if status_h > 0.0 {
       root = root.child(self.render_status(&theme, cx));
+    }
+    if let Some(overlay) = self.render_crop(&theme, cx) {
+      root = root.child(overlay);
     }
     root = root.child(tracker);
     if let Some(g) = &self.ui.ghost
@@ -363,6 +380,7 @@ impl Workspace {
       .ui
       .busy
       .clone()
+      .or_else(|| self.crop_hint())
       .or_else(|| self.ui.hint.clone())
       .unwrap_or_else(|| self.status_text());
     let on_desk = self.ui.page == Page::Desk && self.ui.editing.is_none();

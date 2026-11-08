@@ -12,6 +12,7 @@ pub mod project_file;
 pub mod render_plan;
 pub mod schema;
 pub mod store;
+pub mod time;
 pub mod units;
 pub mod validate;
 

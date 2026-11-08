@@ -100,10 +100,16 @@ fn crop_of(v: Option<&Value>) -> Option<Crop> {
   })
 }
 
+/// Whether an id is a plain name, safe to name a file with: letters, digits, - and _.
+pub fn is_safe_id(id: &str) -> bool {
+  !id.is_empty() && id.len() <= 128 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+}
+
 fn photo(v: &Value, key: &str, where_: &str) -> Result<PhotoMeta> {
   let p = record(Some(v), where_)?;
   let id = text(p.get("id"), &format!("{where_}.id"))?;
-  if id != key {
+  // Ids name the photo's files on disk: only plain names (UUIDs, as the apps make them).
+  if id != key || !is_safe_id(&id) {
     return fail(format!("{where_}.id"));
   }
   let name = match p.get("name") {
@@ -448,4 +454,18 @@ pub fn validate_project(v: &Value) -> Result<Project> {
     next_z,
     export: export_state(d.get("export")),
   })
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn ids_must_be_plain_names() {
+    assert!(is_safe_id("3f2b6c1e-8a4d-4f0e-9b7a-1c2d3e4f5a6b"));
+    assert!(is_safe_id("a"));
+    for bad in ["", "../prefs.json", "/etc/x", "a/b", "a.b", "é"] {
+      assert!(!is_safe_id(bad), "{bad}");
+    }
+  }
 }

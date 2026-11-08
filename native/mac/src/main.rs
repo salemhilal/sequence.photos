@@ -5,16 +5,19 @@ mod assets;
 #[cfg(target_os = "macos")]
 mod bookmarks;
 mod commands;
+mod crop;
 #[cfg(target_os = "macos")]
 mod imageio;
 mod library;
 mod prefs;
 mod theme;
+mod urls;
 mod views;
 mod workspace;
 
 use std::path::PathBuf;
 
+use futures::StreamExt;
 use gpui_kit::*;
 
 use crate::commands::*;
@@ -26,9 +29,9 @@ fn main() {
   let app = application().with_assets(assets::Assets);
   // Files macOS hands the app (a double-click in Finder) can arrive before the window
   // exists, so they wait in a channel.
-  let (urls_tx, urls_rx) = std::sync::mpsc::channel::<Vec<String>>();
+  let (urls_tx, mut urls_rx) = futures::channel::mpsc::unbounded::<Vec<String>>();
   app.on_open_urls(move |urls| {
-    let _ = urls_tx.send(urls);
+    let _ = urls_tx.unbounded_send(urls);
   });
   app.run(move |cx| {
     gpui_kit::init(cx);
@@ -36,14 +39,20 @@ fn main() {
     cx.activate(true);
     cx.bind_keys(key_bindings());
     cx.set_menus(menus());
-    cx.on_action(|_: &Quit, cx| cx.quit());
 
     let mut prefs = Prefs::load();
     // The open project's file, through its bookmark (the sandbox forgets it otherwise).
     #[cfg(target_os = "macos")]
     if let Some(b) = &prefs.document_bookmark {
       match bookmarks::resolve(b) {
-        Ok(path) => prefs.document = Some(path),
+        Ok((path, stale)) => {
+          // A bookmark gone stale (the file moved) is made again while it still resolves.
+          if stale && let Ok(fresh) = bookmarks::bookmark(&path) {
+            prefs.document_bookmark = Some(fresh);
+            prefs.save();
+          }
+          prefs.document = Some(path);
+        }
         Err(_) => prefs.document = None,
       }
     }
@@ -81,48 +90,24 @@ fn main() {
         cx.notify();
       });
     });
+    // Quitting keeps the work in the library first (its save waits a moment after changes).
+    cx.on_action(move |_: &Quit, cx| {
+      let _ = window.update(cx, |ws, _, _| ws.save_to_library());
+      cx.quit();
+    });
     cx.on_action(move |_: &CloseWindow, cx| {
       let _ = window.update(cx, |_, window, _| window.remove_window());
     });
 
-    // Drain files from Finder now and as they come.
+    // Files from Finder, as they come.
     cx.spawn(async move |cx| {
-      loop {
-        while let Ok(urls) = urls_rx.try_recv() {
-          let paths: Vec<PathBuf> = urls
-            .iter()
-            .filter_map(|u| u.strip_prefix("file://"))
-            .map(|p| PathBuf::from(percent_decode(p)))
-            .collect();
-          let _ = window.update(cx, |ws, _, cx| {
-            ws.files_dropped(paths, cx);
-          });
+      while let Some(urls) = urls_rx.next().await {
+        let paths: Vec<PathBuf> = urls.iter().filter_map(|u| urls::file_url_path(u)).collect();
+        if window.update(cx, |ws, _, cx| ws.files_dropped(paths, cx)).is_err() {
+          break;
         }
-        cx.background_executor()
-          .timer(std::time::Duration::from_millis(200))
-          .await;
       }
     })
     .detach();
   });
-}
-
-/// A file URL's path, with its %-escapes undone.
-fn percent_decode(s: &str) -> String {
-  let bytes = s.as_bytes();
-  let mut out = Vec::with_capacity(bytes.len());
-  let mut i = 0;
-  while i < bytes.len() {
-    if bytes[i] == b'%'
-      && i + 2 < bytes.len()
-      && let Ok(b) = u8::from_str_radix(&s[i + 1..i + 3], 16)
-    {
-      out.push(b);
-      i += 3;
-      continue;
-    }
-    out.push(bytes[i]);
-    i += 1;
-  }
-  String::from_utf8_lossy(&out).into_owned()
 }

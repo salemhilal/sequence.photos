@@ -49,6 +49,7 @@ actions!(
     Zoom,
     ToggleFullScreen,
     CloseWindow,
+    Confirm,
   ]
 );
 
@@ -68,6 +69,7 @@ pub fn key_bindings() -> Vec<KeyBinding> {
     KeyBinding::new("backspace", Delete, w),
     KeyBinding::new("delete", Delete, w),
     KeyBinding::new("escape", Escape, w),
+    KeyBinding::new("enter", Confirm, w),
     KeyBinding::new("alt-cmd-1", ShowDesk, None),
     KeyBinding::new("alt-cmd-2", ShowPreview, None),
     KeyBinding::new("cmd-p", ShowPreview, None),
@@ -230,6 +232,20 @@ impl Workspace {
       .on_action(cx.listener(|ws, _: &QuickLook, _, cx| ws.quick_look(cx)))
       .on_key_down(cx.listener(|ws, ev: &KeyDownEvent, _, cx| ws.key_down(ev, cx)))
       .on_key_up(cx.listener(|ws, ev: &KeyUpEvent, _, cx| ws.key_up(ev, cx)))
+  }
+
+  /// While cropping, only finishing or cancelling the crop (and the window's own commands).
+  pub fn bind_crop_commands(&mut self, root: Stateful<Div>, cx: &mut Context<Self>) -> Stateful<Div> {
+    root
+      .on_action(cx.listener(|ws, _: &Confirm, _, cx| ws.finish_crop(true, cx)))
+      .on_action(cx.listener(|ws, _: &Escape, _, cx| {
+        if !ws.cancel_drag(cx) {
+          ws.finish_crop(false, cx);
+        }
+      }))
+      .on_action(cx.listener(|_, _: &Minimize, window, _| window.minimize_window()))
+      .on_action(cx.listener(|_, _: &Zoom, window, _| window.zoom_window()))
+      .on_action(cx.listener(|_, _: &ToggleFullScreen, window, _| window.toggle_fullscreen()))
   }
 
   /// Arrow keys: in Preview, turn pages; elsewhere nudge.
@@ -445,24 +461,44 @@ impl Workspace {
   /// Open a project file into the window, replacing what's there (which is kept in its
   /// own file, if it has one, or was empty).
   pub fn open_path(&mut self, path: PathBuf, cx: &mut Context<Self>) {
-    if self.edited() && !self.project().photos.is_empty() && self.doc.path.is_some() {
-      // Unsaved changes to another file: save them there first, as a document would ask.
-      if let Some(old) = self.doc.path.clone() {
-        let _ = self.lib.save_file(&old, self.project(), &now_iso());
-      }
+    if !self.keep_current(cx) {
+      return;
     }
+    self.cancel_drag(cx);
+    self.finish_crop(true, cx);
     match self.lib.open_file(&path) {
       Ok(project) => {
         self.history.reset(project);
         self.ui = crate::workspace::Ui::default();
         self.doc.path = Some(path.clone());
-        self.doc.saved_revision = self.history.revision;
+        self.doc.saved_revision = self.history.revision();
         self.remember_document(&path);
         self.changed(cx);
       }
       Err(e) => {
         self.ui.notice = Some(e.to_string());
         cx.notify();
+      }
+    }
+  }
+
+  /// Before another project replaces this one: unsaved changes are saved to its file. False
+  /// (with a notice) when they can't be: untitled, or the save failed.
+  fn keep_current(&mut self, cx: &mut Context<Self>) -> bool {
+    if !self.edited() || self.project().photos.is_empty() {
+      return true;
+    }
+    let Some(path) = self.doc.path.clone() else {
+      self.ui.notice = Some("Save this project first (⌘S): another project would replace it.".into());
+      cx.notify();
+      return false;
+    };
+    match self.lib.save_file(&path, self.project(), &now_iso()) {
+      Ok(()) => true,
+      Err(e) => {
+        self.ui.notice = Some(format!("Couldn’t save the open project, so it’s still open: {e}"));
+        cx.notify();
+        false
       }
     }
   }
@@ -523,7 +559,7 @@ impl Workspace {
     match self.lib.save_file(&path, self.project(), &now_iso()) {
       Ok(()) => {
         self.doc.path = Some(path.clone());
-        self.doc.saved_revision = self.history.revision;
+        self.doc.saved_revision = self.history.revision();
         self.remember_document(&path);
         self.prefs.document_edited = false;
         self.prefs.save();
@@ -536,21 +572,17 @@ impl Workspace {
 
   /// A new, empty project (the current one is kept in its file, if saved).
   pub fn new_project(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
-    if self.edited() && !self.project().photos.is_empty() {
-      if let Some(path) = self.doc.path.clone() {
-        let _ = self.lib.save_file(&path, self.project(), &now_iso());
-      } else {
-        self.ui.notice = Some("Save this project first (⌘S): a new project replaces it.".into());
-        cx.notify();
-        return;
-      }
+    if !self.keep_current(cx) {
+      return;
     }
+    self.cancel_drag(cx);
+    self.finish_crop(true, cx);
     self.lib.clear();
     self.history.reset(Project::empty());
     self.ui = crate::workspace::Ui::default();
     self.doc = crate::workspace::Document {
       path: None,
-      saved_revision: self.history.revision,
+      saved_revision: self.history.revision(),
     };
     self.prefs.document = None;
     self.prefs.document_bookmark = None;
@@ -561,29 +593,8 @@ impl Workspace {
 
 /// Now, as an ISO date (as JavaScript's `toISOString`).
 pub fn now_iso() -> String {
-  let secs = std::time::SystemTime::now()
+  let millis = std::time::SystemTime::now()
     .duration_since(std::time::UNIX_EPOCH)
-    .map(|d| d.as_millis())
-    .unwrap_or(0);
-  let ms = (secs % 1000) as u64;
-  let s = (secs / 1000) as i64;
-  let days = s.div_euclid(86400);
-  let rem = s.rem_euclid(86400);
-  // Civil from days (Howard Hinnant's algorithm).
-  let z = days + 719_468;
-  let era = z.div_euclid(146_097);
-  let doe = z - era * 146_097;
-  let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
-  let y = yoe + era * 400;
-  let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-  let mp = (5 * doy + 2) / 153;
-  let d = doy - (153 * mp + 2) / 5 + 1;
-  let m = if mp < 10 { mp + 3 } else { mp - 9 };
-  let y = if m <= 2 { y + 1 } else { y };
-  format!(
-    "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}.{ms:03}Z",
-    rem / 3600,
-    (rem % 3600) / 60,
-    rem % 60
-  )
+    .map_or(0, |d| d.as_millis() as i64);
+  sequence_core::time::iso_from_millis(millis)
 }
