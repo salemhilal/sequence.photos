@@ -1,182 +1,101 @@
-//! Sequence for the Mac, in GPUI. For now, the App Store spike (docs/proposals/gpui-mac.md,
-//! phase 0): a sandboxed window with the menu bar, the open and save panels, files opened
-//! from Finder, and a bookmark that reopens the last file after a restart.
+//! Sequence for the Mac, in GPUI: the window, its menus, and the files macOS hands it.
+//! See docs/proposals/gpui-mac.md.
 
+mod assets;
 #[cfg(target_os = "macos")]
 mod bookmarks;
+mod commands;
+#[cfg(target_os = "macos")]
+mod imageio;
+mod library;
+mod prefs;
+mod theme;
+mod views;
+mod workspace;
 
-use std::io::Write;
 use std::path::PathBuf;
 
 use gpui_kit::*;
 
-actions!(sequence, [Open, SaveAs, ReopenLast, Quit]);
-
-/// What the spike has done, newest last; also written to a log in the temporary folder
-/// (inside the app's container when sandboxed) so a test can read it.
-struct Spike {
-  lines: Vec<String>,
-}
-
-impl Spike {
-  fn log(&mut self, line: impl Into<String>, cx: &mut Context<Self>) {
-    let line = line.into();
-    let file = std::env::temp_dir().join("sequence-gpui.log");
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(file) {
-      let _ = writeln!(f, "{line}");
-    }
-    self.lines.push(line);
-    cx.notify();
-  }
-}
-
-impl Render for Spike {
-  fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-    div()
-      .size_full()
-      .flex()
-      .flex_col()
-      .gap_1()
-      .p_4()
-      .bg(rgb(0x242424))
-      .text_color(rgb(0xe6e6e6))
-      .text_sm()
-      .child(
-        div()
-          .text_color(rgb(0x8e8e8e))
-          .child("Sequence (GPUI spike). ⌘O open, ⇧⌘S save a copy, ⌘R reopen the last file."),
-      )
-      .children(self.lines.iter().map(|l| div().child(l.clone())))
-  }
-}
-
-/// Where the last opened file's bookmark is kept (the app's container when sandboxed).
-fn bookmark_file() -> PathBuf {
-  let dir = std::env::home_dir()
-    .unwrap_or_else(std::env::temp_dir)
-    .join("Library/Application Support/Sequence GPUI");
-  let _ = std::fs::create_dir_all(&dir);
-  dir.join("last.bookmark")
-}
-
-/// Read a file the app was given, keep a bookmark to it, and say how it went.
-fn opened(path: PathBuf, spike: &Entity<Spike>, cx: &mut App) {
-  let size = std::fs::metadata(&path).map(|m| m.len());
-  #[cfg(target_os = "macos")]
-  let kept = bookmarks::bookmark(&path).and_then(|b| std::fs::write(bookmark_file(), b).map_err(|e| e.to_string()));
-  #[cfg(not(target_os = "macos"))]
-  let kept: Result<(), String> = Ok(());
-  spike.update(cx, |s, cx| {
-    s.log(
-      format!("opened {} ({size:?} bytes), bookmark: {kept:?}", path.display()),
-      cx,
-    );
-  });
-}
+use crate::commands::*;
+use crate::library::{Library, support_dir};
+use crate::prefs::Prefs;
+use crate::workspace::Workspace;
 
 fn main() {
-  let app = application();
-  // Files and links macOS hands the app (a double-click in Finder) can arrive before the
-  // window exists, so they wait in a channel.
+  let app = application().with_assets(assets::Assets);
+  // Files macOS hands the app (a double-click in Finder) can arrive before the window
+  // exists, so they wait in a channel.
   let (urls_tx, urls_rx) = std::sync::mpsc::channel::<Vec<String>>();
   app.on_open_urls(move |urls| {
     let _ = urls_tx.send(urls);
   });
   app.run(move |cx| {
     gpui_kit::init(cx);
+    assets::load_fonts(cx);
     cx.activate(true);
+    cx.bind_keys(key_bindings());
+    cx.set_menus(menus());
     cx.on_action(|_: &Quit, cx| cx.quit());
-    cx.bind_keys([
-      KeyBinding::new("cmd-o", Open, None),
-      KeyBinding::new("cmd-shift-s", SaveAs, None),
-      KeyBinding::new("cmd-r", ReopenLast, None),
-      KeyBinding::new("cmd-q", Quit, None),
-    ]);
-    cx.set_menus([
-      Menu::new("Sequence").items([
-        MenuItem::os_submenu("Services", SystemMenuType::Services),
-        MenuItem::separator(),
-        MenuItem::action("Quit Sequence", Quit),
-      ]),
-      Menu::new("File").items([
-        MenuItem::action("Open…", Open),
-        MenuItem::action("Save a Copy…", SaveAs),
-        MenuItem::action("Reopen Last File", ReopenLast),
-      ]),
-    ]);
 
-    let spike = cx.new(|_| Spike { lines: Vec::new() });
+    let mut prefs = Prefs::load();
+    // The open project's file, through its bookmark (the sandbox forgets it otherwise).
+    #[cfg(target_os = "macos")]
+    if let Some(b) = &prefs.document_bookmark {
+      match bookmarks::resolve(b) {
+        Ok(path) => prefs.document = Some(path),
+        Err(_) => prefs.document = None,
+      }
+    }
+    let lib = Library::at(support_dir().join("Current"));
+
     let options = WindowOptions {
       titlebar: Some(TitlebarOptions {
         title: Some("Sequence".into()),
-        ..Default::default()
+        appears_transparent: true,
+        traffic_light_position: Some(point(px(16.0), px(14.0))),
       }),
       window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
         None,
-        size(px(900.), px(600.)),
+        size(px(1280.0), px(820.0)),
         cx,
       ))),
+      window_min_size: Some(size(px(720.0), px(480.0))),
       ..Default::default()
     };
-    let view = spike.clone();
-    cx.open_window(options, move |_, _| view)
+    let window = cx
+      .open_window(options, |window, cx| {
+        let ws = cx.new(|cx| Workspace::new(lib, prefs, cx));
+        let focus = ws.read(cx).focus.clone();
+        window.focus(&focus, cx);
+        ws
+      })
       .expect("couldn't open the window");
 
-    let s = spike.clone();
-    cx.on_action(move |_: &Open, cx| {
-      let picked = cx.prompt_for_paths(PathPromptOptions {
-        files: true,
-        directories: false,
-        multiple: false,
-        prompt: None,
+    cx.on_action(move |_: &About, cx| {
+      let _ = window.update(cx, |ws, _, cx| {
+        ws.ui.notice = Some(format!(
+          "Sequence {} — sequence.photos. Photos stay on this Mac.",
+          env!("CARGO_PKG_VERSION")
+        ));
+        cx.notify();
       });
-      let s = s.clone();
-      cx.spawn(async move |cx| {
-        if let Ok(Ok(Some(paths))) = picked.await {
-          cx.update(|cx| paths.into_iter().for_each(|p| opened(p, &s, cx)));
-        }
-      })
-      .detach();
     });
-
-    let s = spike.clone();
-    cx.on_action(move |_: &SaveAs, cx| {
-      let dir = std::env::home_dir().unwrap_or_default();
-      let picked = cx.prompt_for_new_path(&dir, Some("spike.photo-sequence"));
-      let s = s.clone();
-      cx.spawn(async move |cx| {
-        if let Ok(Ok(Some(path))) = picked.await {
-          let wrote = std::fs::write(&path, b"Sequence GPUI spike\n");
-          cx.update(|cx| s.update(cx, |s, cx| s.log(format!("saved {}: {wrote:?}", path.display()), cx)));
-        }
-      })
-      .detach();
-    });
-
-    let s = spike.clone();
-    cx.on_action(move |_: &ReopenLast, cx| {
-      let result = std::fs::read(bookmark_file()).map_err(|e| e.to_string()).and_then(|b| {
-        #[cfg(target_os = "macos")]
-        let path = bookmarks::resolve(&b)?;
-        #[cfg(not(target_os = "macos"))]
-        let path = PathBuf::from(String::from_utf8_lossy(&b).into_owned());
-        std::fs::read(&path).map(|d| (path, d.len())).map_err(|e| e.to_string())
-      });
-      s.update(cx, |s, cx| s.log(format!("reopened last file: {result:?}"), cx));
+    cx.on_action(move |_: &CloseWindow, cx| {
+      let _ = window.update(cx, |_, window, _| window.remove_window());
     });
 
     // Drain files from Finder now and as they come.
-    let s = spike.clone();
     cx.spawn(async move |cx| {
       loop {
         while let Ok(urls) = urls_rx.try_recv() {
-          cx.update(|cx| {
-            for url in urls {
-              match url.strip_prefix("file://") {
-                Some(path) => opened(PathBuf::from(percent_decode(path)), &s, cx),
-                None => s.update(cx, |s, cx| s.log(format!("link: {url}"), cx)),
-              }
-            }
+          let paths: Vec<PathBuf> = urls
+            .iter()
+            .filter_map(|u| u.strip_prefix("file://"))
+            .map(|p| PathBuf::from(percent_decode(p)))
+            .collect();
+          let _ = window.update(cx, |ws, _, cx| {
+            ws.files_dropped(paths, cx);
           });
         }
         cx.background_executor()
@@ -185,19 +104,6 @@ fn main() {
       }
     })
     .detach();
-    spike.update(cx, |s, cx| {
-      s.log(
-        format!(
-          "started; sandboxed: {}",
-          std::env::var("APP_SANDBOX_CONTAINER_ID").is_ok()
-        ),
-        cx,
-      )
-    });
-    // For checking the bookmark without a keyboard: `open --env SEQUENCE_SPIKE_REOPEN=1 …`.
-    if std::env::var("SEQUENCE_SPIKE_REOPEN").is_ok() {
-      cx.dispatch_action(&ReopenLast);
-    }
   });
 }
 

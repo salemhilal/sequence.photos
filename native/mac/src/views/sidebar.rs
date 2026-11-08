@@ -1,0 +1,292 @@
+//! The sidebar: the book's spreads (or the sequence's frames) in order, each a picture to
+//! drop photos on, select, open, and drag to reorder (`Sidebar.tsx`).
+
+use gpui_kit::prelude::FluentBuilder;
+use gpui_kit::*;
+use sequence_core::actions::{DropTarget, folio_label, is_movable};
+use sequence_core::geometry::{Rect, sheet_extent};
+use sequence_core::units::terms;
+use sequence_core::{Arrangement, PageSide};
+
+use super::paint::{SpreadPicture, boxed, x};
+use super::{icon_button, paint};
+use crate::assets::MONO;
+use crate::theme::Theme;
+use crate::workspace::{Cell, Source, Workspace};
+
+const HEADER_H: f64 = 28.0;
+const LIST_PAD: f64 = 10.0;
+/// The well's padding around a spread's picture, and the row's.
+const WELL_PAD: f64 = 8.0;
+const ROW_PAD: f64 = 4.0;
+const FOOT_H: f64 = 20.0;
+/// The gap between rows, where dropping adds a spread.
+const GAP_H: f64 = 12.0;
+
+impl Workspace {
+  /// `r` is in window pixels; the sidebar is drawn in the page's (below the toolbar).
+  pub fn render_sidebar(&mut self, r: Rect, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
+    let main_y = self.frames.main.y;
+    let project = self.history.project().clone();
+    let sheet = project.sheet();
+    let arrangement = project.layout.arrangement();
+    let book = arrangement == Arrangement::Spreads;
+    let terms = terms(arrangement);
+    let all = project.layout.all();
+    let total = all.len();
+    let (extent_left, extent_w) = sheet_extent(arrangement, sheet.page_w);
+    let pic_w = (r.w - 2.0 * LIST_PAD - 2.0 * ROW_PAD - 2.0 * WELL_PAD).max(60.0);
+    let scale = pic_w / extent_w;
+    let pic_h = sheet.page_h * scale;
+    let row_h = ROW_PAD + 2.0 * WELL_PAD + pic_h + FOOT_H + ROW_PAD;
+    let list = Rect::new(r.x, r.y + HEADER_H, r.w, r.h - HEADER_H);
+    self.frames.sidebar_list = list;
+    let content_h = LIST_PAD * 2.0 + total as f64 * (row_h + GAP_H) + if book { 0.0 } else { GAP_H };
+    let max_scroll = (content_h - list.h).max(0.0);
+    self.ui.sidebar_scroll = self.ui.sidebar_scroll.min(max_scroll);
+    let scroll = self.ui.sidebar_scroll;
+
+    let mut list_el = div()
+      .id("sidebar-list")
+      .absolute()
+      .left_0()
+      .top(x(HEADER_H))
+      .w(x(r.w))
+      .h(x(list.h))
+      .overflow_hidden()
+      .on_scroll(cx.listener(|ws, ev, _, cx| ws.sidebar_scroll(ev, cx)))
+      .on_mouse_down(
+        MouseButton::Left,
+        cx.listener(|ws, _, _, cx| {
+          ws.ui.spread_selection.clear();
+          cx.notify();
+        }),
+      )
+      .on_drop(cx.listener(|ws, paths: &ExternalPaths, _, cx| ws.files_dropped(paths.paths().to_vec(), cx)));
+
+    let editing = self.ui.editing.clone();
+    let reorder = self.ui.reorder.clone();
+    let mut y = LIST_PAD - scroll;
+    let mut cells = Vec::new();
+    let mut gaps = Vec::new();
+    for (i, spread) in all.iter().enumerate() {
+      // The gap before this spread (a book's first stays first).
+      if i > 0 || !book {
+        let gap = Rect::new(LIST_PAD, y, r.w - 2.0 * LIST_PAD, GAP_H);
+        gaps.push((i, Rect::new(list.x + gap.x, list.y + gap.y, gap.w, gap.h)));
+        let lit = self.ui.hover == Some(DropTarget::Insert(i)) || reorder.as_ref().is_some_and(|(_, d)| *d == i);
+        if lit {
+          list_el = list_el.child(boxed(Rect::new(gap.x, gap.y + GAP_H / 2.0 - 1.0, gap.w, 2.0)).bg(theme.accent));
+        }
+      }
+      y += GAP_H;
+      let row = Rect::new(LIST_PAD, y, r.w - 2.0 * LIST_PAD, row_h);
+      let selected = self.ui.spread_selection.contains(&spread.id);
+      let dragging = reorder.as_ref().is_some_and(|(ids, _)| ids.contains(&spread.id));
+      let is_editing = editing.as_ref() == Some(&spread.id);
+      let id = spread.id.clone();
+      let mut row_el = boxed(row)
+        .id(SharedString::from(format!("row-{}", spread.id)))
+        .rounded(px(3.0))
+        .on_mouse_down(
+          MouseButton::Left,
+          cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
+            cx.stop_propagation();
+            ws.spread_down(id.clone(), ev, cx);
+          }),
+        );
+      if selected {
+        row_el = row_el.bg(theme.control).border_1().border_color(theme.accent);
+      } else if is_editing {
+        row_el = row_el.bg(theme.accent_soft);
+      }
+      if dragging {
+        row_el = row_el.opacity(0.4);
+      }
+      // The well, and the spread's picture in it.
+      let well = Rect::new(ROW_PAD, ROW_PAD, row.w - 2.0 * ROW_PAD, pic_h + 2.0 * WELL_PAD);
+      row_el = row_el.child(boxed(well).rounded(px(2.0)).bg(theme.inset));
+      let origin_local = (ROW_PAD + WELL_PAD - extent_left * scale, ROW_PAD + WELL_PAD);
+      let pic = SpreadPicture {
+        spread,
+        sheet: &sheet,
+        scale,
+        origin: origin_local,
+        clip: true,
+      };
+      let lit = match &self.ui.hover {
+        Some(DropTarget::Page { spread: s, side }) if s == &spread.id => Some(*side),
+        _ => None,
+      };
+      for el in pic.page_elements(theme, None) {
+        row_el = row_el.child(el);
+      }
+      row_el = row_el.child(pic.photo_elements(&mut self.lib, &project, theme));
+      // Pressing a photo in the picture drags it out.
+      let pb = pic.pages_box();
+      for p in &spread.items {
+        let pr = pic.at(Rect::from(p));
+        let clipped = clip(pr, pb);
+        if clipped.w <= 0.0 || clipped.h <= 0.0 {
+          continue;
+        }
+        let pid = p.photo_id.clone();
+        row_el = row_el.child(boxed(clipped).on_mouse_down(
+          MouseButton::Left,
+          cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
+            cx.stop_propagation();
+            ws.photo_down(Source::Sidebar, pid.clone(), ev, cx);
+          }),
+        ));
+      }
+      if let Some(side) = lit {
+        for (s, pr) in pic.pages() {
+          if s == side {
+            row_el = row_el.child(boxed(pr).border_2().border_color(theme.accent));
+          }
+        }
+      }
+      // The foot: its folio, and (for a movable spread) delete.
+      let label = folio_label(i, total, arrangement);
+      let foot = div()
+        .absolute()
+        .left(x(ROW_PAD + 2.0))
+        .right(x(ROW_PAD))
+        .top(x(ROW_PAD + well.h))
+        .h(x(FOOT_H))
+        .flex()
+        .items_center()
+        .gap(px(6.0))
+        .text_color(if selected { theme.text } else { theme.muted })
+        .child(
+          div()
+            .font_family(MONO)
+            .text_size(px(11.0))
+            .font_weight(FontWeight::MEDIUM)
+            .child(label),
+        )
+        .child(div().flex_1())
+        .when(is_movable(spread.kind), |d| {
+          let id = spread.id.clone();
+          d.child(
+            icon_button(
+              SharedString::from(format!("delete-{}", spread.id)),
+              "x",
+              theme,
+              true,
+              false,
+              cx.listener(move |ws, _, _, cx| {
+                let visible = ws.visible();
+                let ids = vec![id.clone()];
+                ws.apply(cx, |d| sequence_core::actions::delete_spreads(d, &ids, visible));
+              }),
+            )
+            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation()),
+          )
+        });
+      row_el = row_el.child(foot);
+      list_el = list_el.child(row_el);
+      // Where this row and its pages are, in window pixels.
+      let to_window = |q: Rect| Rect::new(list.x + row.x + q.x, list.y + row.y + q.y, q.w, q.h);
+      cells.push(Cell {
+        id: spread.id.clone(),
+        index: i,
+        row: Rect::new(list.x + row.x, list.y + row.y, row.w, row.h),
+        pages: pic.pages().into_iter().map(|(s, q)| (s, to_window(q))).collect(),
+        scale,
+      });
+      y += row_h;
+    }
+    if !book {
+      let gap = Rect::new(LIST_PAD, y, r.w - 2.0 * LIST_PAD, GAP_H);
+      gaps.push((total, Rect::new(list.x + gap.x, list.y + gap.y, gap.w, gap.h)));
+      if self.ui.hover == Some(DropTarget::Insert(total)) || reorder.as_ref().is_some_and(|(_, d)| *d == total) {
+        list_el = list_el.child(boxed(Rect::new(gap.x, gap.y + GAP_H / 2.0 - 1.0, gap.w, 2.0)).bg(theme.accent));
+      }
+    }
+    // Only gaps and cells in view take drops.
+    let in_view = |q: &Rect| q.y + q.h > list.y && q.y < list.y + list.h;
+    self.frames.cells = cells.into_iter().filter(|c| in_view(&c.row)).collect();
+    self.frames.gaps = gaps.into_iter().filter(|(_, g)| in_view(g)).collect();
+
+    let add_at = if book { total - 1 } else { total };
+    let header = div()
+      .absolute()
+      .left_0()
+      .top_0()
+      .w(x(r.w))
+      .h(x(HEADER_H))
+      .flex()
+      .items_center()
+      .gap(px(2.0))
+      .pl(px(10.0))
+      .pr(px(6.0))
+      .bg(theme.header)
+      .border_b_1()
+      .border_color(theme.divider)
+      .child(div().font_weight(FontWeight::SEMIBOLD).child(terms.spreads_title))
+      .child(icon_button(
+        "add-spread",
+        "plus",
+        theme,
+        true,
+        false,
+        cx.listener(move |ws, _, _, cx| ws.apply(cx, |d| drop(sequence_core::actions::add_spread(d, add_at)))),
+      ))
+      .child(div().flex_1())
+      .child(
+        div()
+          .text_color(theme.muted)
+          .font_family(MONO)
+          .text_size(px(11.0))
+          .child(terms.count(total)),
+      );
+
+    let resize = div()
+      .id("sidebar-resize")
+      .absolute()
+      .left(px(-3.0))
+      .top_0()
+      .bottom_0()
+      .w(px(6.0))
+      .cursor(CursorStyle::ResizeLeftRight)
+      .on_mouse_down(
+        MouseButton::Left,
+        cx.listener(|ws, ev: &MouseDownEvent, _, cx| {
+          cx.stop_propagation();
+          if ev.click_count == 2 {
+            ws.prefs.sidebar_width = crate::prefs::SIDEBAR_DEFAULT_WIDTH;
+            ws.prefs.save();
+            cx.notify();
+          } else {
+            ws.sidebar_resize_down(ev);
+          }
+        }),
+      );
+
+    let _ = PageSide::Whole;
+    let _ = paint::x;
+    div()
+      .absolute()
+      .left(x(r.x))
+      .top(x(r.y - main_y))
+      .w(x(r.w))
+      .h(x(r.h))
+      .bg(theme.panel)
+      .border_l_1()
+      .border_color(theme.divider)
+      .child(list_el)
+      .child(header)
+      .child(resize)
+      .into_any_element()
+  }
+}
+
+/// The part of `r` inside `bounds`.
+fn clip(r: Rect, bounds: Rect) -> Rect {
+  let x1 = r.x.max(bounds.x);
+  let y1 = r.y.max(bounds.y);
+  let x2 = (r.x + r.w).min(bounds.x + bounds.w);
+  let y2 = (r.y + r.h).min(bounds.y + bounds.h);
+  Rect::new(x1, y1, x2 - x1, y2 - y1)
+}

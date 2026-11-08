@@ -2,13 +2,16 @@
 //! website, through wasm) shares. Ported from the TypeScript in `src/`, which stays the
 //! reference; tests check this against golden files the TypeScript writes (`tests/`).
 
+pub mod actions;
 pub mod crop;
+pub mod desk;
 pub mod geometry;
 pub mod ids;
 pub mod model;
 pub mod project_file;
 pub mod render_plan;
 pub mod schema;
+pub mod store;
 pub mod units;
 pub mod validate;
 
