@@ -1,0 +1,1648 @@
+[
+  {
+    "name": "layout 1080x1350 feed crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1350
+      },
+      "kind": "feed",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1080,
+        "height": 1350,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1350
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1350
+        }
+      },
+      "fits": true,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 1080x1350 feed expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1350
+      },
+      "kind": "feed",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1080,
+        "height": 1350,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1350
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1350
+        }
+      },
+      "fits": true,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 1080x1350 story crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1350
+      },
+      "kind": "story",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1080,
+        "height": 1350,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1350
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1350
+        }
+      },
+      "fits": true,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 1080x1350 story expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1350
+      },
+      "kind": "story",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1080,
+        "height": 1350,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1350
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1350
+        }
+      },
+      "fits": true,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "ratio 1080x1350",
+    "input": {
+      "op": "ratio",
+      "r": 0.8
+    },
+    "output": "4:5"
+  },
+  {
+    "name": "layout 1080x1440 feed crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1440
+      },
+      "kind": "feed",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1080,
+        "height": 1350,
+        "source": {
+          "x": 0,
+          "y": 45,
+          "w": 1080,
+          "h": 1350
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1350
+        }
+      },
+      "fits": false,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 1080x1440 feed expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1440
+      },
+      "kind": "feed",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1152,
+        "height": 1440,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1440
+        },
+        "target": {
+          "x": 36,
+          "y": 0,
+          "w": 1080,
+          "h": 1440
+        }
+      },
+      "fits": false,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 1080x1440 story crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1440
+      },
+      "kind": "story",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1080,
+        "height": 1440,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1440
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1440
+        }
+      },
+      "fits": true,
+      "ratio": 0.75
+    }
+  },
+  {
+    "name": "layout 1080x1440 story expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1440
+      },
+      "kind": "story",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1080,
+        "height": 1440,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1440
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1440
+        }
+      },
+      "fits": true,
+      "ratio": 0.75
+    }
+  },
+  {
+    "name": "ratio 1080x1440",
+    "input": {
+      "op": "ratio",
+      "r": 0.75
+    },
+    "output": "3:4"
+  },
+  {
+    "name": "layout 1080x1080 feed crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1080
+      },
+      "kind": "feed",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1080,
+        "height": 1080,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1080
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1080
+        }
+      },
+      "fits": true,
+      "ratio": 1
+    }
+  },
+  {
+    "name": "layout 1080x1080 feed expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1080
+      },
+      "kind": "feed",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1080,
+        "height": 1080,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1080
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1080
+        }
+      },
+      "fits": true,
+      "ratio": 1
+    }
+  },
+  {
+    "name": "layout 1080x1080 story crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1080
+      },
+      "kind": "story",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1080,
+        "height": 1080,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1080
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1080
+        }
+      },
+      "fits": true,
+      "ratio": 1
+    }
+  },
+  {
+    "name": "layout 1080x1080 story expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1080,
+        "h": 1080
+      },
+      "kind": "story",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1080,
+        "height": 1080,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1080
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1080
+        }
+      },
+      "fits": true,
+      "ratio": 1
+    }
+  },
+  {
+    "name": "ratio 1080x1080",
+    "input": {
+      "op": "ratio",
+      "r": 1
+    },
+    "output": "1:1"
+  },
+  {
+    "name": "layout 1440x400 feed crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1440,
+        "h": 400
+      },
+      "kind": "feed",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 764,
+        "height": 400,
+        "source": {
+          "x": 338,
+          "y": 0,
+          "w": 764,
+          "h": 400
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 764,
+          "h": 400
+        }
+      },
+      "fits": false,
+      "ratio": 1.91
+    }
+  },
+  {
+    "name": "layout 1440x400 feed expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1440,
+        "h": 400
+      },
+      "kind": "feed",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 754,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 400
+        },
+        "target": {
+          "x": 0,
+          "y": 177,
+          "w": 1440,
+          "h": 400
+        }
+      },
+      "fits": false,
+      "ratio": 1.91
+    }
+  },
+  {
+    "name": "layout 1440x400 story crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1440,
+        "h": 400
+      },
+      "kind": "story",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 400,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 400
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 400
+        }
+      },
+      "fits": true,
+      "ratio": 3.6
+    }
+  },
+  {
+    "name": "layout 1440x400 story expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1440,
+        "h": 400
+      },
+      "kind": "story",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 400,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 400
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 400
+        }
+      },
+      "fits": true,
+      "ratio": 3.6
+    }
+  },
+  {
+    "name": "ratio 1440x400",
+    "input": {
+      "op": "ratio",
+      "r": 3.6
+    },
+    "output": "3.6:1"
+  },
+  {
+    "name": "layout 300x3000 feed crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 300,
+        "h": 3000
+      },
+      "kind": "feed",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 320,
+        "height": 400,
+        "source": {
+          "x": 0,
+          "y": 1312.5,
+          "w": 300,
+          "h": 375
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 320,
+          "h": 400
+        }
+      },
+      "fits": false,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 300x3000 feed expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 300,
+        "h": 3000
+      },
+      "kind": "feed",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 1800,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 300,
+          "h": 3000
+        },
+        "target": {
+          "x": 630,
+          "y": 0,
+          "w": 180,
+          "h": 1800
+        }
+      },
+      "fits": false,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 300x3000 story crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 300,
+        "h": 3000
+      },
+      "kind": "story",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 320,
+        "height": 2560,
+        "source": {
+          "x": 0,
+          "y": 300,
+          "w": 300,
+          "h": 2400
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 320,
+          "h": 2560
+        }
+      },
+      "fits": false,
+      "ratio": 0.125
+    }
+  },
+  {
+    "name": "layout 300x3000 story expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 300,
+        "h": 3000
+      },
+      "kind": "story",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 320,
+        "height": 2560,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 300,
+          "h": 3000
+        },
+        "target": {
+          "x": 32,
+          "y": 0,
+          "w": 256,
+          "h": 2560
+        }
+      },
+      "fits": false,
+      "ratio": 0.125
+    }
+  },
+  {
+    "name": "ratio 300x3000",
+    "input": {
+      "op": "ratio",
+      "r": 0.1
+    },
+    "output": "0.1:1"
+  },
+  {
+    "name": "layout 4000x300 feed crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 4000,
+        "h": 300
+      },
+      "kind": "feed",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 573,
+        "height": 300,
+        "source": {
+          "x": 1713.5,
+          "y": 0,
+          "w": 573,
+          "h": 300
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 573,
+          "h": 300
+        }
+      },
+      "fits": false,
+      "ratio": 1.91
+    }
+  },
+  {
+    "name": "layout 4000x300 feed expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 4000,
+        "h": 300
+      },
+      "kind": "feed",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 754,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 4000,
+          "h": 300
+        },
+        "target": {
+          "x": 0,
+          "y": 323,
+          "w": 1440,
+          "h": 108
+        }
+      },
+      "fits": false,
+      "ratio": 1.91
+    }
+  },
+  {
+    "name": "layout 4000x300 story crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 4000,
+        "h": 300
+      },
+      "kind": "story",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 108,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 4000,
+          "h": 300
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 108
+        }
+      },
+      "fits": true,
+      "ratio": 13.333333333333334
+    }
+  },
+  {
+    "name": "layout 4000x300 story expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 4000,
+        "h": 300
+      },
+      "kind": "story",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 108,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 4000,
+          "h": 300
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 108
+        }
+      },
+      "fits": true,
+      "ratio": 13.333333333333334
+    }
+  },
+  {
+    "name": "ratio 4000x300",
+    "input": {
+      "op": "ratio",
+      "r": 13.333333333333334
+    },
+    "output": "13.33:1"
+  },
+  {
+    "name": "layout 3000x2400 feed crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 3000,
+        "h": 2400
+      },
+      "kind": "feed",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 1152,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 3000,
+          "h": 2400
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 1152
+        }
+      },
+      "fits": true,
+      "ratio": 1.25
+    }
+  },
+  {
+    "name": "layout 3000x2400 feed expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 3000,
+        "h": 2400
+      },
+      "kind": "feed",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 1152,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 3000,
+          "h": 2400
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 1152
+        }
+      },
+      "fits": true,
+      "ratio": 1.25
+    }
+  },
+  {
+    "name": "layout 3000x2400 story crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 3000,
+        "h": 2400
+      },
+      "kind": "story",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 1152,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 3000,
+          "h": 2400
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 1152
+        }
+      },
+      "fits": true,
+      "ratio": 1.25
+    }
+  },
+  {
+    "name": "layout 3000x2400 story expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 3000,
+        "h": 2400
+      },
+      "kind": "story",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 1152,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 3000,
+          "h": 2400
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 1152
+        }
+      },
+      "fits": true,
+      "ratio": 1.25
+    }
+  },
+  {
+    "name": "ratio 3000x2400",
+    "input": {
+      "op": "ratio",
+      "r": 1.25
+    },
+    "output": "1.25:1"
+  },
+  {
+    "name": "layout 200x250 feed crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 200,
+        "h": 250
+      },
+      "kind": "feed",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 320,
+        "height": 400,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 200,
+          "h": 250
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 320,
+          "h": 400
+        }
+      },
+      "fits": true,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 200x250 feed expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 200,
+        "h": 250
+      },
+      "kind": "feed",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 320,
+        "height": 400,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 200,
+          "h": 250
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 320,
+          "h": 400
+        }
+      },
+      "fits": true,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 200x250 story crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 200,
+        "h": 250
+      },
+      "kind": "story",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 320,
+        "height": 400,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 200,
+          "h": 250
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 320,
+          "h": 400
+        }
+      },
+      "fits": true,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 200x250 story expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 200,
+        "h": 250
+      },
+      "kind": "story",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 320,
+        "height": 400,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 200,
+          "h": 250
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 320,
+          "h": 400
+        }
+      },
+      "fits": true,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "ratio 200x250",
+    "input": {
+      "op": "ratio",
+      "r": 0.8
+    },
+    "output": "4:5"
+  },
+  {
+    "name": "layout 1003x1254 feed crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1003,
+        "h": 1254
+      },
+      "kind": "feed",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1003,
+        "height": 1253,
+        "source": {
+          "x": 0,
+          "y": 0.125,
+          "w": 1003,
+          "h": 1253.75
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1003,
+          "h": 1253
+        }
+      },
+      "fits": false,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 1003x1254 feed expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1003,
+        "h": 1254
+      },
+      "kind": "feed",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1003,
+        "height": 1253,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1003,
+          "h": 1254
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1003,
+          "h": 1253
+        }
+      },
+      "fits": false,
+      "ratio": 0.8
+    }
+  },
+  {
+    "name": "layout 1003x1254 story crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1003,
+        "h": 1254
+      },
+      "kind": "story",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1003,
+        "height": 1254,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1003,
+          "h": 1254
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1003,
+          "h": 1254
+        }
+      },
+      "fits": true,
+      "ratio": 0.7998405103668261
+    }
+  },
+  {
+    "name": "layout 1003x1254 story expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 1003,
+        "h": 1254
+      },
+      "kind": "story",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1003,
+        "height": 1254,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 1003,
+          "h": 1254
+        },
+        "target": {
+          "x": 0,
+          "y": 0,
+          "w": 1003,
+          "h": 1254
+        }
+      },
+      "fits": true,
+      "ratio": 0.7998405103668261
+    }
+  },
+  {
+    "name": "ratio 1003x1254",
+    "input": {
+      "op": "ratio",
+      "r": 0.7998405103668261
+    },
+    "output": "4:5"
+  },
+  {
+    "name": "layout 3300x2550 feed crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 3300,
+        "h": 2550
+      },
+      "kind": "feed",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 1113,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 3300,
+          "h": 2550
+        },
+        "target": {
+          "x": 0,
+          "y": 0.13636363636362603,
+          "w": 1440,
+          "h": 1112.7272727272727
+        }
+      },
+      "fits": true,
+      "ratio": 1.2941176470588236
+    }
+  },
+  {
+    "name": "layout 3300x2550 feed expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 3300,
+        "h": 2550
+      },
+      "kind": "feed",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 1113,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 3300,
+          "h": 2550
+        },
+        "target": {
+          "x": 0,
+          "y": 0.13636363636362603,
+          "w": 1440,
+          "h": 1112.7272727272727
+        }
+      },
+      "fits": true,
+      "ratio": 1.2941176470588236
+    }
+  },
+  {
+    "name": "layout 3300x2550 story crop",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 3300,
+        "h": 2550
+      },
+      "kind": "story",
+      "fit": "crop"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 1113,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 3300,
+          "h": 2550
+        },
+        "target": {
+          "x": 0,
+          "y": 0.13636363636362603,
+          "w": 1440,
+          "h": 1112.7272727272727
+        }
+      },
+      "fits": true,
+      "ratio": 1.2941176470588236
+    }
+  },
+  {
+    "name": "layout 3300x2550 story expand",
+    "input": {
+      "op": "layout",
+      "size": {
+        "w": 3300,
+        "h": 2550
+      },
+      "kind": "story",
+      "fit": "expand"
+    },
+    "output": {
+      "layout": {
+        "width": 1440,
+        "height": 1113,
+        "source": {
+          "x": 0,
+          "y": 0,
+          "w": 3300,
+          "h": 2550
+        },
+        "target": {
+          "x": 0,
+          "y": 0.13636363636362603,
+          "w": 1440,
+          "h": 1112.7272727272727
+        }
+      },
+      "fits": true,
+      "ratio": 1.2941176470588236
+    }
+  },
+  {
+    "name": "ratio 3300x2550",
+    "input": {
+      "op": "ratio",
+      "r": 1.2941176470588236
+    },
+    "output": "1.29:1"
+  },
+  {
+    "name": "hashtags ",
+    "input": {
+      "op": "hashtags",
+      "text": ""
+    },
+    "output": 0
+  },
+  {
+    "name": "hashtags #one #two",
+    "input": {
+      "op": "hashtags",
+      "text": "#one #two"
+    },
+    "output": 2
+  },
+  {
+    "name": "hashtags a#b #c_d #é1 # x",
+    "input": {
+      "op": "hashtags",
+      "text": "a#b #c_d #é1 # x"
+    },
+    "output": 2
+  },
+  {
+    "name": "hashtags #a\n#b",
+    "input": {
+      "op": "hashtags",
+      "text": "#a\n#b"
+    },
+    "output": 2
+  },
+  {
+    "name": "hashtags no tags",
+    "input": {
+      "op": "hashtags",
+      "text": "no tags"
+    },
+    "output": 0
+  },
+  {
+    "name": "quote {\"id\":12345678901234567890}",
+    "input": {
+      "op": "quote",
+      "text": "{\"id\":12345678901234567890}"
+    },
+    "output": "{\"id\":\"12345678901234567890\"}"
+  },
+  {
+    "name": "quote {\"id\": 1, \"user_id\":22}",
+    "input": {
+      "op": "quote",
+      "text": "{\"id\": 1, \"user_id\":22}"
+    },
+    "output": "{\"id\": \"1\", \"user_id\":\"22\"}"
+  },
+  {
+    "name": "quote {\"ids\":3}",
+    "input": {
+      "op": "quote",
+      "text": "{\"ids\":3}"
+    },
+    "output": "{\"ids\":3}"
+  },
+  {
+    "name": "username @Some.One ",
+    "input": {
+      "op": "username",
+      "text": "@Some.One "
+    },
+    "output": "some.one"
+  },
+  {
+    "name": "username bad name",
+    "input": {
+      "op": "username",
+      "text": "bad name"
+    },
+    "output": null
+  },
+  {
+    "name": "username a_b",
+    "input": {
+      "op": "username",
+      "text": "a_b"
+    },
+    "output": "a_b"
+  },
+  {
+    "name": "username ",
+    "input": {
+      "op": "username",
+      "text": ""
+    },
+    "output": null
+  },
+  {
+    "name": "username @xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "input": {
+      "op": "username",
+      "text": "@xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    "output": null
+  },
+  {
+    "name": "user tags",
+    "input": {
+      "op": "tags",
+      "tags": [
+        {
+          "username": "a",
+          "x": -0.2,
+          "y": 0.33333
+        },
+        {
+          "username": "b",
+          "x": 0.5,
+          "y": 1.4
+        }
+      ]
+    },
+    "output": "[{\"username\":\"a\",\"x\":0,\"y\":0.333},{\"username\":\"b\",\"x\":0.5,\"y\":1}]"
+  },
+  {
+    "name": "graph error 190",
+    "input": {
+      "op": "graph",
+      "error": {
+        "code": 190
+      },
+      "status": 400
+    },
+    "output": "Your Instagram connection expired. Connect again in Settings."
+  },
+  {
+    "name": "graph error 4",
+    "input": {
+      "op": "graph",
+      "error": {
+        "code": 4
+      },
+      "status": 400
+    },
+    "output": "Instagram’s posting limit was reached. Try again later."
+  },
+  {
+    "name": "graph error 10",
+    "input": {
+      "op": "graph",
+      "error": {
+        "code": 10
+      },
+      "status": 400
+    },
+    "output": "Sequence doesn’t have permission to post. Connect again in Settings."
+  },
+  {
+    "name": "graph error 9004",
+    "input": {
+      "op": "graph",
+      "error": {
+        "code": 9004
+      },
+      "status": 400
+    },
+    "output": "Instagram couldn’t fetch the images. Try again in a moment."
+  },
+  {
+    "name": "graph error 36003",
+    "input": {
+      "op": "graph",
+      "error": {
+        "code": 36003
+      },
+      "status": 400
+    },
+    "output": "Instagram doesn’t accept this image shape. Try cropping or expanding the slides."
+  },
+  {
+    "name": "graph error 1",
+    "input": {
+      "op": "graph",
+      "error": {
+        "code": 1,
+        "error_user_msg": "Say this"
+      },
+      "status": 400
+    },
+    "output": "Say this"
+  },
+  {
+    "name": "graph error 5",
+    "input": {
+      "op": "graph",
+      "error": {
+        "code": 5
+      },
+      "status": 400
+    },
+    "output": "Instagram couldn’t post this (error 5)."
+  },
+  {
+    "name": "graph error undefined",
+    "input": {
+      "op": "graph",
+      "error": null,
+      "status": 400
+    },
+    "output": "Instagram couldn’t post this (HTTP 400)."
+  },
+  {
+    "name": "return #state=s1&instagram=abc",
+    "input": {
+      "op": "return",
+      "hash": "#state=s1&instagram=abc"
+    },
+    "output": {
+      "kind": "connected",
+      "sealed": "abc",
+      "state": "s1"
+    }
+  },
+  {
+    "name": "return #state=s1&instagram_error=cancelled",
+    "input": {
+      "op": "return",
+      "hash": "#state=s1&instagram_error=cancelled"
+    },
+    "output": {
+      "kind": "error",
+      "error": "cancelled",
+      "state": "s1"
+    }
+  },
+  {
+    "name": "return #state=s&instagram_error=weird",
+    "input": {
+      "op": "return",
+      "hash": "#state=s&instagram_error=weird"
+    },
+    "output": {
+      "kind": "error",
+      "error": "exchange_failed",
+      "state": "s"
+    }
+  },
+  {
+    "name": "return #x=1",
+    "input": {
+      "op": "return",
+      "hash": "#x=1"
+    },
+    "output": null
+  },
+  {
+    "name": "return ",
+    "input": {
+      "op": "return",
+      "hash": ""
+    },
+    "output": null
+  },
+  {
+    "name": "enrollment djEKRU5ST0xMCjEyCjE3MDAwMDAwMDA.sig",
+    "input": {
+      "op": "enrollment",
+      "e": "djEKRU5ST0xMCjEyCjE3MDAwMDAwMDA.sig"
+    },
+    "output": 1700000000
+  },
+  {
+    "name": "enrollment junk",
+    "input": {
+      "op": "enrollment",
+      "e": "junk"
+    },
+    "output": 0
+  },
+  {
+    "name": "enrollment ",
+    "input": {
+      "op": "enrollment",
+      "e": ""
+    },
+    "output": 0
+  }
+]

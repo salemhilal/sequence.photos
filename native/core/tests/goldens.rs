@@ -273,3 +273,55 @@ fn idml_matches_the_typescript() {
     }
   }
 }
+
+#[test]
+fn instagram_matches_the_typescript() {
+  use sequence_core::instagram::*;
+  use sequence_core::{PostFit, PostKind, Tag};
+  let cases = goldens("instagram.json");
+  assert!(cases.len() > 50);
+  let mut failures = Vec::new();
+  for case in &cases {
+    let name = case["name"].as_str().unwrap_or("?");
+    let i = &case["input"];
+    let s = |k: &str| i[k].as_str().unwrap_or("").to_string();
+    let got: Value = match i["op"].as_str() {
+      Some("layout") => {
+        let size = (
+          i["size"]["w"].as_f64().unwrap_or(0.0),
+          i["size"]["h"].as_f64().unwrap_or(0.0),
+        );
+        let kind: PostKind = serde_json::from_value(i["kind"].clone()).expect("a kind");
+        let fit: PostFit = serde_json::from_value(i["fit"].clone()).expect("a fit");
+        serde_json::json!({
+          "layout": post_image_layout(size, kind, fit),
+          "fits": fits(size, kind),
+          "ratio": target_ratio(size, kind),
+        })
+      }
+      Some("ratio") => Value::from(ratio_label(i["r"].as_f64().unwrap_or(0.0))),
+      Some("hashtags") => Value::from(hashtag_count(&s("text"))),
+      Some("quote") => Value::from(quote_ids(&s("text"))),
+      Some("username") => username_of(&s("text")).map_or(Value::Null, Value::from),
+      Some("tags") => {
+        let tags: Vec<Tag> = serde_json::from_value(i["tags"].clone()).expect("tags");
+        user_tags_param(&tags).map_or(Value::Null, Value::from)
+      }
+      Some("graph") => {
+        let e = &i["error"];
+        Value::from(graph_error_message(
+          e["code"].as_i64(),
+          e["error_user_msg"].as_str(),
+          i["status"].as_u64().unwrap_or(0) as u16,
+        ))
+      }
+      Some("return") => serde_json::to_value(parse_sign_in_return(&s("hash"))).expect("json"),
+      Some("enrollment") => Value::from(enrollment_expiry(&s("e"))),
+      other => panic!("unknown op {other:?}"),
+    };
+    if numbers(&got) != numbers(&case["output"]) {
+      failures.push(format!("{name}:\n  got      {got}\n  expected {}", case["output"]));
+    }
+  }
+  assert!(failures.is_empty(), "{}", failures.join("\n"));
+}

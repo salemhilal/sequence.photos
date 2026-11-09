@@ -7,6 +7,7 @@ pub mod crop;
 pub mod desk;
 pub mod editor;
 pub mod export;
+pub mod instagram;
 pub mod layout;
 pub mod paint;
 pub mod preview;

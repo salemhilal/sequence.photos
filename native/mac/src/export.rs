@@ -120,7 +120,7 @@ impl Workspace {
 
   /// Keep the Export page's choices with the project: in the library's copy and the file,
   /// outside undo. Nothing changes when they're as they were.
-  fn save_export_state(&mut self, change: impl FnOnce(&mut ExportState)) {
+  pub fn save_export_state(&mut self, change: impl FnOnce(&mut ExportState)) {
     let was = self.project().export.clone().unwrap_or_default();
     let mut next = was.clone();
     change(&mut next);
@@ -154,7 +154,7 @@ impl Workspace {
     cx.notify();
   }
 
-  fn source(&self) -> LibrarySource {
+  pub fn source(&self) -> LibrarySource {
     LibrarySource {
       dir: self.lib.dir.clone(),
     }
@@ -528,6 +528,31 @@ mod tests {
       assert_eq!((r.missing, r.previews), (0, 0));
       let d = crate::imageio::decode(&r.bytes, 10.0).expect("reads back");
       assert_eq!((d.px_w, d.px_h), (plan.px_w, plan.px_h));
+    }
+    std::fs::remove_dir_all(&dir).ok();
+  }
+
+  /// Each slide as Instagram gets it: the post's size, under its limit.
+  #[test]
+  fn makes_post_images() {
+    use sequence_core::instagram::{post_image_layout, slide_size};
+    use sequence_core::render_plan::{output_pages, plan_page};
+    use sequence_core::{PostFit, PostKind};
+    let Some((project, dir)) = library("post") else { return };
+    let source = LibrarySource { dir: dir.clone() };
+    let sheet = project.sheet();
+    for kind in [PostKind::Feed, PostKind::Story] {
+      let layout = post_image_layout(slide_size(&sheet), kind, PostFit::Expand);
+      for page in output_pages(&project, Per::Page) {
+        let scale = 1f64.min(layout.target.w / layout.source.w);
+        let plan = plan_page(&page, &sheet, &project.photos, Some(sheet.px_per_unit * scale));
+        let k = plan.px_per_unit / sheet.px_per_unit;
+        let (jpeg, previews) =
+          crate::imageio::post_image(&plan, &project.photos, |id| source.paths(id), &layout, k).expect("an image");
+        assert_eq!(previews, 0);
+        let d = crate::imageio::decode(&jpeg, 10.0).expect("reads back");
+        assert_eq!((d.px_w, d.px_h), (layout.width, layout.height));
+      }
     }
     std::fs::remove_dir_all(&dir).ok();
   }

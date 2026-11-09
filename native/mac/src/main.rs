@@ -5,13 +5,16 @@ mod assets;
 #[cfg(target_os = "macos")]
 mod bookmarks;
 mod commands;
+mod config;
 mod crop;
 mod export;
 mod fields;
 #[cfg(target_os = "macos")]
 mod imageio;
+mod instagram;
 mod layout;
 mod library;
+mod posting;
 mod prefs;
 mod theme;
 mod urls;
@@ -94,8 +97,21 @@ fn main() {
           });
         }
         #[cfg(debug_assertions)]
-        if std::env::var_os("SEQUENCE_OPEN_EXPORT").is_some() {
-          ws.update(cx, |ws, cx| ws.go_to(workspace::Page::Export, cx));
+        if let Some(to) = std::env::var_os("SEQUENCE_OPEN_EXPORT") {
+          ws.update(cx, |ws, cx| {
+            use sequence_core::model::ExportDestination as D;
+            let d = match to.to_str() {
+              Some("images") => Some(D::Images),
+              Some("indesign") => Some(D::Indesign),
+              Some("instagram") => Some(D::Instagram),
+              Some("pdf") => Some(D::Pdf),
+              _ => None,
+            };
+            if let Some(d) = d {
+              ws.pick_destination(d, cx);
+            }
+            ws.go_to(workspace::Page::Export, cx);
+          });
         }
         let focus = ws.read(cx).focus.clone();
         window.focus(&focus, cx);
@@ -143,7 +159,19 @@ fn main() {
     cx.spawn(async move |cx| {
       while let Some(urls) = urls_rx.next().await {
         let paths: Vec<PathBuf> = urls.iter().filter_map(|u| urls::file_url_path(u)).collect();
-        if window.update(cx, |ws, _, cx| ws.files_dropped(paths, cx)).is_err() {
+        let links: Vec<String> = urls
+          .into_iter()
+          .filter(|u| u.starts_with("sequence-photos://"))
+          .collect();
+        let done = window.update(cx, |ws, _, cx| {
+          for link in &links {
+            ws.finish_sign_in(link, cx);
+          }
+          if !paths.is_empty() {
+            ws.files_dropped(paths, cx);
+          }
+        });
+        if done.is_err() {
           break;
         }
       }

@@ -11,7 +11,7 @@ use crate::theme::Theme;
 /// A row of choices, one on.
 pub fn segmented<T: Copy + PartialEq + 'static>(
   id: &'static str,
-  options: &[(T, &'static str)],
+  options: &[(T, &str)],
   value: T,
   theme: &Theme,
   on: impl Fn(T, &mut Window, &mut App) + 'static,
@@ -31,7 +31,7 @@ pub fn segmented<T: Copy + PartialEq + 'static>(
       .px(px(8.0))
       .rounded(px(3.0))
       .text_color(if chosen { theme.text } else { theme.muted })
-      .child(label)
+      .child(label.to_string())
       .on_click(move |_, window, cx| on(v, window, cx));
     if chosen {
       b = b.bg(theme.control).shadow_xs();

@@ -20,6 +20,11 @@ import {
 import { outputPages, planPage, slideKey, fitPixels } from './renderPlan';
 import { createZip, readZip } from './zip';
 import { buildIdml, type LinkedImage } from './idml';
+import { fits, hashtagCount, postImageLayout, ratioLabel, targetRatio } from './instagramImage';
+import { graphErrorMessage, quoteIds } from './instagramPost';
+import { userTagsParam, usernameOf } from './instagramTags';
+import { enrollmentExpiry, parseSignInReturn } from './instagram';
+import { encodeBase64Url } from './base64url';
 import { allSpreads, sheetOf } from './spreads';
 import type { Project, Sheet } from './types';
 
@@ -275,6 +280,73 @@ describe('golden files for native/core', () => {
       cases.push({ name, input: { project, links: [...links] }, output: files });
     }
     check('idml.json', cases);
+  });
+
+  it('instagram.json: post images, captions, tags, and sign-in returns', () => {
+    const cases: Case[] = [];
+    const sizes = [
+      [1080, 1350],
+      [1080, 1440],
+      [1080, 1080],
+      [1440, 400],
+      [300, 3000],
+      [4000, 300],
+      [3000, 2400],
+      [200, 250],
+      [1003, 1254],
+      [3300, 2550],
+    ] as const;
+    for (const [w, h] of sizes) {
+      for (const kind of ['feed', 'story'] as const) {
+        for (const fit of ['crop', 'expand'] as const) {
+          cases.push({
+            name: `layout ${w}x${h} ${kind} ${fit}`,
+            input: { op: 'layout', size: { w, h }, kind, fit },
+            output: {
+              layout: postImageLayout({ w, h }, kind, fit),
+              fits: fits({ w, h }, kind),
+              ratio: targetRatio({ w, h }, kind),
+            },
+          });
+        }
+      }
+      cases.push({ name: `ratio ${w}x${h}`, input: { op: 'ratio', r: w / h }, output: ratioLabel(w / h) });
+    }
+    for (const text of ['', '#one #two', 'a#b #c_d #é1 # x', '#a\n#b', 'no tags']) {
+      cases.push({ name: `hashtags ${text}`, input: { op: 'hashtags', text }, output: hashtagCount(text) });
+    }
+    for (const text of ['{"id":12345678901234567890}', '{"id": 1, "user_id":22}', '{"ids":3}']) {
+      cases.push({ name: `quote ${text}`, input: { op: 'quote', text }, output: quoteIds(text) });
+    }
+    for (const text of ['@Some.One ', 'bad name', 'a_b', '', '@' + 'x'.repeat(31)]) {
+      cases.push({ name: `username ${text}`, input: { op: 'username', text }, output: usernameOf(text) });
+    }
+    const tags = [
+      { username: 'a', x: -0.2, y: 0.33333 },
+      { username: 'b', x: 0.5, y: 1.4 },
+    ];
+    cases.push({ name: 'user tags', input: { op: 'tags', tags }, output: userTagsParam(tags) });
+    for (const [code, msg] of [[190], [4], [10], [9004], [36003], [1, 'Say this'], [5], [undefined]] as const) {
+      const error = code === undefined ? null : { code, ...(msg && { error_user_msg: msg }) };
+      cases.push({
+        name: `graph error ${code}`,
+        input: { op: 'graph', error, status: 400 },
+        output: graphErrorMessage(error, 400),
+      });
+    }
+    for (const hash of [
+      '#state=s1&instagram=abc',
+      '#state=s1&instagram_error=cancelled',
+      '#state=s&instagram_error=weird',
+      '#x=1',
+      '',
+    ]) {
+      cases.push({ name: `return ${hash}`, input: { op: 'return', hash }, output: parseSignInReturn(hash) });
+    }
+    for (const e of [`${encodeBase64Url(new TextEncoder().encode('v1\nENROLL\n12\n1700000000'))}.sig`, 'junk', '']) {
+      cases.push({ name: `enrollment ${e}`, input: { op: 'enrollment', e }, output: enrollmentExpiry(e) });
+    }
+    check('instagram.json', cases);
   });
 
   it('geometry.json: guides, snapping, fitting, and relayout', () => {

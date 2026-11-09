@@ -9,6 +9,7 @@ pub mod export_options;
 pub mod geometry;
 pub mod idml;
 pub mod ids;
+pub mod instagram;
 pub mod model;
 pub mod page_setup;
 pub mod pdf;

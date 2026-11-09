@@ -1,6 +1,6 @@
 //! The Settings window (`SettingsDialog.tsx`'s `SettingsWindow`): the app's own preferences,
 //! in a window of their own. It edits the workspace's prefs, so the main window follows as
-//! they change. Instagram's settings come with the Instagram export.
+//! they change.
 
 use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::prelude::FluentBuilder;
@@ -17,10 +17,30 @@ use crate::workspace::Workspace;
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Tab {
   General,
+  Instagram,
   Advanced,
 }
 
-const TABS: &[(Tab, &str)] = &[(Tab::General, "General"), (Tab::Advanced, "Advanced")];
+const TABS: &[(Tab, &str)] = &[
+  (Tab::General, "General"),
+  (Tab::Instagram, "Instagram"),
+  (Tab::Advanced, "Advanced"),
+];
+
+/// Which server posts to Instagram.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Server {
+  Default,
+  Dev,
+  Local,
+}
+
+const SERVERS: &[(Server, &str)] = &[
+  (Server::Default, "Sequence"),
+  (Server::Dev, "Development"),
+  (Server::Local, "Local"),
+];
+const LOCAL_DEFAULT: &str = "http://localhost:8787";
 const THEMES: &[(ThemePref, &str)] = &[
   (ThemePref::System, "System"),
   (ThemePref::Light, "Light"),
@@ -35,6 +55,8 @@ pub struct SettingsWindow {
   custom_desk: Entity<InputState>,
   /// How many test images to add.
   test_count: Entity<InputState>,
+  /// A server on this computer, as typed.
+  local_server: Entity<InputState>,
 }
 
 impl SettingsWindow {
@@ -62,11 +84,30 @@ impl SettingsWindow {
     })
     .detach();
 
+    let chosen = ws.read(cx).prefs.server_url.clone();
+    let local = if server_choice(&chosen) == Server::Local && !chosen.is_empty() {
+      chosen
+    } else {
+      LOCAL_DEFAULT.to_string()
+    };
+    let local_server = cx.new(|cx| InputState::new(window, cx).default_value(local));
+    cx.subscribe_in(&local_server, window, |this, state, ev: &InputEvent, _, cx| match ev {
+      InputEvent::PressEnter { .. } => {
+        if let Some(url) = crate::instagram::normalize_server(&state.read(cx).value()) {
+          this.ws.update(cx, |ws, cx| ws.set_server_url(url, cx));
+        }
+      }
+      InputEvent::Change => cx.notify(),
+      _ => {}
+    })
+    .detach();
+
     Self {
       ws,
       tab: Tab::General,
       custom_desk,
       test_count,
+      local_server,
     }
   }
 
@@ -173,6 +214,127 @@ impl SettingsWindow {
     ]
   }
 
+  fn instagram(&mut self, theme: &Theme, cx: &mut Context<Self>) -> Vec<AnyElement> {
+    let ws = self.ws.read(cx);
+    let connection = ws.ig.connection.clone();
+    let message = ws.ig.message.clone();
+    let now = crate::instagram::now_s();
+    let expired = connection
+      .as_ref()
+      .is_some_and(|c| c.needs_reconnect || c.expires_at <= now);
+    let mut col = div().flex().flex_col().gap(px(6.0));
+    match &connection {
+      Some(c) if !expired => {
+        let w = self.ws.downgrade();
+        col = col
+          .child(
+            div()
+              .flex()
+              .items_center()
+              .gap(px(8.0))
+              .child(format!("Connected as @{}", c.username))
+              .child(text_button("ig-disconnect", "Disconnect", theme, false, move |_, _, cx| {
+                let _ = w.update(cx, |ws, cx| ws.disconnect_instagram(cx));
+              })),
+          )
+          .child(help(
+            "Disconnecting forgets the account here. To remove Sequence’s access entirely, remove it in Instagram’s settings (Website permissions → Apps and websites).",
+            theme,
+          ));
+      }
+      _ => {
+        let w = self.ws.downgrade();
+        col = col.child(div().child(text_button(
+          "ig-connect",
+          if expired {
+            "Reconnect Instagram"
+          } else {
+            "Connect Instagram"
+          },
+          theme,
+          false,
+          move |_, _, cx| {
+            let _ = w.update(cx, |ws, cx| ws.connect_instagram(false, cx));
+          },
+        )));
+        col = col.child(match (&message, &connection) {
+          (Some((text, warn)), _) => help(text.clone(), theme).when(*warn, |d| d.text_color(theme.warn)),
+          (None, Some(c)) if c.needs_reconnect => {
+            help(format!("Instagram needs you to connect @{} again.", c.username), theme)
+          }
+          (None, Some(c)) => help(
+            format!(
+              "The connection to @{} expired. Connect again to keep posting.",
+              c.username
+            ),
+            theme,
+          ),
+          (None, None) => help(
+            "Post frames to Instagram from Export. Needs a Business or Creator account.",
+            theme,
+          ),
+        });
+      }
+    }
+    vec![setting("Instagram", theme, col)]
+  }
+
+  fn server(&mut self, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
+    let chosen = self.ws.read(cx).prefs.server_url.clone();
+    let choice = server_choice(&chosen);
+    let typed = self.local_server.read(cx).value().to_string();
+    let local = crate::instagram::normalize_server(&typed);
+    let ws = self.ws.downgrade();
+    let local_for_pick = local.clone();
+    let picker = segmented("server", SERVERS, choice, theme, move |c, _, cx| {
+      let url = match c {
+        Server::Default => String::new(),
+        Server::Dev => crate::config::dev_server_url().to_string(),
+        Server::Local => local_for_pick.clone().unwrap_or_else(|| LOCAL_DEFAULT.to_string()),
+      };
+      let _ = ws.update(cx, |ws, cx| ws.set_server_url(url, cx));
+    })
+    .w(px(300.0));
+    let mut col = div().flex().flex_col().gap(px(6.0)).child(picker);
+    if choice == Server::Local {
+      let ws = self.ws.downgrade();
+      let save_to = local.clone();
+      let mut save = text_button("server-save", "Save", theme, false, move |_, _, cx| {
+        if let Some(url) = save_to.clone() {
+          let _ = ws.update(cx, |ws, cx| ws.set_server_url(url, cx));
+        }
+      });
+      if local.is_none() || local.as_deref() == Some(chosen.as_str()) {
+        save = save.opacity(0.5);
+      }
+      col = col.child(
+        div()
+          .flex()
+          .items_center()
+          .gap(px(6.0))
+          .child(div().w(px(200.0)).child(Input::new(&self.local_server)))
+          .child(save),
+      );
+      if local.is_none() {
+        col = col.child(help("Use an http://localhost address.", theme).text_color(theme.warn));
+      }
+    } else {
+      col = col.child(help(
+        if choice == Server::Dev {
+          crate::config::dev_server_url()
+        } else {
+          crate::config::server_url()
+        },
+        theme,
+      ));
+    }
+    col = col.child(help(
+      "Posts to Instagram go through this server. Change it only for development; it applies the next time you connect Instagram.",
+      theme,
+    ));
+    setting("Server", theme, col)
+  }
+
   fn advanced(&mut self, theme: &Theme, cx: &mut Context<Self>) -> Vec<AnyElement> {
     let valid = self.count(cx).is_some();
     let working = self.ws.read(cx).is_importing();
@@ -188,23 +350,38 @@ impl SettingsWindow {
     } else {
       format!("Choose from 1 to {MAX_TEST_IMAGES}.")
     };
-    vec![setting(
-      "Test images",
-      theme,
-      div()
-        .flex()
-        .flex_col()
-        .gap(px(6.0))
-        .child(
-          div()
-            .flex()
-            .items_center()
-            .gap(px(6.0))
-            .child(div().w(px(64.0)).child(Input::new(&self.test_count)))
-            .child(button),
-        )
-        .child(help(note, theme).when(!valid, |d| d.text_color(theme.warn))),
-    )]
+    let server = self.server(theme, cx);
+    vec![
+      server,
+      setting(
+        "Test images",
+        theme,
+        div()
+          .flex()
+          .flex_col()
+          .gap(px(6.0))
+          .child(
+            div()
+              .flex()
+              .items_center()
+              .gap(px(6.0))
+              .child(div().w(px(64.0)).child(Input::new(&self.test_count)))
+              .child(button),
+          )
+          .child(help(note, theme).when(!valid, |d| d.text_color(theme.warn))),
+      ),
+    ]
+  }
+}
+
+/// Which server a stored choice is ("" is Sequence's).
+fn server_choice(url: &str) -> Server {
+  if url.is_empty() || url == crate::config::server_url() {
+    Server::Default
+  } else if url == crate::config::dev_server_url() {
+    Server::Dev
+  } else {
+    Server::Local
   }
 }
 
@@ -259,9 +436,10 @@ impl Render for SettingsWindow {
         cx.notify();
       });
     })
-    .w(px(220.0));
+    .w(px(300.0));
     let rows = match self.tab {
       Tab::General => self.general(&theme, window, cx),
+      Tab::Instagram => self.instagram(&theme, cx),
       Tab::Advanced => self.advanced(&theme, cx),
     };
     div()

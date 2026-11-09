@@ -298,7 +298,7 @@ impl Workspace {
 
   /// Escape: end a gesture, close what's open, or clear the selection.
   fn escape(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-    if self.cancel_drag(cx) {
+    if self.cancel_drag(cx) || self.cancel_tag(cx) {
       return;
     }
     if self.ui.context_menu.take().is_some() || self.ui.quick_look.take().is_some() {
@@ -396,6 +396,17 @@ impl Workspace {
 
   pub fn set_status_bar(&mut self, on: bool, cx: &mut Context<Self>) {
     self.prefs.status_bar = on;
+    self.prefs.save();
+    cx.notify();
+  }
+
+  /// The server for posting to Instagram ("" for Sequence's).
+  pub fn set_server_url(&mut self, url: String, cx: &mut Context<Self>) {
+    self.prefs.server_url = if url == crate::config::server_url() {
+      String::new()
+    } else {
+      url
+    };
     self.prefs.save();
     cx.notify();
   }

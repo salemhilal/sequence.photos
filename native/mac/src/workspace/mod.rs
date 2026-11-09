@@ -7,7 +7,7 @@
 //! `gestures` (presses, drags, releases), and `navigation` (scrolling, zooming, the editor).
 
 mod frames;
-mod gestures;
+pub mod gestures;
 mod navigation;
 
 use std::collections::HashSet;
@@ -172,6 +172,8 @@ pub struct Workspace {
   /// The Layout view's run of page changes, and the number fields' inputs.
   pub page_run: PageRun,
   pub fields: Fields,
+  /// Instagram: the account, signing in, and the post being written.
+  pub ig: crate::posting::InstagramUi,
   saved_to_library: u64,
   /// A save to the library is coming (saves wait a moment, so held keys don't write each step).
   save_scheduled: bool,
@@ -206,6 +208,10 @@ impl Workspace {
       focus: cx.focus_handle(),
       page_run: PageRun::default(),
       fields: Fields::default(),
+      ig: crate::posting::InstagramUi {
+        connection: crate::instagram::load_connection(),
+        ..Default::default()
+      },
       saved_to_library: 0,
       save_scheduled: false,
       importing: 0,
@@ -501,6 +507,19 @@ impl Workspace {
   }
 
   pub fn go_to(&mut self, page: Page, cx: &mut Context<Self>) {
+    // A post under way can't be left.
+    if self.posting() && page != Page::Export {
+      return;
+    }
+    if page != self.ui.page {
+      // The post is read from the project again when Export opens next.
+      self.ig.post = None;
+      self.ig.caption = None;
+      self.ig.draft = None;
+      if !self.posting() {
+        self.ig.status = crate::posting::Status::Idle;
+      }
+    }
     self.ui.page = page;
     self.ui.modal = None;
     self.ui.presenting = false;

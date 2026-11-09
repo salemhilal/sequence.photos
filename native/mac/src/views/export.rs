@@ -70,6 +70,7 @@ impl Workspace {
     self.ui.export.index = self.ui.export.index.min(pages.len().saturating_sub(1));
     let index = self.ui.export.index;
     let busy = self.ui.busy.clone();
+    let posting = self.posting();
 
     // The preview.
     let stage_w = main.w - PANEL_W;
@@ -81,7 +82,13 @@ impl Workspace {
       .h(x(main.h))
       .bg(rgb(self.prefs.desk_color))
       .overflow_hidden();
-    if let Some(page) = pages.get(index) {
+    if to == Destination::Instagram {
+      stage = div()
+        .absolute()
+        .left_0()
+        .top_0()
+        .child(self.instagram_stage(stage_w, main.h, theme, cx));
+    } else if let Some(page) = pages.get(index) {
       stage = stage.child(self.output_preview(page, stage_w, main.h, theme));
       let size = if to == Destination::Images {
         let r = page_region(page, &sheet);
@@ -156,7 +163,7 @@ impl Workspace {
           .bg(if on { theme.accent_soft } else { theme.control })
           .child(svg().path(icon(name)).size(px(14.0)).text_color(theme.text))
           .child(label)
-          .when(busy.is_none(), |b| {
+          .when(busy.is_none() && !posting, |b| {
             b.on_click(cx.listener(move |ws, _, _, cx| ws.pick_destination(d, cx)))
           }),
       );
@@ -340,10 +347,7 @@ impl Workspace {
         panel = panel.child(section(None, theme).child(help(text, theme)));
       }
       Destination::Instagram => {
-        panel = panel.child(section(None, theme).child(help(
-          format!("Exporting to {} isn’t in this version yet.", look(to).0),
-          theme,
-        )));
+        panel = self.instagram_panel(panel, theme, window, cx);
       }
     }
 

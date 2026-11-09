@@ -19,6 +19,7 @@ use objc2_image_io::{
 };
 use sequence_core::geometry::Rect;
 use sequence_core::indexmap::IndexMap;
+use sequence_core::instagram::{PostImageLayout, QUALITIES, limits};
 use sequence_core::pdf::decode_size;
 use sequence_core::render_plan::{PagePlan, ink_rgb};
 use sequence_core::{PhotoId, PhotoMeta};
@@ -149,6 +150,25 @@ pub fn render_page(
   png: bool,
   quality: f64,
 ) -> Option<Rendered> {
+  let (drawn, missing, previews) = draw_plan(plan, photos, paths)?;
+  let bytes = if png {
+    encode(&drawn, "public.png", None)?
+  } else {
+    jpeg(&drawn, quality)?
+  };
+  Some(Rendered {
+    bytes,
+    missing,
+    previews,
+  })
+}
+
+/// A plan drawn, with how many photos were missing and drawn from their previews.
+fn draw_plan(
+  plan: &PagePlan,
+  photos: &IndexMap<PhotoId, PhotoMeta>,
+  paths: impl Fn(&PhotoId) -> [PathBuf; 2],
+) -> Option<(CFRetained<CGImage>, usize, usize)> {
   let (w, h) = (plan.px_w as usize, plan.px_h as usize);
   let ctx = bitmap(w, h)?;
   let hh = plan.px_h;
@@ -185,31 +205,69 @@ pub fn render_page(
     // The plan's source is in the photo's own pixels; the decoded image may be smaller.
     let kx = CGImage::width(Some(&image)) as f64 / photo.px_w;
     let ky = CGImage::height(Some(&image)) as f64 / photo.px_h;
-    let (s, t) = (d.src, d.dst);
-    let fx = t.w / (s.w * kx);
-    let fy = t.h / (s.h * ky);
-    let whole = Rect::new(
-      t.x - s.x * kx * fx,
-      t.y - s.y * ky * fy,
-      CGImage::width(Some(&image)) as f64 * fx,
-      CGImage::height(Some(&image)) as f64 * fy,
+    draw_part(
+      &ctx,
+      &image,
+      Rect::new(d.src.x * kx, d.src.y * ky, d.src.w * kx, d.src.h * ky),
+      d.dst,
+      hh,
     );
-    CGContext::save_g_state(Some(&ctx));
-    CGContext::clip_to_rect(Some(&ctx), from_top(t, hh));
-    CGContext::draw_image(Some(&ctx), from_top(whole, hh), Some(&image));
-    CGContext::restore_g_state(Some(&ctx));
   }
   let drawn = CGBitmapContextCreateImage(Some(&ctx))?;
-  let bytes = if png {
-    encode(&drawn, "public.png", None)?
-  } else {
-    jpeg(&drawn, quality)?
-  };
-  Some(Rendered {
-    bytes,
-    missing,
-    previews,
-  })
+  Some((drawn, missing, previews))
+}
+
+/// Draw the part `s` of an image (in its pixels, from the top) at `t` (from the top) in a
+/// context `hh` high.
+fn draw_part(ctx: &CGContext, image: &CGImage, s: Rect, t: Rect, hh: f64) {
+  let fx = t.w / s.w;
+  let fy = t.h / s.h;
+  let whole = Rect::new(
+    t.x - s.x * fx,
+    t.y - s.y * fy,
+    CGImage::width(Some(image)) as f64 * fx,
+    CGImage::height(Some(image)) as f64 * fy,
+  );
+  CGContext::save_g_state(Some(ctx));
+  CGContext::clip_to_rect(Some(ctx), from_top(t, hh));
+  CGContext::draw_image(Some(ctx), from_top(whole, hh), Some(image));
+  CGContext::restore_g_state(Some(ctx));
+}
+
+/// A slide as the JPEG Instagram gets (`renderPostImage`): its plan drawn, then the
+/// layout's part of it placed on white at the post's size, at the best quality under
+/// Instagram's limit. With how many photos came from previews; None if it can't fit.
+/// `k` is the plan's pixels per slide pixel.
+pub fn post_image(
+  plan: &PagePlan,
+  photos: &IndexMap<PhotoId, PhotoMeta>,
+  paths: impl Fn(&PhotoId) -> [PathBuf; 2],
+  layout: &PostImageLayout,
+  k: f64,
+) -> Option<(Vec<u8>, usize)> {
+  let (drawn, _, previews) = draw_plan(plan, photos, paths)?;
+  let ctx = bitmap(layout.width as usize, layout.height as usize)?;
+  let hh = layout.height;
+  fill(
+    &ctx,
+    [255, 255, 255],
+    CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(layout.width, hh)),
+  );
+  CGContext::set_interpolation_quality(Some(&ctx), CGInterpolationQuality::High);
+  let s = layout.source;
+  draw_part(
+    &ctx,
+    &drawn,
+    Rect::new(s.x * k, s.y * k, s.w * k, s.h * k),
+    layout.target,
+    hh,
+  );
+  let out = CGBitmapContextCreateImage(Some(&ctx))?;
+  QUALITIES
+    .iter()
+    .filter_map(|&q| jpeg(&out, q))
+    .find(|b| b.len() <= limits::MAX_BYTES)
+    .map(|b| (b, previews))
 }
 
 /// RGB pixels (8 bits a channel, rows packed, in sRGB) as JPEG at `quality` (0–1).

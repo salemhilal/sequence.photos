@@ -85,6 +85,14 @@ pub enum Drag {
     frame0: Rect,
     whole0: Rect,
   },
+  /// A person's tag on an Instagram slide, moved within its image (`size`, in pixels).
+  Tag {
+    key: String,
+    username: String,
+    start: (f64, f64),
+    at0: (f64, f64),
+    size: (f64, f64),
+  },
 }
 
 /// Pointer travel under this is a click.
@@ -282,6 +290,18 @@ impl Workspace {
     let Some(mut drag) = self.drag.take() else { return };
     let threshold_passed = |start: (f64, f64)| (at.0 - start.0).hypot(at.1 - start.1) >= DRAG_THRESHOLD;
     match &mut drag {
+      Drag::Tag {
+        key,
+        username,
+        start,
+        at0,
+        size,
+      } => {
+        let x = at0.0 + (at.0 - start.0) / size.0;
+        let y = at0.1 + (at.1 - start.1) / size.1;
+        let (key, username) = (key.clone(), username.clone());
+        self.move_tag(&key, &username, x, y, false, cx);
+      }
       Drag::Pan { start, view0, surface } => {
         let (dx, dy) = (at.0 - start.0, at.1 - start.1);
         let v = match surface {
@@ -563,6 +583,10 @@ impl Workspace {
     let Some(drag) = self.drag.take() else { return };
     self.clear_drag_feedback();
     match drag {
+      Drag::Tag { .. } => {
+        self.save_post();
+        cx.notify();
+      }
       Drag::Photos {
         from,
         clicked,

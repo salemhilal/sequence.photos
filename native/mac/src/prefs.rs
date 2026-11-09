@@ -29,6 +29,8 @@ pub struct Prefs {
   pub document_edited: bool,
   /// Recently opened projects, newest first.
   pub recent: Vec<PathBuf>,
+  /// The server for posting to Instagram, chosen in Settings → Advanced ("": Sequence's).
+  pub server_url: String,
 }
 
 impl Default for Prefs {
@@ -45,6 +47,7 @@ impl Default for Prefs {
       document_bookmark: None,
       document_edited: false,
       recent: Vec::new(),
+      server_url: String::new(),
     }
   }
 }
