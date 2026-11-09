@@ -17,7 +17,9 @@ mod urls;
 mod views;
 mod workspace;
 
+use std::cell::RefCell;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use futures::StreamExt;
 use gpui_kit::*;
@@ -25,6 +27,7 @@ use gpui_kit::*;
 use crate::commands::*;
 use crate::library::{Library, support_dir};
 use crate::prefs::Prefs;
+use crate::views::settings::SettingsWindow;
 use crate::workspace::Workspace;
 
 fn main() {
@@ -109,9 +112,27 @@ fn main() {
       let _ = window.update(cx, |ws, _, _| ws.save_to_library());
       cx.quit();
     });
-    cx.on_action(move |_: &CloseWindow, cx| {
-      let _ = window.update(cx, |_, window, _| window.remove_window());
+    // ⌘W closes the window in front (Settings, or the main window).
+    cx.on_action(|_: &CloseWindow, cx| {
+      if let Some(w) = cx.active_window() {
+        let _ = w.update(cx, |_, window, _| window.remove_window());
+      }
     });
+    // Settings, in a window of its own: one at a time, brought forward if it's open.
+    let settings: Rc<RefCell<Option<WindowHandle<SettingsWindow>>>> = Rc::default();
+    let workspace = window.entity(cx).expect("the window was just opened");
+    cx.on_action(move |_: &OpenSettings, cx| {
+      // Later, once the window that sent this (on the stack now) is done with it.
+      let settings = settings.clone();
+      let ws = workspace.clone();
+      cx.defer(move |cx| open_settings(&settings, ws, cx));
+    });
+
+    // A debug build can open Settings at launch, for a quick look.
+    #[cfg(debug_assertions)]
+    if std::env::var_os("SEQUENCE_OPEN_SETTINGS").is_some() {
+      cx.dispatch_action(&OpenSettings);
+    }
 
     // Files from Finder, as they come.
     cx.spawn(async move |cx| {
@@ -124,4 +145,31 @@ fn main() {
     })
     .detach();
   });
+}
+
+/// Open Settings, or bring it forward if it's open.
+fn open_settings(settings: &RefCell<Option<WindowHandle<SettingsWindow>>>, ws: Entity<Workspace>, cx: &mut App) {
+  if let Some(open) = *settings.borrow()
+    && open.update(cx, |_, w, _| w.activate_window()).is_ok()
+  {
+    return;
+  }
+  let options = WindowOptions {
+    titlebar: Some(TitlebarOptions {
+      title: Some("Settings".into()),
+      appears_transparent: true,
+      traffic_light_position: None,
+    }),
+    window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
+      None,
+      size(px(520.0), px(400.0)),
+      cx,
+    ))),
+    is_resizable: false,
+    is_minimizable: false,
+    ..Default::default()
+  };
+  *settings.borrow_mut() = cx
+    .open_window(options, |window, cx| cx.new(|cx| SettingsWindow::new(ws, window, cx)))
+    .ok();
 }

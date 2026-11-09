@@ -126,6 +126,28 @@ pub const DESK_COLORS: &[(&str, u32)] = &[
 /// The default desk color.
 pub const DEFAULT_DESK: u32 = 0x787878;
 
+/// A color as hex, like `#787878`.
+pub fn hex_color(color: u32) -> String {
+  format!("#{:06x}", color & 0xff_ffff)
+}
+
+/// A hex color as typed: six digits (or three), with or without `#`.
+pub fn parse_hex_color(text: &str) -> Option<u32> {
+  let t = text.trim().trim_start_matches('#');
+  if !t.chars().all(|c| c.is_ascii_hexdigit()) {
+    return None;
+  }
+  match t.len() {
+    6 => u32::from_str_radix(t, 16).ok(),
+    3 => {
+      let v = u32::from_str_radix(t, 16).ok()?;
+      let (r, g, b) = (v >> 8 & 0xf, v >> 4 & 0xf, v & 0xf);
+      Some((r * 17) << 16 | (g * 17) << 8 | (b * 17))
+    }
+    _ => None,
+  }
+}
+
 /// Whether text on a desk of this color should be dark (WCAG luminance over 0.3).
 pub fn desk_is_light(color: u32) -> bool {
   let ch = |shift: u32| {
@@ -137,4 +159,18 @@ pub fn desk_is_light(color: u32) -> bool {
     }
   };
   0.2126 * ch(16) + 0.7152 * ch(8) + 0.0722 * ch(0) > 0.3
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn hex_colors() {
+    assert_eq!(parse_hex_color("#787878"), Some(0x787878));
+    assert_eq!(parse_hex_color(" fff "), Some(0xffffff));
+    assert_eq!(parse_hex_color("#12345"), None);
+    assert_eq!(parse_hex_color("zzzzzz"), None);
+    assert_eq!(hex_color(0x0a0b0c), "#0a0b0c");
+  }
 }

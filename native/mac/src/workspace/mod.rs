@@ -375,6 +375,54 @@ impl Workspace {
     .detach();
   }
 
+  /// Whether photos are being read in.
+  pub fn is_importing(&self) -> bool {
+    self.importing > 0
+  }
+
+  /// Make `count` test images (Settings → Advanced) and add them like any photos. Not while
+  /// photos are being added.
+  #[cfg(target_os = "macos")]
+  pub fn add_test_images(&mut self, count: usize, cx: &mut Context<Self>) {
+    use sequence_core::test_images::{MAX_TEST_IMAGES, Rng, gradient_image, test_image_name};
+    if self.importing > 0 || !(1..=MAX_TEST_IMAGES).contains(&count) {
+      return;
+    }
+    self.ui.busy = Some("Making test images…".into());
+    self.importing += 1;
+    cx.notify();
+    let dir = std::env::temp_dir().join(format!("Sequence test images {}", now_ms()));
+    let seed = now_ms() as u64;
+    let task = cx.background_executor().spawn(async move {
+      std::fs::create_dir_all(&dir).ok()?;
+      let mut rng = Rng::new(seed);
+      let mut paths = Vec::with_capacity(count);
+      for i in 1..=count {
+        let img = gradient_image(&mut rng);
+        let jpeg = crate::imageio::encode_jpeg(&img.rgb, img.width, img.height, 0.9)?;
+        let path = dir.join(test_image_name(i, count));
+        std::fs::write(&path, jpeg).ok()?;
+        paths.push(path);
+      }
+      Some(paths)
+    });
+    cx.spawn(async move |this, cx| {
+      let paths = task.await;
+      let _ = this.update(cx, |ws, cx| {
+        ws.importing -= 1;
+        ws.ui.busy = None;
+        match paths {
+          Some(paths) => ws.add_photos(paths, cx),
+          None => {
+            ws.ui.notice = Some("Couldn’t make the test images.".into());
+            cx.notify();
+          }
+        }
+      });
+    })
+    .detach();
+  }
+
   /// Put photos just read on the desk, in a grid, and show them.
   fn place_imported(&mut self, imported: Imported) {
     self.lib.remember_all(imported.thumbs);

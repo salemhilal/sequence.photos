@@ -2,6 +2,9 @@
 //! system reads (HEIC included), upright per its orientation, with its color profile.
 
 use objc2_core_foundation::{CFBoolean, CFData, CFDictionary, CFMutableData, CFNumber, CFRetained, CFString, CFType};
+use objc2_core_graphics::{
+  CGBitmapInfo, CGColorRenderingIntent, CGColorSpace, CGDataProvider, CGImage, CGImageAlphaInfo, kCGColorSpaceSRGB,
+};
 use objc2_image_io::{
   CGImageDestination, CGImageSource, kCGImageDestinationLossyCompressionQuality, kCGImagePropertyOrientation,
   kCGImagePropertyPixelHeight, kCGImagePropertyPixelWidth, kCGImageSourceCreateThumbnailFromImageAlways,
@@ -73,19 +76,52 @@ fn thumbnail(source: &CGImageSource, max: f64) -> Option<Vec<u8>> {
   };
   // SAFETY: index 0 exists (its properties were read); options as above.
   let image = unsafe { source.thumbnail_at_index(0, Some(&options)) }?;
+  jpeg(&image, 0.85)
+}
+
+/// An image as JPEG at `quality` (0–1).
+fn jpeg(image: &CGImage, quality: f64) -> Option<Vec<u8>> {
   let out = CFMutableData::new(None, 0)?;
-  let jpeg = CFString::from_static_str("public.jpeg");
+  let kind = CFString::from_static_str("public.jpeg");
   // SAFETY: one image into a JPEG destination; options as documented.
   unsafe {
-    let dest = CGImageDestination::with_data(&out, &jpeg, 1, None)?;
-    let quality = CFNumber::new_f64(0.85);
+    let dest = CGImageDestination::with_data(&out, &kind, 1, None)?;
+    let quality = CFNumber::new_f64(quality);
     let props = dict(&[kCGImageDestinationLossyCompressionQuality], &[quality.as_ref()]);
-    dest.add_image(&image, Some(&props));
+    dest.add_image(image, Some(&props));
     if !dest.finalize() {
       return None;
     }
   }
   Some(out.to_vec())
+}
+
+/// RGB pixels (8 bits a channel, rows packed, in sRGB) as JPEG at `quality` (0–1).
+pub fn encode_jpeg(rgb: &[u8], width: usize, height: usize, quality: f64) -> Option<Vec<u8>> {
+  if width == 0 || height == 0 || rgb.len() != width * height * 3 {
+    return None;
+  }
+  let data = CFData::from_bytes(rgb);
+  let provider = CGDataProvider::with_cf_data(Some(&data))?;
+  // SAFETY: the documented sRGB name.
+  let space = CGColorSpace::with_name(Some(unsafe { kCGColorSpaceSRGB }))?;
+  // SAFETY: the provider holds width × height × 3 bytes, as described; no decode array.
+  let image = unsafe {
+    CGImage::new(
+      width,
+      height,
+      8,
+      24,
+      width * 3,
+      Some(&space),
+      CGBitmapInfo(CGImageAlphaInfo::None.0),
+      Some(&provider),
+      std::ptr::null(),
+      false,
+      CGColorRenderingIntent::RenderingIntentDefault,
+    )
+  }?;
+  jpeg(&image, quality)
 }
 
 #[cfg(test)]
@@ -99,5 +135,14 @@ mod tests {
     let d = decode(&bytes, 200.0).expect("decodes");
     assert!(d.px_w > 0.0 && d.px_h > 0.0);
     assert!(d.thumb.starts_with(&[0xff, 0xd8]));
+  }
+
+  #[test]
+  fn writes_a_jpeg() {
+    let (w, h) = (40, 30);
+    let rgb: Vec<u8> = (0..w * h).flat_map(|i| [(i % 255) as u8, 120, 200]).collect();
+    let bytes = encode_jpeg(&rgb, w, h, 0.9).expect("encodes");
+    let d = decode(&bytes, 100.0).expect("reads back");
+    assert_eq!((d.px_w, d.px_h), (40.0, 30.0));
   }
 }

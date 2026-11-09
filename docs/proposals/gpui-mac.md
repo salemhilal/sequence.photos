@@ -89,8 +89,8 @@ Save, Save As, Open, Open Recent, bookmarks), Settings, and holding ⌘ for shor
 
 Status (November 2026): the window, toolbar, status bar, menus, undo, and saving and
 opening files work; so do the desk, the sidebar, the spread editor, crop mode, Preview and
-presenting, and Layout (both tabs, rulers, presets, the draft applied as one step). Still to
-come: Settings, every export, copy and paste, the tour, resolution badges, the editor's
+presenting, Layout (both tabs, rulers, presets, the draft applied as one step), and the
+Settings window (General, and Advanced's test images). Still to come: every export, copy and paste, the tour, resolution badges, the editor's
 number fields, sidebar columns, shortcut badges, and an unsaved-changes prompt on quit.
 
 In about this order: the desk (pan, zoom, drag, Option-drag to duplicate, tidy, desk color,

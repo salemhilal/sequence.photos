@@ -2,12 +2,14 @@
 //! bar, and what floats over them. Each region also records where it drew things
 //! (`Frames`) for the pointer's gestures.
 
+pub mod controls;
 pub mod crop;
 pub mod desk;
 pub mod editor;
 pub mod layout;
 pub mod paint;
 pub mod preview;
+pub mod settings;
 pub mod sidebar;
 
 use gpui_kit::prelude::FluentBuilder;
@@ -385,7 +387,7 @@ impl Workspace {
         theme,
         true,
         false,
-        cx.listener(|ws, _, _, cx| ws.cycle_theme(cx)),
+        |_, window, cx| window.dispatch_action(Box::new(OpenSettings), cx),
       ))
       .child(div().hidden().child(terms.spreads))
   }

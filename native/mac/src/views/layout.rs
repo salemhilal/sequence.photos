@@ -14,6 +14,7 @@ use sequence_core::page_setup::{Anchor, Content, PageDraft, resizes};
 use sequence_core::units::{PRESETS, terms, units};
 use sequence_core::{Arrangement, Axis, BorderShape, PageSide, Project, Spread, SpreadKind, Unit};
 
+use super::controls::{self, check, field_row, help};
 use super::paint::{SpreadPicture, boxed, x};
 use super::{icon_button, text_button};
 use crate::assets::{MONO, icon};
@@ -33,7 +34,7 @@ const BAND: f64 = 7.0;
 
 type Handler<T> = Rc<dyn Fn(&mut Workspace, T, &mut Window, &mut Context<Workspace>)>;
 
-/// A row of choices, one on.
+/// A row of choices, one on, whose handler gets the workspace.
 fn segmented<T: Copy + PartialEq + 'static>(
   id: &'static str,
   options: &[(T, &'static str)],
@@ -42,79 +43,10 @@ fn segmented<T: Copy + PartialEq + 'static>(
   on: Handler<T>,
   cx: &mut Context<Workspace>,
 ) -> Div {
-  let mut row = div().flex().p(px(2.0)).gap(px(2.0)).rounded(px(4.0)).bg(theme.track);
-  for (i, &(v, label)) in options.iter().enumerate() {
-    let on = on.clone();
-    let chosen = v == value;
-    let mut b = div()
-      .id((id, i))
-      .flex_1()
-      .flex()
-      .justify_center()
-      .h(px(22.0))
-      .items_center()
-      .px(px(8.0))
-      .rounded(px(3.0))
-      .text_color(if chosen { theme.text } else { theme.muted })
-      .child(label)
-      .on_click(cx.listener(move |ws, _, window, cx| on(ws, v, window, cx)));
-    if chosen {
-      b = b.bg(theme.control).shadow_xs();
-    }
-    row = row.child(b);
-  }
-  row
-}
-
-/// A labelled row of the panel.
-fn field_row(label: impl Into<SharedString>, theme: &Theme, content: impl IntoElement) -> Div {
-  div()
-    .flex()
-    .items_start()
-    .gap(px(8.0))
-    .child(
-      div()
-        .w(px(78.0))
-        .flex_none()
-        .pt(px(4.0))
-        .text_color(theme.muted)
-        .child(label.into()),
-    )
-    .child(div().flex_1().min_w_0().child(content))
-}
-
-fn help(text: impl Into<SharedString>, theme: &Theme) -> Div {
-  div().text_color(theme.muted).text_size(px(11.0)).child(text.into())
-}
-
-/// A checkbox and its label.
-fn check(id: impl Into<ElementId>, label: &'static str, on: bool, theme: &Theme) -> Stateful<Div> {
-  let mut b = div()
-    .w(px(14.0))
-    .h(px(14.0))
-    .flex()
-    .items_center()
-    .justify_center()
-    .rounded(px(3.0))
-    .border_1()
-    .border_color(theme.border_strong)
-    .bg(theme.control);
-  if on {
-    b = b
-      .bg(theme.accent)
-      .border_color(theme.accent)
-      .child(svg().path(icon("check")).size(px(11.0)).text_color(theme.on_accent));
-  }
-  div()
-    .id(id)
-    .flex()
-    .items_center()
-    .gap(px(6.0))
-    .px(px(4.0))
-    .py(px(2.0))
-    .rounded(px(3.0))
-    .child(b)
-    .child(label)
+  let ws = cx.entity().downgrade();
+  controls::segmented(id, options, value, theme, move |v, window, cx| {
+    let _ = ws.update(cx, |ws, cx| on(ws, v, window, cx));
+  })
 }
 
 /// A ruler's markings: the finest ticks that stay a few pixels apart, numbered at the

@@ -15,6 +15,7 @@ actions!(
   sequence,
   [
     About,
+    OpenSettings,
     Quit,
     NewProject,
     OpenProject,
@@ -58,6 +59,7 @@ pub fn key_bindings() -> Vec<KeyBinding> {
   let w = Some("Workspace");
   vec![
     KeyBinding::new("cmd-q", Quit, None),
+    KeyBinding::new("cmd-,", OpenSettings, None),
     KeyBinding::new("cmd-o", OpenProject, None),
     KeyBinding::new("cmd-s", SaveProject, None),
     KeyBinding::new("cmd-shift-s", SaveProjectAs, None),
@@ -100,6 +102,8 @@ pub fn menus() -> Vec<Menu> {
   vec![
     Menu::new("Sequence").items([
       MenuItem::action("About Sequence", About),
+      MenuItem::separator(),
+      MenuItem::action("Settings…", OpenSettings),
       MenuItem::separator(),
       MenuItem::os_submenu("Services", SystemMenuType::Services),
       MenuItem::separator(),
@@ -376,22 +380,29 @@ impl Workspace {
     cx.notify();
   }
 
-  /// Settings come in the next pass; the button switches the theme meanwhile.
-  pub fn cycle_theme(&mut self, cx: &mut Context<Self>) {
-    self.prefs.theme = match self.prefs.theme {
-      ThemePref::System => ThemePref::Light,
-      ThemePref::Light => ThemePref::Dark,
-      ThemePref::Dark => ThemePref::System,
-    };
+  /// The app's theme (Settings).
+  pub fn set_theme(&mut self, theme: ThemePref, cx: &mut Context<Self>) {
+    self.prefs.theme = theme;
     self.prefs.save();
-    self.ui.notice = Some(format!(
-      "Theme: {}",
-      match self.prefs.theme {
-        ThemePref::System => "follows the system",
-        ThemePref::Light => "light",
-        ThemePref::Dark => "dark",
-      }
-    ));
+    cx.notify();
+  }
+
+  /// The desk's color (Settings, and the desk's menu).
+  pub fn set_desk_color(&mut self, color: u32, cx: &mut Context<Self>) {
+    self.prefs.desk_color = color & 0xff_ffff;
+    self.prefs.save();
+    cx.notify();
+  }
+
+  pub fn set_status_bar(&mut self, on: bool, cx: &mut Context<Self>) {
+    self.prefs.status_bar = on;
+    self.prefs.save();
+    cx.notify();
+  }
+
+  pub fn set_shortcut_badges(&mut self, on: bool, cx: &mut Context<Self>) {
+    self.prefs.shortcut_badges = on;
+    self.prefs.save();
     cx.notify();
   }
 
@@ -424,8 +435,7 @@ impl Workspace {
           .iter()
           .position(|c| c.1 == self.prefs.desk_color)
           .map_or(0, |i| (i + 1) % colors.len());
-        self.prefs.desk_color = colors[i].1;
-        self.prefs.save();
+        self.set_desk_color(colors[i].1, cx);
         self.ui.notice = Some(format!("Desk color: {}", colors[i].0.to_lowercase()));
       }
       MenuAction::QuickLook => self.ui.quick_look = Some((targets, 0)),
