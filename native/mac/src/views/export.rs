@@ -2,11 +2,11 @@
 //! where it goes and that destination's choices. A PDF works so far; images, InDesign and
 //! Instagram come next.
 
+use gpui_kit::component::slider::{Slider, SliderEvent, SliderState};
 use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 use sequence_core::export_options::{DESTINATIONS, converts, export_px_per_unit, per_of};
 use sequence_core::geometry::{Rect, sheet_extent};
-use gpui_kit::component::slider::{Slider, SliderEvent, SliderState};
 use sequence_core::model::{ExportDestination as Destination, ImageFormat, Unit};
 use sequence_core::raster::{extension, format_bytes, image_names};
 use sequence_core::render_plan::{OutputPage, Part, Per, output_pages, page_region};
@@ -312,17 +312,22 @@ impl Workspace {
         ));
         let estimate = self.images_estimate(cx);
         sec = sec.child(
-          div().font_family(MONO).text_size(px(11.0)).text_color(theme.muted).child(format!(
-            "{} {}{}",
-            pages.len(),
-            if pages.len() == 1 { "image" } else { "images" },
-            estimate.map_or(String::new(), |b| format!(", ~{} total", format_bytes(b)))
-          )),
+          div()
+            .font_family(MONO)
+            .text_size(px(11.0))
+            .text_color(theme.muted)
+            .child(format!(
+              "{} {}{}",
+              pages.len(),
+              if pages.len() == 1 { "image" } else { "images" },
+              estimate.map_or(String::new(), |b| format!(", ~{} total", format_bytes(b)))
+            )),
         );
         panel = panel.child(sec);
       }
       Destination::Indesign => {
-        let mut text = "An InDesign file with every photo linked at full size, and the guides as InDesign guides.".to_string();
+        let mut text =
+          "An InDesign file with every photo linked at full size, and the guides as InDesign guides.".to_string();
         if !spreads {
           text.push_str(" Frames become single pages, without facing pages.");
         }
@@ -493,7 +498,14 @@ fn note(text: String, theme: &Theme) -> Div {
     .flex()
     .gap(px(6.0))
     .text_color(theme.muted)
-    .child(svg().path(icon("info")).flex_none().mt(px(2.0)).size(px(13.0)).text_color(theme.muted))
+    .child(
+      svg()
+        .path(icon("info"))
+        .flex_none()
+        .mt(px(2.0))
+        .size(px(13.0))
+        .text_color(theme.muted),
+    )
     .child(div().flex_1().child(text))
 }
 

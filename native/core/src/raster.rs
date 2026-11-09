@@ -55,7 +55,10 @@ pub fn fitted_plan(project: &Project, page: &OutputPage, px_per_unit: Option<f64
 /// The page an estimate samples (the first with photos), and its plan made small.
 pub fn sample_plan(project: &Project, pages: &[OutputPage], px_per_unit: f64) -> Option<PagePlan> {
   let sheet = project.sheet();
-  let sample = pages.iter().find(|p| !items_on(p, &sheet).is_empty()).or(pages.first())?;
+  let sample = pages
+    .iter()
+    .find(|p| !items_on(p, &sheet).is_empty())
+    .or(pages.first())?;
   let full = plan_page(sample, &sheet, &project.photos, Some(px_per_unit));
   let k = full.px_per_unit * 1f64.min((SAMPLE_PIXELS / (full.px_w * full.px_h)).sqrt());
   Some(plan_page(sample, &sheet, &project.photos, Some(k)))

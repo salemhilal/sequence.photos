@@ -152,7 +152,11 @@ pub fn render_page(
   let (w, h) = (plan.px_w as usize, plan.px_h as usize);
   let ctx = bitmap(w, h)?;
   let hh = plan.px_h;
-  fill(&ctx, ink_rgb(plan.background), CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(plan.px_w, hh)));
+  fill(
+    &ctx,
+    ink_rgb(plan.background),
+    CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(plan.px_w, hh)),
+  );
   CGContext::set_interpolation_quality(Some(&ctx), CGInterpolationQuality::High);
   let (mut missing, mut previews) = (0, 0);
   for d in &plan.draws {
@@ -288,7 +292,10 @@ pub fn upright_jpeg(path: &Path, quality: f64) -> Option<(Vec<u8>, u32, u32)> {
   let source = source_at(path)?;
   let (w, h) = upright_size(&source)?;
   let image = thumbnail_image(&source, w.max(h))?;
-  let size = (CGImage::width(Some(&image)) as u32, CGImage::height(Some(&image)) as u32);
+  let size = (
+    CGImage::width(Some(&image)) as u32,
+    CGImage::height(Some(&image)) as u32,
+  );
   Some((jpeg(&image, quality)?, size.0, size.1))
 }
 

@@ -243,7 +243,11 @@ fn idml_matches_the_typescript() {
         let id: PhotoId = serde_json::from_value(pair[0].clone()).expect("an id");
         let link = LinkedImage {
           path: l["path"].as_str().expect("a path").into(),
-          format: if l["format"] == "png" { ImageFormat::Png } else { ImageFormat::Jpeg },
+          format: if l["format"] == "png" {
+            ImageFormat::Png
+          } else {
+            ImageFormat::Jpeg
+          },
           ppi: l["ppi"].as_f64().expect("ppi"),
           px_w: l["pxW"].as_f64().expect("w"),
           px_h: l["pxH"].as_f64().expect("h"),

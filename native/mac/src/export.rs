@@ -5,15 +5,15 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+use gpui_kit::component::slider::SliderState;
 use gpui_kit::*;
 use sequence_core::PhotoId;
-use gpui_kit::component::slider::SliderState;
 use sequence_core::export_options::{Options, default_destination, export_px_per_unit, per_of};
 use sequence_core::geometry::Rect;
 use sequence_core::idml::{LinkedImage, build_idml, read_image_info, zip_stored};
-use sequence_core::project_file::unique_name;
 use sequence_core::model::{ExportDestination as Destination, ExportState, ImageFormat};
 use sequence_core::pdf::{Part, PhotoSource, render_pdf};
+use sequence_core::project_file::unique_name;
 use sequence_core::raster::{
   estimate_bytes, extension, fitted_plan, image_names, lowered_notice, sample_plan, write_zip,
 };
@@ -255,9 +255,16 @@ impl Workspace {
           Some(dot) => &meta.name[..dot],
           None => meta.name.as_str(),
         };
-        let base = if base.is_empty() { id.to_string() } else { base.to_string() };
+        let base = if base.is_empty() {
+          id.to_string()
+        } else {
+          base.to_string()
+        };
         let ext = if format == ImageFormat::Png { "png" } else { "jpg" };
-        let path = format!("Links/{}", unique_name(&format!("{base}.{ext}"), &id.to_string(), &mut used));
+        let path = format!(
+          "Links/{}",
+          unique_name(&format!("{base}.{ext}"), &id.to_string(), &mut used)
+        );
         let (px_w, px_h) = size.unwrap_or((meta.px_w, meta.px_h));
         links.insert(
           id.clone(),
@@ -390,7 +397,14 @@ impl Workspace {
     let o = self.export_options();
     let sheet = self.project().sheet();
     let target = export_px_per_unit(Destination::Images, &sheet, o.dpi);
-    let key = format!("{:?} {:?} {} {} {}", o.per, o.format, o.quality, target, self.history.revision());
+    let key = format!(
+      "{:?} {:?} {} {} {}",
+      o.per,
+      o.format,
+      o.quality,
+      target,
+      self.history.revision()
+    );
     if let Some((k, bytes)) = &self.ui.export.estimate
       && *k == key
     {
@@ -403,7 +417,9 @@ impl Workspace {
     let project = self.project().clone();
     let source = self.source();
     cx.spawn(async move |this, cx| {
-      cx.background_executor().timer(std::time::Duration::from_millis(400)).await;
+      cx.background_executor()
+        .timer(std::time::Duration::from_millis(400))
+        .await;
       let still = this
         .update(cx, |ws, _| ws.ui.export.estimating.as_ref() == Some(&key))
         .unwrap_or(false);
@@ -446,7 +462,11 @@ const REENCODE_QUALITY: f64 = 0.95;
 fn linkable(image: &Path, thumb: &Path) -> Option<(Vec<u8>, ImageFormat, f64, Option<(f64, f64)>)> {
   use std::io::Read;
   let mut head = Vec::new();
-  std::fs::File::open(image).ok()?.take(HEADER_BYTES).read_to_end(&mut head).ok()?;
+  std::fs::File::open(image)
+    .ok()?
+    .take(HEADER_BYTES)
+    .read_to_end(&mut head)
+    .ok()?;
   let info = read_image_info(&head);
   if info.format == Some(ImageFormat::Png) || (info.format == Some(ImageFormat::Jpeg) && info.orientation == 1) {
     return Some((std::fs::read(image).ok()?, info.format?, info.ppi, None));
@@ -494,7 +514,9 @@ mod tests {
   fn renders_images_from_the_library() {
     use sequence_core::raster::fitted_plan;
     use sequence_core::render_plan::output_pages;
-    let Some((project, dir)) = library("images") else { return };
+    let Some((project, dir)) = library("images") else {
+      return;
+    };
     let source = LibrarySource { dir: dir.clone() };
     for (i, page) in output_pages(&project, Per::Spread).iter().enumerate() {
       let plan = fitted_plan(&project, page, Some(30.0));

@@ -415,7 +415,12 @@ fn be16(b: &[u8], at: usize) -> Option<u16> {
 }
 
 fn be32(b: &[u8], at: usize) -> Option<u32> {
-  Some(u32::from_be_bytes([*b.get(at)?, *b.get(at + 1)?, *b.get(at + 2)?, *b.get(at + 3)?]))
+  Some(u32::from_be_bytes([
+    *b.get(at)?,
+    *b.get(at + 1)?,
+    *b.get(at + 2)?,
+    *b.get(at + 3)?,
+  ]))
 }
 
 fn read_jpeg(bytes: &[u8]) -> ImageInfo {
@@ -458,11 +463,19 @@ fn read_exif(b: &[u8], tiff: usize, end: usize) -> (Option<f64>, u16) {
     let little = be16(b, tiff)? == 0x4949;
     let u16_at = |o: usize| -> Option<u16> {
       let v = [*b.get(o)?, *b.get(o + 1)?];
-      Some(if little { u16::from_le_bytes(v) } else { u16::from_be_bytes(v) })
+      Some(if little {
+        u16::from_le_bytes(v)
+      } else {
+        u16::from_be_bytes(v)
+      })
     };
     let u32_at = |o: usize| -> Option<u32> {
       let v = [*b.get(o)?, *b.get(o + 1)?, *b.get(o + 2)?, *b.get(o + 3)?];
-      Some(if little { u32::from_le_bytes(v) } else { u32::from_be_bytes(v) })
+      Some(if little {
+        u32::from_le_bytes(v)
+      } else {
+        u32::from_be_bytes(v)
+      })
     };
     let ifd = tiff + u32_at(tiff + 4)? as usize;
     let mut orientation = 1;
@@ -486,7 +499,9 @@ fn read_exif(b: &[u8], tiff: usize, end: usize) -> (Option<f64>, u16) {
         _ => {}
       }
     }
-    let ppi = x_res.filter(|x| *x != 0.0).map(|x| if unit == 3 { x * CM_PER_INCH } else { x });
+    let ppi = x_res
+      .filter(|x| *x != 0.0)
+      .map(|x| if unit == 3 { x * CM_PER_INCH } else { x });
     Some((ppi, orientation))
   };
   // A malformed block just means no information.
