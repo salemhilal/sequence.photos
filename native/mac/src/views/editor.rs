@@ -385,7 +385,7 @@ impl Workspace {
           theme,
           false,
           cx.listener(move |ws, _, _, cx| {
-            ws.ui.editing = Some(n.spread_id.clone());
+            ws.open_editor(n.spread_id.clone(), cx);
             ws.ui.editor_selected = Some(n.photo_id.clone());
             cx.notify();
           }),
@@ -479,22 +479,38 @@ impl Workspace {
         });
       }),
     ));
-    let mut boxes: Vec<(String, Rect)> = vec![(format!("Fit {where_}"), page)];
+    let mut boxes: Vec<(String, Rect, Option<String>)> = vec![(format!("Fit {where_}"), page, None)];
     let mut guides: Vec<_> = sheet.borders.iter().map(|g| (g, border_box(side, &sheet, g))).collect();
     guides.sort_by(|a, b| (b.1.w * b.1.h).total_cmp(&(a.1.w * a.1.h)));
     for (g, b) in guides {
-      let label = match g.shape {
-        sequence_core::BorderShape::Even { inset } => format!("Fit {} {} guide", u.format(inset), u.suffix),
+      let (label, tip) = match g.shape {
+        sequence_core::BorderShape::Even { inset } => (format!("Fit {} {} guide", u.format(inset), u.suffix), None),
         sequence_core::BorderShape::Edges(e) => {
           let d = [e.top, e.bottom, e.inside, e.outside];
           let lo = d.iter().copied().fold(f64::INFINITY, f64::min);
           let hi = d.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-          format!("Fit {}–{} {} guide", u.format(lo), u.format(hi), u.suffix)
+          // Each edge's distance, as its hint: top, outside, bottom, inside.
+          let t = terms(sheet.arrangement);
+          let f = |v: f64| u.format(v);
+          let tip = format!(
+            "Top {} · {} {} · Bottom {} · {} {} {}",
+            f(e.top),
+            t.edges[3],
+            f(e.outside),
+            f(e.bottom),
+            t.edges[2],
+            f(e.inside),
+            u.suffix
+          );
+          (
+            format!("Fit {}–{} {} guide", u.format(lo), u.format(hi), u.suffix),
+            Some(tip),
+          )
         }
       };
-      boxes.push((label, b));
+      boxes.push((label, b, tip));
     }
-    for (i, (label, b)) in boxes.into_iter().enumerate() {
+    for (i, (label, b, tip)) in boxes.into_iter().enumerate() {
       let id = item.photo_id.clone();
       let (w, h) = (item.w, item.h);
       el = el.child(
@@ -525,6 +541,11 @@ impl Workspace {
         )
         .on_hover(cx.listener(move |ws, hovered: &bool, _, cx| {
           ws.ui.fit_glow = hovered.then_some(b);
+          match &tip {
+            Some(t) if *hovered => ws.ui.hint = Some(t.clone()),
+            Some(t) if ws.ui.hint.as_ref() == Some(t) => ws.ui.hint = None,
+            _ => {}
+          }
           cx.notify();
         })),
       );
@@ -572,7 +593,14 @@ impl Workspace {
   fn render_strip(&mut self, r: Rect, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
     let project = self.project().clone();
     let lit = self.ui.hover == Some(DropTarget::Strip);
-    let mut row = div().flex().items_center().gap(px(8.0)).h_full().px(px(12.0));
+    let mut row = div().flex().items_center().gap(px(8.0)).h_full().px(px(12.0)).child(
+      div()
+        .flex_none()
+        .text_color(theme.muted)
+        .text_size(px(11.0))
+        .font_weight(FontWeight::SEMIBOLD)
+        .child(format!("Desk · {}", project.pile.len())),
+    );
     let h = r.h - 24.0;
     let strip_tip = format!(
       "Drag onto the {}, or click to add",
@@ -612,7 +640,11 @@ impl Workspace {
       row = row.child(cell);
     }
     if project.pile.is_empty() {
-      row = row.child(div().text_color(theme.muted).child("The desk is empty."));
+      row = row.child(
+        div()
+          .text_color(theme.muted)
+          .child("Empty. Drag a photo here to send it back to the desk."),
+      );
     }
     let mut el = boxed(r)
       .id("strip")

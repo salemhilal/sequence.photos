@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 
+use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 use sequence_core::Project;
 use sequence_core::actions as act;
@@ -118,6 +119,7 @@ pub struct MenuState {
   pub sidebar_open: bool,
   pub guides_shown: bool,
   pub arrangement: sequence_core::Arrangement,
+  pub fullscreen: bool,
 }
 
 /// The menu bar. macOS titles the first menu with the app's name.
@@ -185,7 +187,14 @@ pub fn menus(state: MenuState) -> Vec<Menu> {
       MenuItem::action("Zoom Out", ZoomOut),
       MenuItem::action("Zoom to Fit", ZoomToFit),
       MenuItem::separator(),
-      MenuItem::action("Enter Full Screen", ToggleFullScreen),
+      MenuItem::action(
+        if state.fullscreen {
+          "Exit Full Screen"
+        } else {
+          "Enter Full Screen"
+        },
+        ToggleFullScreen,
+      ),
     ]),
     Menu::new("Window").items([MenuItem::action("Minimize", Minimize), MenuItem::action("Zoom", Zoom)]),
     Menu::new("Help").items([
@@ -215,9 +224,15 @@ pub enum MenuAction {
 impl Workspace {
   /// The workspace's own commands, on its root element.
   pub fn bind_commands(&mut self, root: Stateful<Div>, cx: &mut Context<Self>) -> Stateful<Div> {
+    // Undo and Redo only when there's something to undo or redo (the menu greys them out).
+    let (can_undo, can_redo) = (self.history.can_undo(), self.history.can_redo());
     root
-      .on_action(cx.listener(|ws, _: &Undo, _, cx| ws.undo(cx)))
-      .on_action(cx.listener(|ws, _: &Redo, _, cx| ws.redo(cx)))
+      .when(can_undo, |r| {
+        r.on_action(cx.listener(|ws, _: &Undo, _, cx| ws.undo(cx)))
+      })
+      .when(can_redo, |r| {
+        r.on_action(cx.listener(|ws, _: &Redo, _, cx| ws.redo(cx)))
+      })
       .on_action(cx.listener(|ws, _: &SelectAll, _, cx| {
         if ws.ui.editing.is_none() && ws.ui.page == Page::Desk {
           ws.ui.selection = ws.project().pile.iter().map(|p| p.photo_id.clone()).collect();
@@ -333,6 +348,19 @@ impl Workspace {
       )
       .on_action(cx.listener(|ws, _: &SaveProject, window, cx| ws.save(false, window, cx)))
       .on_action(cx.listener(|ws, _: &SaveProjectAs, window, cx| ws.save(true, window, cx)))
+      // App-wide commands work over Layout, closing it first where they change the page.
+      .on_action(cx.listener(|ws, _: &ShowLayout, window, cx| ws.close_layout(window, cx, |_, _| {})))
+      .on_action(cx.listener(|ws, _: &ShowDesk, window, cx| ws.close_layout(window, cx, |_, _| {})))
+      .on_action(
+        cx.listener(|ws, _: &AddPhotos, window, cx| ws.close_layout(window, cx, |ws, cx| ws.pick_photos_now(cx))),
+      )
+      .on_action(
+        cx.listener(|ws, _: &OpenProject, window, cx| ws.close_layout(window, cx, |ws, cx| ws.pick_project_now(cx))),
+      )
+      .on_action(
+        cx.listener(|ws, _: &NewProject, window, cx| ws.close_layout(window, cx, |ws, cx| ws.new_project_now(cx))),
+      )
+      .on_action(cx.listener(|ws, _: &ToggleSidebar, _, cx| ws.toggle_sidebar(cx)))
       .on_action(cx.listener(|ws, _: &ToggleGuides, _, cx| {
         ws.ui.guides_hidden = !ws.ui.guides_hidden;
         cx.notify();
@@ -654,6 +682,10 @@ impl Workspace {
   // Files.
 
   pub fn pick_photos(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+    self.pick_photos_now(cx);
+  }
+
+  pub fn pick_photos_now(&mut self, cx: &mut Context<Self>) {
     let picked = cx.prompt_for_paths(PathPromptOptions {
       files: true,
       directories: true,
@@ -682,6 +714,10 @@ impl Workspace {
   }
 
   pub fn pick_project(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+    self.pick_project_now(cx);
+  }
+
+  pub fn pick_project_now(&mut self, cx: &mut Context<Self>) {
     let picked = cx.prompt_for_paths(PathPromptOptions {
       files: true,
       directories: false,
@@ -998,6 +1034,10 @@ impl Workspace {
 
   /// A new, empty project (after asking, when this one's changes aren't in a file).
   pub fn new_project(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+    self.new_project_now(cx);
+  }
+
+  pub fn new_project_now(&mut self, cx: &mut Context<Self>) {
     if self.posting() {
       return;
     }

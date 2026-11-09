@@ -95,6 +95,7 @@ impl Render for Workspace {
       sidebar_open: self.prefs.sidebar_open,
       guides_shown: !self.ui.guides_hidden,
       arrangement: self.project().layout.arrangement(),
+      fullscreen: window.is_fullscreen(),
     };
     if self.menu_state != Some(menu) {
       self.menu_state = Some(menu);
@@ -278,6 +279,22 @@ impl Render for Workspace {
       }
       root = root.child(ghost);
     }
+    // Notices go after a few seconds.
+    if self.ui.notice != self.ui.notice_timed {
+      self.ui.notice_timed = self.ui.notice.clone();
+      if let Some(n) = self.ui.notice.clone() {
+        cx.spawn(async move |this, cx| {
+          cx.background_executor().timer(std::time::Duration::from_secs(6)).await;
+          let _ = this.update(cx, |ws, cx| {
+            if ws.ui.notice.as_ref() == Some(&n) {
+              ws.ui.notice = None;
+              cx.notify();
+            }
+          });
+        })
+        .detach();
+      }
+    }
     if let Some(n) = self.ui.notice.clone() {
       root = root.child(
         div()
@@ -320,6 +337,38 @@ impl Render for Workspace {
     if self.ui.quick_look.is_some() {
       root = root.child(self.render_quick_look(&theme, cx));
     }
+    if self.ui.save_failed {
+      root = root.child(
+        div()
+          .absolute()
+          .top(x(TOOLBAR_H + 8.0))
+          .left_0()
+          .right_0()
+          .flex()
+          .justify_center()
+          .child(
+            div()
+              .flex()
+              .items_center()
+              .gap(px(10.0))
+              .px(px(12.0))
+              .py(px(6.0))
+              .rounded(px(6.0))
+              .bg(theme.panel)
+              .border_1()
+              .border_color(theme.danger)
+              .shadow_md()
+              .child("Couldn’t keep a copy of your work in the app’s storage.")
+              .child(text_button(
+                "save-to-file",
+                "Save to a file",
+                &theme,
+                true,
+                cx.listener(|ws, _, window, cx| ws.save(false, window, cx)),
+              )),
+          ),
+      );
+    }
     if let Some(tour) = self.render_tour(&theme, cx) {
       root = root.child(tour);
     }
@@ -337,7 +386,9 @@ impl Workspace {
       .and_then(|p| p.file_stem())
       .map(|s| s.to_string_lossy().into_owned())
       .unwrap_or_else(|| "Untitled".into());
-    let edited = self.edited();
+    // Mid-tour, the sample project isn't the user's.
+    let name = if self.touring() { "Sequence".to_string() } else { name };
+    let edited = self.edited() && !self.touring();
     window.set_window_title(&name);
     window.set_window_edited(edited);
     let page = self.ui.page;
@@ -464,8 +515,10 @@ impl Workspace {
           true,
           false,
           cx.listener(|ws, _, _, cx| {
-            ws.go_to(Page::Desk, cx);
-            ws.open_layout(cx);
+            if !ws.posting() {
+              ws.go_to(Page::Desk, cx);
+              ws.open_layout(cx);
+            }
           }),
         )
         .relative()
@@ -485,12 +538,18 @@ impl Workspace {
 
   fn render_status(&mut self, theme: &Theme, cx: &mut Context<Self>) -> impl IntoElement {
     let text = self
-      .ui
-      .busy
-      .clone()
-      .or_else(|| self.crop_hint())
+      .crop_hint()
       .or_else(|| self.ui.hint.clone())
       .unwrap_or_else(|| self.status_text());
+    // Progress: photos being added (counted), or what else is under way.
+    let progress = match self.ui.import_progress {
+      Some((done, total)) if total > 0 => Some((
+        format!("Adding photos {done}/{total}"),
+        Some(done as f32 / total as f32),
+      )),
+      Some(_) => Some(("Adding photos…".to_string(), None)),
+      None => self.ui.busy.clone().map(|b| (b, None)),
+    };
     let on_desk = self.ui.page == Page::Desk && self.ui.editing.is_none();
     let zoom = format!("{}%", (self.ui.view.zoom * 100.0).round());
     div()
@@ -508,6 +567,27 @@ impl Workspace {
       .font_family(MONO)
       .text_size(px(11.0))
       .child(div().flex_1().overflow_hidden().whitespace_nowrap().child(text))
+      .when_some(progress, |d, (label, frac)| {
+        d.child(
+          div()
+            .flex()
+            .items_center()
+            .gap(px(6.0))
+            .text_color(theme.text)
+            .whitespace_nowrap()
+            .child(label)
+            .when_some(frac, |d, f| {
+              d.child(
+                div()
+                  .w(px(80.0))
+                  .h(px(4.0))
+                  .rounded(px(2.0))
+                  .bg(theme.track)
+                  .child(div().h_full().rounded(px(2.0)).bg(theme.accent).w(relative(f))),
+              )
+            }),
+        )
+      })
       .when(on_desk, |d| {
         d.child(
           div()
@@ -526,13 +606,56 @@ impl Workspace {
             ))
             .child(
               div()
-                .id("zoom-fit")
+                .id("zoom-menu")
+                .relative()
                 .px(px(6.0))
                 .child(zoom)
+                .tip("Zoom", cx.entity().downgrade())
                 .on_click(cx.listener(|ws, _, _, cx| {
-                  ws.fit_desk();
+                  ws.ui.zoom_menu = !ws.ui.zoom_menu;
                   cx.notify();
-                })),
+                }))
+                .when(self.ui.zoom_menu, |d| {
+                  let mut list = div()
+                    .absolute()
+                    .bottom(px(20.0))
+                    .right_0()
+                    .w(px(140.0))
+                    .py(px(4.0))
+                    .rounded(px(5.0))
+                    .bg(theme.panel)
+                    .text_color(theme.text)
+                    .border_1()
+                    .border_color(theme.border_strong)
+                    .shadow_lg();
+                  let entries: [(&str, Option<f64>); 4] = [
+                    ("Show all photos", None),
+                    ("50%", Some(0.5)),
+                    ("100%", Some(1.0)),
+                    ("200%", Some(2.0)),
+                  ];
+                  for (i, (label, z)) in entries.into_iter().enumerate() {
+                    list = list.child(
+                      div()
+                        .id(("zoom-item", i))
+                        .px(px(10.0))
+                        .py(px(3.0))
+                        .when(i == 1, |d| d.border_t_1().border_color(theme.divider))
+                        .hover(|s| s.bg(theme.accent).text_color(theme.on_accent))
+                        .child(label)
+                        .on_click(cx.listener(move |ws, _, _, cx| {
+                          cx.stop_propagation();
+                          match z {
+                            Some(z) => ws.zoom_desk(z / ws.ui.view.zoom),
+                            None => ws.fit_desk(),
+                          }
+                          ws.ui.zoom_menu = false;
+                          cx.notify();
+                        })),
+                    );
+                  }
+                  d.child(list)
+                }),
             )
             .child(icon_button(
               "zoom-in",

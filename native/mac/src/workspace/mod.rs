@@ -103,6 +103,16 @@ pub struct Ui {
   pub context_menu: Option<ContextMenu>,
   /// Files dragged over the desk include a project (so dropping opens it).
   pub file_drop_project: bool,
+  /// Photos being added: how many done, of how many.
+  pub import_progress: Option<(usize, usize)>,
+  /// The Layout view's tab, as last left.
+  pub layout_tab: crate::layout::LayoutTab,
+  /// The last save to the app's storage failed.
+  pub save_failed: bool,
+  /// The status bar's zoom menu is open.
+  pub zoom_menu: bool,
+  /// The notice a timer's been started for.
+  pub notice_timed: Option<String>,
   /// The context menu's Crop to submenu is open.
   pub menu_sub: bool,
   pub busy: Option<String>,
@@ -158,6 +168,11 @@ impl Default for Ui {
       scale_factor: 2.0,
       context_menu: None,
       menu_sub: false,
+      import_progress: None,
+      zoom_menu: false,
+      save_failed: false,
+      layout_tab: crate::layout::LayoutTab::Page,
+      notice_timed: None,
       file_drop_project: false,
       busy: None,
       hint: None,
@@ -366,9 +381,8 @@ impl Workspace {
       return;
     }
     self.saved_to_library = self.history.revision();
-    if self.lib.save_project(self.history.project()).is_err() {
-      self.ui.notice = Some("Couldn’t keep a copy of your work in the app’s storage.".into());
-    }
+    // Until a save works again, a bar offers to save to a file instead.
+    self.ui.save_failed = self.lib.save_project(self.history.project()).is_err();
     self.prefs.document_edited = self.edited();
     self.prefs.save();
   }
@@ -427,24 +441,32 @@ impl Workspace {
     if files.is_empty() {
       return;
     }
-    self.ui.busy = Some(format!(
-      "Adding {} photo{}…",
-      files.len(),
-      if files.len() == 1 { "" } else { "s" }
-    ));
+    self.ui.import_progress = Some((0, files.len()));
     cx.notify();
     let dir = self.lib.dir.clone();
     let epoch = self.lib.epoch;
     self.importing += 1;
-    let task = cx
-      .background_executor()
-      .spawn(async move { crate::library::import_files(&dir, &files) });
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(usize, usize)>();
+    let task = cx.background_executor().spawn(async move {
+      crate::library::import_files(&dir, &files, |done, total| {
+        let _ = tx.unbounded_send((done, total));
+      })
+    });
     cx.spawn(async move |this, cx| {
+      use futures::StreamExt;
+      while let Some(p) = rx.next().await {
+        let _ = this.update(cx, |ws, cx| {
+          if ws.importing == 1 {
+            ws.ui.import_progress = Some(p);
+            cx.notify();
+          }
+        });
+      }
       let imported = task.await;
       let _ = this.update(cx, |ws, cx| {
         ws.importing -= 1;
         if ws.importing == 0 {
-          ws.ui.busy = None;
+          ws.ui.import_progress = None;
         }
         if ws.lib.epoch != epoch {
           // Another project opened meanwhile: these photos were for the one before.

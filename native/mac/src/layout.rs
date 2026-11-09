@@ -67,7 +67,7 @@ impl Workspace {
     self.finish_crop(true, cx);
     let d = PageDraft::of(self.project());
     self.ui.layout = Some(LayoutState {
-      tab: LayoutTab::Page,
+      tab: self.ui.layout_tab,
       draft: d,
       draft_for: d,
       selected: None,
@@ -192,6 +192,7 @@ impl Workspace {
   /// Switch tabs; going to Guides asks about page changes first.
   pub fn layout_tab(&mut self, tab: LayoutTab, window: &mut Window, cx: &mut Context<Self>) {
     let go = move |ws: &mut Self, cx: &mut Context<Self>| {
+      ws.ui.layout_tab = tab;
       if let Some(l) = &mut ws.ui.layout {
         l.tab = tab;
         l.selected = None;

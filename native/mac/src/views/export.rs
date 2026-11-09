@@ -31,7 +31,7 @@ fn look(d: Destination) -> (&'static str, &'static str) {
     Destination::Pdf => ("PDF", "file-text"),
     Destination::Images => ("Images", "images"),
     Destination::Indesign => ("InDesign", "package"),
-    Destination::Instagram => ("Instagram", "upload"),
+    Destination::Instagram => ("Instagram", "instagram"),
   }
 }
 
@@ -476,7 +476,7 @@ impl Workspace {
 
   /// Open a placed photo in the spread editor, selected.
   pub fn show_photo(&mut self, at: Located, cx: &mut Context<Self>) {
-    self.ui.modal = None;
+    self.go_to(crate::workspace::Page::Desk, cx);
     self.open_editor(at.spread_id, cx);
     self.ui.editor_selected = Some(at.photo_id);
     cx.notify();

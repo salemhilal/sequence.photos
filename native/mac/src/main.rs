@@ -54,6 +54,7 @@ fn main() {
       sidebar_open: true,
       guides_shown: true,
       arrangement: sequence_core::Arrangement::Spreads,
+      fullscreen: false,
     }));
     cx.on_action(|_: &HideApp, cx| cx.hide());
     cx.on_action(|_: &HideOthers, cx| cx.hide_other_apps());

@@ -149,7 +149,7 @@ impl Library {
 /// Read image files into the library at `dir`, sorted by name (numbers in order), as the
 /// web app does. Photos that won't decode are named in `failed`. Safe to run off the main
 /// thread: it only writes new files.
-pub fn import_files(dir: &Path, paths: &[PathBuf]) -> Imported {
+pub fn import_files(dir: &Path, paths: &[PathBuf], mut progress: impl FnMut(usize, usize)) -> Imported {
   let mut files: Vec<&PathBuf> = paths
     .iter()
     .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(is_image_name))
@@ -158,7 +158,9 @@ pub fn import_files(dir: &Path, paths: &[PathBuf]) -> Imported {
   let mut photos = Vec::new();
   let mut thumbs = Vec::new();
   let mut failed = Vec::new();
-  for path in files {
+  let total = files.len();
+  for (i, path) in files.into_iter().enumerate() {
+    progress(i, total);
     let name = name_of(path);
     match import_one(dir, path, &name) {
       Some((meta, thumb)) => {
@@ -464,7 +466,7 @@ mod tests {
     let dir = std::env::temp_dir().join(format!("sequence-lib-{}", PhotoId::new()));
     let lib = Library::at(dir.join("a"));
     let tour = concat!(env!("CARGO_MANIFEST_DIR"), "/../../src/tour/taxi.jpg");
-    let imported = import_files(&lib.dir, &[PathBuf::from(tour)]);
+    let imported = import_files(&lib.dir, &[PathBuf::from(tour)], |_, _| {});
     assert_eq!(imported.photos.len(), 1);
     let mut p = Project::empty();
     let visible = sequence_core::geometry::Rect::new(0.0, 0.0, 20.0, 12.0);

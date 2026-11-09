@@ -32,6 +32,7 @@ const ICONS: &[(&str, &[u8])] = icons![
   "image-plus",
   "images",
   "info",
+  "instagram",
   "layout-grid",
   "link-2",
   "link-2-off",

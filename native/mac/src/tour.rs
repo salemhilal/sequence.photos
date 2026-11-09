@@ -189,6 +189,7 @@ impl Workspace {
       None
     };
     if step.layout {
+      self.ui.layout_tab = crate::layout::LayoutTab::Page;
       self.open_layout(cx);
     }
     cx.notify();

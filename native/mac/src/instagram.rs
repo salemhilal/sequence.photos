@@ -40,7 +40,8 @@ impl Failure {
   pub fn message(&self) -> String {
     match self {
       Failure::Cancelled => "Cancelled. Nothing was posted.".into(),
-      Failure::Reconnect(m) | Failure::Other(m) => m.clone(),
+      Failure::Reconnect(m) | Failure::Other(m) if !m.is_empty() => m.clone(),
+      _ => "Couldn’t post to Instagram.".into(),
     }
   }
 }

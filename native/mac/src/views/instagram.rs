@@ -14,7 +14,7 @@ use sequence_core::render_plan::{OutputPage, Per, output_pages, page_region, sli
 use sequence_core::{Arrangement, PostFit, PostKind, Tag};
 
 use super::controls::{check, help, segmented};
-use super::paint::{SpreadPicture, boxed, x};
+use super::paint::{SpreadPicture, Tip as _, boxed, x};
 use super::text_button;
 use crate::assets::{MONO, icon};
 use crate::posting::Status;
@@ -319,6 +319,16 @@ impl Workspace {
       .absolute()
       .size_full()
       .when(editable && !full, |d| d.cursor_crosshair())
+      .when(editable, |d| {
+        d.tip(
+          if full {
+            format!("Up to {} people per image", limits::MAX_TAGS)
+          } else {
+            "Click to tag someone here".to_string()
+          },
+          cx.entity().downgrade(),
+        )
+      })
       .on_mouse_down(
         MouseButton::Left,
         cx.listener(move |ws, ev: &MouseDownEvent, window, cx| {
@@ -453,7 +463,7 @@ impl Workspace {
         theme,
       ));
       let label = if self.ig.connecting {
-        "Connecting…"
+        "Opening Instagram…"
       } else if known.is_some() {
         "Reconnect Instagram"
       } else {
