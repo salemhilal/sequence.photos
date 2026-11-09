@@ -10,6 +10,7 @@ use sequence_core::project_file::PROJECT_EXTENSION;
 
 use crate::theme::ThemePref;
 use crate::workspace::{ContextMenu, Page, Workspace};
+use sequence_core::PhotoId;
 
 actions!(
   sequence,
@@ -74,6 +75,7 @@ pub fn key_bindings() -> Vec<KeyBinding> {
     KeyBinding::new("cmd-i", AddPhotos, None),
     KeyBinding::new("cmd-z", Undo, None),
     KeyBinding::new("cmd-shift-z", Redo, None),
+    KeyBinding::new("cmd-y", Redo, None),
     KeyBinding::new("cmd-a", SelectAll, w),
     KeyBinding::new("cmd-d", Duplicate, w),
     KeyBinding::new("cmd-c", CopyItems, w),
@@ -194,16 +196,19 @@ pub fn menus(state: MenuState) -> Vec<Menu> {
 }
 
 /// What a context menu's item does.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MenuAction {
-  AddPhotos,
   Tidy,
-  Fit,
-  SelectAll,
-  DeskColor,
+  DeskColor(u32),
+  CustomColor,
   QuickLook,
+  Copy,
   Duplicate,
   ToDesk,
+  Crop,
+  /// Crop to a shape (width / height).
+  CropTo(f64),
+  ResetCrop,
   Delete,
 }
 
@@ -247,7 +252,7 @@ impl Workspace {
         }
       }))
       .on_action(cx.listener(|ws, _: &Delete, _, cx| {
-        if ws.ui.page == Page::Desk {
+        if ws.desk_keys() {
           ws.delete_selection(cx);
         }
       }))
@@ -290,8 +295,8 @@ impl Workspace {
       .on_action(cx.listener(|_, _: &Zoom, window, _| window.zoom_window()))
       .on_action(cx.listener(|_, _: &ToggleFullScreen, window, _| window.toggle_fullscreen()))
       .on_action(cx.listener(|ws, _: &QuickLook, _, cx| ws.quick_look(cx)))
-      .on_key_down(cx.listener(|ws, ev: &KeyDownEvent, _, cx| ws.key_down(ev, cx)))
-      .on_key_up(cx.listener(|ws, ev: &KeyUpEvent, _, cx| ws.key_up(ev, cx)))
+      .on_key_down(cx.listener(|ws, ev: &KeyDownEvent, window, cx| ws.key_down(ev, window, cx)))
+      .on_key_up(cx.listener(|ws, ev: &KeyUpEvent, window, cx| ws.key_up(ev, window, cx)))
   }
 
   /// While cropping, only finishing or cancelling the crop (and the window's own commands).
@@ -339,6 +344,22 @@ impl Workspace {
 
   /// Arrow keys: in Preview, turn pages; elsewhere nudge.
   fn arrow(&mut self, dx: f64, dy: f64, big: bool, cx: &mut Context<Self>) {
+    // Quick Look browses its photos; a menu takes nothing.
+    if let Some((ids, i)) = &mut self.ui.quick_look {
+      let step = if dx != 0.0 { dx } else { dy } as isize;
+      *i = (*i as isize + step).clamp(0, ids.len() as isize - 1) as usize;
+      self.ui.ql = Default::default();
+      cx.notify();
+      return;
+    }
+    if self.ui.context_menu.is_some() {
+      return;
+    }
+    if self.touring() && dy == 0.0 && dx != 0.0 && self.ui.page != Page::Preview {
+      let step = self.tour.as_ref().map_or(0, |t| t.step) as isize + dx as isize;
+      self.tour_go(step.max(0) as usize, cx);
+      return;
+    }
     match self.ui.page {
       Page::Preview => {
         if dx != 0.0 {
@@ -348,7 +369,11 @@ impl Workspace {
         }
       }
       Page::Desk => self.nudge(dx, dy, big, cx),
-      Page::Export => {}
+      Page::Export => {
+        if dx != 0.0 {
+          self.page_export(dx as isize, cx);
+        }
+      }
     }
   }
 
@@ -382,20 +407,48 @@ impl Workspace {
   }
 
   /// Space: tapped, Quick Look; held, the desk pans under the pointer.
-  fn key_down(&mut self, ev: &KeyDownEvent, cx: &mut Context<Self>) {
+  /// Keys the workspace handles itself (not as actions), only while it has the keyboard:
+  /// none of them while a text field does.
+  fn key_down(&mut self, ev: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
     // Any key but ⌘ itself hides the shortcut badges.
     if self.ui.hints {
       self.ui.hints = false;
       self.ui.hint_press += 1;
       cx.notify();
     }
-    if ev.keystroke.key == "space" && !ev.keystroke.modifiers.modified() {
+    if !self.focus.is_focused(window) {
+      return;
+    }
+    let key = ev.keystroke.key.as_str();
+    let m = ev.keystroke.modifiers;
+    let plain = !m.modified();
+    if self.ui.page == Page::Preview && self.ui.quick_look.is_none() {
+      // Space, Page Down and Up, Home and End turn pages; F goes fullscreen.
+      let total = self.project().layout.all().len() as isize;
+      match key {
+        "space" if !m.platform && !m.control && !m.alt => {
+          self.preview_go(if m.shift { -1 } else { 1 }, cx);
+        }
+        "pagedown" => self.preview_go(1, cx),
+        "pageup" => self.preview_go(-1, cx),
+        "home" => self.preview_go(-total, cx),
+        "end" => self.preview_go(total, cx),
+        "f" if plain => {
+          let on = !self.ui.presenting;
+          self.present(on, window, cx);
+        }
+        _ => return,
+      }
+      cx.stop_propagation();
+      return;
+    }
+    if key == "space" && plain {
       if !ev.is_held {
         self.ui.space_down = Some(std::time::Instant::now());
         self.ui.space_panned = false;
       }
       cx.stop_propagation();
-    } else if ev.keystroke.key == "c" && !ev.keystroke.modifiers.modified() {
+    } else if key == "c" && plain && self.desk_keys() {
       // C crops the one photo selected.
       let one = if self.ui.editing.is_some() {
         self.ui.editor_selected.clone()
@@ -410,14 +463,24 @@ impl Workspace {
     }
   }
 
-  fn key_up(&mut self, ev: &KeyUpEvent, cx: &mut Context<Self>) {
-    if ev.keystroke.key != "space" {
+  /// Whether the desk's (and the editor's) keys act: on the desk, with nothing over it.
+  pub fn desk_keys(&self) -> bool {
+    self.ui.page == Page::Desk
+      && self.ui.quick_look.is_none()
+      && self.ui.context_menu.is_none()
+      && self.ui.layout.is_none()
+      && self.ui.cropping.is_none()
+  }
+
+  fn key_up(&mut self, ev: &KeyUpEvent, window: &mut Window, cx: &mut Context<Self>) {
+    if ev.keystroke.key != "space" || !self.focus.is_focused(window) {
       return;
     }
     let down = self.ui.space_down.take();
     if let Some(at) = down
       && !self.ui.space_panned
       && at.elapsed() < std::time::Duration::from_millis(400)
+      && (self.ui.page == Page::Desk || self.ui.quick_look.is_some())
     {
       self.quick_look(cx);
     }
@@ -425,6 +488,7 @@ impl Workspace {
 
   /// Quick Look the selection (on the desk, or the editor's photo).
   fn quick_look(&mut self, cx: &mut Context<Self>) {
+    self.ui.ql = Default::default();
     if self.ui.quick_look.is_some() {
       self.ui.quick_look = None;
     } else {
@@ -489,42 +553,102 @@ impl Workspace {
     self.apply(cx, |d| act::tidy_pile(d, &ids, visible));
   }
 
-  pub fn run_menu(&mut self, menu: &ContextMenu, action: MenuAction, cx: &mut Context<Self>) {
+  pub fn run_menu(&mut self, menu: &ContextMenu, action: MenuAction, window: &mut Window, cx: &mut Context<Self>) {
     self.ui.context_menu = None;
+    self.ui.menu_sub = false;
     let photo = match menu {
       ContextMenu::Photo { photo, .. } => Some(photo.clone()),
       ContextMenu::Desk { .. } => None,
     };
-    let targets = match &photo {
-      Some(p) if self.ui.selection.contains(p) => self.ui.selection.clone(),
-      Some(p) => vec![p.clone()],
-      None => Vec::new(),
-    };
+    let name = photo
+      .as_ref()
+      .and_then(|p| self.project().photos.get(p))
+      .map_or("Photo".to_string(), |m| m.name.clone());
+    let one: Vec<PhotoId> = photo.iter().cloned().collect();
     let visible = self.visible();
     match action {
-      MenuAction::AddPhotos => cx.dispatch_action(&AddPhotos),
       MenuAction::Tidy => self.tidy(cx),
-      MenuAction::Fit => self.fit_desk(),
-      MenuAction::SelectAll => self.ui.selection = self.project().pile.iter().map(|p| p.photo_id.clone()).collect(),
-      MenuAction::DeskColor => {
-        let colors = crate::theme::DESK_COLORS;
-        let i = colors
-          .iter()
-          .position(|c| c.1 == self.prefs.desk_color)
-          .map_or(0, |i| (i + 1) % colors.len());
-        self.set_desk_color(colors[i].1, cx);
-        self.ui.notice = Some(format!("Desk color: {}", colors[i].0.to_lowercase()));
+      MenuAction::DeskColor(c) => self.set_desk_color(c, cx),
+      MenuAction::CustomColor => window.dispatch_action(Box::new(OpenSettings), cx),
+      MenuAction::QuickLook => self.ui.quick_look = Some((one, 0)),
+      MenuAction::Copy => {
+        let keep = std::mem::take(&mut self.ui.selection);
+        let editor = self.ui.editor_selected.take();
+        let editing = self.ui.editing.take();
+        self.ui.selection = one;
+        self.copy_photos(cx);
+        (self.ui.selection, self.ui.editor_selected, self.ui.editing) = (keep, editor, editing);
+        self.ui.notice = Some(format!("Copied {name}"));
       }
-      MenuAction::QuickLook => self.ui.quick_look = Some((targets, 0)),
-      MenuAction::Duplicate => self.ui.selection = self.duplicate(&targets, cx),
+      MenuAction::Duplicate => {
+        let made = self.duplicate(&one, cx);
+        let on_desk: Vec<PhotoId> = made
+          .into_iter()
+          .filter(|id| self.project().pile.iter().any(|p| &p.photo_id == id))
+          .collect();
+        if !on_desk.is_empty() {
+          self.ui.selection = on_desk;
+        }
+      }
       MenuAction::ToDesk => self.apply(cx, |d| {
-        for id in &targets {
+        for id in &one {
           act::put_in_pile(d, id, None, visible);
         }
       }),
-      MenuAction::Delete => self.delete_photos(&targets, cx),
+      MenuAction::Crop => {
+        if let Some(p) = &photo {
+          self.crop_anywhere(p, cx);
+        }
+      }
+      MenuAction::CropTo(ratio) => {
+        if let Some(p) = &photo
+          && let Some(meta) = self.project().photos.get(p).cloned()
+        {
+          let crop = sequence_core::crop::crop_to_ratio(&meta, ratio);
+          self.apply(cx, |d| act::set_crop(d, p, crop));
+        }
+      }
+      MenuAction::ResetCrop => {
+        if let Some(p) = &photo {
+          self.apply(cx, |d| act::set_crop(d, p, None));
+        }
+      }
+      MenuAction::Delete => {
+        self.delete_photos(&one, cx);
+        self.ui.notice = Some(format!("Deleted {name}. Undo to bring it back."));
+      }
     }
     cx.notify();
+  }
+
+  /// A photo's context menu, at the pointer.
+  pub fn photo_menu(&mut self, photo: PhotoId, ev: &MouseDownEvent, cx: &mut Context<Self>) {
+    if self.ui.cropping.is_some() {
+      return;
+    }
+    self.ui.menu_sub = false;
+    self.ui.context_menu = Some(ContextMenu::Photo {
+      x: f64::from(ev.position.x),
+      y: f64::from(ev.position.y),
+      photo,
+    });
+    cx.notify();
+  }
+
+  /// Crop mode on a photo: on the desk where it is, or for one on a page, in its spread's editor.
+  pub fn crop_anywhere(&mut self, photo: &PhotoId, cx: &mut Context<Self>) {
+    match act::locate(self.project(), photo) {
+      Some((act::Location::Desk, _)) => {
+        self.ui.editing = None;
+        self.start_crop(photo, cx);
+      }
+      Some((act::Location::Spread(s), _)) => {
+        self.open_editor(s, cx);
+        self.ui.editor_selected = Some(photo.clone());
+        self.start_crop(photo, cx);
+      }
+      None => {}
+    }
   }
 
   // Files.

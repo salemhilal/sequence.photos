@@ -148,6 +148,24 @@ impl Workspace {
     cx.notify();
   }
 
+  /// ← →: the Export page's preview, a page along.
+  pub fn page_export(&mut self, delta: isize, cx: &mut Context<Self>) {
+    let to = self.export_to();
+    if to == Destination::Instagram {
+      let n = self.chosen_slides().len();
+      self.ig.index = (self.ig.index as isize + delta).clamp(0, n.saturating_sub(1) as isize) as usize;
+      cx.notify();
+      return;
+    }
+    let per = if to == Destination::Indesign {
+      sequence_core::render_plan::Per::Spread
+    } else {
+      per_of(self.project(), self.export_options().per)
+    };
+    let total = output_pages(self.project(), per).len();
+    self.export_go(delta, total, cx);
+  }
+
   pub fn export_go(&mut self, delta: isize, total: usize, cx: &mut Context<Self>) {
     let next = (self.ui.export.index as isize + delta).clamp(0, total.saturating_sub(1) as isize);
     self.ui.export.index = next as usize;

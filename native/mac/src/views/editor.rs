@@ -113,13 +113,25 @@ impl Workspace {
         stage_el = stage_el.child(b);
       }
       let pid = p.photo_id.clone();
-      stage_el = stage_el.child(photo(&mut self.lib, &project, p, r, theme).on_mouse_down(
-        MouseButton::Left,
-        cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
-          cx.stop_propagation();
-          ws.photo_down(Source::Editor, pid.clone(), ev, cx);
-        }),
-      ));
+      let pid2 = pid.clone();
+      stage_el = stage_el.child(
+        photo(&mut self.lib, &project, p, r, theme)
+          .on_mouse_down(
+            MouseButton::Left,
+            cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
+              cx.stop_propagation();
+              ws.photo_down(Source::Editor, pid.clone(), ev, cx);
+            }),
+          )
+          .on_mouse_down(
+            MouseButton::Right,
+            cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
+              cx.stop_propagation();
+              ws.ui.editor_selected = Some(pid2.clone());
+              ws.photo_menu(pid2.clone(), ev, cx);
+            }),
+          ),
+      );
       let cropping = self.ui.cropping.as_ref().is_some_and(|c| c.photo == p.photo_id);
       if !cropping && placed_soft(project.photos.get(&p.photo_id), p, sheet.px_per_unit) {
         stage_el = stage_el.child(soft_badge(r, theme));
@@ -588,7 +600,14 @@ impl Workspace {
             cx.stop_propagation();
             ws.photo_down(Source::Strip, id.clone(), ev, cx);
           }),
-        );
+        )
+        .on_mouse_down(MouseButton::Right, {
+          let id = p.photo_id.clone();
+          cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
+            cx.stop_propagation();
+            ws.photo_menu(id.clone(), ev, cx);
+          })
+        });
       cell = cell.child(photo(&mut self.lib, &project, p, Rect::new(0.0, 0.0, w, h), theme));
       row = row.child(cell);
     }

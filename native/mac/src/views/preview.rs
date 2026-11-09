@@ -12,6 +12,9 @@ use crate::assets::MONO;
 use crate::theme::Theme;
 use crate::workspace::Workspace;
 
+/// How long the presentation's controls stay after the pointer stops.
+const IDLE: std::time::Duration = std::time::Duration::from_millis(2000);
+
 impl Workspace {
   pub fn render_preview(&mut self, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
     let main = self.frames.main;
@@ -45,22 +48,70 @@ impl Workspace {
     } else {
       rgb(self.prefs.desk_color).into()
     };
-    let mut stage =
-      div()
-        .id("preview")
-        .absolute()
-        .size_full()
-        .bg(bg)
-        .on_click(cx.listener(|ws, ev: &ClickEvent, _, cx| {
-          if ws.ui.presenting {
-            let back = ev.modifiers().shift;
-            ws.preview_go(if back { -1 } else { 1 }, cx);
-          }
-        }));
+    let mut stage = div()
+      .id("preview")
+      .absolute()
+      .size_full()
+      .bg(bg)
+      .on_click(cx.listener(|ws, ev: &ClickEvent, _, cx| {
+        if ws.ui.presenting {
+          let back = ev.modifiers().shift;
+          ws.preview_go(if back { -1 } else { 1 }, cx);
+        }
+      }))
+      .on_mouse_move(cx.listener(|ws, _: &MouseMoveEvent, _, cx| {
+        if !ws.ui.presenting {
+          return;
+        }
+        let was = ws.ui.preview_moved.is_some_and(|t| t.elapsed() < IDLE);
+        ws.ui.preview_moved = Some(std::time::Instant::now());
+        if !was {
+          cx.notify();
+        }
+        // Hide the controls once the pointer rests.
+        cx.spawn(async move |this, cx| {
+          cx.background_executor().timer(IDLE).await;
+          let _ = this.update(cx, |ws, cx| {
+            if ws.ui.preview_moved.is_some_and(|t| t.elapsed() >= IDLE) {
+              cx.notify();
+            }
+          });
+        })
+        .detach();
+      }));
     for el in pic.page_elements(theme, None) {
       stage = stage.child(el);
     }
     stage = stage.child(pic.photo_elements(&mut self.lib, &project, theme));
+    // Presenting: how to use it, and the way out, while the pointer moves.
+    if self.ui.presenting && self.ui.preview_moved.is_some_and(|t| t.elapsed() < IDLE) {
+      stage = stage.child(
+        div()
+          .absolute()
+          .top_0()
+          .left_0()
+          .right_0()
+          .flex()
+          .items_center()
+          .justify_end()
+          .gap(px(12.0))
+          .p(px(12.0))
+          .text_color(rgb(0xbbbbbb))
+          .font_family(MONO)
+          .text_size(px(11.0))
+          .child(format!("← → to {} · Esc to leave fullscreen", terms(arrangement).turn))
+          .child(text_button(
+            "exit-present",
+            "Exit fullscreen",
+            theme,
+            false,
+            cx.listener(|ws, _, window, cx| {
+              cx.stop_propagation();
+              ws.present(false, window, cx);
+            }),
+          )),
+      );
+    }
     if !self.ui.presenting {
       let noun = terms(arrangement).spread;
       stage = stage.child(
@@ -130,6 +181,7 @@ impl Workspace {
       return;
     }
     self.ui.presenting = on;
+    self.ui.presented_full = false;
     if window.is_fullscreen() != on {
       window.toggle_fullscreen();
     }

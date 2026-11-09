@@ -101,6 +101,23 @@ impl Render for Workspace {
       cx.set_menus(crate::commands::menus(menu));
     }
     let theme = self.theme(window);
+    // Fullscreen left another way (the green button, the menu): presenting ends too; and
+    // presenting ended by leaving Preview leaves fullscreen.
+    let full = window.is_fullscreen();
+    if self.ui.presenting {
+      if full {
+        self.ui.presented_full = true;
+      } else if self.ui.presented_full {
+        self.ui.presenting = false;
+        self.ui.presented_full = false;
+      }
+    } else if self.ui.presented_full {
+      self.ui.presented_full = false;
+      if full {
+        window.toggle_fullscreen();
+      }
+    }
+    self.ui.scale_factor = f64::from(window.scale_factor());
     let size = window.viewport_size();
     let (w, h) = (f64::from(size.width), f64::from(size.height));
     let presenting = self.ui.presenting && self.ui.page == Page::Preview;
@@ -157,6 +174,8 @@ impl Render for Workspace {
       .id("workspace")
       .key_context("Workspace")
       .track_focus(&self.focus)
+      // A press anywhere gives the workspace the keyboard back (a text field pressed takes it after).
+      .capture_any_mouse_down(cx.listener(|ws, _, window, cx| window.focus(&ws.focus, cx)))
       .relative()
       .size_full()
       .flex()
@@ -563,118 +582,505 @@ impl Workspace {
   }
 
   fn render_context_menu(&mut self, menu: ContextMenu, theme: &Theme, cx: &mut Context<Self>) -> impl IntoElement {
-    let (mx, my, items): (f64, f64, Vec<(&'static str, MenuAction)>) = match &menu {
-      ContextMenu::Desk { x, y } => (
-        *x,
-        *y,
-        vec![
-          ("Add photos…", MenuAction::AddPhotos),
-          ("Tidy up", MenuAction::Tidy),
-          ("Zoom to fit", MenuAction::Fit),
-          ("Select all", MenuAction::SelectAll),
-          ("Desk color", MenuAction::DeskColor),
-        ],
-      ),
-      ContextMenu::Photo { x, y, .. } => (
-        *x,
-        *y,
-        vec![
-          ("Quick Look", MenuAction::QuickLook),
-          ("Duplicate", MenuAction::Duplicate),
-          ("Put on the desk", MenuAction::ToDesk),
-          ("Delete", MenuAction::Delete),
-        ],
-      ),
+    /// A row: a label, a shortcut, what it does (None: disabled), and whether it's checked.
+    enum Row {
+      Caption(String),
+      Item(String, &'static str, Option<MenuAction>, bool),
+      Sub,
+      Separator,
+      Swatches,
+    }
+    let project = self.project().clone();
+    let (mx, my) = match &menu {
+      ContextMenu::Desk { x, y } | ContextMenu::Photo { x, y, .. } => (*x, *y),
+    };
+    let mut rows = Vec::new();
+    let mut shapes: Vec<(String, &'static str, f64)> = Vec::new();
+    let mut now_ratio = 0.0;
+    match &menu {
+      ContextMenu::Desk { .. } => {
+        let sel = self.ui.selection.len();
+        let can = sel > 1 || project.pile.len() > 1;
+        rows.push(Row::Item(
+          if sel > 1 {
+            format!("Tidy up {sel} photos")
+          } else {
+            "Tidy up desk".into()
+          },
+          "",
+          can.then_some(MenuAction::Tidy),
+          false,
+        ));
+        rows.push(Row::Separator);
+        rows.push(Row::Caption("Desk color".into()));
+        rows.push(Row::Swatches);
+      }
+      ContextMenu::Photo { photo, .. } => {
+        let meta = project.photos.get(photo).cloned();
+        let on_page = matches!(
+          sequence_core::actions::locate(&project, photo),
+          Some((sequence_core::actions::Location::Spread(_), _))
+        );
+        rows.push(Row::Caption(meta.as_ref().map_or("Photo".into(), |m| m.name.clone())));
+        rows.push(Row::Item(
+          "Quick Look".into(),
+          if on_page { "" } else { "Space" },
+          Some(MenuAction::QuickLook),
+          false,
+        ));
+        rows.push(Row::Item("Copy image".into(), "⌘C", Some(MenuAction::Copy), false));
+        rows.push(Row::Item("Duplicate".into(), "⌘D", Some(MenuAction::Duplicate), false));
+        if on_page {
+          rows.push(Row::Item("Return to desk".into(), "", Some(MenuAction::ToDesk), false));
+        }
+        rows.push(Row::Separator);
+        rows.push(Row::Item("Crop…".into(), "C", Some(MenuAction::Crop), false));
+        if let Some(m) = &meta {
+          let sheet = project.sheet();
+          let page = if sheet.arrangement == sequence_core::Arrangement::Spreads {
+            "page"
+          } else {
+            "frame"
+          };
+          shapes = vec![
+            ("Square".into(), "1:1", 1.0),
+            ("4:5".into(), "", 4.0 / 5.0),
+            ("3:2".into(), "", 3.0 / 2.0),
+            ("16:9".into(), "", 16.0 / 9.0),
+            (format!("The {page}"), "", sheet.page_w / sheet.page_h),
+          ];
+          let (w, h) = sequence_core::crop::visible_size(m);
+          now_ratio = w / h;
+          rows.push(Row::Sub);
+          if !sequence_core::crop::is_whole(m.crop.as_ref()) {
+            rows.push(Row::Item("Reset crop".into(), "", Some(MenuAction::ResetCrop), false));
+          }
+        }
+        rows.push(Row::Separator);
+        rows.push(Row::Item("Delete".into(), "", Some(MenuAction::Delete), false));
+      }
+    }
+    // Kept on screen.
+    let row_h = 24.0;
+    let height = rows.len() as f64 * row_h + 8.0;
+    let width = 220.0;
+    let win = self.frames.window;
+    let left = mx.min(win.w - width - 8.0).max(4.0);
+    let top = my.min(win.h - height - 8.0).max(4.0);
+    let item = |id: (&'static str, usize),
+                label: String,
+                key: &'static str,
+                action: Option<MenuAction>,
+                checked: bool,
+                menu: ContextMenu,
+                cx: &mut Context<Self>| {
+      let enabled = action.is_some();
+      // Its own row (not the submenu's) closes the submenu when hovered.
+      let closes_sub = id.0 == "menu-item";
+      div()
+        .id(id)
+        .when(closes_sub, |d| {
+          d.on_hover(cx.listener(|ws, h: &bool, _, cx| {
+            if *h && ws.ui.menu_sub {
+              ws.ui.menu_sub = false;
+              cx.notify();
+            }
+          }))
+        })
+        .flex()
+        .items_center()
+        .gap(px(6.0))
+        .h(x(row_h))
+        .px(px(10.0))
+        .when(!enabled, |d| d.text_color(theme.muted.opacity(0.6)))
+        .when(enabled, |d| d.hover(|s| s.bg(theme.accent).text_color(theme.on_accent)))
+        .child(div().w(px(12.0)).when(checked, |d| {
+          d.child(svg().path(icon("check")).size(px(12.0)).text_color(theme.text))
+        }))
+        .child(div().flex_1().child(label))
+        .child(
+          div()
+            .text_color(theme.muted)
+            .font_family(MONO)
+            .text_size(px(10.0))
+            .child(key),
+        )
+        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        .when_some(action, |d, a| {
+          d.on_click(cx.listener(move |ws, _, window, cx| ws.run_menu(&menu, a, window, cx)))
+        })
     };
     let mut list = div()
       .absolute()
-      .left(x(mx))
-      .top(x(my))
-      .min_w(px(180.0))
+      .left(x(left))
+      .top(x(top))
+      .w(x(width))
       .py(px(4.0))
       .rounded(px(5.0))
       .bg(theme.panel)
       .border_1()
       .border_color(theme.border_strong)
       .shadow_lg();
-    for (i, (label, action)) in items.into_iter().enumerate() {
-      let menu = menu.clone();
-      list = list.child(
-        div()
-          .id(("menu-item", i))
-          .px(px(12.0))
-          .py(px(4.0))
-          .hover(|s| s.bg(theme.accent).text_color(theme.on_accent))
-          .child(label)
-          .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-          .on_click(cx.listener(move |ws, _, _, cx| ws.run_menu(&menu, action, cx))),
-      );
+    let sub_open = self.ui.menu_sub;
+    for (i, row) in rows.into_iter().enumerate() {
+      list = list.child(match row {
+        Row::Caption(t) => div()
+          .h(x(row_h))
+          .px(px(10.0))
+          .flex()
+          .items_center()
+          .overflow_hidden()
+          .whitespace_nowrap()
+          .text_color(theme.muted)
+          .font_family(MONO)
+          .text_size(px(11.0))
+          .child(t)
+          .into_any_element(),
+        Row::Separator => div()
+          .h(x(row_h))
+          .flex()
+          .items_center()
+          .child(div().h(px(1.0)).w_full().bg(theme.divider))
+          .into_any_element(),
+        Row::Item(label, key, action, checked) => {
+          item(("menu-item", i), label, key, action, checked, menu.clone(), cx).into_any_element()
+        }
+        Row::Swatches => {
+          let mut row = div().h(x(row_h)).px(px(10.0)).flex().items_center().gap(px(6.0));
+          for (k, &(_, c)) in crate::theme::DESK_COLORS.iter().enumerate() {
+            let on = c == self.prefs.desk_color;
+            let m = menu.clone();
+            row = row.child(
+              div()
+                .id(("menu-swatch", k))
+                .size(px(16.0))
+                .rounded_full()
+                .bg(rgb(c))
+                .border_1()
+                .border_color(theme.border_strong)
+                .when(on, |d| d.border_2().border_color(theme.accent))
+                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                .on_click(cx.listener(move |ws, _, window, cx| ws.run_menu(&m, MenuAction::DeskColor(c), window, cx))),
+            );
+          }
+          let m = menu.clone();
+          row = row.child(
+            div()
+              .id("menu-custom-color")
+              .ml(px(4.0))
+              .text_color(theme.accent_ink)
+              .child("Custom…")
+              .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+              .on_click(cx.listener(move |ws, _, window, cx| ws.run_menu(&m, MenuAction::CustomColor, window, cx))),
+          );
+          row.into_any_element()
+        }
+        Row::Sub => {
+          let mut el = div()
+            .id("menu-crop-to")
+            .relative()
+            .flex()
+            .items_center()
+            .gap(px(6.0))
+            .h(x(row_h))
+            .px(px(10.0))
+            .when(sub_open, |d| d.bg(theme.accent).text_color(theme.on_accent))
+            .child(div().w(px(12.0)))
+            .child(div().flex_1().child("Crop to"))
+            .child(svg().path(icon("chevron-right")).size(px(12.0)).text_color(theme.muted))
+            .on_hover(cx.listener(|ws, h: &bool, _, cx| {
+              if *h {
+                ws.ui.menu_sub = true;
+                cx.notify();
+              }
+            }))
+            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+            .on_click(cx.listener(|ws, _, _, cx| {
+              ws.ui.menu_sub = true;
+              cx.notify();
+            }));
+          if sub_open {
+            // To the right, or the left where there's no room.
+            let flip = left + width + 180.0 > win.w;
+            let mut sub = div()
+              .absolute()
+              .top(px(-4.0))
+              .w(px(180.0))
+              .py(px(4.0))
+              .rounded(px(5.0))
+              .bg(theme.panel)
+              .text_color(theme.text)
+              .border_1()
+              .border_color(theme.border_strong)
+              .shadow_lg();
+            sub = if flip {
+              sub.right(x(width))
+            } else {
+              sub.left(x(width - 2.0))
+            };
+            for (k, (label, note, ratio)) in shapes.iter().enumerate() {
+              let checked = (ratio - now_ratio).abs() < 0.005;
+              sub = sub.child(item(
+                ("menu-shape", k),
+                label.clone(),
+                note,
+                Some(MenuAction::CropTo(*ratio)),
+                checked,
+                menu.clone(),
+                cx,
+              ));
+            }
+            el = el.child(sub);
+          }
+          el.into_any_element()
+        }
+      });
     }
     div()
       .id("menu-backdrop")
       .absolute()
       .size_full()
+      .on_any_mouse_down(cx.listener(|ws, _, _, cx| {
+        ws.ui.context_menu = None;
+        ws.ui.menu_sub = false;
+        cx.notify();
+      }))
+      .child(list.on_any_mouse_down(|_, _, cx| cx.stop_propagation()))
+  }
+
+  /// Quick Look (`QuickLook.tsx`): the photo at full size over everything. ← → browse
+  /// several; click the image to see actual pixels (drag to look around), again to fit;
+  /// click off it, Space, or Esc to close.
+  fn render_quick_look(&mut self, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
+    let Some((ids, i)) = self.ui.quick_look.clone() else {
+      return div().into_any_element();
+    };
+    let Some(id) = ids.get(i).cloned() else {
+      return div().into_any_element();
+    };
+    let Some(meta) = self.project().photos.get(&id).cloned() else {
+      return div().into_any_element();
+    };
+    let image = self.quick_look_image(&id, cx);
+    let n = ids.len();
+    let win = self.frames.window;
+    let dark = Theme::dark();
+    // The image's place: fitted, or at actual pixels with the view's pan.
+    let area = Rect::new(
+      24.0,
+      TOOLBAR_H + 8.0,
+      (win.w - 48.0).max(1.0),
+      (win.h - TOOLBAR_H - 32.0).max(1.0),
+    );
+    let (w, h) = (meta.px_w, meta.px_h);
+    let fit = (area.w / w).min(area.h / h).min(1.0);
+    let ql = self.ui.ql;
+    let scale = if ql.zoomed {
+      (1.0 / self.ui.scale_factor).max(fit * 2.0)
+    } else {
+      fit
+    };
+    let (iw, ih) = (w * scale, h * scale);
+    let clamp = |pan: f64, size: f64, room: f64| {
+      if size <= room {
+        0.0
+      } else {
+        pan.clamp(-(size - room) / 2.0, (size - room) / 2.0)
+      }
+    };
+    let pan = (clamp(ql.pan.0, iw, area.w), clamp(ql.pan.1, ih, area.h));
+    let r = Rect::new(
+      area.x + (area.w - iw) / 2.0 + pan.0,
+      area.y + (area.h - ih) / 2.0 + pan.1,
+      iw,
+      ih,
+    );
+    let header = div()
+      .flex()
+      .items_center()
+      .gap(px(12.0))
+      .h(x(TOOLBAR_H))
+      .pl(x(LIGHTS_W))
+      .pr(px(12.0))
+      .child(div().font_weight(FontWeight::MEDIUM).child(meta.name.clone()))
+      .child(
+        div()
+          .text_color(dark.muted)
+          .font_family(MONO)
+          .text_size(px(11.0))
+          .child(format!(
+            "{} × {} px{}",
+            w,
+            h,
+            if n > 1 {
+              format!(" · {} of {n}", i + 1)
+            } else {
+              String::new()
+            }
+          )),
+      )
+      .child(div().flex_1())
+      .child(
+        div()
+          .text_color(dark.muted)
+          .font_family(MONO)
+          .text_size(px(11.0))
+          .child(if n > 1 {
+            "← → to browse · Space to close"
+          } else {
+            "Space to close"
+          }),
+      )
+      .child(icon_button(
+        "close-quick-look",
+        "x",
+        &dark,
+        true,
+        false,
+        cx.listener(|ws, _, _, cx| {
+          ws.ui.quick_look = None;
+          cx.notify();
+        }),
+      ));
+    let turn = |id: &'static str, icon_name: &'static str, delta: isize, at: Rect, cx: &mut Context<Self>| {
+      boxed(at).child(icon_button(
+        id,
+        icon_name,
+        &dark,
+        true,
+        false,
+        cx.listener(move |ws, _, _, cx| {
+          if let Some((ids, i)) = &mut ws.ui.quick_look {
+            *i = (*i as isize + delta).clamp(0, ids.len() as isize - 1) as usize;
+          }
+          ws.ui.ql = Default::default();
+          cx.notify();
+        }),
+      ))
+    };
+    let mut el = div()
+      .id("quick-look")
+      .absolute()
+      .size_full()
+      .bg(rgba(0x000000e6))
+      .text_color(rgb(0xe6e6e6))
+      .on_any_mouse_down(|_, _, cx| cx.stop_propagation())
+      // A click off the image closes it.
       .on_mouse_down(
         MouseButton::Left,
-        cx.listener(|ws, _, _, cx| {
-          ws.ui.context_menu = None;
+        cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
+          let at = (f64::from(ev.position.x), f64::from(ev.position.y));
+          if at.0 >= r.x && at.0 < r.x + r.w && at.1 >= r.y && at.1 < r.y + r.h {
+            ws.ui.ql.drag = Some((at, ws.ui.ql.pan, false));
+          } else if at.1 > TOOLBAR_H {
+            ws.ui.quick_look = None;
+            ws.ui.ql = Default::default();
+          }
           cx.notify();
         }),
       )
-      .child(list)
+      .on_mouse_move(cx.listener(move |ws, ev: &MouseMoveEvent, _, cx| {
+        let Some((start, pan0, moved)) = ws.ui.ql.drag else {
+          return;
+        };
+        let at = (f64::from(ev.position.x), f64::from(ev.position.y));
+        let (dx, dy) = (at.0 - start.0, at.1 - start.1);
+        if moved || dx.hypot(dy) > 3.0 {
+          ws.ui.ql.drag = Some((start, pan0, true));
+          if ws.ui.ql.zoomed {
+            ws.ui.ql.pan = (pan0.0 + dx, pan0.1 + dy);
+          }
+          cx.notify();
+        }
+      }))
+      .on_mouse_up(
+        MouseButton::Left,
+        cx.listener(move |ws, ev: &MouseUpEvent, _, cx| {
+          let Some((start, _, moved)) = ws.ui.ql.drag.take() else {
+            return;
+          };
+          if !moved {
+            // Zoom in keeping the point clicked under the pointer; out to fit.
+            if ws.ui.ql.zoomed {
+              ws.ui.ql = Default::default();
+            } else {
+              let zoom = (1.0 / ws.ui.scale_factor).max(fit * 2.0) / fit;
+              let (cx_, cy_) = (area.x + area.w / 2.0, area.y + area.h / 2.0);
+              let _ = ev;
+              // The point clicked, from the image's center, scaled, then moved back under the pointer.
+              let (ox, oy) = (r.x + r.w / 2.0, r.y + r.h / 2.0);
+              ws.ui.ql.zoomed = true;
+              ws.ui.ql.pan = (
+                (ox - start.0) * zoom + (start.0 - cx_),
+                (oy - start.1) * zoom + (start.1 - cy_),
+              );
+            }
+          }
+          cx.notify();
+        }),
+      )
+      .child(header)
+      .child(
+        boxed(r)
+          .overflow_hidden()
+          .cursor(if ql.zoomed {
+            CursorStyle::ClosedHand
+          } else {
+            CursorStyle::PointingHand
+          })
+          .when_some(image, |d, im| d.child(img(im).size_full().object_fit(ObjectFit::Fill))),
+      );
+    if n > 1 {
+      if i > 0 {
+        el = el.child(turn(
+          "ql-prev",
+          "chevron-left",
+          -1,
+          Rect::new(12.0, win.h / 2.0 - 14.0, 28.0, 28.0),
+          cx,
+        ));
+      }
+      if i + 1 < n {
+        el = el.child(turn(
+          "ql-next",
+          "chevron-right",
+          1,
+          Rect::new(win.w - 40.0, win.h / 2.0 - 14.0, 28.0, 28.0),
+          cx,
+        ));
+      }
+    }
+    let _ = theme;
+    el.into_any_element()
   }
 
-  fn render_quick_look(&mut self, theme: &Theme, cx: &mut Context<Self>) -> impl IntoElement {
-    let Some((ids, i)) = self.ui.quick_look.clone() else {
-      return div();
-    };
-    let id = ids.get(i).cloned();
-    let name = id
-      .as_ref()
-      .and_then(|id| self.project().photos.get(id))
-      .map(|m| m.name.clone())
-      .unwrap_or_default();
-    let thumb = id.as_ref().and_then(|id| self.lib.thumb(id));
-    let count = if ids.len() > 1 {
-      format!("{} of {}", i + 1, ids.len())
-    } else {
-      String::new()
-    };
-    div()
-      .absolute()
-      .size_full()
-      .flex()
-      .flex_col()
-      .bg(rgba(0x000000e6))
-      .text_color(rgb(0xe6e6e6))
-      .child(
-        div()
-          .flex()
-          .items_center()
-          .gap(px(12.0))
-          .h(x(TOOLBAR_H))
-          .pl(x(LIGHTS_W))
-          .pr(px(12.0))
-          .child(name)
-          .child(div().text_color(theme.muted).child(count))
-          .child(div().flex_1())
-          .child(icon_button(
-            "close-quick-look",
-            "x",
-            &Theme::dark(),
-            true,
-            false,
-            cx.listener(|ws, _, _, cx| {
-              ws.ui.quick_look = None;
-              cx.notify();
-            }),
-          )),
-      )
-      .child(
-        div()
-          .flex_1()
-          .p(px(24.0))
-          .when_some(thumb, |d, t| d.child(img(t).size_full().object_fit(ObjectFit::Contain))),
-      )
+  /// The photo Quick Look shows: upright at full size once read (in the background), its
+  /// display copy until then.
+  fn quick_look_image(&mut self, id: &sequence_core::PhotoId, cx: &mut Context<Self>) -> Option<std::sync::Arc<Image>> {
+    if let Some((for_id, full)) = &self.ui.ql_full
+      && for_id == id
+    {
+      return full.clone().or_else(|| self.lib.thumb(id));
+    }
+    self.ui.ql_full = Some((id.clone(), None));
+    let path = self.lib.image_path(id);
+    let id2 = id.clone();
+    let task = cx
+      .background_executor()
+      .spawn(async move { crate::imageio::upright_jpeg(&path, 0.92) });
+    cx.spawn(async move |this, cx| {
+      let Some((bytes, _, _)) = task.await else { return };
+      let _ = this.update(cx, |ws, cx| {
+        if ws.ui.ql_full.as_ref().is_some_and(|(i, _)| *i == id2) {
+          ws.ui.ql_full = Some((
+            id2,
+            Some(std::sync::Arc::new(Image::from_bytes(ImageFormat::Jpeg, bytes))),
+          ));
+          cx.notify();
+        }
+      });
+    })
+    .detach();
+    self.lib.thumb(id)
   }
 }

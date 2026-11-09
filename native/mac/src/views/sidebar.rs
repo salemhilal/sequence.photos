@@ -191,13 +191,24 @@ impl Workspace {
           continue;
         }
         let pid = p.photo_id.clone();
-        row_el = row_el.child(boxed(clipped).on_mouse_down(
-          MouseButton::Left,
-          cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
-            cx.stop_propagation();
-            ws.photo_down(Source::Sidebar, pid.clone(), ev, cx);
-          }),
-        ));
+        let pid2 = p.photo_id.clone();
+        row_el = row_el.child(
+          boxed(clipped)
+            .on_mouse_down(
+              MouseButton::Left,
+              cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
+                cx.stop_propagation();
+                ws.photo_down(Source::Sidebar, pid.clone(), ev, cx);
+              }),
+            )
+            .on_mouse_down(
+              MouseButton::Right,
+              cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
+                cx.stop_propagation();
+                ws.photo_menu(pid2.clone(), ev, cx);
+              }),
+            ),
+        );
       }
       if let Some(side) = lit {
         for (s, pr) in pic.pages() {

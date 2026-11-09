@@ -90,8 +90,19 @@ pub struct Ui {
   pub reorder: Option<(Vec<SpreadId>, usize)>,
   pub preview_index: usize,
   pub presenting: bool,
+  /// Presenting has reached fullscreen (so leaving fullscreen ends it).
+  pub presented_full: bool,
+  /// When the pointer last moved over the presentation (its controls show a moment after).
+  pub preview_moved: Option<Instant>,
   pub quick_look: Option<(Vec<PhotoId>, usize)>,
+  /// Quick Look's view (actual pixels, panned, a press under way), and its full-size image.
+  pub ql: QuickLookView,
+  pub ql_full: Option<(PhotoId, Option<std::sync::Arc<Image>>)>,
+  /// The window's pixels per point, as last drawn.
+  pub scale_factor: f64,
   pub context_menu: Option<ContextMenu>,
+  /// The context menu's Crop to submenu is open.
+  pub menu_sub: bool,
   pub busy: Option<String>,
   pub hint: Option<String>,
   pub space_down: Option<Instant>,
@@ -137,8 +148,14 @@ impl Default for Ui {
       reorder: None,
       preview_index: 0,
       presenting: false,
+      presented_full: false,
+      preview_moved: None,
       quick_look: None,
+      ql: QuickLookView::default(),
+      ql_full: None,
+      scale_factor: 2.0,
       context_menu: None,
+      menu_sub: false,
       busy: None,
       hint: None,
       space_down: None,
@@ -155,6 +172,17 @@ impl Default for Ui {
       fit_glow: None,
     }
   }
+}
+
+type Point2 = (f64, f64);
+
+/// Quick Look's view of its photo.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct QuickLookView {
+  pub zoomed: bool,
+  pub pan: (f64, f64),
+  /// A press on the image: where, the pan then, and whether it's moved.
+  pub drag: Option<(Point2, Point2, bool)>,
 }
 
 /// The editor's stage fitting the spread, unpanned.
@@ -285,6 +313,12 @@ impl Workspace {
   pub fn changed(&mut self, cx: &mut Context<Self>) {
     let project = self.history.project();
     self.ui.selection.retain(|id| project.photos.contains_key(id));
+    // Quick Look closes when its photo goes away (an undo, say).
+    if let Some((ids, i)) = &self.ui.quick_look
+      && ids.get(*i).is_none_or(|id| !project.photos.contains_key(id))
+    {
+      self.ui.quick_look = None;
+    }
     self.ui.spread_selection.retain(|id| project.find_spread(id).is_some());
     if let Some(id) = &self.ui.editing
       && project.find_spread(id).is_none()
@@ -549,6 +583,14 @@ impl Workspace {
       if !self.posting() {
         self.ig.status = crate::posting::Status::Idle;
       }
+    }
+    // Preview opens at the spread being edited.
+    if page == Page::Preview
+      && self.ui.page != Page::Preview
+      && let Some(id) = &self.ui.editing
+      && let Some(i) = self.project().layout.all().iter().position(|s| &s.id == id)
+    {
+      self.ui.preview_index = i;
     }
     self.ui.page = page;
     self.ui.modal = None;

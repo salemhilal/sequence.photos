@@ -136,6 +136,7 @@ impl Workspace {
       .on_mouse_down(
         MouseButton::Right,
         cx.listener(|ws, ev: &MouseDownEvent, _, cx| {
+          ws.ui.menu_sub = false;
           ws.ui.context_menu = Some(ContextMenu::Desk {
             x: f64::from(ev.position.x),
             y: f64::from(ev.position.y),
@@ -174,12 +175,7 @@ impl Workspace {
               if !ws.ui.selection.contains(&id2) {
                 ws.ui.selection = vec![id2.clone()];
               }
-              ws.ui.context_menu = Some(ContextMenu::Photo {
-                x: f64::from(ev.position.x),
-                y: f64::from(ev.position.y),
-                photo: id2.clone(),
-              });
-              cx.notify();
+              ws.photo_menu(id2.clone(), ev, cx);
             }),
           )
           .on_hover(cx.listener(move |ws, hovered: &bool, _, cx| {
