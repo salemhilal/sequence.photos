@@ -197,6 +197,10 @@ impl Workspace {
 
   /// End the tour: the user's project comes back as it was.
   pub fn end_tour(&mut self, cx: &mut Context<Self>) {
+    // Not under a post (which can't run mid-tour anyway) or other work on the sample.
+    if self.posting() || self.is_working() {
+      return;
+    }
     let Some(t) = self.tour.take() else { return };
     self.cancel_drag(cx);
     self.finish_crop(false, cx);

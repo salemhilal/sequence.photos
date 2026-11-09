@@ -104,6 +104,43 @@ pub fn lowered_notice(lowest: f64, unit: Unit) -> String {
   }
 }
 
+/// A ZIP written as it goes, to a file say, so a big export needn't fit in memory. JPEGs
+/// are stored as they are; anything else is compressed.
+pub struct ZipOut<W: Write + io::Seek>(ZipWriter<W>);
+
+impl<W: Write + io::Seek> ZipOut<W> {
+  pub fn new(out: W) -> Self {
+    Self(ZipWriter::new(out))
+  }
+
+  fn start(&mut self, name: &str, stored: bool) -> io::Result<()> {
+    let method = if stored || name.ends_with(".jpg") {
+      CompressionMethod::Stored
+    } else {
+      CompressionMethod::Deflated
+    };
+    self
+      .0
+      .start_file(name, SimpleFileOptions::default().compression_method(method))
+      .map_err(io::Error::other)
+  }
+
+  pub fn add(&mut self, name: &str, data: &[u8]) -> io::Result<()> {
+    self.start(name, false)?;
+    self.0.write_all(data)
+  }
+
+  /// A file copied in as it's read, stored.
+  pub fn add_reader(&mut self, name: &str, data: &mut dyn io::Read) -> io::Result<()> {
+    self.start(name, true)?;
+    io::copy(data, &mut self.0).map(|_| ())
+  }
+
+  pub fn finish(self) -> io::Result<W> {
+    self.0.finish().map_err(io::Error::other)
+  }
+}
+
 /// Files as a ZIP, compressed (PNGs shrink a little; JPEGs are stored as they are).
 pub fn write_zip(files: &[(String, Vec<u8>)]) -> io::Result<Vec<u8>> {
   let mut zip = ZipWriter::new(Cursor::new(Vec::new()));

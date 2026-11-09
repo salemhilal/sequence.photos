@@ -107,6 +107,8 @@ pub struct Ui {
   pub import_progress: Option<(usize, usize)>,
   /// The Layout view's tab, as last left.
   pub layout_tab: crate::layout::LayoutTab,
+  /// Quit was asked for while work was under way: it happens once that's done.
+  pub quit_waiting: bool,
   /// The last save to the app's storage failed.
   pub save_failed: bool,
   /// The status bar's zoom menu is open.
@@ -171,6 +173,7 @@ impl Default for Ui {
       import_progress: None,
       zoom_menu: false,
       save_failed: false,
+      quit_waiting: false,
       layout_tab: crate::layout::LayoutTab::Page,
       notice_timed: None,
       file_drop_project: false,
@@ -215,6 +218,9 @@ pub const FITTED: DeskView = DeskView {
 pub struct Document {
   pub path: Option<PathBuf>,
   pub saved_revision: u64,
+  /// Bumped when another project replaces this one, so a save that finishes after can
+  /// tell the project it saved is gone.
+  pub generation: u64,
 }
 
 pub struct Workspace {
@@ -294,6 +300,7 @@ impl Workspace {
       importing: 0,
       imported: Vec::new(),
     };
+    let unreadable_aside = unreadable.is_some();
     if let Some(aside) = unreadable {
       ws.ui.notice = Some(format!(
         "The last project couldn’t be read, so it was kept aside as {}.",
@@ -304,7 +311,12 @@ impl Workspace {
       ));
     }
     ws.outdated = newer;
-    ws.doc.path = ws.prefs.document.clone();
+    // The file is this project's only if the project could be read.
+    ws.doc.path = if unreadable_aside {
+      None
+    } else {
+      ws.prefs.document.clone()
+    };
     ws.doc.saved_revision = if ws.prefs.document_edited { u64::MAX } else { 0 };
     ws
   }
@@ -433,6 +445,14 @@ impl Workspace {
 
   /// Add photos from files: decoded in the background, then put on the desk in a grid.
   pub fn add_photos(&mut self, paths: Vec<PathBuf>, cx: &mut Context<Self>) {
+    if self.outdated {
+      return;
+    }
+    // The tour ends first (once nothing's working on its sample), so they're the user's.
+    if self.touring() && self.is_working() {
+      self.when_quiet(cx, move |ws, cx| ws.add_photos(paths, cx));
+      return;
+    }
     self.leave_tour(cx);
     let files: Vec<PathBuf> = expand(paths)
       .into_iter()
@@ -477,6 +497,27 @@ impl Workspace {
         ws.imported.push(imported);
         ws.changed(cx);
       });
+    })
+    .detach();
+  }
+
+  /// Whether anything that mustn't overlap a save, an open, or a new project is under way:
+  /// a save, open, export or import (`ui.busy`, imports).
+  pub fn is_working(&self) -> bool {
+    self.ui.busy.is_some() || self.is_importing()
+  }
+
+  /// Run `f` once nothing's working (now, if nothing is): one thing at a time.
+  pub fn when_quiet(&mut self, cx: &mut Context<Self>, f: impl FnOnce(&mut Self, &mut Context<Self>) + 'static) {
+    if !self.is_working() {
+      f(self, cx);
+      return;
+    }
+    cx.spawn(async move |this, cx| {
+      cx.background_executor()
+        .timer(std::time::Duration::from_millis(200))
+        .await;
+      let _ = this.update(cx, |ws, cx| ws.when_quiet(cx, f));
     })
     .detach();
   }

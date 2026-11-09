@@ -702,6 +702,9 @@ impl Workspace {
 
   /// Files dropped on the window: a project opens; photos are added.
   pub fn files_dropped(&mut self, paths: Vec<PathBuf>, cx: &mut Context<Self>) {
+    if self.outdated {
+      return;
+    }
     if let Some(project) = paths.iter().find(|p| {
       p.file_name()
         .and_then(|n| n.to_str())
@@ -794,6 +797,7 @@ impl Workspace {
           Ok(project) => {
             ws.history.reset(project);
             ws.ui = crate::workspace::Ui::default();
+            ws.doc.generation += 1;
             ws.doc.path = Some(path.clone());
             ws.doc.saved_revision = ws.history.revision();
             ws.remember_document(&path);
@@ -894,6 +898,19 @@ impl Workspace {
 
   /// Quit, or close the main window: first asking to save changes that aren't in a file.
   pub fn request_quit(&mut self, cx: &mut Context<Self>) {
+    // Not mid-save (a file half written) or mid-export: once it's done.
+    if self.ui.busy.is_some() || self.is_importing() {
+      if !self.ui.quit_waiting {
+        self.ui.quit_waiting = true;
+        self.ui.notice = Some("Quitting once the work under way is done…".into());
+        cx.notify();
+        self.when_quiet(cx, |ws, cx| {
+          ws.ui.quit_waiting = false;
+          ws.request_quit(cx);
+        });
+      }
+      return;
+    }
     // Mid-tour, the sample project is showing: bring back the user's before judging it.
     self.leave_tour(cx);
     let quit = |ws: &mut Self, cx: &mut Context<Self>| {
@@ -977,7 +994,9 @@ impl Workspace {
     cx: &mut Context<Self>,
     then: impl FnOnce(&mut Self, &mut Context<Self>) + 'static,
   ) {
-    if self.ui.busy.is_some() || self.is_importing() {
+    if self.is_working() {
+      // After what's under way (it may be another save).
+      self.when_quiet(cx, move |ws, cx| ws.write_to(path, cx, then));
       return;
     }
     let path = if path.extension().is_none() {
@@ -987,6 +1006,7 @@ impl Workspace {
     };
     let project = self.project().clone();
     let revision = self.history.revision();
+    let generation = self.doc.generation;
     let dir = self.lib.dir.clone();
     let name = path
       .file_stem()
@@ -1012,6 +1032,9 @@ impl Workspace {
       let _ = this.update(cx, |ws, cx| {
         ws.ui.busy = None;
         match result {
+          // Another project replaced it meanwhile (it can't: saving is busy work; but
+          // should it): the file isn't that one's.
+          Ok(()) if ws.doc.generation != generation => {}
           Ok(()) => {
             ws.doc.path = Some(path.clone());
             ws.doc.saved_revision = revision;
@@ -1052,6 +1075,15 @@ impl Workspace {
   }
 
   fn new_now(&mut self, cx: &mut Context<Self>) {
+    // Not under a save, export or import, which still need this project's files.
+    if self.is_working() {
+      self.when_quiet(cx, |ws, cx| ws.new_now(cx));
+      return;
+    }
+    if self.outdated {
+      return;
+    }
+    self.leave_tour(cx);
     self.cancel_drag(cx);
     self.finish_crop(true, cx);
     self.lib.clear();
@@ -1060,6 +1092,7 @@ impl Workspace {
     self.doc = crate::workspace::Document {
       path: None,
       saved_revision: self.history.revision(),
+      generation: self.doc.generation + 1,
     };
     self.prefs.document = None;
     self.prefs.document_bookmark = None;

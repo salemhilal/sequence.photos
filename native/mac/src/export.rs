@@ -14,9 +14,7 @@ use sequence_core::idml::{LinkedImage, build_idml, read_image_info, zip_stored};
 use sequence_core::model::{ExportDestination as Destination, ExportState, ImageFormat};
 use sequence_core::pdf::{Part, PhotoSource, render_pdf};
 use sequence_core::project_file::unique_name;
-use sequence_core::raster::{
-  estimate_bytes, extension, fitted_plan, image_names, lowered_notice, sample_plan, write_zip,
-};
+use sequence_core::raster::{ZipOut, estimate_bytes, extension, fitted_plan, image_names, lowered_notice, sample_plan};
 use sequence_core::render_plan::output_pages;
 use sequence_core::units::terms;
 
@@ -41,7 +39,6 @@ pub struct ExportUi {
 
 /// What an export made, to save, and what it ran into.
 pub struct Made {
-  pub bytes: Vec<u8>,
   /// Photos with no image at all, left out.
   pub missing: usize,
   /// Photos drawn from their display copies.
@@ -50,8 +47,14 @@ pub struct Made {
   pub notice: Option<String>,
 }
 
-/// An export's work, run in the background, hearing its progress (done, total).
-type Job = Box<dyn FnOnce(&mut dyn FnMut(usize, usize)) -> Option<Made> + Send>;
+/// An export's work, run in the background: written to the file at the path given,
+/// hearing its progress (done, total).
+type Job = Box<dyn FnOnce(&Path, &mut dyn FnMut(usize, usize)) -> Option<Made> + Send>;
+
+/// A file to write an export into, buffered.
+fn create(path: &Path) -> Option<std::io::BufWriter<std::fs::File>> {
+  std::fs::File::create(path).ok().map(std::io::BufWriter::new)
+}
 
 /// JPEG quality of the parts of photos made for a PDF.
 const PDF_QUALITY: f64 = 0.92;
@@ -184,10 +187,10 @@ impl Workspace {
     let project = self.project().clone();
     let o = self.export_options();
     let mut source = self.source();
-    let job: Job = Box::new(move |progress| {
+    let job: Job = Box::new(move |path, progress| {
       let r = render_pdf(&project, o.per, o.dpi, o.print_at, &mut source, progress);
+      std::fs::write(path, &r.bytes).ok()?;
       Some(Made {
-        bytes: r.bytes,
         missing: r.missing,
         previews: r.previews,
         notice: None,
@@ -208,26 +211,26 @@ impl Workspace {
     let project = self.project().clone();
     let o = self.export_options();
     let source = self.source();
-    let job: Job = Box::new(move |progress| {
+    let job: Job = Box::new(move |path, progress| {
       let sheet = project.sheet();
+      let mut zip = ZipOut::new(create(path)?);
       let pages = output_pages(&project, per_of(&project, o.per));
       let target = export_px_per_unit(Destination::Images, &sheet, o.dpi);
       let png = o.format == ImageFormat::Png;
       let names = image_names(&project, &pages, extension(o.format));
       let (mut missing, mut previews) = (0, 0);
       let mut lowest = sheet.px_per_unit.min(target);
-      let mut files = Vec::new();
       for (i, page) in pages.iter().enumerate() {
         let plan = fitted_plan(&project, page, Some(target));
         lowest = lowest.min(plan.px_per_unit);
         let r = crate::imageio::render_page(&plan, &project.photos, |id| source.paths(id), png, o.quality)?;
         missing += r.missing;
         previews += r.previews;
-        files.push((names[i].clone(), r.bytes));
+        zip.add(&names[i], &r.bytes).ok()?;
         progress(i + 1, pages.len());
       }
+      zip.finish().ok()?.into_inner().ok()?.sync_all().ok()?;
       Some(Made {
-        bytes: write_zip(&files).ok()?,
         missing,
         previews,
         notice: (lowest < target).then(|| lowered_notice(lowest, sheet.unit)),
@@ -250,7 +253,7 @@ impl Workspace {
     let source = self.source();
     let stem = terms(project.layout.arrangement()).file_stem;
     let idml_name = format!("{stem}-{}.idml", &now_iso()[..10]);
-    let job: Job = Box::new(move |progress| {
+    let job: Job = Box::new(move |out, progress| {
       let mut placed: Vec<PhotoId> = Vec::new();
       for s in project.layout.all() {
         for i in &s.items {
@@ -301,10 +304,17 @@ impl Workspace {
         .into_iter()
         .map(|(n, text)| (n, text.into_bytes()))
         .collect();
-      let mut all = vec![(idml_name, zip_stored(&idml).ok()?)];
-      all.extend(files);
+      // The IDML first, then each photo, copied in as it's read.
+      let mut zip = ZipOut::new(create(out)?);
+      zip.add(&idml_name, &zip_stored(&idml).ok()?).ok()?;
+      for (name, data) in files {
+        match data {
+          Linked::File(p) => zip.add_reader(&name, &mut std::fs::File::open(p).ok()?).ok()?,
+          Linked::Bytes(b) => zip.add(&name, &b).ok()?,
+        }
+      }
+      zip.finish().ok()?.into_inner().ok()?.sync_all().ok()?;
       Some(Made {
-        bytes: write_zip(&all).ok()?,
         missing: 0,
         previews: 0,
         notice: (missing > 0).then(|| "Some photos’ images were missing, so their frames are empty.".into()),
@@ -385,10 +395,9 @@ impl Workspace {
     cx.notify();
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(usize, usize)>();
     let task = cx.background_executor().spawn(async move {
-      let made = job(&mut |done, total| {
+      job(&path, &mut |done, total| {
         let _ = tx.unbounded_send((done, total));
-      })?;
-      std::fs::write(&path, &made.bytes).ok().map(|()| made)
+      })
     });
     cx.spawn(async move |this, cx| {
       use futures::StreamExt;
@@ -480,6 +489,13 @@ impl Workspace {
   }
 }
 
+/// A photo for InDesign: its original as it is (copied straight from the library), or a
+/// JPEG made for it.
+enum Linked {
+  File(PathBuf),
+  Bytes(Vec<u8>),
+}
+
 /// Enough of a file to cover its metadata segments.
 const HEADER_BYTES: u64 = 512 * 1024;
 const REENCODE_QUALITY: f64 = 0.95;
@@ -488,7 +504,7 @@ const REENCODE_QUALITY: f64 = 0.95;
 /// upright JPEG (from the display copy if the original won't decode). With its format, its
 /// resolution, and its size when that's not the photo's.
 #[allow(clippy::type_complexity)]
-fn linkable(image: &Path, thumb: &Path) -> Option<(Vec<u8>, ImageFormat, f64, Option<(f64, f64)>)> {
+fn linkable(image: &Path, thumb: &Path) -> Option<(Linked, ImageFormat, f64, Option<(f64, f64)>)> {
   use std::io::Read;
   let mut head = Vec::new();
   std::fs::File::open(image)
@@ -498,12 +514,17 @@ fn linkable(image: &Path, thumb: &Path) -> Option<(Vec<u8>, ImageFormat, f64, Op
     .ok()?;
   let info = read_image_info(&head);
   if info.format == Some(ImageFormat::Png) || (info.format == Some(ImageFormat::Jpeg) && info.orientation == 1) {
-    return Some((std::fs::read(image).ok()?, info.format?, info.ppi, None));
+    return Some((Linked::File(image.to_path_buf()), info.format?, info.ppi, None));
   }
   let (data, w, h) = crate::imageio::upright_jpeg(image, REENCODE_QUALITY)
     .or_else(|| crate::imageio::upright_jpeg(thumb, REENCODE_QUALITY))?;
   // Written without a resolution, which InDesign reads as 72 ppi.
-  Some((data, ImageFormat::Jpeg, 72.0, Some((f64::from(w), f64::from(h)))))
+  Some((
+    Linked::Bytes(data),
+    ImageFormat::Jpeg,
+    72.0,
+    Some((f64::from(w), f64::from(h))),
+  ))
 }
 
 #[cfg(test)]
@@ -593,7 +614,7 @@ mod tests {
     let image = dir.join("images").join("a");
     let (data, format, _, size) = super::linkable(&image, &image).expect("links");
     assert_eq!(format, sequence_core::ImageFormat::Jpeg);
-    assert_eq!(data, std::fs::read(&image).expect("reads"));
+    assert!(matches!(data, super::Linked::File(p) if p == image));
     assert_eq!(size, None);
     std::fs::remove_dir_all(&dir).ok();
   }

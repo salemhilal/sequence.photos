@@ -424,6 +424,12 @@ impl Workspace {
     if self.posting() || self.post_problem().is_some() {
       return;
     }
+    // The tour's sample book isn't posted to the user's account.
+    if self.touring() {
+      self.ig.status = Status::Failed("Finish the tour to post your own work.".into());
+      cx.notify();
+      return;
+    }
     let Some(connection) = self.ig.connection.clone() else {
       return;
     };
