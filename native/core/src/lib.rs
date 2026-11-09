@@ -5,10 +5,12 @@
 pub mod actions;
 pub mod crop;
 pub mod desk;
+pub mod export_options;
 pub mod geometry;
 pub mod ids;
 pub mod model;
 pub mod page_setup;
+pub mod pdf;
 pub mod project_file;
 pub mod render_plan;
 pub mod schema;

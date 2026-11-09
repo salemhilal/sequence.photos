@@ -102,6 +102,8 @@ pub struct Ui {
   /// The Layout view, while it's open, and the label beside a guide being dragged.
   pub layout: Option<LayoutState>,
   pub guide_label: Option<(String, f64, f64)>,
+  /// The Export page's own state.
+  pub export: crate::export::ExportUi,
 }
 
 impl Default for Ui {
@@ -139,6 +141,7 @@ impl Default for Ui {
       cropping: None,
       layout: None,
       guide_label: None,
+      export: Default::default(),
     }
   }
 }

@@ -1,15 +1,23 @@
 //! Reading photos with macOS's ImageIO, as WebKit does in the Tauri app: any format the
 //! system reads (HEIC included), upright per its orientation, with its color profile.
 
-use objc2_core_foundation::{CFBoolean, CFData, CFDictionary, CFMutableData, CFNumber, CFRetained, CFString, CFType};
+use std::io::Read;
+use std::path::Path;
+
+use objc2_core_foundation::{
+  CFBoolean, CFData, CFDictionary, CFMutableData, CFNumber, CFRetained, CFString, CFType, CFURL, CFURLPathStyle,
+  CGPoint, CGRect, CGSize,
+};
 use objc2_core_graphics::{
-  CGBitmapInfo, CGColorRenderingIntent, CGColorSpace, CGDataProvider, CGImage, CGImageAlphaInfo, kCGColorSpaceSRGB,
+  CGBitmapContextCreate, CGBitmapContextCreateImage, CGBitmapInfo, CGColorRenderingIntent, CGColorSpace, CGContext,
+  CGDataProvider, CGImage, CGImageAlphaInfo, CGInterpolationQuality, kCGColorSpaceSRGB,
 };
 use objc2_image_io::{
   CGImageDestination, CGImageSource, kCGImageDestinationLossyCompressionQuality, kCGImagePropertyOrientation,
   kCGImagePropertyPixelHeight, kCGImagePropertyPixelWidth, kCGImageSourceCreateThumbnailFromImageAlways,
   kCGImageSourceCreateThumbnailWithTransform, kCGImageSourceThumbnailMaxPixelSize,
 };
+use sequence_core::geometry::Rect;
 
 /// What reading a photo gives: its upright size, and a JPEG display copy.
 pub struct Decoded {
@@ -61,21 +69,7 @@ pub fn decode(bytes: &[u8], max: f64) -> Option<Decoded> {
 
 /// The source's first image, upright, at most `max` px on its longest side, as JPEG.
 fn thumbnail(source: &CGImageSource, max: f64) -> Option<Vec<u8>> {
-  let size = CFNumber::new_f64(max);
-  let yes = CFBoolean::new(true);
-  // SAFETY: the documented option keys, with the value types they take.
-  let options = unsafe {
-    dict(
-      &[
-        kCGImageSourceCreateThumbnailFromImageAlways,
-        kCGImageSourceCreateThumbnailWithTransform,
-        kCGImageSourceThumbnailMaxPixelSize,
-      ],
-      &[yes.as_ref(), yes.as_ref(), size.as_ref()],
-    )
-  };
-  // SAFETY: index 0 exists (its properties were read); options as above.
-  let image = unsafe { source.thumbnail_at_index(0, Some(&options)) }?;
+  let image = thumbnail_image(source, max)?;
   jpeg(&image, 0.85)
 }
 
@@ -124,6 +118,85 @@ pub fn encode_jpeg(rgb: &[u8], width: usize, height: usize, quality: f64) -> Opt
   jpeg(&image, quality)
 }
 
+/// A file's image source, read as it's needed (its headers first).
+fn source_at(path: &Path) -> Option<CFRetained<CGImageSource>> {
+  let path = CFString::from_str(path.to_str()?);
+  let url = CFURL::with_file_system_path(None, Some(&path), CFURLPathStyle::CFURLPOSIXPathStyle, false)?;
+  // SAFETY: no options.
+  unsafe { CGImageSource::with_url(&url, None) }
+}
+
+/// A file's EXIF orientation, if the file is a JPEG (by its first bytes, not its name).
+pub fn jpeg_orientation(path: &Path) -> Option<u32> {
+  let mut head = [0u8; 3];
+  std::fs::File::open(path).ok()?.read_exact(&mut head).ok()?;
+  if head != [0xff, 0xd8, 0xff] {
+    return None;
+  }
+  let source = source_at(path)?;
+  // SAFETY: index 0 exists when the source has an image; no options.
+  let props = unsafe { source.properties_at_index(0, None) }?;
+  // SAFETY: the documented property key.
+  let o = number(&props, unsafe { kCGImagePropertyOrientation }).unwrap_or(1.0);
+  Some(if (1.0..=8.0).contains(&o) { o as u32 } else { 1 })
+}
+
+/// A file's photo decoded upright at about `whole` pixels, then its part `src` (in those
+/// pixels) drawn at `out` pixels on white, as JPEG at `quality`: what an export draws.
+pub fn part_jpeg(path: &Path, whole: (u32, u32), src: Rect, out: (u32, u32), quality: f64) -> Option<Vec<u8>> {
+  let source = source_at(path)?;
+  let image = thumbnail_image(&source, f64::from(whole.0.max(whole.1)))?;
+  let (w, h) = (out.0.max(1) as usize, out.1.max(1) as usize);
+  // SAFETY: the documented sRGB name.
+  let space = CGColorSpace::with_name(Some(unsafe { kCGColorSpaceSRGB }))?;
+  // SAFETY: no buffer given (CoreGraphics makes one); 8-bit RGB with an unused alpha byte.
+  let ctx = unsafe {
+    CGBitmapContextCreate(
+      std::ptr::null_mut(),
+      w,
+      h,
+      8,
+      0,
+      Some(&space),
+      CGImageAlphaInfo::NoneSkipLast.0,
+    )
+  }?;
+  let all = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(w as f64, h as f64));
+  CGContext::set_rgb_fill_color(Some(&ctx), 1.0, 1.0, 1.0, 1.0);
+  CGContext::fill_rect(Some(&ctx), all);
+  CGContext::set_interpolation_quality(Some(&ctx), CGInterpolationQuality::High);
+  // The whole photo, placed so `src` fills the output (CoreGraphics' origin is the bottom).
+  let fx = w as f64 / src.w;
+  let fy = h as f64 / src.h;
+  let (ww, wh) = (f64::from(whole.0), f64::from(whole.1));
+  let at = CGRect::new(
+    CGPoint::new(-src.x * fx, h as f64 - (wh - src.y) * fy),
+    CGSize::new(ww * fx, wh * fy),
+  );
+  CGContext::draw_image(Some(&ctx), at, Some(&image));
+  let drawn = CGBitmapContextCreateImage(Some(&ctx))?;
+  jpeg(&drawn, quality)
+}
+
+/// The source's first image, upright, at most `max` px on its longest side.
+fn thumbnail_image(source: &CGImageSource, max: f64) -> Option<CFRetained<CGImage>> {
+  let size = CFNumber::new_f64(max.max(1.0));
+  let yes = CFBoolean::new(true);
+  // SAFETY: the documented option keys, with the value types they take.
+  let options = unsafe {
+    dict(
+      &[
+        kCGImageSourceCreateThumbnailFromImageAlways,
+        kCGImageSourceCreateThumbnailWithTransform,
+        kCGImageSourceThumbnailMaxPixelSize,
+      ],
+      &[yes.as_ref(), yes.as_ref(), size.as_ref()],
+    )
+  };
+  // SAFETY: index 0, options as above.
+  unsafe { source.thumbnail_at_index(0, Some(&options)) }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -144,5 +217,60 @@ mod tests {
     let bytes = encode_jpeg(&rgb, w, h, 0.9).expect("encodes");
     let d = decode(&bytes, 100.0).expect("reads back");
     assert_eq!((d.px_w, d.px_h), (40.0, 30.0));
+  }
+
+  /// A JPEG's middle pixel, as RGB.
+  fn middle(jpeg: &[u8]) -> [u8; 3] {
+    let data = CFData::from_bytes(jpeg);
+    // SAFETY: no options; index 0.
+    let image =
+      unsafe { CGImageSource::with_data(&data, None).and_then(|s| s.image_at_index(0, None)) }.expect("an image");
+    let mut px = [0u8; 4];
+    let space = CGColorSpace::with_name(Some(unsafe { kCGColorSpaceSRGB })).expect("sRGB");
+    // SAFETY: a 1 × 1 buffer of 4 bytes, as described.
+    let ctx = unsafe {
+      CGBitmapContextCreate(
+        px.as_mut_ptr().cast(),
+        1,
+        1,
+        8,
+        4,
+        Some(&space),
+        CGImageAlphaInfo::NoneSkipLast.0,
+      )
+    }
+    .expect("a context");
+    let (w, h) = (
+      CGImage::width(Some(&image)) as f64,
+      CGImage::height(Some(&image)) as f64,
+    );
+    // Only the middle pixel lands in the 1 × 1 context.
+    let at = CGRect::new(CGPoint::new(-(w / 2.0).floor(), -(h / 2.0).floor()), CGSize::new(w, h));
+    CGContext::draw_image(Some(&ctx), at, Some(&image));
+    drop(ctx);
+    [px[0], px[1], px[2]]
+  }
+
+  #[test]
+  fn cuts_a_part() {
+    let dir = std::env::temp_dir().join(format!("sequence-part-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("a folder");
+    let path = dir.join("p.jpg");
+    // Red on top, blue below.
+    let (w, h) = (80, 60);
+    let rgb: Vec<u8> = (0..w * h)
+      .flat_map(|i| if i / w < h / 2 { [220, 20, 20] } else { [20, 20, 220] })
+      .collect();
+    std::fs::write(&path, encode_jpeg(&rgb, w, h, 0.95).expect("encodes")).expect("writes");
+    assert_eq!(jpeg_orientation(&path), Some(1));
+    let top = part_jpeg(&path, (80, 60), Rect::new(0.0, 0.0, 80.0, 30.0), (40, 15), 0.95).expect("a part");
+    let d = decode(&top, 100.0).expect("reads back");
+    assert_eq!((d.px_w, d.px_h), (40.0, 15.0));
+    let [r, _, b] = middle(&top);
+    assert!(r > 150 && b < 80, "the top is red: {r} {b}");
+    let bottom = part_jpeg(&path, (80, 60), Rect::new(0.0, 30.0, 80.0, 30.0), (40, 15), 0.95).expect("a part");
+    let [r, _, b] = middle(&bottom);
+    assert!(b > 150 && r < 80, "the bottom is blue: {r} {b}");
+    std::fs::remove_dir_all(&dir).ok();
   }
 }

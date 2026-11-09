@@ -23,6 +23,9 @@ pub enum Field {
   Border(GuideId, usize),
   /// A line guide's distance.
   Line(GuideId),
+  /// The Export page's dpi (inches projects' photos) and a pixel project's printed dpi.
+  ExportDpi,
+  PrintAt,
 }
 
 /// The fields' inputs, by what they edit.

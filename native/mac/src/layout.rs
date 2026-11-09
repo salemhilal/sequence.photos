@@ -347,6 +347,7 @@ impl Workspace {
           },
         });
       }
+      Field::ExportDpi | Field::PrintAt => self.export_field(&field, n, cx),
       Field::Line(id) => {
         let s = self.project().sheet();
         let u = units(s.unit);

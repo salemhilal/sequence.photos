@@ -6,6 +6,7 @@ mod assets;
 mod bookmarks;
 mod commands;
 mod crop;
+mod export;
 mod fields;
 #[cfg(target_os = "macos")]
 mod imageio;
@@ -91,6 +92,10 @@ fn main() {
               l.tab = layout::LayoutTab::Guides;
             }
           });
+        }
+        #[cfg(debug_assertions)]
+        if std::env::var_os("SEQUENCE_OPEN_EXPORT").is_some() {
+          ws.update(cx, |ws, cx| ws.go_to(workspace::Page::Export, cx));
         }
         let focus = ws.read(cx).focus.clone();
         window.focus(&focus, cx);

@@ -6,6 +6,7 @@ pub mod controls;
 pub mod crop;
 pub mod desk;
 pub mod editor;
+pub mod export;
 pub mod layout;
 pub mod paint;
 pub mod preview;
@@ -107,7 +108,7 @@ impl Render for Workspace {
     let main = match self.ui.page {
       Page::Desk => self.render_desk_page(&theme, cx),
       Page::Preview => self.render_preview(&theme, cx),
-      Page::Export => self.render_export(&theme, cx),
+      Page::Export => self.render_export(&theme, window, cx),
     };
 
     let this = cx.entity().downgrade();

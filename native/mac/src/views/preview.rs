@@ -1,12 +1,12 @@
 //! Preview: every spread (or frame) in order, large, as it will print, turned with the
-//! arrow keys or the pager; fullscreen to present (`Preview.tsx`). And the Export page.
+//! arrow keys or the pager; fullscreen to present (`Preview.tsx`).
 
 use gpui_kit::*;
 use sequence_core::actions::folio_label;
-use sequence_core::geometry::{Rect, spread_left, spread_width};
+use sequence_core::geometry::{spread_left, spread_width};
 use sequence_core::units::terms;
 
-use super::paint::{SpreadPicture, x};
+use super::paint::SpreadPicture;
 use super::{icon_button, text_button};
 use crate::assets::MONO;
 use crate::theme::Theme;
@@ -61,8 +61,6 @@ impl Workspace {
       stage = stage.child(el);
     }
     stage = stage.child(pic.photo_elements(&mut self.lib, &project, theme));
-    let pb: Rect = pic.pages_box();
-    let _ = pb;
     if !self.ui.presenting {
       let noun = terms(arrangement).spread;
       stage = stage.child(
@@ -116,7 +114,6 @@ impl Workspace {
           )),
       );
     }
-    let _ = x;
     stage.into_any_element()
   }
 
@@ -137,27 +134,5 @@ impl Workspace {
       window.toggle_fullscreen();
     }
     cx.notify();
-  }
-
-  pub fn render_export(&mut self, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
-    div()
-      .absolute()
-      .size_full()
-      .flex()
-      .flex_col()
-      .items_center()
-      .justify_center()
-      .gap(px(12.0))
-      .bg(theme.panel)
-      .text_color(theme.muted)
-      .child("Exporting (PDF, images, InDesign, Instagram) comes in the next pass.")
-      .child(text_button(
-        "export-back",
-        "Back to the desk",
-        theme,
-        false,
-        cx.listener(|ws, _, _, cx| ws.go_to(crate::workspace::Page::Desk, cx)),
-      ))
-      .into_any_element()
   }
 }

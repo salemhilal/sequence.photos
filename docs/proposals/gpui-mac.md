@@ -87,11 +87,14 @@ Save, Save As, Open, Open Recent, bookmarks), Settings, and holding ⌘ for shor
 
 ### 4. Where the work happens
 
-Status (November 2026): the window, toolbar, status bar, menus, undo, and saving and
-opening files work; so do the desk, the sidebar, the spread editor, crop mode, Preview and
+Status (November 2026): the window, toolbar, status bar, menus, undo, and saving and opening
+files work; so do the desk, the sidebar, the spread editor, crop mode, Preview and
 presenting, Layout (both tabs, rulers, presets, the draft applied as one step), and the
-Settings window (General, and Advanced's test images). Still to come: every export, copy and paste, the tour, resolution badges, the editor's
-number fields, sidebar columns, shortcut badges, and an unsaved-changes prompt on quit.
+Settings window (General, and Advanced's test images). The Export page saves a PDF (the core
+writes it: originals that fit go in as they are, the rest cut to what shows). Still to come:
+the images, InDesign and Instagram exports, copy and paste, the tour, resolution badges, the
+editor's number fields, sidebar columns, shortcut badges, and an unsaved-changes prompt on
+quit.
 
 In about this order: the desk (pan, zoom, drag, Option-drag to duplicate, tidy, desk color,
 drops); the sidebar (spreads or frames, reordered by dragging); the spread editor (rulers,
