@@ -224,3 +224,48 @@ mod geometry_and_render {
     });
   }
 }
+
+#[test]
+fn idml_matches_the_typescript() {
+  use sequence_core::idml::{LinkedImage, build_idml};
+  use sequence_core::{ImageFormat, PhotoId};
+  let cases = goldens("idml.json");
+  assert!(cases.len() >= 5);
+  for case in &cases {
+    let name = case["name"].as_str().unwrap_or("?");
+    let project = migrate_project(&case["input"]["project"]).expect("a project");
+    let links = case["input"]["links"]
+      .as_array()
+      .expect("links")
+      .iter()
+      .map(|pair| {
+        let l = &pair[1];
+        let id: PhotoId = serde_json::from_value(pair[0].clone()).expect("an id");
+        let link = LinkedImage {
+          path: l["path"].as_str().expect("a path").into(),
+          format: if l["format"] == "png" { ImageFormat::Png } else { ImageFormat::Jpeg },
+          ppi: l["ppi"].as_f64().expect("ppi"),
+          px_w: l["pxW"].as_f64().expect("w"),
+          px_h: l["pxH"].as_f64().expect("h"),
+        };
+        (id, link)
+      })
+      .collect();
+    let got = build_idml(&project, &links);
+    let expected = case["output"].as_array().expect("files");
+    assert_eq!(got.len(), expected.len(), "{name}");
+    for ((n, text), e) in got.iter().zip(expected) {
+      assert_eq!(n, e["name"].as_str().expect("a name"), "{name}");
+      let want = e["text"].as_str().expect("text");
+      if text != want {
+        let at = text.chars().zip(want.chars()).take_while(|(a, b)| a == b).count();
+        let from = at.saturating_sub(200);
+        panic!(
+          "{name} {n} differs at {at}:\n got  {}\n want {}",
+          text.chars().skip(from).take(400).collect::<String>(),
+          want.chars().skip(from).take(400).collect::<String>()
+        );
+      }
+    }
+  }
+}

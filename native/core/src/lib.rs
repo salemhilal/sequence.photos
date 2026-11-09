@@ -7,12 +7,15 @@ pub mod crop;
 pub mod desk;
 pub mod export_options;
 pub mod geometry;
+pub mod idml;
 pub mod ids;
 pub mod model;
 pub mod page_setup;
 pub mod pdf;
 pub mod project_file;
+pub mod raster;
 pub mod render_plan;
+pub mod resolution;
 pub mod schema;
 pub mod store;
 pub mod test_images;
@@ -21,6 +24,7 @@ pub mod units;
 pub mod validate;
 
 pub use ids::{GuideId, PhotoId, SpreadId};
+pub use indexmap;
 pub use model::*;
 
 /// A number as JavaScript prints it (`String(n)`): no ".0" on whole numbers.

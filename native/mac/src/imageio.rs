@@ -2,7 +2,7 @@
 //! system reads (HEIC included), upright per its orientation, with its color profile.
 
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use objc2_core_foundation::{
   CFBoolean, CFData, CFDictionary, CFMutableData, CFNumber, CFRetained, CFString, CFType, CFURL, CFURLPathStyle,
@@ -18,6 +18,10 @@ use objc2_image_io::{
   kCGImageSourceCreateThumbnailWithTransform, kCGImageSourceThumbnailMaxPixelSize,
 };
 use sequence_core::geometry::Rect;
+use sequence_core::indexmap::IndexMap;
+use sequence_core::pdf::decode_size;
+use sequence_core::render_plan::{PagePlan, ink_rgb};
+use sequence_core::{PhotoId, PhotoMeta};
 
 /// What reading a photo gives: its upright size, and a JPEG display copy.
 pub struct Decoded {
@@ -75,19 +79,133 @@ fn thumbnail(source: &CGImageSource, max: f64) -> Option<Vec<u8>> {
 
 /// An image as JPEG at `quality` (0–1).
 fn jpeg(image: &CGImage, quality: f64) -> Option<Vec<u8>> {
+  encode(image, "public.jpeg", Some(quality))
+}
+
+/// An image as a file of type `uti`, at `quality` for lossy types.
+fn encode(image: &CGImage, uti: &'static str, quality: Option<f64>) -> Option<Vec<u8>> {
   let out = CFMutableData::new(None, 0)?;
-  let kind = CFString::from_static_str("public.jpeg");
-  // SAFETY: one image into a JPEG destination; options as documented.
+  let kind = CFString::from_static_str(uti);
+  // SAFETY: one image into a destination of a known type; options as documented.
   unsafe {
     let dest = CGImageDestination::with_data(&out, &kind, 1, None)?;
-    let quality = CFNumber::new_f64(quality);
-    let props = dict(&[kCGImageDestinationLossyCompressionQuality], &[quality.as_ref()]);
-    dest.add_image(image, Some(&props));
+    let props = quality.map(|q| {
+      let q = CFNumber::new_f64(q);
+      dict(&[kCGImageDestinationLossyCompressionQuality], &[q.as_ref()])
+    });
+    dest.add_image(image, props.as_deref());
     if !dest.finalize() {
       return None;
     }
   }
   Some(out.to_vec())
+}
+
+/// An sRGB bitmap of `w` × `h`, 8-bit RGB with an unused alpha byte.
+fn bitmap(w: usize, h: usize) -> Option<CFRetained<CGContext>> {
+  // SAFETY: the documented sRGB name.
+  let space = CGColorSpace::with_name(Some(unsafe { kCGColorSpaceSRGB }))?;
+  // SAFETY: no buffer given (CoreGraphics makes one).
+  unsafe {
+    CGBitmapContextCreate(
+      std::ptr::null_mut(),
+      w,
+      h,
+      8,
+      0,
+      Some(&space),
+      CGImageAlphaInfo::NoneSkipLast.0,
+    )
+  }
+}
+
+/// A rectangle given from the top (as plans are) in a context `h` high (whose origin is the bottom).
+fn from_top(r: Rect, h: f64) -> CGRect {
+  CGRect::new(CGPoint::new(r.x, h - r.y - r.h), CGSize::new(r.w, r.h))
+}
+
+fn fill(ctx: &CGContext, rgb: [u8; 3], r: CGRect) {
+  let c = |v: u8| f64::from(v) / 255.0;
+  CGContext::set_rgb_fill_color(Some(ctx), c(rgb[0]), c(rgb[1]), c(rgb[2]), 1.0);
+  CGContext::fill_rect(Some(ctx), r);
+}
+
+/// An output page drawn from its plan, and what it ran into.
+pub struct Rendered {
+  pub bytes: Vec<u8>,
+  /// Photos with no image, left out.
+  pub missing: usize,
+  /// Photos drawn from their display copies.
+  pub previews: usize,
+}
+
+/// An output page drawn from its plan (`renderPage`): the background, then each photo's
+/// border and the part of it that shows, decoded from `paths(id)` (the original, then the
+/// display copy) at its placed size. Encoded as PNG, or JPEG at `quality`.
+pub fn render_page(
+  plan: &PagePlan,
+  photos: &IndexMap<PhotoId, PhotoMeta>,
+  paths: impl Fn(&PhotoId) -> [PathBuf; 2],
+  png: bool,
+  quality: f64,
+) -> Option<Rendered> {
+  let (w, h) = (plan.px_w as usize, plan.px_h as usize);
+  let ctx = bitmap(w, h)?;
+  let hh = plan.px_h;
+  fill(&ctx, ink_rgb(plan.background), CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(plan.px_w, hh)));
+  CGContext::set_interpolation_quality(Some(&ctx), CGInterpolationQuality::High);
+  let (mut missing, mut previews) = (0, 0);
+  for d in &plan.draws {
+    if let Some(b) = d.border {
+      let p = d.placed;
+      let r = Rect::new(p.x - b.width, p.y - b.width, p.w + 2.0 * b.width, p.h + 2.0 * b.width);
+      fill(&ctx, ink_rgb(b.color), from_top(r, hh));
+    }
+    let Some(photo) = photos.get(&d.photo_id) else {
+      missing += 1;
+      continue;
+    };
+    let (dw, dh) = decode_size(photo, d.placed.w, d.placed.h);
+    let mut image = None;
+    for (i, path) in paths(&d.photo_id).iter().enumerate() {
+      if let Some(img) = source_at(path).and_then(|s| thumbnail_image(&s, f64::from(dw.max(dh)))) {
+        image = Some(img);
+        previews += i;
+        break;
+      }
+    }
+    let Some(image) = image else {
+      missing += 1;
+      continue;
+    };
+    // The plan's source is in the photo's own pixels; the decoded image may be smaller.
+    let kx = CGImage::width(Some(&image)) as f64 / photo.px_w;
+    let ky = CGImage::height(Some(&image)) as f64 / photo.px_h;
+    let (s, t) = (d.src, d.dst);
+    let fx = t.w / (s.w * kx);
+    let fy = t.h / (s.h * ky);
+    let whole = Rect::new(
+      t.x - s.x * kx * fx,
+      t.y - s.y * ky * fy,
+      CGImage::width(Some(&image)) as f64 * fx,
+      CGImage::height(Some(&image)) as f64 * fy,
+    );
+    CGContext::save_g_state(Some(&ctx));
+    CGContext::clip_to_rect(Some(&ctx), from_top(t, hh));
+    CGContext::draw_image(Some(&ctx), from_top(whole, hh), Some(&image));
+    CGContext::restore_g_state(Some(&ctx));
+  }
+  let drawn = CGBitmapContextCreateImage(Some(&ctx))?;
+  let bytes = if png {
+    encode(&drawn, "public.png", None)?
+  } else {
+    jpeg(&drawn, quality)?
+  };
+  Some(Rendered {
+    bytes,
+    missing,
+    previews,
+  })
 }
 
 /// RGB pixels (8 bits a channel, rows packed, in sRGB) as JPEG at `quality` (0–1).
@@ -147,23 +265,9 @@ pub fn part_jpeg(path: &Path, whole: (u32, u32), src: Rect, out: (u32, u32), qua
   let source = source_at(path)?;
   let image = thumbnail_image(&source, f64::from(whole.0.max(whole.1)))?;
   let (w, h) = (out.0.max(1) as usize, out.1.max(1) as usize);
-  // SAFETY: the documented sRGB name.
-  let space = CGColorSpace::with_name(Some(unsafe { kCGColorSpaceSRGB }))?;
-  // SAFETY: no buffer given (CoreGraphics makes one); 8-bit RGB with an unused alpha byte.
-  let ctx = unsafe {
-    CGBitmapContextCreate(
-      std::ptr::null_mut(),
-      w,
-      h,
-      8,
-      0,
-      Some(&space),
-      CGImageAlphaInfo::NoneSkipLast.0,
-    )
-  }?;
+  let ctx = bitmap(w, h)?;
   let all = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(w as f64, h as f64));
-  CGContext::set_rgb_fill_color(Some(&ctx), 1.0, 1.0, 1.0, 1.0);
-  CGContext::fill_rect(Some(&ctx), all);
+  fill(&ctx, [255, 255, 255], all);
   CGContext::set_interpolation_quality(Some(&ctx), CGInterpolationQuality::High);
   // The whole photo, placed so `src` fills the output (CoreGraphics' origin is the bottom).
   let fx = w as f64 / src.w;
@@ -176,6 +280,16 @@ pub fn part_jpeg(path: &Path, whole: (u32, u32), src: Rect, out: (u32, u32), qua
   CGContext::draw_image(Some(&ctx), at, Some(&image));
   let drawn = CGBitmapContextCreateImage(Some(&ctx))?;
   jpeg(&drawn, quality)
+}
+
+/// A file's photo, upright at full size, as JPEG at `quality`, with its size: for apps that
+/// don't turn photos by their orientation, or read their format.
+pub fn upright_jpeg(path: &Path, quality: f64) -> Option<(Vec<u8>, u32, u32)> {
+  let source = source_at(path)?;
+  let (w, h) = upright_size(&source)?;
+  let image = thumbnail_image(&source, w.max(h))?;
+  let size = (CGImage::width(Some(&image)) as u32, CGImage::height(Some(&image)) as u32);
+  Some((jpeg(&image, quality)?, size.0, size.1))
 }
 
 /// The source's first image, upright, at most `max` px on its longest side.

@@ -19,6 +19,7 @@ import {
 } from './geometry';
 import { outputPages, planPage, slideKey, fitPixels } from './renderPlan';
 import { createZip, readZip } from './zip';
+import { buildIdml, type LinkedImage } from './idml';
 import { allSpreads, sheetOf } from './spreads';
 import type { Project, Sheet } from './types';
 
@@ -251,6 +252,29 @@ describe('golden files for native/core', () => {
       ),
     );
     check('render.json', cases);
+  });
+
+  it('idml.json: the InDesign file', async () => {
+    const cases: Case[] = [];
+    for (const [name, project] of projects()) {
+      const links = new Map<string, LinkedImage>(
+        Object.values(project.photos).map((p, i) => [
+          p.id,
+          {
+            path: `Links/${p.name.replace(/\.[^.]*$/, '')} & co ${i}.${i % 2 ? 'png' : 'jpg'}`,
+            format: i % 2 ? 'png' : 'jpeg',
+            ppi: i % 3 ? 300 : 72,
+            pxW: p.pxW,
+            pxH: p.pxH,
+          },
+        ]),
+      );
+      const files = await Promise.all(
+        buildIdml(project, links).map(async (f) => ({ name: f.name, text: await new Blob([f.data]).text() })),
+      );
+      cases.push({ name, input: { project, links: [...links] }, output: files });
+    }
+    check('idml.json', cases);
   });
 
   it('geometry.json: guides, snapping, fitting, and relayout', () => {

@@ -6,8 +6,11 @@ use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 use sequence_core::export_options::{DESTINATIONS, converts, export_px_per_unit, per_of};
 use sequence_core::geometry::{Rect, sheet_extent};
-use sequence_core::model::{ExportDestination as Destination, Unit};
+use gpui_kit::component::slider::{Slider, SliderEvent, SliderState};
+use sequence_core::model::{ExportDestination as Destination, ImageFormat, Unit};
+use sequence_core::raster::{extension, format_bytes, image_names};
 use sequence_core::render_plan::{OutputPage, Part, Per, output_pages, page_region};
+use sequence_core::resolution::{Located, soft_photos, soft_sentence};
 use sequence_core::units::{terms, units};
 
 use super::controls::{help, segmented};
@@ -173,82 +176,222 @@ impl Workspace {
       .border_color(theme.divider)
       .child(section(Some("Destination"), theme).child(picker));
 
+    let spreads = sheet.arrangement == sequence_core::Arrangement::Spreads;
+    let max_dpi = if sheet.unit == Unit::In { sheet.px_per_unit } else { 1.0 };
+    let enabled = busy.is_none();
+    let per_choice = |title: &'static str, cx: &mut Context<Self>| {
+      section(Some(title), theme).child(segmented(
+        "export-per",
+        &[(Per::Spread, "Spread"), (Per::Page, "Page")],
+        per,
+        theme,
+        {
+          let ws = cx.entity().downgrade();
+          move |p, _, cx| {
+            let _ = ws.update(cx, |ws, cx| ws.set_export_options(cx, |o| o.per = p));
+          }
+        },
+      ))
+    };
+
     match to {
       Destination::Pdf => {
-        let spreads = sheet.arrangement == sequence_core::Arrangement::Spreads;
         if converts(to, sheet.unit) {
           let field = self.number_field(
             Field::PrintAt,
             Some("Print at"),
             format!("{} dpi", o.print_at),
-            busy.is_none(),
+            enabled,
             theme,
             window,
             cx,
           );
           panel = panel.child(
             section(None, theme)
-              .child(div().text_color(theme.muted).child(format!(
-                "{} are measured in pixels, so they’re given a printed size: {} × {} in.",
-                capitalize(terms(sheet.arrangement).spreads),
-                round2(sheet.page_w / o.print_at),
-                round2(sheet.page_h / o.print_at)
-              )))
+              .child(note(
+                format!(
+                  "{} are measured in pixels, so they’re given a printed size: {} × {} in.",
+                  capitalize(terms(sheet.arrangement).spreads),
+                  round2(sheet.page_w / o.print_at),
+                  round2(sheet.page_h / o.print_at)
+                ),
+                theme,
+              ))
               .child(field),
           );
         }
         if spreads {
-          panel = panel.child(section(Some("One PDF page per"), theme).child(segmented(
-            "export-per",
-            &[(Per::Spread, "Spread"), (Per::Page, "Page")],
-            per,
-            theme,
-            {
-              let ws = cx.entity().downgrade();
-              move |p, _, cx| {
-                let _ = ws.update(cx, |ws, cx| ws.set_export_options(cx, |o| o.per = p));
-              }
-            },
-          )));
+          panel = panel.child(per_choice("One PDF page per", cx));
         }
         if sheet.unit == Unit::In {
           let field = self.number_field(
             Field::ExportDpi,
             Some("Photos at"),
             format!("{} dpi", px_per_unit),
-            busy.is_none(),
+            enabled,
             theme,
             window,
             cx,
           );
           panel = panel.child(section(Some("Resolution"), theme).child(field).child(help(
-            format!(
-              "Up to the page’s {} dpi. Lower makes a smaller file, for a proof.",
-              sheet.px_per_unit
-            ),
+            format!("Up to the page’s {max_dpi} dpi. Lower makes a smaller file, for a proof."),
             theme,
           )));
         }
-        let label = busy.clone().unwrap_or_else(|| "Export PDF".into());
-        let mut button = text_button(
-          "export-run",
-          label,
-          theme,
-          true,
-          cx.listener(|ws, _, _, cx| ws.save_pdf(cx)),
-        )
-        .justify_center();
-        if busy.is_some() {
-          button = button.opacity(0.6);
-        }
-        panel = panel.child(section(None, theme).child(button));
       }
-      _ => {
+      Destination::Images => {
+        if converts(to, sheet.unit) {
+          let field = self.number_field(
+            Field::ExportDpi,
+            Some("Resolution"),
+            format!("{} dpi", px_per_unit),
+            enabled,
+            theme,
+            window,
+            cx,
+          );
+          let mut sec = section(None, theme)
+            .child(note(
+              format!(
+                "Pages are measured in inches, so they’re turned into pixels: {} × {} px a page.",
+                (sheet.page_w * px_per_unit).round(),
+                (sheet.page_h * px_per_unit).round()
+              ),
+              theme,
+            ))
+            .child(field);
+          if px_per_unit >= max_dpi {
+            sec = sec.child(help(format!("Up to the page’s {max_dpi} dpi."), theme));
+          }
+          panel = panel.child(sec);
+        }
+        if spreads {
+          panel = panel.child(per_choice("One image per", cx));
+        }
+        let mut sec = section(Some("Format"), theme).child(segmented(
+          "export-format",
+          &[(ImageFormat::Jpeg, "JPEG"), (ImageFormat::Png, "PNG")],
+          o.format,
+          theme,
+          {
+            let ws = cx.entity().downgrade();
+            move |f, _, cx| {
+              let _ = ws.update(cx, |ws, cx| ws.set_export_options(cx, |o| o.format = f));
+            }
+          },
+        ));
+        if o.format == ImageFormat::Jpeg {
+          let slider = self.quality_slider(o.quality, window, cx);
+          sec = sec.child(
+            div()
+              .flex()
+              .items_center()
+              .gap(px(8.0))
+              .child(div().w(px(56.0)).text_color(theme.muted).child("Quality"))
+              .child(div().flex_1().child(Slider::new(&slider).disabled(!enabled)))
+              .child(
+                div()
+                  .w(px(36.0))
+                  .font_family(MONO)
+                  .text_size(px(11.0))
+                  .child(format!("{}%", (o.quality * 100.0).round())),
+              ),
+          );
+        } else {
+          sec = sec.child(help("Lossless, so larger.", theme));
+        }
+        let names = image_names(&project, &pages, extension(o.format));
+        let shown: Vec<&str> = names.iter().take(2).map(String::as_str).collect();
+        sec = sec.child(help(
+          format!(
+            "Saved as a ZIP: {}{}",
+            shown.join(", "),
+            if pages.len() > 2 { ", …" } else { "" }
+          ),
+          theme,
+        ));
+        let estimate = self.images_estimate(cx);
+        sec = sec.child(
+          div().font_family(MONO).text_size(px(11.0)).text_color(theme.muted).child(format!(
+            "{} {}{}",
+            pages.len(),
+            if pages.len() == 1 { "image" } else { "images" },
+            estimate.map_or(String::new(), |b| format!(", ~{} total", format_bytes(b)))
+          )),
+        );
+        panel = panel.child(sec);
+      }
+      Destination::Indesign => {
+        let mut text = "An InDesign file with every photo linked at full size, and the guides as InDesign guides.".to_string();
+        if !spreads {
+          text.push_str(" Frames become single pages, without facing pages.");
+        }
+        if sheet.unit == Unit::Px {
+          text.push_str(&format!(
+            " InDesign counts a pixel as a point, so pages open at {} × {} px.",
+            sheet.page_w, sheet.page_h
+          ));
+        }
+        panel = panel.child(section(None, theme).child(help(text, theme)));
+      }
+      Destination::Instagram => {
         panel = panel.child(section(None, theme).child(help(
           format!("Exporting to {} isn’t in this version yet.", look(to).0),
           theme,
         )));
       }
+    }
+
+    if to != Destination::Instagram {
+      let soft = soft_photos(&project, Some(px_per_unit));
+      let mut actions = section(None, theme);
+      if let Some(first) = soft.first().cloned() {
+        let sentence = soft_sentence(soft.len(), sheet.unit, px_per_unit, false);
+        actions = actions.child(
+          div()
+            .flex()
+            .flex_wrap()
+            .items_center()
+            .gap(px(6.0))
+            .text_color(theme.warn)
+            .child(svg().path(icon("triangle-alert")).size(px(13.0)).text_color(theme.warn))
+            .child(sentence)
+            .child(
+              div()
+                .id("show-soft")
+                .text_color(theme.accent)
+                .cursor_pointer()
+                .child("Show me")
+                .on_click(cx.listener(move |ws, _, _, cx| ws.show_photo(first.clone(), cx))),
+            ),
+        );
+      }
+      let action = match to {
+        Destination::Pdf => "Export PDF".to_string(),
+        Destination::Images => format!(
+          "Export {} {}",
+          pages.len(),
+          if pages.len() == 1 { "image" } else { "images" }
+        ),
+        _ => "Export for InDesign".to_string(),
+      };
+      let label = busy.clone().unwrap_or(action);
+      let mut button = text_button(
+        "export-run",
+        label,
+        theme,
+        true,
+        cx.listener(move |ws, _, _, cx| match to {
+          Destination::Pdf => ws.save_pdf(cx),
+          Destination::Images => ws.save_images(cx),
+          _ => ws.save_indesign(cx),
+        }),
+      )
+      .justify_center();
+      if busy.is_some() {
+        button = button.opacity(0.6);
+      }
+      panel = panel.child(actions.child(button));
     }
 
     div()
@@ -294,6 +437,42 @@ impl Workspace {
       .into_any_element()
   }
 
+  /// The JPEG quality slider, from 50 to 100%: saved when it's let go.
+  fn quality_slider(&mut self, quality: f64, window: &mut Window, cx: &mut Context<Self>) -> Entity<SliderState> {
+    if let Some(s) = &self.ui.export.quality {
+      return s.clone();
+    }
+    let s = cx.new(|_| {
+      SliderState::new()
+        .min(50.0)
+        .max(100.0)
+        .step(1.0)
+        .default_value((quality * 100.0).round() as f32)
+    });
+    cx.subscribe_in(&s, window, |ws, _, ev: &SliderEvent, _, cx| match ev {
+      SliderEvent::Change(v) => {
+        ws.ui.export.live_quality = Some(f64::from(v.start()) / 100.0);
+        cx.notify();
+      }
+      SliderEvent::Release(v) => {
+        ws.ui.export.live_quality = None;
+        let q = f64::from(v.start()) / 100.0;
+        ws.set_export_options(cx, |o| o.quality = q);
+      }
+    })
+    .detach();
+    self.ui.export.quality = Some(s.clone());
+    s
+  }
+
+  /// Open a placed photo in the spread editor, selected.
+  pub fn show_photo(&mut self, at: Located, cx: &mut Context<Self>) {
+    self.ui.modal = None;
+    self.open_editor(at.spread_id, cx);
+    self.ui.editor_selected = Some(at.photo_id);
+    cx.notify();
+  }
+
   /// A dpi typed on the Export page.
   pub fn export_field(&mut self, field: &Field, n: f64, cx: &mut Context<Self>) {
     let sheet = self.project().sheet();
@@ -306,6 +485,16 @@ impl Workspace {
       _ => {}
     }
   }
+}
+
+/// A note on how the destination converts the project's measurements.
+fn note(text: String, theme: &Theme) -> Div {
+  div()
+    .flex()
+    .gap(px(6.0))
+    .text_color(theme.muted)
+    .child(svg().path(icon("info")).flex_none().mt(px(2.0)).size(px(13.0)).text_color(theme.muted))
+    .child(div().flex_1().child(text))
 }
 
 fn capitalize(s: &str) -> String {
