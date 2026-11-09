@@ -5,6 +5,7 @@ use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 use sequence_core::actions::{DropTarget, folio_label, is_movable};
 use sequence_core::geometry::{Rect, sheet_extent};
+use sequence_core::resolution::{placed_soft, soft_label};
 use sequence_core::units::terms;
 use sequence_core::{Arrangement, PageSide};
 
@@ -146,8 +147,13 @@ impl Workspace {
           }
         }
       }
-      // The foot: its folio, and (for a movable spread) delete.
+      // The foot: its folio, its soft photos, and (for a movable spread) delete.
       let label = folio_label(i, total, arrangement);
+      let soft = spread
+        .items
+        .iter()
+        .filter(|p| placed_soft(project.photos.get(&p.photo_id), p, sheet.px_per_unit))
+        .count();
       let foot = div()
         .absolute()
         .left(x(ROW_PAD + 2.0))
@@ -165,6 +171,23 @@ impl Workspace {
             .font_weight(FontWeight::MEDIUM)
             .child(label),
         )
+        .when(soft > 0, |d| {
+          d.child(
+            div()
+              .flex()
+              .items_center()
+              .gap(px(3.0))
+              .text_size(px(10.0))
+              .text_color(theme.warn)
+              .child(
+                svg()
+                  .path(crate::assets::icon("triangle-alert"))
+                  .size(px(11.0))
+                  .text_color(theme.warn),
+              )
+              .child(soft_label(soft, sheet.unit, sheet.px_per_unit)),
+          )
+        })
         .child(div().flex_1())
         .when(is_movable(spread.kind), |d| {
           let id = spread.id.clone();

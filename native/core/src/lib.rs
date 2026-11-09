@@ -21,6 +21,7 @@ pub mod schema;
 pub mod store;
 pub mod test_images;
 pub mod time;
+pub mod tour;
 pub mod units;
 pub mod validate;
 

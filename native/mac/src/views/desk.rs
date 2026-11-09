@@ -85,7 +85,7 @@ pub fn handle_targets(
 }
 
 impl Workspace {
-  pub fn render_desk_page(&mut self, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
+  pub fn render_desk_page(&mut self, theme: &Theme, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
     let main = self.frames.main;
     let sidebar_w = if self.prefs.sidebar_open {
       self
@@ -109,7 +109,7 @@ impl Workspace {
       page = page.child(self.render_sidebar(r, theme, cx));
     }
     if self.ui.editing.is_some() {
-      page = page.child(self.render_editor(theme, cx));
+      page = page.child(self.render_editor(theme, window, cx));
     }
     page.into_any_element()
   }
@@ -244,6 +244,7 @@ impl Workspace {
       rgb(0xeeeeee).into()
     };
     let any = !self.project().photos.is_empty();
+    let hints = self.ui.hints;
     div()
       .absolute()
       .size_full()
@@ -269,6 +270,8 @@ impl Workspace {
               true,
               cx.listener(|ws, _, window, cx| ws.pick_photos(window, cx)),
             )
+            .relative()
+            .when(hints, |d| d.child(super::paint::shortcut_badge("⌘I", theme)))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation()),
           ),
       )

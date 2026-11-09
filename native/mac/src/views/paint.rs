@@ -158,3 +158,45 @@ impl SpreadPicture<'_> {
     el.into_any_element()
   }
 }
+
+/// A mark on a photo with less detail than the page asks for, at its top right (`SoftBadge`).
+pub fn soft_badge(r: Rect, theme: &Theme) -> Div {
+  let size = 18f64.min(r.w * 0.4).min(r.h * 0.4).max(10.0);
+  boxed(Rect::new(r.x + r.w - size - 4.0, r.y + 4.0, size, size))
+    .rounded_full()
+    .flex()
+    .items_center()
+    .justify_center()
+    .bg(theme.warn)
+    .child(
+      svg()
+        .path(crate::assets::icon("triangle-alert"))
+        .size(x(size * 0.62))
+        .text_color(gpui_kit::white()),
+    )
+}
+
+/// A shortcut's badge just below its button, while ⌘ is held (`ShortcutBadges`). The button
+/// must be `relative()`.
+pub fn shortcut_badge(label: &'static str, theme: &Theme) -> Div {
+  div()
+    .absolute()
+    .top_full()
+    .mt(px(4.0))
+    .left_0()
+    .right_0()
+    .flex()
+    .justify_center()
+    .child(
+      div()
+        .px(px(5.0))
+        .py(px(1.0))
+        .rounded(px(3.0))
+        .bg(theme.text)
+        .text_color(theme.bg)
+        .text_size(px(10.0))
+        .font_family(crate::assets::MONO)
+        .whitespace_nowrap()
+        .child(label),
+    )
+}

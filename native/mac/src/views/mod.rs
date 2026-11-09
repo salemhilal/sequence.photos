@@ -2,6 +2,7 @@
 //! bar, and what floats over them. Each region also records where it drew things
 //! (`Frames`) for the pointer's gestures.
 
+pub mod about;
 pub mod controls;
 pub mod crop;
 pub mod desk;
@@ -88,6 +89,16 @@ pub fn text_button(
 
 impl Render for Workspace {
   fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    // The menu bar's wording follows the sidebar, the guides, and the arrangement.
+    let menu = crate::commands::MenuState {
+      sidebar_open: self.prefs.sidebar_open,
+      guides_shown: !self.ui.guides_hidden,
+      arrangement: self.project().layout.arrangement(),
+    };
+    if self.menu_state != Some(menu) {
+      self.menu_state = Some(menu);
+      cx.set_menus(crate::commands::menus(menu));
+    }
     let theme = self.theme(window);
     let size = window.viewport_size();
     let (w, h) = (f64::from(size.width), f64::from(size.height));
@@ -107,7 +118,7 @@ impl Render for Workspace {
     self.frames.crop_zone = None;
 
     let main = match self.ui.page {
-      Page::Desk => self.render_desk_page(&theme, cx),
+      Page::Desk => self.render_desk_page(&theme, window, cx),
       Page::Preview => self.render_preview(&theme, cx),
       Page::Export => self.render_export(&theme, window, cx),
     };
@@ -155,6 +166,7 @@ impl Render for Workspace {
       .text_size(px(12.0))
       .on_modifiers_changed(cx.listener(|ws, ev: &ModifiersChangedEvent, _, cx| {
         ws.ui.cmd_held = ev.modifiers.platform;
+        ws.modifiers_changed(ev.modifiers, cx);
         cx.notify();
       }));
     root = if self.ui.cropping.is_some() {
@@ -264,6 +276,9 @@ impl Render for Workspace {
     if self.ui.quick_look.is_some() {
       root = root.child(self.render_quick_look(&theme, cx));
     }
+    if let Some(tour) = self.render_tour(&theme, cx) {
+      root = root.child(tour);
+    }
     root
   }
 }
@@ -282,10 +297,18 @@ impl Workspace {
     window.set_window_title(&name);
     window.set_window_edited(edited);
     let page = self.ui.page;
+    let hints = self.ui.hints;
     let tab = |id: &'static str, label: &'static str, which: Page, theme: &Theme, cx: &mut Context<Self>| {
       let on = page == which;
+      let key = match which {
+        Page::Desk => "⌥⌘1",
+        Page::Preview => "⌥⌘2",
+        Page::Export => "⌥⌘3",
+      };
       let mut t = div()
         .id(id)
+        .relative()
+        .when(hints, |d| d.child(paint::shortcut_badge(key, theme)))
         .flex()
         .items_center()
         .h(px(22.0))

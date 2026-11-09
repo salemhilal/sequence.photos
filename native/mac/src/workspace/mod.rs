@@ -97,6 +97,10 @@ pub struct Ui {
   pub space_down: Option<Instant>,
   pub space_panned: bool,
   pub cmd_held: bool,
+  /// Shortcut badges showing (⌘ held a moment).
+  pub hints: bool,
+  /// Counts ⌘ presses, so a badge timer from an earlier press does nothing.
+  pub hint_press: u64,
   pub fitted_once: bool,
   pub cropping: Option<Cropping>,
   /// The Layout view, while it's open, and the label beside a guide being dragged.
@@ -104,6 +108,9 @@ pub struct Ui {
   pub guide_label: Option<(String, f64, f64)>,
   /// The Export page's own state.
   pub export: crate::export::ExportUi,
+  /// The editor's Keep proportions, and the box a hovered Fit button means (spread units).
+  pub keep_proportions: bool,
+  pub fit_glow: Option<Rect>,
 }
 
 impl Default for Ui {
@@ -137,11 +144,15 @@ impl Default for Ui {
       space_down: None,
       space_panned: false,
       cmd_held: false,
+      hints: false,
+      hint_press: 0,
       fitted_once: false,
       cropping: None,
       layout: None,
       guide_label: None,
       export: Default::default(),
+      keep_proportions: true,
+      fit_glow: None,
     }
   }
 }
@@ -174,6 +185,14 @@ pub struct Workspace {
   pub fields: Fields,
   /// Instagram: the account, signing in, and the post being written.
   pub ig: crate::posting::InstagramUi,
+  /// The tour, while it runs (with the user's work set aside).
+  pub tour: Option<crate::tour::Tour>,
+  /// Photos copied with ⌘C.
+  pub copied: crate::clipboard::Copied,
+  /// The menu bar's wording, as last set.
+  pub menu_state: Option<crate::commands::MenuState>,
+  /// The main window, for asking questions in it.
+  pub window_handle: Option<AnyWindowHandle>,
   saved_to_library: u64,
   /// A save to the library is coming (saves wait a moment, so held keys don't write each step).
   save_scheduled: bool,
@@ -212,6 +231,10 @@ impl Workspace {
         connection: crate::instagram::load_connection(),
         ..Default::default()
       },
+      window_handle: None,
+      menu_state: None,
+      tour: None,
+      copied: Default::default(),
       saved_to_library: 0,
       save_scheduled: false,
       importing: 0,
@@ -288,7 +311,8 @@ impl Workspace {
   /// Keep the project in the library now (if it changed, and no gesture is under way).
   pub fn save_to_library(&mut self) {
     self.save_scheduled = false;
-    if self.history.in_gesture() || self.saved_to_library == self.history.revision() {
+    // The tour's sample project is never kept.
+    if self.tour.is_some() || self.history.in_gesture() || self.saved_to_library == self.history.revision() {
       return;
     }
     self.saved_to_library = self.history.revision();
@@ -345,6 +369,7 @@ impl Workspace {
 
   /// Add photos from files: decoded in the background, then put on the desk in a grid.
   pub fn add_photos(&mut self, paths: Vec<PathBuf>, cx: &mut Context<Self>) {
+    self.leave_tour(cx);
     let files: Vec<PathBuf> = expand(paths)
       .into_iter()
       .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(is_image_name))
@@ -471,6 +496,11 @@ impl Workspace {
 
   /// Duplicate photos: new, independent photos, down and right of the originals.
   pub fn duplicate(&mut self, ids: &[PhotoId], cx: &mut Context<Self>) -> Vec<PhotoId> {
+    self.duplicate_by(ids, act::DUPLICATE_OFFSET, cx)
+  }
+
+  /// Copies of photos, `offset` inches from them (on a page, at the same spot).
+  pub fn duplicate_by(&mut self, ids: &[PhotoId], offset: f64, cx: &mut Context<Self>) -> Vec<PhotoId> {
     let ids: Vec<PhotoId> = ids
       .iter()
       .filter(|id| self.project().photos.contains_key(*id))
@@ -482,7 +512,7 @@ impl Workspace {
     let copies = act::copies_of(&ids);
     self.store_copies(&copies);
     let visible = self.visible();
-    self.apply(cx, |d| act::place_copies(d, &copies, act::DUPLICATE_OFFSET, visible));
+    self.apply(cx, |d| act::place_copies(d, &copies, offset, visible));
     copies.into_iter().map(|c| c.id).collect()
   }
 
@@ -494,8 +524,8 @@ impl Workspace {
 
   /// Remove photos' files that no project in the history refers to.
   pub fn prune_library(&mut self) {
-    // An import under way has files no project refers to yet.
-    if self.importing > 0 || !self.imported.is_empty() {
+    // An import under way has files no project refers to yet; the tour's project isn't the user's.
+    if self.importing > 0 || !self.imported.is_empty() || self.tour.is_some() {
       return;
     }
     let keep: HashSet<PhotoId> = self

@@ -29,6 +29,16 @@ pub fn dev_server_url() -> &'static str {
   value("VITE_DEV_SERVER_URL")
 }
 
+/// The source code, linked from About and the Help menu.
+pub fn repo_url() -> &'static str {
+  value("VITE_REPO_URL")
+}
+
+/// The website's address, e.g. https://sequence.photos.
+pub fn site_url() -> String {
+  format!("https://{}", value("VITE_SITE_DOMAIN"))
+}
+
 /// The Instagram app's id (public: it's in every sign-in URL).
 pub fn instagram_app_id() -> &'static str {
   value("VITE_INSTAGRAM_APP_ID")

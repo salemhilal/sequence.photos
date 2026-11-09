@@ -128,7 +128,7 @@ impl Workspace {
       return;
     }
     self.history.silent(|d| d.export = Some(next));
-    if self.lib.save_project(self.history.project()).is_err() {
+    if self.tour.is_none() && self.lib.save_project(self.history.project()).is_err() {
       self.ui.notice = Some("Couldn’t keep a copy of your work in the app’s storage.".into());
     }
   }

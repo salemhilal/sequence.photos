@@ -11,6 +11,7 @@ use sequence_core::geometry::{
   Rect, edges_of, line_on_page, line_position, page_rect, page_sides, spread_left, spread_width,
 };
 use sequence_core::page_setup::{Anchor, Content, PageDraft, resizes};
+use sequence_core::resolution::{placed_soft, soft_photos, soft_sentence};
 use sequence_core::units::{PRESETS, terms, units};
 use sequence_core::{Arrangement, Axis, BorderShape, PageSide, Project, Spread, SpreadKind, Unit};
 
@@ -216,10 +217,32 @@ impl Workspace {
       el = el.child(p);
     }
     el = el.child(pic.photo_elements(&mut self.lib, &project, theme));
+    for p in &spread.items {
+      if placed_soft(project.photos.get(&p.photo_id), p, sheet.px_per_unit) {
+        el = el.child(super::paint::soft_badge(pic.at(Rect::from(p)), theme));
+      }
+    }
     el = el.child(pic.outline(theme));
     let noun = terms(sheet.arrangement).spread;
     let i = st.preview_index;
     let light = self.desk_light();
+    // With no changes waiting, this is the project as it is: photos are soft, not would be.
+    let soft = soft_photos(&project, None).len();
+    if soft > 0 {
+      let changed = st.draft != sequence_core::page_setup::PageDraft::of(self.project());
+      el = el.child(
+        div()
+          .absolute()
+          .left_0()
+          .right_0()
+          .bottom(px(48.0))
+          .flex()
+          .justify_center()
+          .text_size(px(11.0))
+          .text_color(theme.warn)
+          .child(soft_sentence(soft, sheet.unit, sheet.px_per_unit, changed)),
+      );
+    }
     el.child(
       div()
         .absolute()

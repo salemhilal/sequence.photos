@@ -51,8 +51,16 @@ actions!(
     ToggleFullScreen,
     CloseWindow,
     Confirm,
+    ShowLayout,
+    HideApp,
+    HideOthers,
+    ShowAll,
+    TakeTour,
+    OpenGitHub,
   ]
 );
+
+use gpui_kit::component::input::{Copy as CopyItems, Cut, Paste as PasteItems};
 
 /// The shortcuts, in the workspace's key context.
 pub fn key_bindings() -> Vec<KeyBinding> {
@@ -68,6 +76,11 @@ pub fn key_bindings() -> Vec<KeyBinding> {
     KeyBinding::new("cmd-shift-z", Redo, None),
     KeyBinding::new("cmd-a", SelectAll, w),
     KeyBinding::new("cmd-d", Duplicate, w),
+    KeyBinding::new("cmd-c", CopyItems, w),
+    KeyBinding::new("cmd-v", PasteItems, w),
+    KeyBinding::new("alt-cmd-p", ShowLayout, None),
+    KeyBinding::new("cmd-h", HideApp, None),
+    KeyBinding::new("alt-cmd-h", HideOthers, None),
     KeyBinding::new("backspace", Delete, w),
     KeyBinding::new("delete", Delete, w),
     KeyBinding::new("escape", Escape, w),
@@ -97,8 +110,18 @@ pub fn key_bindings() -> Vec<KeyBinding> {
   ]
 }
 
+/// What the menu bar's wording follows.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct MenuState {
+  pub sidebar_open: bool,
+  pub guides_shown: bool,
+  pub arrangement: sequence_core::Arrangement,
+}
+
 /// The menu bar. macOS titles the first menu with the app's name.
-pub fn menus() -> Vec<Menu> {
+pub fn menus(state: MenuState) -> Vec<Menu> {
+  let spreads = sequence_core::units::terms(state.arrangement).spreads;
+  let spreads = format!("{}{}", spreads[..1].to_uppercase(), &spreads[1..]);
   vec![
     Menu::new("Sequence").items([
       MenuItem::action("About Sequence", About),
@@ -107,27 +130,33 @@ pub fn menus() -> Vec<Menu> {
       MenuItem::separator(),
       MenuItem::os_submenu("Services", SystemMenuType::Services),
       MenuItem::separator(),
+      MenuItem::action("Hide Sequence", HideApp),
+      MenuItem::action("Hide Others", HideOthers),
+      MenuItem::action("Show All", ShowAll),
+      MenuItem::separator(),
       MenuItem::action("Quit Sequence", Quit),
     ]),
     Menu::new("File").items([
       MenuItem::action("New Project…", NewProject),
       MenuItem::action("Open…", OpenProject),
-      MenuItem::separator(),
       MenuItem::action("Save", SaveProject),
       MenuItem::action("Save As…", SaveProjectAs),
+      MenuItem::action("Close Window", CloseWindow),
       MenuItem::separator(),
       MenuItem::action("Add Photos…", AddPhotos),
       MenuItem::separator(),
       MenuItem::action("Export…", ShowExport),
-      MenuItem::separator(),
-      MenuItem::action("Close", CloseWindow),
     ]),
     Menu::new("Edit").items([
       MenuItem::action("Undo", Undo),
       MenuItem::action("Redo", Redo),
       MenuItem::separator(),
+      MenuItem::action("Cut", Cut),
+      MenuItem::action("Copy", CopyItems),
+      MenuItem::action("Paste", PasteItems),
       MenuItem::action("Duplicate", Duplicate),
       MenuItem::action("Delete", Delete),
+      MenuItem::separator(),
       MenuItem::action("Select All", SelectAll),
     ]),
     Menu::new("View").items([
@@ -135,8 +164,19 @@ pub fn menus() -> Vec<Menu> {
       MenuItem::action("Preview", ShowPreview),
       MenuItem::action("Export", ShowExport),
       MenuItem::separator(),
-      MenuItem::action("Show or Hide Spreads", ToggleSidebar),
-      MenuItem::action("Show or Hide Guides", ToggleGuides),
+      MenuItem::action("Layout…", ShowLayout),
+      MenuItem::action(
+        if state.guides_shown {
+          "Hide Guides"
+        } else {
+          "Show Guides"
+        },
+        ToggleGuides,
+      ),
+      MenuItem::action(
+        format!("{} {spreads}", if state.sidebar_open { "Hide" } else { "Show" }),
+        ToggleSidebar,
+      ),
       MenuItem::separator(),
       MenuItem::action("Tidy Up", Tidy),
       MenuItem::action("Zoom In", ZoomIn),
@@ -146,6 +186,10 @@ pub fn menus() -> Vec<Menu> {
       MenuItem::action("Enter Full Screen", ToggleFullScreen),
     ]),
     Menu::new("Window").items([MenuItem::action("Minimize", Minimize), MenuItem::action("Zoom", Zoom)]),
+    Menu::new("Help").items([
+      MenuItem::action("Take the Tour", TakeTour),
+      MenuItem::action("Sequence on GitHub", OpenGitHub),
+    ]),
   ]
 }
 
@@ -189,6 +233,18 @@ impl Workspace {
           ws.ui.selection = ws.duplicate(&sel, cx);
         }
         cx.notify();
+      }))
+      .on_action(cx.listener(|ws, _: &CopyItems, _, cx| ws.copy_photos(cx)))
+      .on_action(cx.listener(|ws, _: &PasteItems, _, cx| {
+        if ws.ui.page == Page::Desk {
+          ws.paste(cx);
+        }
+      }))
+      .on_action(cx.listener(|ws, _: &ShowLayout, _, cx| {
+        if !ws.posting() {
+          ws.go_to(Page::Desk, cx);
+          ws.open_layout(cx);
+        }
       }))
       .on_action(cx.listener(|ws, _: &Delete, _, cx| {
         if ws.ui.page == Page::Desk {
@@ -301,6 +357,10 @@ impl Workspace {
     if self.cancel_drag(cx) || self.cancel_tag(cx) {
       return;
     }
+    if self.touring() {
+      self.end_tour(cx);
+      return;
+    }
     if self.ui.context_menu.take().is_some() || self.ui.quick_look.take().is_some() {
       cx.notify();
       return;
@@ -323,6 +383,12 @@ impl Workspace {
 
   /// Space: tapped, Quick Look; held, the desk pans under the pointer.
   fn key_down(&mut self, ev: &KeyDownEvent, cx: &mut Context<Self>) {
+    // Any key but ⌘ itself hides the shortcut badges.
+    if self.ui.hints {
+      self.ui.hints = false;
+      self.ui.hint_press += 1;
+      cx.notify();
+    }
     if ev.keystroke.key == "space" && !ev.keystroke.modifiers.modified() {
       if !ev.is_held {
         self.ui.space_down = Some(std::time::Instant::now());
@@ -508,12 +574,27 @@ impl Workspace {
     .detach();
   }
 
-  /// Open a project file into the window, replacing what's there (which is kept in its
-  /// own file, if it has one, or was empty).
+  /// Open a project file into the window, replacing what's there (after asking, when
+  /// that has changes that aren't in a file).
   pub fn open_path(&mut self, path: PathBuf, cx: &mut Context<Self>) {
-    if !self.keep_current(cx) {
+    if self.posting() {
       return;
     }
+    self.leave_tour(cx);
+    let name = path
+      .file_name()
+      .map(|n| n.to_string_lossy().into_owned())
+      .unwrap_or_default();
+    self.confirm_replace(
+      "Replace your current project?",
+      format!("“{name}”"),
+      "Replace",
+      cx,
+      move |ws, cx| ws.open_now(path, cx),
+    );
+  }
+
+  fn open_now(&mut self, path: PathBuf, cx: &mut Context<Self>) {
     self.cancel_drag(cx);
     self.finish_crop(true, cx);
     match self.lib.open_file(&path) {
@@ -532,25 +613,103 @@ impl Workspace {
     }
   }
 
-  /// Before another project replaces this one: unsaved changes are saved to its file. False
-  /// (with a notice) when they can't be: untitled, or the save failed.
-  fn keep_current(&mut self, cx: &mut Context<Self>) -> bool {
-    if !self.edited() || self.project().photos.is_empty() {
-      return true;
+  /// Whether the project is safe in its file (or empty), so replacing it loses nothing.
+  pub fn project_is_safe(&self) -> bool {
+    self.project().photos.is_empty() || (self.doc.path.is_some() && !self.edited())
+  }
+
+  /// Ask a question in a sheet on the main window, then hear which answer was picked.
+  pub fn ask(
+    &mut self,
+    title: String,
+    detail: String,
+    answers: Vec<&'static str>,
+    cx: &mut Context<Self>,
+    then: impl FnOnce(&mut Self, usize, &mut Context<Self>) + 'static,
+  ) {
+    let Some(handle) = self.window_handle else { return };
+    let this = cx.entity().downgrade();
+    // Deferred: the window may be busy with the event that asked.
+    cx.defer(move |cx| {
+      let Ok(answer) = handle.update(cx, |_, window, cx| {
+        window.prompt(PromptLevel::Info, &title, Some(&detail), &answers, cx)
+      }) else {
+        return;
+      };
+      cx.spawn(async move |cx| {
+        if let Ok(i) = answer.await {
+          let _ = this.update(cx, |ws, cx| then(ws, i, cx));
+        }
+      })
+      .detach();
+    });
+  }
+
+  /// Before another project replaces this one (`confirmReplace`): go ahead when it's safe in
+  /// its file; otherwise ask to replace it, save it first, or cancel.
+  fn confirm_replace(
+    &mut self,
+    title: &str,
+    what: String,
+    label: &'static str,
+    cx: &mut Context<Self>,
+    then: impl FnOnce(&mut Self, &mut Context<Self>) + 'static,
+  ) {
+    if self.project_is_safe() {
+      then(self, cx);
+      return;
     }
-    let Some(path) = self.doc.path.clone() else {
-      self.ui.notice = Some("Save this project first (⌘S): another project would replace it.".into());
-      cx.notify();
-      return false;
+    let n = self.project().photos.len();
+    let detail = format!(
+      "{what} will replace the project you’re working on ({n} photo{}). Changes that aren’t saved to its file will be lost. To keep them, save first.",
+      if n == 1 { "" } else { "s" }
+    );
+    self.ask(
+      title.into(),
+      detail,
+      vec![label, "Save First", "Cancel"],
+      cx,
+      move |ws, i, cx| match i {
+        0 => then(ws, cx),
+        1 => ws.save_then(false, cx, then),
+        _ => {}
+      },
+    );
+  }
+
+  /// The window's name for the project: its file's, or Untitled.
+  pub fn document_name(&self) -> String {
+    self
+      .doc
+      .path
+      .as_ref()
+      .and_then(|p| p.file_stem())
+      .map_or("Untitled".into(), |s| s.to_string_lossy().into_owned())
+  }
+
+  /// Quit, or close the main window: first asking to save changes that aren't in a file.
+  pub fn request_quit(&mut self, cx: &mut Context<Self>) {
+    // Mid-tour, the sample project is showing: bring back the user's before judging it.
+    self.leave_tour(cx);
+    let quit = |ws: &mut Self, cx: &mut Context<Self>| {
+      ws.save_to_library();
+      cx.quit();
     };
-    match self.lib.save_file(&path, self.project(), &now_iso()) {
-      Ok(()) => true,
-      Err(e) => {
-        self.ui.notice = Some(format!("Couldn’t save the open project, so it’s still open: {e}"));
-        cx.notify();
-        false
-      }
+    if self.project_is_safe() {
+      quit(self, cx);
+      return;
     }
+    self.ask(
+      format!("Save changes to “{}”?", self.document_name()),
+      "Unsaved changes are kept in the app for next time, but they’re only safe once they’re in a file.".into(),
+      vec!["Save", "Don’t Save", "Cancel"],
+      cx,
+      move |ws, i, cx| match i {
+        0 => ws.save_then(false, cx, quit),
+        1 => quit(ws, cx),
+        _ => {}
+      },
+    );
   }
 
   fn remember_document(&mut self, path: &std::path::Path) {
@@ -567,8 +726,21 @@ impl Workspace {
 
   /// Save to the project's file, or (as, or without one) to a new one.
   pub fn save(&mut self, as_new: bool, _window: &mut Window, cx: &mut Context<Self>) {
+    self.save_then(as_new, cx, |_, _| {});
+  }
+
+  /// Save (to its file, or one chosen), then carry on if it saved.
+  pub fn save_then(
+    &mut self,
+    as_new: bool,
+    cx: &mut Context<Self>,
+    then: impl FnOnce(&mut Self, &mut Context<Self>) + 'static,
+  ) {
+    self.leave_tour(cx);
     if !as_new && let Some(path) = self.doc.path.clone() {
-      self.write_to(path, cx);
+      if self.write_to(path, cx) {
+        then(self, cx);
+      }
       return;
     }
     let dir = self
@@ -594,13 +766,18 @@ impl Workspace {
     let picked = cx.prompt_for_new_path(&dir, Some(&format!("{stem}.{PROJECT_EXTENSION}")));
     cx.spawn(async move |this, cx| {
       if let Ok(Ok(Some(path))) = picked.await {
-        let _ = this.update(cx, |ws, cx| ws.write_to(path, cx));
+        let _ = this.update(cx, |ws, cx| {
+          if ws.write_to(path, cx) {
+            then(ws, cx);
+          }
+        });
       }
     })
     .detach();
   }
 
-  fn write_to(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+  /// Save to a file; whether it worked.
+  fn write_to(&mut self, path: PathBuf, cx: &mut Context<Self>) -> bool {
     let path = if path.extension().is_none() {
       path.with_extension(PROJECT_EXTENSION)
     } else {
@@ -614,17 +791,33 @@ impl Workspace {
         self.prefs.document_edited = false;
         self.prefs.save();
         self.prune_library();
+        cx.notify();
+        true
       }
-      Err(e) => self.ui.notice = Some(format!("Couldn’t save the project: {e}")),
+      Err(e) => {
+        self.ui.notice = Some(format!("Couldn’t save the project: {e}"));
+        cx.notify();
+        false
+      }
     }
-    cx.notify();
   }
 
-  /// A new, empty project (the current one is kept in its file, if saved).
+  /// A new, empty project (after asking, when this one's changes aren't in a file).
   pub fn new_project(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
-    if !self.keep_current(cx) {
+    if self.posting() {
       return;
     }
+    self.leave_tour(cx);
+    self.confirm_replace(
+      "Start a new project?",
+      "A new project".into(),
+      "New Project",
+      cx,
+      |ws, cx| ws.new_now(cx),
+    );
+  }
+
+  fn new_now(&mut self, cx: &mut Context<Self>) {
     self.cancel_drag(cx);
     self.finish_crop(true, cx);
     self.lib.clear();
@@ -647,4 +840,47 @@ pub fn now_iso() -> String {
     .duration_since(std::time::UNIX_EPOCH)
     .map_or(0, |d| d.as_millis() as i64);
   sequence_core::time::iso_from_millis(millis)
+}
+
+/// The local time of day, as "18:23".
+pub fn local_time_hm() -> String {
+  #[cfg(target_os = "macos")]
+  {
+    let now = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .map_or(0, |d| d.as_secs() as libc::time_t);
+    // SAFETY: localtime_r fills the tm it's given from a valid time.
+    let mut tm: libc::tm = unsafe { std::mem::zeroed() };
+    if !unsafe { libc::localtime_r(&now, &mut tm) }.is_null() {
+      return format!("{:02}:{:02}", tm.tm_hour, tm.tm_min);
+    }
+  }
+  now_iso()[11..16].to_string()
+}
+
+/// How long ⌘ is held before the shortcut badges show.
+const HINT_DELAY: std::time::Duration = std::time::Duration::from_millis(250);
+
+impl Workspace {
+  /// ⌘ alone, held a moment: the shortcut badges (unless turned off in Settings). Anything
+  /// else hides them.
+  pub fn modifiers_changed(&mut self, m: Modifiers, cx: &mut Context<Self>) {
+    self.ui.hint_press += 1;
+    self.ui.hints = false;
+    let alone = m.platform && !m.shift && !m.alt && !m.control && !m.function;
+    if !alone || !self.prefs.shortcut_badges {
+      return;
+    }
+    let press = self.ui.hint_press;
+    cx.spawn(async move |this, cx| {
+      cx.background_executor().timer(HINT_DELAY).await;
+      let _ = this.update(cx, |ws, cx| {
+        if ws.ui.hint_press == press && ws.ui.cmd_held {
+          ws.ui.hints = true;
+          cx.notify();
+        }
+      });
+    })
+    .detach();
+  }
 }

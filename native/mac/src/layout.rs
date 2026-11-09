@@ -320,6 +320,7 @@ impl Workspace {
       return;
     };
     match field {
+      Field::Item(i) => self.item_field(i, n, cx),
       Field::PageW | Field::PageH => self.set_draft(cx, |d, _| {
         let u = units(d.page.unit);
         let v = u.round(n).max(u.min_size);

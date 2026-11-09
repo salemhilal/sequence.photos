@@ -1,6 +1,7 @@
 //! The spread editor: one spread, large, with its guides; photos move and resize with
 //! snapping; a strip of the desk's photos below to drag in (`SpreadEditor.tsx`).
 
+use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 use sequence_core::actions::{DropTarget, folio_label, placement_mut};
 use sequence_core::geometry::{
@@ -9,12 +10,16 @@ use sequence_core::geometry::{
 use sequence_core::units::{terms, units};
 use sequence_core::{PageSide, PhotoMeta};
 
+use super::controls::check;
 use super::desk::{handle_targets, selection_frame};
-use super::paint::{SpreadPicture, boxed, photo, x};
+use super::paint::{SpreadPicture, boxed, photo, soft_badge, x};
 use super::{icon_button, text_button};
 use crate::assets::MONO;
+use crate::fields::Field;
 use crate::theme::Theme;
 use crate::workspace::{EditorFrame, Source, Surface, Workspace};
+use sequence_core::PhotoId;
+use sequence_core::resolution::{next_soft_photo, placed_soft, resolution_note};
 
 /// Room under the spread for its pager.
 pub const PAGER_PX: f64 = 52.0;
@@ -26,7 +31,7 @@ const STRIP_H: f64 = 96.0;
 const MARGIN: f64 = 24.0;
 
 impl Workspace {
-  pub fn render_editor(&mut self, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
+  pub fn render_editor(&mut self, theme: &Theme, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
     let main = self.frames.main;
     let project = self.history.project().clone();
     let Some(id) = self.ui.editing.clone() else {
@@ -115,6 +120,19 @@ impl Workspace {
           ws.photo_down(Source::Editor, pid.clone(), ev, cx);
         }),
       ));
+      let cropping = self.ui.cropping.as_ref().is_some_and(|c| c.photo == p.photo_id);
+      if !cropping && placed_soft(project.photos.get(&p.photo_id), p, sheet.px_per_unit) {
+        stage_el = stage_el.child(soft_badge(r, theme));
+      }
+    }
+    // The box a hovered Fit button means.
+    if let Some(g) = self.ui.fit_glow {
+      stage_el = stage_el.child(
+        boxed(pic.at(g))
+          .bg(theme.accent.opacity(0.15))
+          .border_1()
+          .border_color(theme.accent),
+      );
     }
     // Off the pages, photos are dimmed by the desk around them.
     let pb = pic.pages_box();
@@ -263,17 +281,21 @@ impl Workspace {
         folio_label(index, total, arrangement)
       )))
       .child(div().flex_1())
-      .child(icon_button(
-        "toggle-guides",
-        if self.ui.guides_hidden { "eye-off" } else { "eye" },
-        theme,
-        true,
-        self.ui.guides_hidden,
-        cx.listener(|ws, _, _, cx| {
-          ws.ui.guides_hidden = !ws.ui.guides_hidden;
-          cx.notify();
-        }),
-      ))
+      .child(
+        icon_button(
+          "toggle-guides",
+          if self.ui.guides_hidden { "eye-off" } else { "eye" },
+          theme,
+          true,
+          self.ui.guides_hidden,
+          cx.listener(|ws, _, _, cx| {
+            ws.ui.guides_hidden = !ws.ui.guides_hidden;
+            cx.notify();
+          }),
+        )
+        .relative()
+        .when(self.ui.hints, |d| d.child(super::paint::shortcut_badge("⌘;", theme))),
+      )
       .child(icon_button(
         "close-editor",
         "x",
@@ -291,6 +313,7 @@ impl Workspace {
         panel.h - HEADER_H - STRIP_H,
       ),
       theme,
+      window,
       cx,
     );
     let strip_el = self.render_strip(Rect::new(0.0, panel.h - STRIP_H, panel.w, STRIP_H), theme, cx);
@@ -322,8 +345,9 @@ impl Workspace {
       .into_any_element()
   }
 
-  /// The selected photo's place, size, and fitting; or how to use the editor.
-  fn render_inspector(&mut self, r: Rect, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
+  /// The selected photo's place, size, resolution, and fitting; or how to use the editor.
+  /// "Go to next error" and "Return to desk" sit at the foot.
+  fn render_inspector(&mut self, r: Rect, theme: &Theme, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
     let project = self.project().clone();
     let sheet = project.sheet();
     let u = units(sheet.unit);
@@ -335,29 +359,50 @@ impl Workspace {
       .border_l_1()
       .border_color(theme.divider);
     let item = self.ui.editor_selected.as_ref().and_then(|id| act_locate(&project, id));
+    let next_error = next_soft_photo(&project, self.ui.editor_selected.as_ref());
+    let foot = |el: Div, item: Option<PhotoId>, cx: &mut Context<Self>| {
+      let mut el = el.child(div().flex_1());
+      if let Some(n) = next_error.clone() {
+        el = el.child(text_button(
+          "next-error",
+          "Go to next error",
+          theme,
+          false,
+          cx.listener(move |ws, _, _, cx| {
+            ws.ui.editing = Some(n.spread_id.clone());
+            ws.ui.editor_selected = Some(n.photo_id.clone());
+            cx.notify();
+          }),
+        ));
+      }
+      if let Some(id) = item {
+        el = el.child(text_button(
+          "to-desk",
+          "Return to desk",
+          theme,
+          false,
+          cx.listener(move |ws, _, _, cx| {
+            let visible = ws.visible();
+            let id = id.clone();
+            ws.ui.editor_selected = None;
+            ws.apply(cx, |d| sequence_core::actions::put_in_pile(d, &id, None, visible));
+          }),
+        ));
+      }
+      el
+    };
     let Some(item) = item else {
-      return el
+      let el = el
         .text_color(theme.muted)
         .child("Select a photo to adjust its position and size.")
-        .child("Drag photos in from the desk strip below, or drag one onto the strip to send it back.")
-        .into_any_element();
+        .child("Drag photos in from the desk strip below, or drag one onto the strip to send it back.");
+      return foot(el, None, cx).into_any_element();
     };
-    let name = project
-      .photos
-      .get(&item.photo_id)
-      .map(|m| m.name.clone())
-      .unwrap_or_default();
+    let meta = project.photos.get(&item.photo_id).cloned();
+    let name = meta.as_ref().map(|m| m.name.clone()).unwrap_or_default();
     let side = side_at(&sheet, item.x + item.w / 2.0);
     let page = page_rect(side, &sheet);
     let where_ = if side == PageSide::Whole { "frame" } else { "page" };
-    let f = |n: f64| format!("{} {}", u.format(n), u.suffix);
-    let row = |label: &'static str, value: String| {
-      div()
-        .flex()
-        .gap(px(8.0))
-        .child(div().w(px(20.0)).text_color(theme.muted).child(label))
-        .child(div().font_family(MONO).child(value))
-    };
     el = el
       .child(
         div()
@@ -370,11 +415,37 @@ impl Workspace {
         PageSide::Whole => "Frame · measured from its top-left corner",
         PageSide::Left => "Left page · measured from its top-left corner",
         PageSide::Right => "Right page · measured from its top-left corner",
-      }))
-      .child(row("X", f(item.x - page.x)))
-      .child(row("Y", f(item.y)))
-      .child(row("W", f(item.w)))
-      .child(row("H", f(item.h)));
+      }));
+    let values = [item.x - page.x, item.y, item.w, item.h];
+    let mut grid = div().flex().flex_wrap().gap(px(6.0));
+    for (i, label) in ["X", "Y", "W", "H"].into_iter().enumerate() {
+      let f = self.number_field(
+        Field::Item(i),
+        Some(label),
+        format!("{} {}", u.format(values[i]), u.suffix),
+        true,
+        theme,
+        window,
+        cx,
+      );
+      grid = grid.child(div().w(px(110.0)).child(f));
+    }
+    el = el.child(grid);
+    let lock = self.ui.keep_proportions;
+    el = el.child(
+      check("keep-proportions", "Keep proportions", lock, theme).on_click(cx.listener(|ws, _, _, cx| {
+        ws.ui.keep_proportions = !ws.ui.keep_proportions;
+        cx.notify();
+      })),
+    );
+    if let Some((text, soft)) = meta.as_ref().and_then(|m| resolution_note(m, &item, &sheet)) {
+      el = el.child(
+        div()
+          .text_size(px(11.0))
+          .text_color(if soft { theme.warn } else { theme.muted })
+          .child(text),
+      );
+    }
     let id = item.photo_id.clone();
     let it = item.clone();
     el = el.child(text_button(
@@ -410,46 +481,75 @@ impl Workspace {
     for (i, (label, b)) in boxes.into_iter().enumerate() {
       let id = item.photo_id.clone();
       let (w, h) = (item.w, item.h);
-      el = el.child(text_button(
-        ("fit", i),
-        label,
-        theme,
-        false,
-        cx.listener(move |ws, _, _, cx| {
-          let id = id.clone();
-          let shape = PhotoMeta {
-            id: id.clone(),
-            name: String::new(),
-            px_w: w,
-            px_h: h,
-            crop: None,
-          };
-          let r = fit_centered(&shape, b, Some(page));
-          ws.apply(cx, |d| {
-            if let Some(p) = placement_mut(d, &id) {
-              p.x = r.x;
-              p.y = r.y;
-              p.w = r.w;
-              p.h = r.h;
-            }
-          });
-        }),
-      ));
+      el = el.child(
+        text_button(
+          ("fit", i),
+          label,
+          theme,
+          false,
+          cx.listener(move |ws, _, _, cx| {
+            let id = id.clone();
+            let shape = PhotoMeta {
+              id: id.clone(),
+              name: String::new(),
+              px_w: w,
+              px_h: h,
+              crop: None,
+            };
+            let r = fit_centered(&shape, b, Some(page));
+            ws.apply(cx, |d| {
+              if let Some(p) = placement_mut(d, &id) {
+                p.x = r.x;
+                p.y = r.y;
+                p.w = r.w;
+                p.h = r.h;
+              }
+            });
+          }),
+        )
+        .on_hover(cx.listener(move |ws, hovered: &bool, _, cx| {
+          ws.ui.fit_glow = hovered.then_some(b);
+          cx.notify();
+        })),
+      );
     }
-    let id = item.photo_id.clone();
-    el = el.child(div().flex_1()).child(text_button(
-      "to-desk",
-      "Return to desk",
-      theme,
-      false,
-      cx.listener(move |ws, _, _, cx| {
-        let visible = ws.visible();
-        let id = id.clone();
-        ws.ui.editor_selected = None;
-        ws.apply(cx, |d| sequence_core::actions::put_in_pile(d, &id, None, visible));
-      }),
-    ));
-    el.into_any_element()
+    foot(el, Some(item.photo_id.clone()), cx).into_any_element()
+  }
+
+  /// A number typed in the editor's X, Y, W, or H: the selected photo moved or resized (W
+  /// and H keep its proportions, if asked), as one undo step per field.
+  pub fn item_field(&mut self, i: usize, n: f64, cx: &mut Context<Self>) {
+    let Some(id) = self.ui.editor_selected.clone() else {
+      return;
+    };
+    let project = self.project();
+    let sheet = project.sheet();
+    let u = units(sheet.unit);
+    let Some(item) = act_locate(project, &id) else { return };
+    let page = page_rect(side_at(&sheet, item.x + item.w / 2.0), &sheet);
+    let aspect = item.w / item.h;
+    let lock = self.ui.keep_proportions;
+    let min = u.min_photo;
+    let key = format!("inspect:{id}:{i}");
+    self.apply_coalesced(&key, cx, |d| {
+      let Some(p) = placement_mut(d, &id) else { return };
+      match i {
+        0 => p.x = page.x + u.round(n),
+        1 => p.y = u.round(n),
+        2 => {
+          p.w = u.round(n).max(min);
+          if lock {
+            p.h = u.round(p.w / aspect);
+          }
+        }
+        _ => {
+          p.h = u.round(n).max(min);
+          if lock {
+            p.w = u.round(p.h * aspect);
+          }
+        }
+      }
+    });
   }
 
   /// The desk's photos in a row, to drag onto the spread; dropping one here sends it back.

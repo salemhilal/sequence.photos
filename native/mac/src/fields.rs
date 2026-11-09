@@ -26,6 +26,8 @@ pub enum Field {
   /// The Export page's dpi (inches projects' photos) and a pixel project's printed dpi.
   ExportDpi,
   PrintAt,
+  /// The editor's selected photo: its X, Y, W, H (0 to 3).
+  Item(usize),
 }
 
 /// The fields' inputs, by what they edit.

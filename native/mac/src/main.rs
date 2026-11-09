@@ -4,6 +4,7 @@
 mod assets;
 #[cfg(target_os = "macos")]
 mod bookmarks;
+mod clipboard;
 mod commands;
 mod config;
 mod crop;
@@ -17,6 +18,7 @@ mod library;
 mod posting;
 mod prefs;
 mod theme;
+mod tour;
 mod urls;
 mod views;
 mod workspace;
@@ -31,6 +33,7 @@ use gpui_kit::*;
 use crate::commands::*;
 use crate::library::{Library, support_dir};
 use crate::prefs::Prefs;
+use crate::views::about::AboutWindow;
 use crate::views::settings::SettingsWindow;
 use crate::workspace::Workspace;
 
@@ -47,7 +50,15 @@ fn main() {
     assets::load_fonts(cx);
     cx.activate(true);
     cx.bind_keys(key_bindings());
-    cx.set_menus(menus());
+    cx.set_menus(menus(MenuState {
+      sidebar_open: true,
+      guides_shown: true,
+      arrangement: sequence_core::Arrangement::Spreads,
+    }));
+    cx.on_action(|_: &HideApp, cx| cx.hide());
+    cx.on_action(|_: &HideOthers, cx| cx.hide_other_apps());
+    cx.on_action(|_: &ShowAll, cx| cx.unhide_other_apps());
+    cx.on_action(|_: &OpenGitHub, cx| cx.open_url(crate::config::repo_url()));
 
     let mut prefs = Prefs::load();
     // The open project's file, through its bookmark (the sandbox forgets it otherwise).
@@ -119,23 +130,48 @@ fn main() {
       })
       .expect("couldn't open the window");
 
-    cx.on_action(move |_: &About, cx| {
+    cx.on_action(move |_: &TakeTour, cx| {
+      let _ = window.update(cx, |ws, _, cx| ws.start_tour(cx));
+    });
+    // The first time the app opens to an empty project, the tour.
+    cx.spawn(async move |cx| {
+      cx.background_executor()
+        .timer(std::time::Duration::from_millis(400))
+        .await;
       let _ = window.update(cx, |ws, _, cx| {
-        ws.ui.notice = Some(format!(
-          "Sequence {} — sequence.photos. Photos stay on this Mac.",
-          env!("CARGO_PKG_VERSION")
-        ));
-        cx.notify();
+        if ws.project().photos.is_empty() && !ws.prefs.tour_seen {
+          ws.start_tour(cx);
+        }
       });
+    })
+    .detach();
+    // About, in a window of its own: one at a time.
+    let about: Rc<RefCell<Option<WindowHandle<AboutWindow>>>> = Rc::default();
+    let ws_for_about = window.entity(cx).expect("the window was just opened");
+    cx.on_action(move |_: &About, cx| {
+      let about = about.clone();
+      let ws = ws_for_about.clone();
+      cx.defer(move |cx| open_about(&about, ws, cx));
     });
     // Quitting keeps the work in the library first (its save waits a moment after changes).
-    cx.on_action(move |_: &Quit, cx| {
-      let _ = window.update(cx, |ws, _, _| ws.save_to_library());
-      cx.quit();
+    // Quitting asks about changes that aren't in a file (and keeps the work in the library).
+    let _ = window.update(cx, |ws, window, cx| {
+      ws.window_handle = Some(window.window_handle());
+      let this = cx.entity().downgrade();
+      window.on_window_should_close(cx, move |_, cx| {
+        let _ = this.update(cx, |ws, cx| ws.request_quit(cx));
+        false
+      });
     });
-    // ⌘W closes the window in front (Settings, or the main window).
-    cx.on_action(|_: &CloseWindow, cx| {
-      if let Some(w) = cx.active_window() {
+    cx.on_action(move |_: &Quit, cx| {
+      let _ = window.update(cx, |ws, _, cx| ws.request_quit(cx));
+    });
+    // ⌘W closes the window in front: Settings, or the main window (which quits, asking first).
+    cx.on_action(move |_: &CloseWindow, cx| {
+      let Some(w) = cx.active_window() else { return };
+      if w == window.into() {
+        let _ = window.update(cx, |ws, _, cx| ws.request_quit(cx));
+      } else {
         let _ = w.update(cx, |_, window, _| window.remove_window());
       }
     });
@@ -204,5 +240,32 @@ fn open_settings(settings: &RefCell<Option<WindowHandle<SettingsWindow>>>, ws: E
   };
   *settings.borrow_mut() = cx
     .open_window(options, |window, cx| cx.new(|cx| SettingsWindow::new(ws, window, cx)))
+    .ok();
+}
+
+/// Open About, or bring it forward if it's open.
+fn open_about(about: &RefCell<Option<WindowHandle<AboutWindow>>>, ws: Entity<Workspace>, cx: &mut App) {
+  if let Some(open) = *about.borrow()
+    && open.update(cx, |_, w, _| w.activate_window()).is_ok()
+  {
+    return;
+  }
+  let options = WindowOptions {
+    titlebar: Some(TitlebarOptions {
+      title: Some("About Sequence".into()),
+      appears_transparent: true,
+      traffic_light_position: None,
+    }),
+    window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
+      None,
+      size(px(320.0), px(330.0)),
+      cx,
+    ))),
+    is_resizable: false,
+    is_minimizable: false,
+    ..Default::default()
+  };
+  *about.borrow_mut() = cx
+    .open_window(options, |window, cx| cx.new(|cx| AboutWindow::new(ws, window, cx)))
     .ok();
 }
