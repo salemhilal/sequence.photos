@@ -23,6 +23,25 @@ const ROW_PAD: f64 = 4.0;
 const FOOT_H: f64 = 20.0;
 /// The gap between rows, where dropping adds a spread.
 const GAP_H: f64 = 12.0;
+/// In a grid: the gutter between columns (where dropping adds a spread), the rows' gap,
+/// and the side padding.
+const GAP_X: f64 = 12.0;
+const GRID_ROW_GAP: f64 = 10.0;
+const GRID_PAD: f64 = 10.0;
+/// Horizontal room in a cell beside its picture.
+const CELL_PAD_X: f64 = 2.0 * ROW_PAD + 2.0 * WELL_PAD;
+/// The most columns, and the narrowest a spread's (or frame's) picture gets.
+pub const MAX_COLUMNS: usize = 4;
+fn min_thumb(a: Arrangement) -> f64 {
+  if a == Arrangement::Spreads { 120.0 } else { 60.0 }
+}
+
+/// How many columns fit in a sidebar `w` wide.
+fn columns_that_fit(w: f64, a: Arrangement) -> usize {
+  let in_grid = w - 2.0 * GRID_PAD;
+  let n = ((in_grid + GAP_X) / (min_thumb(a) + CELL_PAD_X + GAP_X)).floor() as usize;
+  n.clamp(1, MAX_COLUMNS)
+}
 
 impl Workspace {
   /// `r` is in window pixels; the sidebar is drawn in the page's (below the toolbar).
@@ -36,13 +55,28 @@ impl Workspace {
     let all = project.layout.all();
     let total = all.len();
     let (extent_left, extent_w) = sheet_extent(arrangement, sheet.page_w);
-    let pic_w = (r.w - 2.0 * LIST_PAD - 2.0 * ROW_PAD - 2.0 * WELL_PAD).max(60.0);
+    // The columns asked for, as many as fit.
+    let fit = columns_that_fit(r.w, arrangement);
+    let cols = self.prefs.sidebar_columns.clamp(1, fit);
+    let grid = cols > 1;
+    self.frames.sidebar_grid = grid;
+    let cell_w = if grid {
+      (r.w - 2.0 * GRID_PAD - GAP_X * (cols - 1) as f64) / cols as f64
+    } else {
+      r.w - 2.0 * LIST_PAD
+    };
+    let pic_w = (cell_w - CELL_PAD_X).max(min_thumb(arrangement).min(60.0));
     let scale = pic_w / extent_w;
     let pic_h = sheet.page_h * scale;
     let row_h = ROW_PAD + 2.0 * WELL_PAD + pic_h + FOOT_H + ROW_PAD;
     let list = Rect::new(r.x, r.y + HEADER_H, r.w, r.h - HEADER_H);
     self.frames.sidebar_list = list;
-    let content_h = LIST_PAD * 2.0 + total as f64 * (row_h + GAP_H) + if book { 0.0 } else { GAP_H };
+    let slots = total + usize::from(!book);
+    let content_h = if grid {
+      LIST_PAD * 2.0 + slots.div_ceil(cols) as f64 * (row_h + GRID_ROW_GAP)
+    } else {
+      LIST_PAD * 2.0 + total as f64 * (row_h + GAP_H) + if book { 0.0 } else { GAP_H }
+    };
     let max_scroll = (content_h - list.h).max(0.0);
     self.ui.sidebar_scroll = self.ui.sidebar_scroll.min(max_scroll);
     let scroll = self.ui.sidebar_scroll;
@@ -70,18 +104,42 @@ impl Workspace {
     let mut y = LIST_PAD - scroll;
     let mut cells = Vec::new();
     let mut gaps = Vec::new();
+    // Where slot `i` (a spread's cell, or the end) is, and the gap before it, in the list.
+    let slot = |i: usize, y: f64| -> (Rect, Rect) {
+      if grid {
+        let (col, line) = (i % cols, i / cols);
+        let cx_ = GRID_PAD + col as f64 * (cell_w + GAP_X);
+        let cy = LIST_PAD - scroll + line as f64 * (row_h + GRID_ROW_GAP);
+        (
+          Rect::new(cx_, cy, cell_w, row_h),
+          Rect::new((cx_ - GAP_X).max(0.0), cy, GAP_X.min(cx_), row_h),
+        )
+      } else {
+        (
+          Rect::new(LIST_PAD, y + GAP_H, cell_w, row_h),
+          Rect::new(LIST_PAD, y, cell_w, GAP_H),
+        )
+      }
+    };
+    // A gap lit for a drop: a line along it.
+    let gap_line = |g: Rect| {
+      if grid {
+        boxed(Rect::new(g.x + g.w / 2.0 - 1.0, g.y, 2.0, g.h)).bg(theme.accent)
+      } else {
+        boxed(Rect::new(g.x, g.y + g.h / 2.0 - 1.0, g.w, 2.0)).bg(theme.accent)
+      }
+    };
     for (i, spread) in all.iter().enumerate() {
+      let (row, gap) = slot(i, y);
       // The gap before this spread (a book's first stays first).
       if i > 0 || !book {
-        let gap = Rect::new(LIST_PAD, y, r.w - 2.0 * LIST_PAD, GAP_H);
         gaps.push((i, Rect::new(list.x + gap.x, list.y + gap.y, gap.w, gap.h)));
         let lit = self.ui.hover == Some(DropTarget::Insert(i)) || reorder.as_ref().is_some_and(|(_, d)| *d == i);
         if lit {
-          list_el = list_el.child(boxed(Rect::new(gap.x, gap.y + GAP_H / 2.0 - 1.0, gap.w, 2.0)).bg(theme.accent));
+          list_el = list_el.child(gap_line(gap));
         }
       }
       y += GAP_H;
-      let row = Rect::new(LIST_PAD, y, r.w - 2.0 * LIST_PAD, row_h);
       let selected = self.ui.spread_selection.contains(&spread.id);
       let dragging = reorder.as_ref().is_some_and(|(ids, _)| ids.contains(&spread.id));
       let is_editing = editing.as_ref() == Some(&spread.id);
@@ -189,6 +247,18 @@ impl Workspace {
           )
         })
         .child(div().flex_1())
+        .child({
+          let id = spread.id.clone();
+          icon_button(
+            SharedString::from(format!("edit-{}", spread.id)),
+            "pencil",
+            theme,
+            true,
+            false,
+            cx.listener(move |ws, _, _, cx| ws.open_editor(id.clone(), cx)),
+          )
+          .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        })
         .when(is_movable(spread.kind), |d| {
           let id = spread.id.clone();
           d.child(
@@ -221,10 +291,10 @@ impl Workspace {
       y += row_h;
     }
     if !book {
-      let gap = Rect::new(LIST_PAD, y, r.w - 2.0 * LIST_PAD, GAP_H);
+      let (_, gap) = slot(total, y);
       gaps.push((total, Rect::new(list.x + gap.x, list.y + gap.y, gap.w, gap.h)));
       if self.ui.hover == Some(DropTarget::Insert(total)) || reorder.as_ref().is_some_and(|(_, d)| *d == total) {
-        list_el = list_el.child(boxed(Rect::new(gap.x, gap.y + GAP_H / 2.0 - 1.0, gap.w, 2.0)).bg(theme.accent));
+        list_el = list_el.child(gap_line(gap));
       }
     }
     // Only gaps and cells in view take drops.
@@ -257,6 +327,22 @@ impl Workspace {
         cx.listener(move |ws, _, _, cx| ws.apply(cx, |d| drop(sequence_core::actions::add_spread(d, add_at)))),
       ))
       .child(div().flex_1())
+      .when(fit > 1, |d| {
+        // Only as many columns as fit: none to choose from when one is all that fits.
+        let options: Vec<(usize, String)> = (1..=fit).map(|n| (n, n.to_string())).collect();
+        let options: Vec<(usize, &str)> = options.iter().map(|(n, l)| (*n, l.as_str())).collect();
+        let ws = cx.entity().downgrade();
+        d.child(
+          super::controls::segmented("sidebar-columns", &options, cols, theme, move |n, _, cx| {
+            let _ = ws.update(cx, |ws, cx| {
+              ws.prefs.sidebar_columns = n;
+              ws.prefs.save();
+              cx.notify();
+            });
+          })
+          .mr(px(6.0)),
+        )
+      })
       .child(
         div()
           .text_color(theme.muted)

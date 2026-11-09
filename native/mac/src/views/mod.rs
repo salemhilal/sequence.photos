@@ -487,8 +487,37 @@ impl Workspace {
   fn status_text(&self) -> String {
     let project = self.project();
     let terms = terms(project.layout.arrangement());
-    if self.ui.page == Page::Preview {
-      return String::new();
+    let sheet = project.sheet();
+    let u = sequence_core::units::units(sheet.unit);
+    let size = format!("{} × {} {}", u.format(sheet.page_w), u.format(sheet.page_h), u.suffix);
+    match self.ui.page {
+      Page::Preview => return format!("← → to {} · F for fullscreen", terms.turn),
+      Page::Export => {
+        return format!(
+          "{size} {}{}",
+          terms.spreads,
+          if sheet.unit == sequence_core::Unit::In {
+            format!(" · {} dpi", sheet.px_per_unit)
+          } else {
+            String::new()
+          }
+        );
+      }
+      Page::Desk => {}
+    }
+    if let Some(l) = &self.ui.layout {
+      let previewing = l.tab == crate::layout::LayoutTab::Page || self.layout_pending();
+      if !previewing {
+        return size;
+      }
+      return format!(
+        "{size}{} · ← → to flip through",
+        if self.layout_pending() {
+          " · Preview of the changes"
+        } else {
+          ""
+        }
+      );
     }
     if self.ui.editing.is_some() {
       return "Shift: free resize · Option: no snapping, or drag a copy · Arrows nudge".into();

@@ -40,6 +40,8 @@ pub struct Frames {
   pub desk: Rect,
   pub sidebar: Option<Rect>,
   pub sidebar_list: Rect,
+  /// Whether the sidebar shows its spreads in a grid (so a drop goes left or right of one).
+  pub sidebar_grid: bool,
   pub cells: Vec<Cell>,
   pub gaps: Vec<(usize, Rect)>,
   pub editor: Option<EditorFrame>,

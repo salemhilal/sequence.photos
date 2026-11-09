@@ -533,7 +533,11 @@ impl Workspace {
           }
         }
         if let Some((idx, r, _)) = best {
-          let before = at.1 < r.y + r.h / 2.0;
+          let before = if self.frames.sidebar_grid {
+            at.0 < r.x + r.w / 2.0
+          } else {
+            at.1 < r.y + r.h / 2.0
+          };
           let at_i = if before { idx } else { idx + 1 };
           let di = if book { at_i.max(1).min(total - 1) } else { at_i };
           *drop_index = Some(di);

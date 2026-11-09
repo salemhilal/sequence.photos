@@ -18,6 +18,8 @@ pub struct Prefs {
   pub desk_color: u32,
   pub sidebar_open: bool,
   pub sidebar_width: f64,
+  /// The sidebar's columns, as chosen (as many as fit show).
+  pub sidebar_columns: usize,
   pub status_bar: bool,
   pub shortcut_badges: bool,
   pub tour_seen: bool,
@@ -40,6 +42,7 @@ impl Default for Prefs {
       desk_color: DEFAULT_DESK,
       sidebar_open: true,
       sidebar_width: SIDEBAR_DEFAULT_WIDTH,
+      sidebar_columns: 1,
       status_bar: true,
       shortcut_badges: true,
       tour_seen: false,
