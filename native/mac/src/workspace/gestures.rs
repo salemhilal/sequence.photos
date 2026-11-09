@@ -614,7 +614,26 @@ impl Workspace {
               self.history.silent(|d| act::raise(d, &clicked));
             }
             Source::Editor => self.history.silent(|d| act::raise(d, &clicked)),
-            Source::Strip => {}
+            // A click places the photo on the first empty page, or the right page.
+            Source::Strip => {
+              if let Some(id) = self.ui.editing.clone()
+                && let Some(spread) = self.project().find_spread(&id)
+              {
+                let sheet = self.project().sheet();
+                let side = sequence_core::geometry::page_sides(spread.kind)[0];
+                let taken = spread
+                  .items
+                  .iter()
+                  .any(|i| sequence_core::geometry::side_at(&sheet, i.x + i.w / 2.0) == side);
+                let pick = if spread.kind == sequence_core::SpreadKind::Middle && taken {
+                  sequence_core::PageSide::Right
+                } else {
+                  side
+                };
+                self.apply(cx, |d| act::put_on_page(d, std::slice::from_ref(&clicked), &id, pick));
+                return;
+              }
+            }
             Source::Sidebar => {
               // A click on a photo in a spread's picture selects the spread.
               if let Some(c) = self

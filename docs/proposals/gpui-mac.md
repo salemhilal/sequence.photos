@@ -87,14 +87,14 @@ Save, Save As, Open, Open Recent, bookmarks), Settings, and holding ⌘ for shor
 
 ### 4. Where the work happens
 
-Status (November 2026): the window, toolbar, status bar, menus, undo, and saving and opening
-files work; so do the desk, the sidebar, the spread editor, crop mode, Preview and
-presenting, Layout (both tabs, rulers, presets, the draft applied as one step), and the
-Settings window (General, and Advanced's test images). The Export page saves a PDF (the core
-writes it: originals that fit go in as they are, the rest cut to what shows). Still to come:
-the images, InDesign and Instagram exports, copy and paste, the tour, resolution badges, the
-editor's number fields, sidebar columns, shortcut badges, and an unsaved-changes prompt on
-quit.
+Status (November 2026): everything in the web app's Mac build is in. The window, toolbar,
+status bar, menus, undo, shortcut badges, and documents (asking before unsaved changes are
+lost); the desk, the sidebar (with columns), the spread editor (its number fields, soft-photo
+marks, and Go to next error), crop mode, Preview and presenting, Layout, copy and paste, the
+tour, About, and Settings (General, Instagram, and Advanced's server and test images).
+Export makes a PDF, images, or an InDesign package, or posts to Instagram; the core writes
+the files and the Instagram logic, checked against goldens from the TypeScript, and the app
+draws with CoreGraphics. What's left is checking it by hand, and what a parity review finds.
 
 In about this order: the desk (pan, zoom, drag, Option-drag to duplicate, tidy, desk color,
 drops); the sidebar (spreads or frames, reordered by dragging); the spread editor (rulers,

@@ -12,7 +12,7 @@ use sequence_core::{PageSide, PhotoMeta};
 
 use super::controls::check;
 use super::desk::{handle_targets, selection_frame};
-use super::paint::{SpreadPicture, boxed, photo, soft_badge, x};
+use super::paint::{SpreadPicture, Tip as _, boxed, photo, soft_badge, x};
 use super::{icon_button, text_button};
 use crate::assets::MONO;
 use crate::fields::Field;
@@ -294,6 +294,10 @@ impl Workspace {
           }),
         )
         .relative()
+        .tip(
+          format!("{} guides (⌘;)", if self.ui.guides_hidden { "Show" } else { "Hide" }),
+          cx.entity().downgrade(),
+        )
         .when(self.ui.hints, |d| d.child(super::paint::shortcut_badge("⌘;", theme))),
       )
       .child(icon_button(
@@ -558,6 +562,10 @@ impl Workspace {
     let lit = self.ui.hover == Some(DropTarget::Strip);
     let mut row = div().flex().items_center().gap(px(8.0)).h_full().px(px(12.0));
     let h = r.h - 24.0;
+    let strip_tip = format!(
+      "Drag onto the {}, or click to add",
+      terms(project.layout.arrangement()).page
+    );
     let mut pile: Vec<_> = project.pile.iter().collect();
     pile.sort_by(|a, b| a.y.total_cmp(&b.y).then(a.x.total_cmp(&b.x)));
     for p in pile {
@@ -569,6 +577,7 @@ impl Workspace {
       let id = p.photo_id.clone();
       let mut cell = div()
         .id(SharedString::from(format!("strip-{id}")))
+        .tip(strip_tip.clone(), cx.entity().downgrade())
         .relative()
         .flex_none()
         .w(x(w))

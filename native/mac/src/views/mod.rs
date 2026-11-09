@@ -24,6 +24,7 @@ use crate::assets::{FONT, MONO, icon};
 use crate::commands::*;
 use crate::theme::Theme;
 use crate::workspace::{ContextMenu, Page, Workspace};
+use paint::Tip as _;
 use paint::{boxed, x};
 
 pub const TOOLBAR_H: f64 = 42.0;
@@ -305,9 +306,15 @@ impl Workspace {
         Page::Preview => "⌥⌘2",
         Page::Export => "⌥⌘3",
       };
+      let tip = match which {
+        Page::Desk => "Arrange photos and sequence them",
+        Page::Preview => "See it as it will look",
+        Page::Export => "Make a PDF, images, an InDesign file, or a post",
+      };
       let mut t = div()
         .id(id)
         .relative()
+        .tip(format!("{tip} ({key})"), cx.entity().downgrade())
         .when(hints, |d| d.child(paint::shortcut_badge(key, theme)))
         .flex()
         .items_center()
@@ -385,35 +392,51 @@ impl Workspace {
       )
       .child(div().flex_1())
       .when(page == Page::Desk, |d| {
-        d.child(icon_button(
-          "toggle-sidebar",
-          if sidebar_open {
-            "panel-right-close"
-          } else {
-            "panel-right-open"
-          },
+        d.child(
+          icon_button(
+            "toggle-sidebar",
+            if sidebar_open {
+              "panel-right-close"
+            } else {
+              "panel-right-open"
+            },
+            theme,
+            true,
+            !sidebar_open,
+            cx.listener(|ws, _, _, cx| ws.toggle_sidebar(cx)),
+          )
+          .relative()
+          .tip(
+            format!("{} {} (⌘B)", if sidebar_open { "Hide" } else { "Show" }, terms.spreads),
+            cx.entity().downgrade(),
+          )
+          .when(hints, |d| d.child(paint::shortcut_badge("⌘B", theme))),
+        )
+      })
+      .child(
+        icon_button(
+          "layout",
+          "ruler",
           theme,
           true,
-          !sidebar_open,
-          cx.listener(|ws, _, _, cx| ws.toggle_sidebar(cx)),
-        ))
-      })
-      .child(icon_button(
-        "layout",
-        "ruler",
-        theme,
-        true,
-        false,
-        cx.listener(|ws, _, _, cx| ws.open_layout(cx)),
-      ))
-      .child(icon_button(
-        "settings",
-        "settings",
-        theme,
-        true,
-        false,
-        |_, window, cx| window.dispatch_action(Box::new(OpenSettings), cx),
-      ))
+          false,
+          cx.listener(|ws, _, _, cx| {
+            ws.go_to(Page::Desk, cx);
+            ws.open_layout(cx);
+          }),
+        )
+        .relative()
+        .tip("Layout: the page size and guides (⌥⌘P)", cx.entity().downgrade())
+        .when(hints, |d| d.child(paint::shortcut_badge("⌥⌘P", theme))),
+      )
+      .child(
+        icon_button("settings", "settings", theme, true, false, |_, window, cx| {
+          window.dispatch_action(Box::new(OpenSettings), cx)
+        })
+        .relative()
+        .tip("Settings (⌘,)", cx.entity().downgrade())
+        .when(hints, |d| d.child(paint::shortcut_badge("⌘,", theme))),
+      )
       .child(div().hidden().child(terms.spreads))
   }
 

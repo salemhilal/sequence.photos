@@ -9,7 +9,7 @@ use sequence_core::resolution::{placed_soft, soft_label};
 use sequence_core::units::terms;
 use sequence_core::{Arrangement, PageSide};
 
-use super::paint::{SpreadPicture, boxed, x};
+use super::paint::{SpreadPicture, Tip as _, boxed, x};
 use super::{icon_button, paint};
 use crate::assets::MONO;
 use crate::theme::Theme;
@@ -101,6 +101,7 @@ impl Workspace {
 
     let editing = self.ui.editing.clone();
     let reorder = self.ui.reorder.clone();
+    let weak = cx.entity().downgrade();
     let mut y = LIST_PAD - scroll;
     let mut cells = Vec::new();
     let mut gaps = Vec::new();
@@ -257,6 +258,7 @@ impl Workspace {
             false,
             cx.listener(move |ws, _, _, cx| ws.open_editor(id.clone(), cx)),
           )
+          .tip("Edit", weak.clone())
           .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
         })
         .when(is_movable(spread.kind), |d| {
@@ -273,6 +275,17 @@ impl Workspace {
                 let ids = vec![id.clone()];
                 ws.apply(cx, |d| sequence_core::actions::delete_spreads(d, &ids, visible));
               }),
+            )
+            .tip(
+              format!(
+                "Delete {} (photos return to the desk)",
+                if spread.kind == sequence_core::SpreadKind::Frame {
+                  "frame"
+                } else {
+                  "spread"
+                }
+              ),
+              weak.clone(),
             )
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation()),
           )
@@ -318,14 +331,17 @@ impl Workspace {
       .border_b_1()
       .border_color(theme.divider)
       .child(div().font_weight(FontWeight::SEMIBOLD).child(terms.spreads_title))
-      .child(icon_button(
-        "add-spread",
-        "plus",
-        theme,
-        true,
-        false,
-        cx.listener(move |ws, _, _, cx| ws.apply(cx, |d| drop(sequence_core::actions::add_spread(d, add_at)))),
-      ))
+      .child(
+        icon_button(
+          "add-spread",
+          "plus",
+          theme,
+          true,
+          false,
+          cx.listener(move |ws, _, _, cx| ws.apply(cx, |d| drop(sequence_core::actions::add_spread(d, add_at)))),
+        )
+        .tip(terms.add_at_end, cx.entity().downgrade()),
+      )
       .child(div().flex_1())
       .when(fit > 1, |d| {
         // Only as many columns as fit: none to choose from when one is all that fits.
@@ -359,6 +375,7 @@ impl Workspace {
       .bottom_0()
       .w(px(6.0))
       .cursor(CursorStyle::ResizeLeftRight)
+      .tip("Drag to resize · double-click to reset", cx.entity().downgrade())
       .on_mouse_down(
         MouseButton::Left,
         cx.listener(|ws, ev: &MouseDownEvent, _, cx| {

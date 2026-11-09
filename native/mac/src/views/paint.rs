@@ -200,3 +200,25 @@ pub fn shortcut_badge(label: &'static str, theme: &Theme) -> Div {
         .child(label),
     )
 }
+
+/// A hint in the status bar while the pointer is over an element (`data-tip`, `hints.ts`).
+pub trait Tip {
+  fn tip(self, text: impl Into<String>, ws: WeakEntity<crate::workspace::Workspace>) -> Self;
+}
+
+impl Tip for Stateful<Div> {
+  fn tip(self, text: impl Into<String>, ws: WeakEntity<crate::workspace::Workspace>) -> Self {
+    let text = text.into();
+    self.on_hover(move |hovered, _, cx| {
+      let text = text.clone();
+      let _ = ws.update(cx, |ws, cx| {
+        if *hovered {
+          ws.ui.hint = Some(text);
+        } else if ws.ui.hint.as_deref() == Some(text.as_str()) {
+          ws.ui.hint = None;
+        }
+        cx.notify();
+      });
+    })
+  }
+}
