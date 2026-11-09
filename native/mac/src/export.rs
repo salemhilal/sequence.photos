@@ -343,7 +343,18 @@ impl Workspace {
       .or_else(|| std::env::home_dir().map(|h| h.join("Documents")))
       .unwrap_or_default();
     let stem = terms(self.project().layout.arrangement()).file_stem;
-    let name = format!("{stem}-{}{suffix}.{ext}", &now_iso()[..10]);
+    // After the document, as Mac apps do; dated for an untitled one.
+    let name = match self.doc.path.as_ref().and_then(|p| p.file_stem()) {
+      Some(named) => {
+        let named = named.to_string_lossy();
+        match (suffix, ext) {
+          ("-indesign", _) => format!("{named} (InDesign).zip"),
+          (_, "zip") => format!("{named} (images).zip"),
+          _ => format!("{named}.{ext}"),
+        }
+      }
+      None => format!("{stem}-{}{suffix}.{ext}", &now_iso()[..10]),
+    };
     let picked = cx.prompt_for_new_path(&dir, Some(&name));
     cx.spawn(async move |this, cx| {
       if let Ok(Ok(Some(path))) = picked.await {

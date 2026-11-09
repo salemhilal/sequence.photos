@@ -101,6 +101,8 @@ pub struct Ui {
   /// The window's pixels per point, as last drawn.
   pub scale_factor: f64,
   pub context_menu: Option<ContextMenu>,
+  /// Files dragged over the desk include a project (so dropping opens it).
+  pub file_drop_project: bool,
   /// The context menu's Crop to submenu is open.
   pub menu_sub: bool,
   pub busy: Option<String>,
@@ -156,6 +158,7 @@ impl Default for Ui {
       scale_factor: 2.0,
       context_menu: None,
       menu_sub: false,
+      file_drop_project: false,
       busy: None,
       hint: None,
       space_down: None,
@@ -213,6 +216,8 @@ pub struct Workspace {
   pub fields: Fields,
   /// Instagram: the account, signing in, and the post being written.
   pub ig: crate::posting::InstagramUi,
+  /// The library's project is from a newer version: nothing else shows, and nothing's saved.
+  pub outdated: bool,
   /// The tour, while it runs (with the user's work set aside).
   pub tour: Option<crate::tour::Tour>,
   /// Photos copied with ⌘C.
@@ -240,9 +245,14 @@ const SAVE_DELAY: std::time::Duration = std::time::Duration::from_millis(300);
 
 impl Workspace {
   pub fn new(lib: Library, prefs: Prefs, cx: &mut Context<Self>) -> Self {
+    let mut newer = false;
     let (project, unreadable) = match lib.load_project() {
       Ok(p) => (p.unwrap_or_else(Project::empty), None),
-      Err(aside) => (Project::empty(), Some(aside)),
+      Err(crate::library::Unloadable::SetAside(aside)) => (Project::empty(), Some(aside)),
+      Err(crate::library::Unloadable::Newer) => {
+        newer = true;
+        (Project::empty(), None)
+      }
     };
     let mut ws = Self {
       history: History::new(project),
@@ -262,6 +272,7 @@ impl Workspace {
       window_handle: None,
       menu_state: None,
       tour: None,
+      outdated: false,
       copied: Default::default(),
       saved_to_library: 0,
       save_scheduled: false,
@@ -277,6 +288,7 @@ impl Workspace {
           .unwrap_or_default()
       ));
     }
+    ws.outdated = newer;
     ws.doc.path = ws.prefs.document.clone();
     ws.doc.saved_revision = if ws.prefs.document_edited { u64::MAX } else { 0 };
     ws
@@ -345,8 +357,12 @@ impl Workspace {
   /// Keep the project in the library now (if it changed, and no gesture is under way).
   pub fn save_to_library(&mut self) {
     self.save_scheduled = false;
-    // The tour's sample project is never kept.
-    if self.tour.is_some() || self.history.in_gesture() || self.saved_to_library == self.history.revision() {
+    // The tour's sample project is never kept, nor anything over a newer version's project.
+    if self.tour.is_some()
+      || self.outdated
+      || self.history.in_gesture()
+      || self.saved_to_library == self.history.revision()
+    {
       return;
     }
     self.saved_to_library = self.history.revision();
@@ -643,8 +659,8 @@ impl Workspace {
     if self.ui.selection.is_empty() {
       return;
     }
-    // On the desk, a screen step at the current zoom.
-    let n = (if big { 10.0 } else { 1.0 }) / self.ui.view.scale();
+    // On the desk, an eighth of an inch, or an inch with Shift.
+    let n = if big { 1.0 } else { 0.125 };
     let ids: HashSet<PhotoId> = self.ui.selection.iter().cloned().collect();
     self.apply_coalesced("nudge:desk", cx, |d| {
       for item in d.pile.iter_mut().filter(|i| ids.contains(&i.photo_id)) {

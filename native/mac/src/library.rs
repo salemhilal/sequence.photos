@@ -18,6 +18,15 @@ use sequence_core::{PhotoId, PhotoMeta, Project};
 use crate::imageio;
 
 /// The open project's photos on disk, and their display copies in memory.
+/// Why the library's project couldn't be loaded.
+#[derive(Debug, PartialEq)]
+pub enum Unloadable {
+  /// Saved by a newer version of the app: left untouched.
+  Newer,
+  /// Unreadable: moved aside, to this file.
+  SetAside(PathBuf),
+}
+
 pub struct Library {
   pub dir: PathBuf,
   /// Bumped whenever the library is emptied or replaced, so work started before (an
@@ -246,22 +255,24 @@ impl Library {
 
   /// The project kept in the library: none if there isn't one, an error if there's one
   /// that won't open (it's moved aside, so it isn't overwritten).
-  pub fn load_project(&self) -> Result<Option<Project>, PathBuf> {
+  pub fn load_project(&self) -> Result<Option<Project>, Unloadable> {
     let Ok(text) = fs::read(self.project_path()) else {
       return Ok(None);
     };
     let project = serde_json::from_slice::<serde_json::Value>(&text)
       .ok()
-      .and_then(|v| migrate_project(&v).ok());
+      .map(|v| migrate_project(&v));
     match project {
-      Some(p) => Ok(Some(p)),
-      None => {
+      Some(Ok(p)) => Ok(Some(p)),
+      // From a newer version: left as it is, for that version.
+      Some(Err(sequence_core::schema::LoadError::Newer)) => Err(Unloadable::Newer),
+      _ => {
         let stamp = std::time::SystemTime::now()
           .duration_since(std::time::UNIX_EPOCH)
           .map_or(0, |d| d.as_secs());
         let aside = self.dir.join(format!("project.unreadable-{stamp}.json"));
         let _ = fs::rename(self.project_path(), &aside);
-        Err(aside)
+        Err(Unloadable::SetAside(aside))
       }
     }
   }
@@ -269,17 +280,23 @@ impl Library {
   /// Read a project file in place of the library's project. Photos it lacks are left
   /// out. It's read into a folder beside the library, which replaces it only once the
   /// whole file is read: a file that fails partway leaves the library as it was.
+  #[cfg(test)]
   pub fn open_file(&mut self, path: &Path) -> Result<Project, OpenError> {
+    let (project, staging) = Library::read_file(&self.dir, path)?;
+    self.swap_in(&staging).map_err(OpenError::Io)?;
+    Ok(project)
+  }
+
+  /// The first half of opening, which can run in the background: the file read into a
+  /// folder beside the library at `dir`, which `swap_in` then puts in its place.
+  pub fn read_file(dir: &Path, path: &Path) -> Result<(Project, PathBuf), OpenError> {
     let file = File::open(path).map_err(OpenError::Io)?;
     let mut opened = OpenedProject::open(BufReader::new(file))?;
-    let staging = self.dir.with_extension("opening");
+    let staging = dir.with_extension("opening");
     let _ = fs::remove_dir_all(&staging);
     let stage = Library::at(staging.clone());
     match stage.fill_from(&mut opened) {
-      Ok(project) => {
-        self.swap_in(&staging).map_err(OpenError::Io)?;
-        Ok(project)
-      }
+      Ok(project) => Ok((project, staging)),
       Err(e) => {
         let _ = fs::remove_dir_all(&staging);
         Err(e)
@@ -288,7 +305,7 @@ impl Library {
   }
 
   /// Replace the library's folder with `staging`.
-  fn swap_in(&mut self, staging: &Path) -> io::Result<()> {
+  pub fn swap_in(&mut self, staging: &Path) -> io::Result<()> {
     let old = self.dir.with_extension("old");
     let _ = fs::remove_dir_all(&old);
     fs::rename(&self.dir, &old)?;
@@ -335,15 +352,30 @@ impl Library {
 
   /// Write the project and its photos to a project file (through a temporary file beside
   /// it, so a failed save leaves the old one).
+  #[cfg(test)]
   pub fn save_file(&self, path: &Path, project: &Project, exported_at: &str) -> io::Result<()> {
+    Library::save_file_at(&self.dir, path, project, exported_at, |_| {})
+  }
+
+  /// Saving, for the background: the library at `dir`, with progress from 0 to 1.
+  pub fn save_file_at(
+    dir: &Path,
+    path: &Path,
+    project: &Project,
+    exported_at: &str,
+    mut progress: impl FnMut(f64),
+  ) -> io::Result<()> {
+    let lib = Library::at(dir.to_path_buf());
+    let me = &lib;
     let mut images = Vec::new();
     let mut thumbs = Vec::new();
     for (id, meta) in &project.photos {
-      let image = File::open(self.image_path(id))
+      let image = File::open(me.image_path(id))
         .map_err(|e| io::Error::new(e.kind(), format!("{} is missing from the app’s storage", meta.name)))?;
       images.push(BufReader::new(image));
-      thumbs.push(File::open(self.thumb_path(id)).ok().map(BufReader::new));
+      thumbs.push(File::open(me.thumb_path(id)).ok().map(BufReader::new));
     }
+    let total = (images.len() + thumbs.iter().filter(|t| t.is_some()).count()).max(1) as f64;
     let mut sources: Vec<PhotoSource> = Vec::new();
     for (((id, meta), image), thumb) in project.photos.iter().zip(images.iter_mut()).zip(thumbs.iter_mut()) {
       sources.push(PhotoSource {
@@ -357,10 +389,12 @@ impl Library {
     // lets the app write the file the user chose but not make or rename others beside it.
     let tmp = std::env::temp_dir().join(format!("{}.saving", uuid_name()));
     let out = BufWriter::new(File::create(&tmp)?);
-    let result = write_project(out, project, &mut sources, exported_at, |_| {})
-      .and_then(|w| w.into_inner().map_err(|e| e.into_error()))
-      .and_then(|f| f.sync_all())
-      .and_then(|()| fs::copy(&tmp, path).map(|_| ()));
+    let result = write_project(out, project, &mut sources, exported_at, |done| {
+      progress(done as f64 / total)
+    })
+    .and_then(|w| w.into_inner().map_err(|e| e.into_error()))
+    .and_then(|f| f.sync_all())
+    .and_then(|()| fs::copy(&tmp, path).map(|_| ()));
     let _ = fs::remove_file(&tmp);
     result
   }

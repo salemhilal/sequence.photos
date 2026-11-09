@@ -146,7 +146,20 @@ impl Workspace {
       )
       .on_scroll(cx.listener(|ws, ev, _, cx| ws.desk_scroll(ev, cx)))
       .on_pinch(cx.listener(|ws, ev, _, cx| ws.desk_pinch(ev, cx)))
-      .on_drop(cx.listener(|ws, paths: &ExternalPaths, _, cx| ws.files_dropped(paths.paths().to_vec(), cx)));
+      .on_drop(cx.listener(|ws, paths: &ExternalPaths, _, cx| ws.files_dropped(paths.paths().to_vec(), cx)))
+      .group("desk")
+      // Files dragged over: what dropping them does.
+      .on_drag_move(cx.listener(|ws, ev: &DragMoveEvent<ExternalPaths>, _, cx| {
+        let project = ev.drag(cx).paths().iter().any(|p| {
+          p.file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(sequence_core::project_file::is_project_name)
+        });
+        if ws.ui.file_drop_project != project {
+          ws.ui.file_drop_project = project;
+          cx.notify();
+        }
+      }));
 
     let single = (self.ui.selection.len() == 1).then(|| self.ui.selection[0].clone());
     for p in &items {
@@ -230,6 +243,33 @@ impl Workspace {
     if project.pile.is_empty() {
       desk = desk.child(self.render_desk_empty(theme, cx));
     }
+    // Shown only while files are dragged over the desk.
+    desk = desk.child(
+      div()
+        .absolute()
+        .size_full()
+        .flex()
+        .items_center()
+        .justify_center()
+        .bg(theme.accent.opacity(0.12))
+        .border_2()
+        .border_color(theme.accent)
+        .invisible()
+        .group_drag_over::<ExternalPaths>("desk", |s| s.visible())
+        .child(
+          div()
+            .px(px(14.0))
+            .py(px(8.0))
+            .rounded(px(6.0))
+            .bg(theme.panel)
+            .text_color(theme.text)
+            .child(if self.ui.file_drop_project {
+              "Drop to open project"
+            } else {
+              "Drop to add photos"
+            }),
+        ),
+    );
     desk.into_any_element()
   }
 
@@ -270,6 +310,108 @@ impl Workspace {
             .when(hints, |d| d.child(super::paint::shortcut_badge("⌘I", theme)))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation()),
           ),
+      )
+      .when(!any, |d| d.child(self.setup_card(theme, cx)))
+  }
+
+  /// A new project's page, set before anything's placed (`OwnPageSettings`): spreads or
+  /// frames and a preset, applied at once; the rest is in Layout.
+  fn setup_card(&mut self, theme: &Theme, cx: &mut Context<Self>) -> impl IntoElement {
+    use sequence_core::page_setup::PageDraft;
+    use sequence_core::units::{PRESETS, units};
+    let d = PageDraft::of(self.project());
+    let u = units(d.page.unit);
+    let mut presets = div().flex().flex_wrap().gap(px(4.0));
+    for (i, p) in PRESETS.iter().filter(|p| p.arrangement == d.arrangement).enumerate() {
+      let on = d.preset().is_some_and(|q| q.label == p.label);
+      presets = presets.child(
+        div()
+          .id(("setup-preset", i))
+          .px(px(8.0))
+          .py(px(3.0))
+          .rounded(px(4.0))
+          .border_1()
+          .border_color(if on { theme.accent } else { theme.border_strong })
+          .bg(if on { theme.accent_soft } else { theme.control })
+          .child(p.label)
+          .on_click(cx.listener(move |ws, _, _, cx| ws.set_up_page(cx, |d| *d = d.with_preset(p)))),
+      );
+    }
+    let ws = cx.entity().downgrade();
+    div()
+      .id("setup-card")
+      .w(px(340.0))
+      .flex()
+      .flex_col()
+      .gap(px(8.0))
+      .p(px(14.0))
+      .rounded(px(6.0))
+      .bg(theme.panel)
+      .text_color(theme.text)
+      .text_size(px(12.0))
+      .border_1()
+      .border_color(theme.border)
+      .shadow_md()
+      .on_any_mouse_down(|_, _, cx| cx.stop_propagation())
+      .child(div().text_color(theme.muted).text_size(px(11.0)).child("Page"))
+      .child(super::controls::segmented(
+        "setup-pages",
+        &[
+          (sequence_core::Arrangement::Spreads, "Spreads"),
+          (sequence_core::Arrangement::Frames, "Frames"),
+        ],
+        d.arrangement,
+        theme,
+        move |a, _, cx| {
+          let _ = ws.update(cx, |ws, cx| {
+            // The first preset of the kind, so the size suits it.
+            let first = PRESETS.iter().find(|p| p.arrangement == a);
+            ws.set_up_page(cx, |d| {
+              *d = match first {
+                Some(p) => d.with_preset(p),
+                None => {
+                  d.arrangement = a;
+                  *d
+                }
+              }
+            });
+          });
+        },
+      ))
+      .child(presets)
+      .child(
+        div()
+          .font_family(crate::assets::MONO)
+          .text_size(px(11.0))
+          .child(format!(
+            "{} × {} {}{}",
+            u.format(d.page.w),
+            u.format(d.page.h),
+            u.suffix,
+            if d.page.unit == sequence_core::Unit::In {
+              format!(" · {} dpi", d.page.px_per_unit)
+            } else {
+              String::new()
+            }
+          )),
+      )
+      .child(
+        div()
+          .flex()
+          .flex_wrap()
+          .items_center()
+          .gap(px(4.0))
+          .text_color(theme.muted)
+          .child("You can change this anytime in")
+          .child(
+            div()
+              .id("setup-layout")
+              .text_color(theme.accent_ink)
+              .cursor_pointer()
+              .child("Layout")
+              .on_click(cx.listener(|ws, _, _, cx| ws.open_layout(cx))),
+          )
+          .child(", along with the guides photos fit and snap to."),
       )
   }
 }

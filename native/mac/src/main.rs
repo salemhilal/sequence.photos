@@ -191,9 +191,12 @@ fn main() {
       cx.dispatch_action(&OpenSettings);
     }
 
-    // Files from Finder, as they come.
+    // Files from Finder, as they come. One the app was launched with (in its first moments)
+    // takes over from the last session's project without asking.
+    let started = std::time::Instant::now();
     cx.spawn(async move |cx| {
       while let Some(urls) = urls_rx.next().await {
+        let launching = started.elapsed() < std::time::Duration::from_secs(2);
         let paths: Vec<PathBuf> = urls.iter().filter_map(|u| urls::file_url_path(u)).collect();
         let links: Vec<String> = urls
           .into_iter()
@@ -203,8 +206,15 @@ fn main() {
           for link in &links {
             ws.finish_sign_in(link, cx);
           }
-          if !paths.is_empty() {
-            ws.files_dropped(paths, cx);
+          let project = paths.iter().rev().find(|p| {
+            p.file_name()
+              .and_then(|n| n.to_str())
+              .is_some_and(sequence_core::project_file::is_project_name)
+          });
+          match project {
+            Some(p) if launching => ws.open_launched(p.clone(), cx),
+            _ if !paths.is_empty() => ws.files_dropped(paths, cx),
+            _ => {}
           }
         });
         if done.is_err() {

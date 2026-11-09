@@ -101,6 +101,30 @@ impl Render for Workspace {
       cx.set_menus(crate::commands::menus(menu));
     }
     let theme = self.theme(window);
+    if self.outdated {
+      return div()
+        .size_full()
+        .flex()
+        .flex_col()
+        .items_center()
+        .justify_center()
+        .gap(px(10.0))
+        .bg(theme.bg)
+        .text_color(theme.text)
+        .font_family(FONT)
+        .child(
+          div()
+            .text_size(px(18.0))
+            .font_weight(FontWeight::SEMIBOLD)
+            .child("This project was saved by a newer version of Sequence."),
+        )
+        .child(
+          div()
+            .text_color(theme.muted)
+            .child("Update Sequence from the App Store to open it. Your saved project hasn’t been changed."),
+        )
+        .into_any_element();
+    }
     // Fullscreen left another way (the green button, the menu): presenting ends too; and
     // presenting ended by leaving Preview leaves fullscreen.
     let full = window.is_fullscreen();
@@ -299,7 +323,7 @@ impl Render for Workspace {
     if let Some(tour) = self.render_tour(&theme, cx) {
       root = root.child(tour);
     }
-    root
+    root.into_any_element()
   }
 }
 

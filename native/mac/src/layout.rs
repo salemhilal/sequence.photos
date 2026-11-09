@@ -166,6 +166,20 @@ impl Workspace {
     self.changed(cx);
   }
 
+  /// A page change made at once, as one step (a new project's setup card).
+  pub fn set_up_page(&mut self, cx: &mut Context<Self>, f: impl FnOnce(&mut PageDraft)) {
+    let before = self.project().clone();
+    let mut draft = PageDraft::of(&before);
+    f(&mut draft);
+    let Some(next) = self.page_run.apply(&before, &draft) else {
+      return;
+    };
+    self.history.replace(next);
+    let after = self.project().clone();
+    self.page_run.recorded(&before, &after);
+    self.changed(cx);
+  }
+
   pub fn revert_page(&mut self, cx: &mut Context<Self>) {
     let d = PageDraft::of(self.project());
     if let Some(l) = &mut self.ui.layout {

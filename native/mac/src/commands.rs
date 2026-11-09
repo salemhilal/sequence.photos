@@ -709,32 +709,77 @@ impl Workspace {
       .file_name()
       .map(|n| n.to_string_lossy().into_owned())
       .unwrap_or_default();
+    if self.doc.path.as_ref() == Some(&path) && !self.edited() {
+      return;
+    }
     self.confirm_replace(
-      "Replace your current project?",
+      "Open another project?",
       format!("“{name}”"),
-      "Replace",
+      "Open",
       cx,
       move |ws, cx| ws.open_now(path, cx),
     );
   }
 
+  /// Open a file, once nothing's being added, saved, or opened: read in the background,
+  /// then put in place of the library.
   fn open_now(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+    if self.ui.busy.is_some() || self.is_importing() {
+      // One at a time, after what's under way.
+      cx.spawn(async move |this, cx| {
+        cx.background_executor()
+          .timer(std::time::Duration::from_millis(200))
+          .await;
+        let _ = this.update(cx, |ws, cx| ws.open_now(path, cx));
+      })
+      .detach();
+      return;
+    }
     self.cancel_drag(cx);
     self.finish_crop(true, cx);
-    match self.lib.open_file(&path) {
-      Ok(project) => {
-        self.history.reset(project);
-        self.ui = crate::workspace::Ui::default();
-        self.doc.path = Some(path.clone());
-        self.doc.saved_revision = self.history.revision();
-        self.remember_document(&path);
-        self.changed(cx);
-      }
-      Err(e) => {
-        self.ui.notice = Some(e.to_string());
-        cx.notify();
-      }
+    self.ui.busy = Some("Opening project…".into());
+    cx.notify();
+    let dir = self.lib.dir.clone();
+    let file = path.clone();
+    let task = cx
+      .background_executor()
+      .spawn(async move { crate::library::Library::read_file(&dir, &file) });
+    cx.spawn(async move |this, cx| {
+      let read = task.await;
+      let _ = this.update(cx, |ws, cx| {
+        ws.ui.busy = None;
+        let opened = read.and_then(|(project, staging)| {
+          ws.lib
+            .swap_in(&staging)
+            .map(|()| project)
+            .map_err(sequence_core::project_file::OpenError::Io)
+        });
+        match opened {
+          Ok(project) => {
+            ws.history.reset(project);
+            ws.ui = crate::workspace::Ui::default();
+            ws.doc.path = Some(path.clone());
+            ws.doc.saved_revision = ws.history.revision();
+            ws.remember_document(&path);
+            ws.changed(cx);
+          }
+          Err(e) => {
+            ws.ui.notice = Some(e.to_string());
+            cx.notify();
+          }
+        }
+      });
+    })
+    .detach();
+  }
+
+  /// A file the app was launched to open: it takes over from the last session's project
+  /// without asking (and the same file, unchanged, is already open).
+  pub fn open_launched(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+    if self.doc.path.as_ref() == Some(&path) && !self.edited() {
+      return;
     }
+    self.open_now(path, cx);
   }
 
   /// Whether the project is safe in its file (or empty), so replacing it loses nothing.
@@ -862,9 +907,7 @@ impl Workspace {
   ) {
     self.leave_tour(cx);
     if !as_new && let Some(path) = self.doc.path.clone() {
-      if self.write_to(path, cx) {
-        then(self, cx);
-      }
+      self.write_to(path, cx, then);
       return;
     }
     let dir = self
@@ -880,50 +923,77 @@ impl Workspace {
       .as_ref()
       .and_then(|p| p.file_stem())
       .map(|s| s.to_string_lossy().into_owned())
-      .unwrap_or_else(|| {
-        format!(
-          "{}-{}",
-          sequence_core::units::terms(self.project().layout.arrangement()).file_stem,
-          &now_iso()[..10]
-        )
-      });
+      .unwrap_or_else(|| "Untitled".into());
     let picked = cx.prompt_for_new_path(&dir, Some(&format!("{stem}.{PROJECT_EXTENSION}")));
     cx.spawn(async move |this, cx| {
       if let Ok(Ok(Some(path))) = picked.await {
-        let _ = this.update(cx, |ws, cx| {
-          if ws.write_to(path, cx) {
-            then(ws, cx);
-          }
-        });
+        let _ = this.update(cx, |ws, cx| ws.write_to(path, cx, then));
       }
     })
     .detach();
   }
 
-  /// Save to a file; whether it worked.
-  fn write_to(&mut self, path: PathBuf, cx: &mut Context<Self>) -> bool {
+  /// Save to a file in the background, with its progress in the status bar; then carry on
+  /// if it saved. Changes made while it saves aren't in the file.
+  fn write_to(
+    &mut self,
+    path: PathBuf,
+    cx: &mut Context<Self>,
+    then: impl FnOnce(&mut Self, &mut Context<Self>) + 'static,
+  ) {
+    if self.ui.busy.is_some() || self.is_importing() {
+      return;
+    }
     let path = if path.extension().is_none() {
       path.with_extension(PROJECT_EXTENSION)
     } else {
       path
     };
-    match self.lib.save_file(&path, self.project(), &now_iso()) {
-      Ok(()) => {
-        self.doc.path = Some(path.clone());
-        self.doc.saved_revision = self.history.revision();
-        self.remember_document(&path);
-        self.prefs.document_edited = false;
-        self.prefs.save();
-        self.prune_library();
-        cx.notify();
-        true
+    let project = self.project().clone();
+    let revision = self.history.revision();
+    let dir = self.lib.dir.clone();
+    let name = path
+      .file_stem()
+      .map_or(String::new(), |s| s.to_string_lossy().into_owned());
+    self.ui.busy = Some("Saving… 0%".into());
+    cx.notify();
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<f64>();
+    let target = path.clone();
+    let task = cx.background_executor().spawn(async move {
+      crate::library::Library::save_file_at(&dir, &target, &project, &now_iso(), |f| {
+        let _ = tx.unbounded_send(f);
+      })
+    });
+    cx.spawn(async move |this, cx| {
+      use futures::StreamExt;
+      while let Some(f) = rx.next().await {
+        let _ = this.update(cx, |ws, cx| {
+          ws.ui.busy = Some(format!("Saving… {}%", (f * 100.0).round()));
+          cx.notify();
+        });
       }
-      Err(e) => {
-        self.ui.notice = Some(format!("Couldn’t save the project: {e}"));
-        cx.notify();
-        false
-      }
-    }
+      let result = task.await;
+      let _ = this.update(cx, |ws, cx| {
+        ws.ui.busy = None;
+        match result {
+          Ok(()) => {
+            ws.doc.path = Some(path.clone());
+            ws.doc.saved_revision = revision;
+            ws.remember_document(&path);
+            ws.prefs.document_edited = ws.edited();
+            ws.prefs.save();
+            ws.prune_library();
+            cx.notify();
+            then(ws, cx);
+          }
+          Err(e) => {
+            ws.ui.notice = Some(format!("Couldn’t save “{name}”: {e}"));
+            cx.notify();
+          }
+        }
+      });
+    })
+    .detach();
   }
 
   /// A new, empty project (after asking, when this one's changes aren't in a file).

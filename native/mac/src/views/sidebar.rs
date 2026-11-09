@@ -102,6 +102,9 @@ impl Workspace {
     let editing = self.ui.editing.clone();
     let reorder = self.ui.reorder.clone();
     let weak = cx.entity().downgrade();
+    // While something's dragged, the gaps show only where it would go.
+    let dragging_any = self.drag.is_some();
+    let noun = terms.spread;
     let mut y = LIST_PAD - scroll;
     let mut cells = Vec::new();
     let mut gaps = Vec::new();
@@ -138,6 +141,8 @@ impl Workspace {
         let lit = self.ui.hover == Some(DropTarget::Insert(i)) || reorder.as_ref().is_some_and(|(_, d)| *d == i);
         if lit {
           list_el = list_el.child(gap_line(gap));
+        } else if !dragging_any {
+          list_el = list_el.child(insert_button(i, gap, grid, noun, theme, cx));
         }
       }
       y += GAP_H;
@@ -319,6 +324,8 @@ impl Workspace {
       gaps.push((total, Rect::new(list.x + gap.x, list.y + gap.y, gap.w, gap.h)));
       if self.ui.hover == Some(DropTarget::Insert(total)) || reorder.as_ref().is_some_and(|(_, d)| *d == total) {
         list_el = list_el.child(gap_line(gap));
+      } else if !dragging_any {
+        list_el = list_el.child(insert_button(total, gap, grid, noun, theme, cx));
       }
     }
     // Only gaps and cells in view take drops.
@@ -417,6 +424,39 @@ impl Workspace {
       .child(resize)
       .into_any_element()
   }
+}
+
+/// A gap between spreads, hovered: a button to add one there ("+" in a grid's narrow gutters).
+fn insert_button(
+  index: usize,
+  gap: Rect,
+  grid: bool,
+  noun: &'static str,
+  theme: &Theme,
+  cx: &mut Context<Workspace>,
+) -> Stateful<Div> {
+  let label = if grid { "+".to_string() } else { format!("+ Add {noun}") };
+  boxed(gap)
+    .id(("insert", index))
+    .flex()
+    .items_center()
+    .justify_center()
+    .opacity(0.0)
+    .hover(|s| s.opacity(1.0))
+    .tip(format!("Add a {noun} here"), cx.entity().downgrade())
+    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+    .on_click(cx.listener(move |ws, _, _, cx| {
+      ws.apply(cx, |d| drop(sequence_core::actions::add_spread(d, index)));
+    }))
+    .child(
+      div()
+        .px(px(6.0))
+        .rounded(px(3.0))
+        .bg(theme.accent)
+        .text_color(theme.on_accent)
+        .text_size(px(10.0))
+        .child(label),
+    )
 }
 
 /// The part of `r` inside `bounds`.
