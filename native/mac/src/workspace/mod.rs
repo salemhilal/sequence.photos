@@ -243,6 +243,8 @@ pub struct Workspace {
   pub tour: Option<crate::tour::Tour>,
   /// Photos copied with ⌘C.
   pub copied: crate::clipboard::Copied,
+  /// Whether the components were last given the dark theme.
+  pub component_theme: Option<bool>,
   /// The menu bar's wording, as last set.
   pub menu_state: Option<crate::commands::MenuState>,
   /// The main window, for asking questions in it.
@@ -294,6 +296,7 @@ impl Workspace {
       },
       window_handle: None,
       menu_state: None,
+      component_theme: None,
       tour: None,
       outdated: false,
       copied: Default::default(),

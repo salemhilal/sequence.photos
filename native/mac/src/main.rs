@@ -132,8 +132,12 @@ fn main() {
       })
       .expect("couldn't open the window");
 
+    // Menu actions arrive while the window that dispatched them is busy: the main
+    // window's own work waits a moment (updating it now would fail, silently).
     cx.on_action(move |_: &TakeTour, cx| {
-      let _ = window.update(cx, |ws, _, cx| ws.start_tour(cx));
+      cx.defer(move |cx| {
+        let _ = window.update(cx, |ws, _, cx| ws.start_tour(cx));
+      });
     });
     // The first time the app opens to an empty project, the tour.
     cx.spawn(async move |cx| {
@@ -166,16 +170,20 @@ fn main() {
       });
     });
     cx.on_action(move |_: &Quit, cx| {
-      let _ = window.update(cx, |ws, _, cx| ws.request_quit(cx));
+      cx.defer(move |cx| {
+        let _ = window.update(cx, |ws, _, cx| ws.request_quit(cx));
+      });
     });
     // ⌘W closes the window in front: Settings, or the main window (which quits, asking first).
     cx.on_action(move |_: &CloseWindow, cx| {
       let Some(w) = cx.active_window() else { return };
-      if w == window.into() {
-        let _ = window.update(cx, |ws, _, cx| ws.request_quit(cx));
-      } else {
-        let _ = w.update(cx, |_, window, _| window.remove_window());
-      }
+      cx.defer(move |cx| {
+        if w == window.into() {
+          let _ = window.update(cx, |ws, _, cx| ws.request_quit(cx));
+        } else {
+          let _ = w.update(cx, |_, window, _| window.remove_window());
+        }
+      });
     });
     // Settings, in a window of its own: one at a time, brought forward if it's open.
     let settings: Rc<RefCell<Option<WindowHandle<SettingsWindow>>>> = Rc::default();

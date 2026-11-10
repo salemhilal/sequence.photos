@@ -4,6 +4,7 @@
 
 use std::collections::HashMap;
 
+use gpui_kit::component::Sizable as _;
 use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
@@ -89,7 +90,9 @@ impl Workspace {
     }
     let mut row = div().flex().items_center().gap(px(6.0)).min_w_0();
     if let Some(l) = label {
-      row = row.child(div().w(px(52.0)).flex_none().text_color(theme.muted).child(l));
+      // A letter (X, W) takes little room; a word, a column of its own.
+      let w = if l.chars().count() <= 2 { 14.0 } else { 52.0 };
+      row = row.child(div().w(px(w)).flex_none().text_color(theme.muted).child(l));
     }
     row
       .child(
@@ -97,7 +100,7 @@ impl Workspace {
           .flex_1()
           .min_w_0()
           .when(!enabled, |d| d.opacity(0.5))
-          .child(Input::new(&state).disabled(!enabled)),
+          .child(Input::new(&state).small().disabled(!enabled)),
       )
       .into_any_element()
   }

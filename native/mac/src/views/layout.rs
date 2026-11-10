@@ -15,7 +15,7 @@ use sequence_core::resolution::{placed_soft, soft_photos, soft_sentence};
 use sequence_core::units::{PRESETS, terms, units};
 use sequence_core::{Arrangement, Axis, BorderShape, PageSide, Spread, SpreadKind, Unit};
 
-use super::controls::{self, check, field_row, help};
+use super::controls::{self, check, field_row, help, radio};
 use super::paint::{SpreadPicture, boxed, x};
 use super::{icon_button, text_button};
 use crate::assets::{MONO, icon};
@@ -783,7 +783,7 @@ impl Workspace {
     .into_iter()
     .enumerate()
     {
-      let mut row = check(("content", i), label, d.content == c, theme);
+      let mut row = radio(("content", i), label, d.content == c, theme);
       if matters {
         row = row.on_click(cx.listener(move |ws, _, _, cx| ws.set_draft(cx, |d, _| d.content = c)));
       } else {

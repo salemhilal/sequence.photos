@@ -231,7 +231,9 @@ impl Workspace {
         .shadow_lg()
         .child(bars)
         .child(div().absolute().top(px(14.0)).left_0().child(head(true)));
-      stage = stage.child(arrows(screen, cx)).child(image_el);
+      // The arrows over the image, so the tag layer under them doesn't take their clicks.
+      let overlay = arrows(boxed(Rect::new(left, top, w, h)), cx);
+      stage = stage.child(screen).child(image_el).child(overlay);
     } else {
       let mut card = boxed(Rect::new(left, top, w, card_h))
         .rounded(px(8.0))
@@ -241,9 +243,11 @@ impl Workspace {
         .border_color(rgb(0xdbdbdb))
         .shadow_md()
         .child(head(false));
-      let mut media = div().relative().w(x(w)).h(x(h)).bg(rgb(0xffffff));
+      let media = div().relative().w(x(w)).h(x(h)).bg(rgb(0xffffff));
+      // Over the image: the count and the arrows (the tag layer would take their clicks).
+      let mut over = boxed(Rect::new(left, media_top, w, h));
       if total > 1 {
-        media = media.child(
+        over = over.child(
           div()
             .absolute()
             .top(px(10.0))
@@ -257,7 +261,8 @@ impl Workspace {
             .child(format!("{}/{total}", at + 1)),
         );
       }
-      card = card.child(arrows(media, cx));
+      card = card.child(media);
+      let over = arrows(over, cx);
       let mut dots = div().flex().justify_center().gap(px(4.0)).py(px(8.0)).h(px(22.0));
       if total > 1 {
         for i in 0..total {
@@ -279,7 +284,7 @@ impl Workspace {
           .overflow_hidden()
           .child(caption_text(&username, post.caption.as_deref().unwrap_or(""))),
       );
-      stage = stage.child(card).child(image_el);
+      stage = stage.child(card).child(image_el).child(over);
     }
     stage.into_any_element()
   }

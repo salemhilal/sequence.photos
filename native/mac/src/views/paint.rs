@@ -94,10 +94,8 @@ impl SpreadPicture<'_> {
 
   /// The pages, each lit if it's the drop target.
   pub fn page_elements(&self, theme: &Theme, lit: Option<PageSide>) -> Vec<AnyElement> {
-    let bg = match self.spread.background {
-      Some(Ink::Black) => ink(Ink::Black),
-      _ => theme.page,
-    };
+    // As exports draw it: pure white, or black.
+    let bg = ink(self.spread.background.unwrap_or(Ink::White));
     self
       .pages()
       .into_iter()

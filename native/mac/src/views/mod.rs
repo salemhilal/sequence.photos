@@ -60,7 +60,38 @@ pub fn icon_button(
   b
 }
 
-/// A text button, plain or primary.
+/// A raised control's edge (`--raise`): a hairline and a soft drop in light; in dark, a
+/// faint light top edge.
+fn raised(b: Stateful<Div>, theme: &Theme) -> Stateful<Div> {
+  if theme.is_dark() {
+    b.shadow(vec![BoxShadow {
+      color: hsla(0.0, 0.0, 1.0, 0.05),
+      offset: point(px(0.0), px(1.0)),
+      blur_radius: px(0.0),
+      spread_radius: px(0.0),
+      inset: true,
+    }])
+  } else {
+    b.shadow(vec![
+      BoxShadow {
+        color: hsla(0.0, 0.0, 0.0, 0.18),
+        offset: point(px(0.0), px(0.0)),
+        blur_radius: px(0.0),
+        spread_radius: px(0.5),
+        inset: false,
+      },
+      BoxShadow {
+        color: hsla(0.0, 0.0, 0.0, 0.06),
+        offset: point(px(0.0), px(1.0)),
+        blur_radius: px(1.0),
+        spread_radius: px(0.0),
+        inset: false,
+      },
+    ])
+  }
+}
+
+/// A text button, plain or primary (`.btn`): raised, and darkening while pressed.
 pub fn text_button(
   id: impl Into<ElementId>,
   label: impl Into<SharedString>,
@@ -72,18 +103,27 @@ pub fn text_button(
     .id(id)
     .flex()
     .items_center()
+    .justify_center()
+    .gap(px(6.0))
     .h(px(24.0))
     .px(px(10.0))
     .rounded(px(3.0))
     .text_size(px(12.0))
+    .whitespace_nowrap()
+    .cursor_pointer()
     .child(label.into());
+  let pressed = theme.border_strong;
   let b = if primary {
-    b.bg(theme.accent).text_color(theme.on_accent)
+    raised(b, theme)
+      .bg(theme.accent)
+      .text_color(theme.on_accent)
+      .font_weight(FontWeight::MEDIUM)
+      .active(|s| s.opacity(0.85))
   } else {
-    b.bg(theme.control)
+    raised(b, theme)
+      .bg(theme.control)
       .text_color(theme.text)
-      .border_1()
-      .border_color(theme.border_strong)
+      .active(move |s| s.bg(pressed))
   };
   b.on_click(click)
 }
@@ -102,6 +142,11 @@ impl Render for Workspace {
       cx.set_menus(crate::commands::menus(menu));
     }
     let theme = self.theme(window);
+    // Text fields and the like follow the app's light or dark.
+    if self.component_theme != Some(theme.is_dark()) {
+      self.component_theme = Some(theme.is_dark());
+      cx.defer(move |cx| theme.apply_to_components(cx));
+    }
     if self.outdated {
       return div()
         .size_full()

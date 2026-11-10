@@ -8,7 +8,7 @@ use sequence_core::geometry::{
   Rect, border_box, fit_centered, page_rect, page_sides, pile_size, sheet_extent, side_at, spread_guides,
 };
 use sequence_core::units::{terms, units};
-use sequence_core::{PageSide, PhotoMeta};
+use sequence_core::{Ink, PageSide, PhotoMeta};
 
 use super::controls::check;
 use super::desk::{handle_targets, selection_frame};
@@ -274,6 +274,8 @@ impl Workspace {
       );
     stage_el = stage_el.child(pager);
 
+    let spread_id = spread.id.clone();
+    let spread_bg = spread.background.unwrap_or(Ink::White);
     let header = div()
       .absolute()
       .left_0()
@@ -293,6 +295,30 @@ impl Workspace {
         folio_label(index, total, arrangement)
       )))
       .child(div().flex_1())
+      // The page's background, as exports draw it.
+      .child(div().text_color(theme.muted).text_size(px(11.0)).child("Background"))
+      .child({
+        let id = spread_id.clone();
+        let ws = cx.entity().downgrade();
+        super::controls::segmented(
+          "spread-background",
+          &[(Ink::White, "White"), (Ink::Black, "Black")],
+          spread_bg,
+          theme,
+          move |ink, _, cx| {
+            let id = id.clone();
+            let _ = ws.update(cx, |ws, cx| {
+              ws.apply(cx, |d| {
+                if let Some(s) = sequence_core::actions::spread_mut(d, &id) {
+                  s.background = (ink == Ink::Black).then_some(Ink::Black);
+                }
+              });
+            });
+          },
+        )
+        .w(px(120.0))
+        .mr(px(8.0))
+      })
       .child(
         icon_button(
           "toggle-guides",
@@ -433,7 +459,8 @@ impl Workspace {
         PageSide::Right => "Right page · measured from its top-left corner",
       }));
     let values = [item.x - page.x, item.y, item.w, item.h];
-    let mut grid = div().flex().flex_wrap().gap(px(6.0));
+    // Two to a row, as X Y over W H.
+    let mut grid = div().flex().flex_wrap().gap(px(8.0));
     for (i, label) in ["X", "Y", "W", "H"].into_iter().enumerate() {
       let f = self.number_field(
         Field::Item(i),
@@ -444,7 +471,7 @@ impl Workspace {
         window,
         cx,
       );
-      grid = grid.child(div().w(px(110.0)).child(f));
+      grid = grid.child(div().w(relative(0.47)).child(f));
     }
     el = el.child(grid);
     let lock = self.ui.keep_proportions;

@@ -104,6 +104,35 @@ impl Theme {
   }
 }
 
+impl Theme {
+  /// Whether this is the dark theme.
+  pub fn is_dark(&self) -> bool {
+    self.bg == Self::dark().bg
+  }
+
+  /// Give the components the app borrows (text fields, the slider) its colors, in light
+  /// or dark, rather than their library's own.
+  pub fn apply_to_components(&self, cx: &mut gpui_kit::App) {
+    use gpui_kit::component::theme::{Theme as Components, ThemeMode};
+    let t = *self;
+    Components::change(if t.is_dark() { ThemeMode::Dark } else { ThemeMode::Light }, None, cx);
+    Components::update(cx, |c| {
+      c.colors.background = t.control;
+      c.colors.input = t.border_strong;
+      c.colors.border = t.border_strong;
+      c.colors.foreground = t.text;
+      c.colors.muted_foreground = t.muted;
+      c.colors.ring = t.accent;
+      c.colors.caret = t.text;
+      c.colors.selection = t.accent.opacity(0.35);
+      c.colors.accent = t.hover;
+      c.colors.primary = t.accent;
+      c.colors.popover = t.panel;
+      c.colors.popover_foreground = t.text;
+    });
+  }
+}
+
 /// The theme setting.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]

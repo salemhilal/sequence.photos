@@ -91,3 +91,32 @@ pub fn check(id: impl Into<ElementId>, label: &'static str, on: bool, theme: &Th
     .child(b)
     .child(label)
 }
+
+/// A radio button and its label: one choice of several.
+pub fn radio(id: impl Into<ElementId>, label: &'static str, on: bool, theme: &Theme) -> Stateful<Div> {
+  let mut b = div()
+    .size(px(14.0))
+    .flex()
+    .items_center()
+    .justify_center()
+    .rounded_full()
+    .border_1()
+    .border_color(theme.border_strong)
+    .bg(theme.control);
+  if on {
+    b = b
+      .bg(theme.accent)
+      .border_color(theme.accent)
+      .child(div().size(px(5.0)).rounded_full().bg(theme.on_accent));
+  }
+  div()
+    .id(id)
+    .flex()
+    .items_center()
+    .gap(px(6.0))
+    .px(px(4.0))
+    .py(px(2.0))
+    .rounded(px(3.0))
+    .child(b)
+    .child(label)
+}

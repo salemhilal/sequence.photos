@@ -197,12 +197,19 @@ impl Workspace {
         }
         let pid = p.photo_id.clone();
         let pid2 = p.photo_id.clone();
+        let sid = spread.id.clone();
         row_el = row_el.child(
           boxed(clipped)
             .on_mouse_down(
               MouseButton::Left,
               cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
                 cx.stop_propagation();
+                // A double-click opens the spread, as anywhere else on it.
+                if ev.click_count == 2 {
+                  ws.drag = None;
+                  ws.open_editor(sid.clone(), cx);
+                  return;
+                }
                 ws.photo_down(Source::Sidebar, pid.clone(), ev, cx);
               }),
             )
