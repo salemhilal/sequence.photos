@@ -13,7 +13,7 @@ use sequence_core::geometry::{
 use sequence_core::page_setup::{Anchor, Content, PageDraft, resizes};
 use sequence_core::resolution::{placed_soft, soft_photos, soft_sentence};
 use sequence_core::units::{PRESETS, terms, units};
-use sequence_core::{Arrangement, Axis, BorderShape, PageSide, Project, Spread, SpreadKind, Unit};
+use sequence_core::{Arrangement, Axis, BorderShape, PageSide, Spread, SpreadKind, Unit};
 
 use super::controls::{self, check, field_row, help};
 use super::paint::{SpreadPicture, boxed, x};
@@ -620,7 +620,7 @@ impl Workspace {
     cx: &mut Context<Self>,
   ) -> AnyElement {
     let d = st.draft;
-    let project: Project = self.history.project().clone();
+    let project = self.history.shared();
     let base = self.page_run.base(&project).clone();
     let u = units(d.page.unit);
     let mut col = div()

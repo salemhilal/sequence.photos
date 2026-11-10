@@ -18,7 +18,7 @@ const IDLE: std::time::Duration = std::time::Duration::from_millis(2000);
 impl Workspace {
   pub fn render_preview(&mut self, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
     let main = self.frames.main;
-    let project = self.history.project().clone();
+    let project = self.history.shared();
     let sheet = project.sheet();
     let arrangement = project.layout.arrangement();
     let all = project.layout.all();

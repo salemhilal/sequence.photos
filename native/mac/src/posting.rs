@@ -122,13 +122,13 @@ impl Workspace {
     change(&mut p);
     self.ig.post = Some(p);
     if save {
-      self.save_post();
+      self.save_post(cx);
     }
     cx.notify();
   }
 
   /// Keep the post with the project, with empty tag lists and caption left out.
-  pub fn save_post(&mut self) {
+  pub fn save_post(&mut self, cx: &mut Context<Self>) {
     let Some(mut p) = self.ig.post.clone() else { return };
     if let Some(tags) = &mut p.tags {
       tags.retain(|_, list| !list.is_empty());
@@ -139,7 +139,7 @@ impl Workspace {
     if p.caption.as_deref() == Some("") {
       p.caption = None;
     }
-    self.save_export_state(|s: &mut ExportState| s.instagram = Some(p));
+    self.save_export_state(cx, |s: &mut ExportState| s.instagram = Some(p));
   }
 
   /// The slides chosen, in the document's order.
@@ -532,7 +532,7 @@ impl Workspace {
               fit: p.fit,
               ..Default::default()
             });
-            ws.save_export_state(|s| {
+            ws.save_export_state(cx, |s| {
               s.instagram = Some(InstagramState {
                 kind: p.kind,
                 fit: p.fit,

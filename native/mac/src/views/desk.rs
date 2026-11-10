@@ -117,7 +117,7 @@ impl Workspace {
   fn render_desk(&mut self, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
     let d = self.frames.desk;
     let view = self.ui.view;
-    let project = self.history.project().clone();
+    let project = self.history.shared();
     let mut items: Vec<_> = project.pile.iter().collect();
     items.sort_by(|a, b| a.z.total_cmp(&b.z));
     let desk_color: Hsla = rgb(self.prefs.desk_color).into();

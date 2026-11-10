@@ -121,9 +121,9 @@ impl Workspace {
     o
   }
 
-  /// Keep the Export page's choices with the project: in the library's copy and the file,
-  /// outside undo. Nothing changes when they're as they were.
-  pub fn save_export_state(&mut self, change: impl FnOnce(&mut ExportState)) {
+  /// Keep the Export page's choices with the project (the library's copy, and the file
+  /// when it's next saved), outside undo. Nothing changes when they're as they were.
+  pub fn save_export_state(&mut self, cx: &mut Context<Self>, change: impl FnOnce(&mut ExportState)) {
     let was = self.project().export.clone().unwrap_or_default();
     let mut next = was.clone();
     change(&mut next);
@@ -131,13 +131,12 @@ impl Workspace {
       return;
     }
     self.history.silent(|d| d.export = Some(next));
-    if self.tour.is_none() && self.lib.save_project(self.history.project()).is_err() {
-      self.ui.save_failed = true;
-    }
+    // Kept with the library's next save, a moment from now (not on every keystroke).
+    self.schedule_save(cx);
   }
 
   pub fn pick_destination(&mut self, to: Destination, cx: &mut Context<Self>) {
-    self.save_export_state(|s| s.to = Some(to));
+    self.save_export_state(cx, |s| s.to = Some(to));
     cx.notify();
   }
 
@@ -147,7 +146,7 @@ impl Workspace {
     change(&mut o);
     self.ui.export.dpi = o.dpi;
     let saved = o.saved();
-    self.save_export_state(|s| s.options = Some(saved));
+    self.save_export_state(cx, |s| s.options = Some(saved));
     cx.notify();
   }
 

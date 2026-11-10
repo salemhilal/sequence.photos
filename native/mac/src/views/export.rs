@@ -55,7 +55,7 @@ fn section(title: Option<&'static str>, theme: &Theme) -> Div {
 impl Workspace {
   pub fn render_export(&mut self, theme: &Theme, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
     let main = self.frames.main;
-    let project = self.project().clone();
+    let project = self.history.shared();
     let sheet = project.sheet();
     let to = self.export_to();
     let o = self.export_options();
@@ -414,7 +414,7 @@ impl Workspace {
   /// One output page, fitted to the stage above the pager: a book's spreads all at one
   /// scale, a whole spread's, so a single first or last page shows at a page's size.
   fn output_preview(&mut self, page: &OutputPage, stage_w: f64, stage_h: f64, theme: &Theme) -> AnyElement {
-    let project = self.project().clone();
+    let project = self.history.shared();
     let sheet = project.sheet();
     let region = page_region(page, &sheet);
     let pad = sheet.page_w * PAD_SHARE;

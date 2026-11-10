@@ -47,7 +47,7 @@ impl Workspace {
   /// `r` is in window pixels; the sidebar is drawn in the page's (below the toolbar).
   pub fn render_sidebar(&mut self, r: Rect, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
     let main_y = self.frames.main.y;
-    let project = self.history.project().clone();
+    let project = self.history.shared();
     let sheet = project.sheet();
     let arrangement = project.layout.arrangement();
     let book = arrangement == Arrangement::Spreads;

@@ -3,6 +3,7 @@
 //! (milliseconds, from any fixed start), as there's no clock to read on the web.
 
 use std::collections::VecDeque;
+use std::sync::Arc;
 
 use crate::model::Project;
 
@@ -10,13 +11,14 @@ const HISTORY_LIMIT: usize = 200;
 /// Changes with the same key this close together (ms) are one step.
 const COALESCE_MS: f64 = 1000.0;
 
-/// A project and its history.
+/// A project and its history. Projects are shared, so keeping one in the history, or
+/// handing the present to a view for a frame, costs no copy.
 pub struct History {
-  past: VecDeque<Project>,
-  future: Vec<Project>,
-  present: Project,
+  past: VecDeque<Arc<Project>>,
+  future: Vec<Arc<Project>>,
+  present: Arc<Project>,
   /// The project a gesture started from, and the revision then.
-  gesture_base: Option<(Project, u64)>,
+  gesture_base: Option<(Arc<Project>, u64)>,
   last_coalesce: Option<(String, f64)>,
   revision: u64,
 }
@@ -26,7 +28,7 @@ impl History {
     Self {
       past: VecDeque::new(),
       future: Vec::new(),
-      present: project,
+      present: Arc::new(project),
       gesture_base: None,
       last_coalesce: None,
       revision: 0,
@@ -42,9 +44,14 @@ impl History {
     &self.present
   }
 
+  /// The present, shared: for a view to read without copying it.
+  pub fn shared(&self) -> Arc<Project> {
+    self.present.clone()
+  }
+
   /// The project a gesture started from (or the present, outside a gesture).
   pub fn gesture_start(&self) -> &Project {
-    self.gesture_base.as_ref().map_or(&self.present, |(p, _)| p)
+    self.gesture_base.as_ref().map_or(&*self.present, |(p, _)| &**p)
   }
 
   pub fn in_gesture(&self) -> bool {
@@ -65,7 +72,7 @@ impl History {
     self.future.clear();
     self.gesture_base = None;
     self.last_coalesce = None;
-    self.present = project;
+    self.present = Arc::new(project);
     self.revision += 1;
   }
 
@@ -81,11 +88,12 @@ impl History {
     if self.in_gesture() {
       return;
     }
-    let mut next = self.present.clone();
+    let mut next = Project::clone(&self.present);
     recipe(&mut next);
-    if next == self.present {
+    if next == *self.present {
       return;
     }
+    let next = Arc::new(next);
     let joins = match (coalesce, &self.last_coalesce) {
       (Some((k, now)), Some((last, at))) => k == last && now - at < COALESCE_MS,
       _ => false,
@@ -104,7 +112,7 @@ impl History {
   /// Replace the whole project as one undoable step (opening a file into the window).
   pub fn replace(&mut self, project: Project) {
     self.cancel();
-    let prev = std::mem::replace(&mut self.present, project);
+    let prev = std::mem::replace(&mut self.present, Arc::new(project));
     self.push(prev);
     self.future.clear();
     self.last_coalesce = None;
@@ -114,7 +122,7 @@ impl History {
   /// Change the present without recording history (raising a clicked photo).
   /// Not a step, and not an edit either: the revision doesn't change.
   pub fn silent(&mut self, recipe: impl FnOnce(&mut Project)) {
-    recipe(&mut self.present);
+    recipe(Arc::make_mut(&mut self.present));
   }
 
   /// Start a gesture (one already under way goes on).
@@ -128,7 +136,7 @@ impl History {
   pub fn preview(&mut self, recipe: impl FnOnce(&mut Project)) {
     let mut next = self.gesture_start().clone();
     recipe(&mut next);
-    self.present = next;
+    self.present = Arc::new(next);
     self.revision += 1;
   }
 
@@ -161,7 +169,7 @@ impl History {
   pub fn undo(&mut self) {
     self.cancel();
     let Some(mut prev) = self.past.pop_back() else { return };
-    prev.export = self.present.export.clone();
+    Arc::make_mut(&mut prev).export = self.present.export.clone();
     let now = std::mem::replace(&mut self.present, prev);
     self.future.push(now);
     self.last_coalesce = None;
@@ -171,7 +179,7 @@ impl History {
   pub fn redo(&mut self) {
     self.cancel();
     let Some(mut next) = self.future.pop() else { return };
-    next.export = self.present.export.clone();
+    Arc::make_mut(&mut next).export = self.present.export.clone();
     let now = std::mem::replace(&mut self.present, next);
     self.past.push_back(now);
     self.last_coalesce = None;
@@ -186,9 +194,10 @@ impl History {
       .chain(std::iter::once(&self.present))
       .chain(self.future.iter())
       .chain(self.gesture_base.iter().map(|(p, _)| p))
+      .map(|p| &**p)
   }
 
-  fn push(&mut self, p: Project) {
+  fn push(&mut self, p: Arc<Project>) {
     self.past.push_back(p);
     if self.past.len() > HISTORY_LIMIT {
       self.past.pop_front();

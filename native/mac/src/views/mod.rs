@@ -737,7 +737,7 @@ impl Workspace {
       Separator,
       Swatches,
     }
-    let project = self.project().clone();
+    let project = self.history.shared();
     let (mx, my) = match &menu {
       ContextMenu::Desk { x, y } | ContextMenu::Photo { x, y, .. } => (*x, *y),
     };

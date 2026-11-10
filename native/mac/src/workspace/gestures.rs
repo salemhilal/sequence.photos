@@ -588,7 +588,7 @@ impl Workspace {
     self.clear_drag_feedback();
     match drag {
       Drag::Tag { .. } => {
-        self.save_post();
+        self.save_post(cx);
         cx.notify();
       }
       Drag::Photos {

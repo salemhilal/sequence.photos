@@ -33,7 +33,7 @@ const MARGIN: f64 = 24.0;
 impl Workspace {
   pub fn render_editor(&mut self, theme: &Theme, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
     let main = self.frames.main;
-    let project = self.history.project().clone();
+    let project = self.history.shared();
     let Some(id) = self.ui.editing.clone() else {
       return div().into_any_element();
     };
@@ -364,7 +364,7 @@ impl Workspace {
   /// The selected photo's place, size, resolution, and fitting; or how to use the editor.
   /// "Go to next error" and "Return to desk" sit at the foot.
   fn render_inspector(&mut self, r: Rect, theme: &Theme, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-    let project = self.project().clone();
+    let project = self.history.shared();
     let sheet = project.sheet();
     let u = units(sheet.unit);
     let mut el = boxed(r)
@@ -591,7 +591,7 @@ impl Workspace {
 
   /// The desk's photos in a row, to drag onto the spread; dropping one here sends it back.
   fn render_strip(&mut self, r: Rect, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
-    let project = self.project().clone();
+    let project = self.history.shared();
     let lit = self.ui.hover == Some(DropTarget::Strip);
     let mut row = div().flex().items_center().gap(px(8.0)).h_full().px(px(12.0)).child(
       div()

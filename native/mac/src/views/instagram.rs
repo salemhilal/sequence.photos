@@ -59,7 +59,7 @@ pub fn grouped(n: usize) -> String {
 impl Workspace {
   /// A page, drawn at `scale` (pixels per unit) with its top left at `origin`, clipped to it.
   fn slide_picture(&mut self, page: &OutputPage, scale: f64, origin: (f64, f64), theme: &Theme) -> Vec<AnyElement> {
-    let project = self.project().clone();
+    let project = self.history.shared();
     let sheet = project.sheet();
     let region = page_region(page, &sheet);
     let pic = SpreadPicture {
@@ -77,7 +77,7 @@ impl Workspace {
   /// How the post will look on Instagram, on the stage.
   pub fn instagram_stage(&mut self, stage_w: f64, stage_h: f64, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
     let main = self.frames.main;
-    let project = self.project().clone();
+    let project = self.history.shared();
     let sheet = project.sheet();
     let post = self.post_state();
     let kind = post.kind.unwrap_or(PostKind::Feed);
@@ -426,7 +426,7 @@ impl Workspace {
     window: &mut Window,
     cx: &mut Context<Self>,
   ) -> Stateful<Div> {
-    let project = self.project().clone();
+    let project = self.history.shared();
     let sheet = project.sheet();
     let post = self.post_state();
     let kind = post.kind.unwrap_or(PostKind::Feed);

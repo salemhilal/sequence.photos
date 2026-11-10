@@ -250,6 +250,8 @@ pub struct Workspace {
   saved_to_library: u64,
   /// A save to the library is coming (saves wait a moment, so held keys don't write each step).
   save_scheduled: bool,
+  /// A change outside undo is waiting for the library's save.
+  unsaved_silent: bool,
   /// Imports under way, and finished ones waiting for a gesture to end.
   importing: usize,
   imported: Vec<Imported>,
@@ -297,6 +299,7 @@ impl Workspace {
       copied: Default::default(),
       saved_to_library: 0,
       save_scheduled: false,
+      unsaved_silent: false,
       importing: 0,
       imported: Vec::new(),
     };
@@ -369,16 +372,26 @@ impl Workspace {
       for imported in std::mem::take(&mut self.imported) {
         self.place_imported(imported);
       }
-      if self.saved_to_library != self.history.revision() && !self.save_scheduled {
-        self.save_scheduled = true;
-        cx.spawn(async move |this, cx| {
-          cx.background_executor().timer(SAVE_DELAY).await;
-          let _ = this.update(cx, |ws, _| ws.save_to_library());
-        })
-        .detach();
+      if self.saved_to_library != self.history.revision() {
+        self.schedule_save(cx);
       }
     }
     cx.notify();
+  }
+
+  /// Save to the library a moment from now (held keys and typing don't write each step).
+  /// Changes outside undo (the Export page's choices) count too.
+  pub fn schedule_save(&mut self, cx: &mut Context<Self>) {
+    self.unsaved_silent = true;
+    if self.save_scheduled {
+      return;
+    }
+    self.save_scheduled = true;
+    cx.spawn(async move |this, cx| {
+      cx.background_executor().timer(SAVE_DELAY).await;
+      let _ = this.update(cx, |ws, _| ws.save_to_library());
+    })
+    .detach();
   }
 
   /// Keep the project in the library now (if it changed, and no gesture is under way).
@@ -388,10 +401,11 @@ impl Workspace {
     if self.tour.is_some()
       || self.outdated
       || self.history.in_gesture()
-      || self.saved_to_library == self.history.revision()
+      || (self.saved_to_library == self.history.revision() && !self.unsaved_silent)
     {
       return;
     }
+    self.unsaved_silent = false;
     self.saved_to_library = self.history.revision();
     // Until a save works again, a bar offers to save to a file instead.
     self.ui.save_failed = self.lib.save_project(self.history.project()).is_err();
