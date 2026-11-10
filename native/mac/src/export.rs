@@ -12,7 +12,7 @@ use sequence_core::export_options::{Options, default_destination, export_px_per_
 use sequence_core::geometry::Rect;
 use sequence_core::idml::{LinkedImage, build_idml, read_image_info, zip_stored};
 use sequence_core::model::{ExportDestination as Destination, ExportState, ImageFormat};
-use sequence_core::pdf::{Part, PhotoSource, render_pdf};
+use sequence_core::pdf::{Part, PhotoSource, render_pdf_to};
 use sequence_core::project_file::unique_name;
 use sequence_core::raster::{ZipOut, estimate_bytes, extension, fitted_plan, image_names, lowered_notice, sample_plan};
 use sequence_core::render_plan::output_pages;
@@ -187,8 +187,8 @@ impl Workspace {
     let o = self.export_options();
     let mut source = self.source();
     let job: Job = Box::new(move |path, progress| {
-      let r = render_pdf(&project, o.per, o.dpi, o.print_at, &mut source, progress);
-      std::fs::write(path, &r.bytes).ok()?;
+      let r = render_pdf_to(create(path)?, &project, o.per, o.dpi, o.print_at, &mut source, progress).ok()?;
+      r.bytes.into_inner().ok()?.sync_all().ok()?;
       Some(Made {
         missing: r.missing,
         previews: r.previews,

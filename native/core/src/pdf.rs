@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::fmt::Write as _;
+use std::io;
 
 use crate::PhotoId;
 use crate::crop::crop_of;
@@ -146,26 +147,67 @@ impl PageContent {
   }
 }
 
-/// A PDF being written: its objects, then its pages.
-pub struct PdfWriter {
-  /// Each object's body, by its number less one. 1 is the catalog, 2 the page tree, 3 the info.
-  objects: Vec<Vec<u8>>,
+/// A PDF being written to `out` as it goes: each object as it's added (a big export
+/// needn't fit in memory), then the catalog, page tree, info, and cross-reference table.
+pub struct PdfWriter<W: io::Write = Vec<u8>> {
+  out: W,
+  /// Bytes written so far.
+  pos: u64,
+  /// Each object's offset, by its number less one. 1 is the catalog, 2 the page tree, 3 the
+  /// info: written last, so their offsets are filled in then.
+  offsets: Vec<u64>,
+  info: String,
   pages: Vec<usize>,
+  /// The first write that failed: everything after is skipped, and `finish` reports it.
+  error: Option<io::Error>,
 }
 
-impl PdfWriter {
+impl PdfWriter<Vec<u8>> {
+  /// A PDF written into memory.
   pub fn new(title: &str) -> Self {
+    Self::to(Vec::new(), title)
+  }
+}
+
+impl<W: io::Write> PdfWriter<W> {
+  pub fn to(out: W, title: &str) -> Self {
     let mut w = Self {
-      objects: vec![Vec::new(), Vec::new(), Vec::new()],
+      out,
+      pos: 0,
+      offsets: vec![0, 0, 0],
+      info: format!("<< /Title {} /Creator (Sequence) /Producer (Sequence) >>", text(title)),
       pages: Vec::new(),
+      error: None,
     };
-    w.objects[2] = format!("<< /Title {} /Creator (Sequence) /Producer (Sequence) >>", text(title)).into_bytes();
+    w.write(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n");
     w
   }
 
-  fn add(&mut self, body: Vec<u8>) -> usize {
-    self.objects.push(body);
-    self.objects.len()
+  fn write(&mut self, bytes: &[u8]) {
+    if self.error.is_some() {
+      return;
+    }
+    match self.out.write_all(bytes) {
+      Ok(()) => self.pos += bytes.len() as u64,
+      Err(e) => self.error = Some(e),
+    }
+  }
+
+  /// Write object `n`'s body (its parts in turn), noting where it starts.
+  fn object(&mut self, n: usize, parts: &[&[u8]]) {
+    self.offsets[n - 1] = self.pos;
+    self.write(format!("{n} 0 obj\n").as_bytes());
+    for part in parts {
+      self.write(part);
+    }
+    self.write(b"\nendobj\n");
+  }
+
+  fn add(&mut self, parts: &[&[u8]]) -> usize {
+    self.offsets.push(0);
+    let n = self.offsets.len();
+    self.object(n, parts);
+    n
   }
 
   /// Embed a JPEG as it is. None if it isn't a JPEG PDF can show (grayscale, RGB or CMYK).
@@ -178,64 +220,56 @@ impl PdfWriter {
       4 => "/DeviceCMYK /Decode [1 0 1 0 1 0 1 0]",
       _ => return None,
     };
-    let mut body = format!(
+    let head = format!(
       "<< /Type /XObject /Subtype /Image /Width {} /Height {} /ColorSpace {space} /BitsPerComponent 8 /Filter /DCTDecode /Length {} >>\nstream\n",
       info.width,
       info.height,
       bytes.len()
-    )
-    .into_bytes();
-    body.extend_from_slice(bytes);
-    body.extend_from_slice(b"\nendstream");
-    Some(ImageRef(self.add(body)))
+    );
+    Some(ImageRef(self.add(&[head.as_bytes(), bytes, b"\nendstream"])))
   }
 
   /// A page `w` × `h` points.
   pub fn add_page(&mut self, w: f64, h: f64, content: PageContent) {
-    let mut stream = format!("<< /Length {} >>\nstream\n", content.ops.len()).into_bytes();
-    stream.extend_from_slice(content.ops.as_bytes());
-    stream.extend_from_slice(b"endstream");
-    let contents = self.add(stream);
+    let head = format!("<< /Length {} >>\nstream\n", content.ops.len());
+    let contents = self.add(&[head.as_bytes(), content.ops.as_bytes(), b"endstream"]);
     let images: String = content.images.iter().map(|i| format!(" /Im{0} {0} 0 R", i.0)).collect();
     let page = format!(
       "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {} {}] /Resources << /XObject <<{images} >> >> /Contents {contents} 0 R >>",
       num(w),
       num(h)
     );
-    let n = self.add(page.into_bytes());
+    let n = self.add(&[page.as_bytes()]);
     self.pages.push(n);
   }
 
-  /// The file.
-  pub fn finish(mut self) -> Vec<u8> {
-    self.objects[0] = b"<< /Type /Catalog /Pages 2 0 R >>".to_vec();
+  /// The rest of the file; its output.
+  pub fn finish(mut self) -> io::Result<W> {
+    self.object(1, &[b"<< /Type /Catalog /Pages 2 0 R >>"]);
     let kids: String = self.pages.iter().map(|n| format!("{n} 0 R ")).collect();
-    self.objects[1] = format!(
+    let tree = format!(
       "<< /Type /Pages /Kids [{}] /Count {} >>",
       kids.trim_end(),
       self.pages.len()
-    )
-    .into_bytes();
-    let mut out = b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n".to_vec();
-    let mut offsets = Vec::with_capacity(self.objects.len());
-    for (i, body) in self.objects.iter().enumerate() {
-      offsets.push(out.len());
-      out.extend_from_slice(format!("{} 0 obj\n", i + 1).as_bytes());
-      out.extend_from_slice(body);
-      out.extend_from_slice(b"\nendobj\n");
-    }
-    let xref = out.len();
-    let mut table = format!("xref\n0 {}\n0000000000 65535 f \n", self.objects.len() + 1);
-    for o in offsets {
+    );
+    self.object(2, &[tree.as_bytes()]);
+    let info = std::mem::take(&mut self.info);
+    self.object(3, &[info.as_bytes()]);
+    let xref = self.pos;
+    let mut table = format!("xref\n0 {}\n0000000000 65535 f \n", self.offsets.len() + 1);
+    for o in &self.offsets {
       let _ = writeln!(table, "{o:010} 00000 n ");
     }
     let _ = write!(
       table,
       "trailer\n<< /Size {} /Root 1 0 R /Info 3 0 R >>\nstartxref\n{xref}\n%%EOF\n",
-      self.objects.len() + 1
+      self.offsets.len() + 1
     );
-    out.extend_from_slice(table.as_bytes());
-    out
+    self.write(table.as_bytes());
+    match self.error {
+      Some(e) => Err(e),
+      None => Ok(self.out),
+    }
   }
 }
 
@@ -280,8 +314,8 @@ pub fn decode_size(photo: &PhotoMeta, placed_w: f64, placed_h: f64) -> (u32, u32
 }
 
 /// What rendering a PDF made, and what it ran into.
-pub struct PdfResult {
-  pub bytes: Vec<u8>,
+pub struct PdfResult<W = Vec<u8>> {
+  pub bytes: W,
   /// Photos drawn from their display copies, their originals unreadable.
   pub previews: usize,
   /// Photos with no image at all, left out.
@@ -304,8 +338,27 @@ pub fn render_pdf(
   source: &mut dyn PhotoSource,
   progress: &mut dyn FnMut(usize, usize),
 ) -> PdfResult {
+  let r = render_pdf_to(Vec::new(), project, per, dpi, print_at, source, progress);
+  // Writing into memory can't fail.
+  r.unwrap_or_else(|_| PdfResult {
+    bytes: Vec::new(),
+    previews: 0,
+    missing: 0,
+  })
+}
+
+/// `render_pdf`, written to `out` as it goes.
+pub fn render_pdf_to<W: io::Write>(
+  out: W,
+  project: &Project,
+  per: Per,
+  dpi: Option<f64>,
+  print_at: f64,
+  source: &mut dyn PhotoSource,
+  progress: &mut dyn FnMut(usize, usize),
+) -> io::Result<PdfResult<W>> {
   let sheet = project.sheet();
-  let mut pdf = PdfWriter::new(terms(sheet.arrangement).pdf_title);
+  let mut pdf = PdfWriter::to(out, terms(sheet.arrangement).pdf_title);
   let to_pt = pt_per_unit(sheet.unit, print_at);
   let px_per_unit = export_px_per_unit(ExportDestination::Pdf, &sheet, dpi);
   // Each original embedded as it is goes in once, however many pages draw it.
@@ -349,11 +402,11 @@ pub fn render_pdf(
     pdf.add_page(page_w, page_h, content);
     progress(i + 1, total);
   }
-  PdfResult {
-    bytes: pdf.finish(),
+  Ok(PdfResult {
+    bytes: pdf.finish()?,
     previews,
     missing,
-  }
+  })
 }
 
 enum Embedded {
@@ -363,8 +416,8 @@ enum Embedded {
   Part(ImageRef, bool),
 }
 
-fn embed(
-  pdf: &mut PdfWriter,
+fn embed<W: io::Write>(
+  pdf: &mut PdfWriter<W>,
   d: &Draw,
   photo: &PhotoMeta,
   source: &mut dyn PhotoSource,
@@ -486,7 +539,7 @@ mod tests {
     content.fill_rect(Rect::new(0.0, 0.0, 72.0, 72.0), [0, 0, 0]);
     content.draw_image(image, [72.0, 0.0, 0.0, 54.0, 0.0, 9.0]);
     pdf.add_page(72.0, 72.0, content);
-    let bytes = pdf.finish();
+    let bytes = pdf.finish().expect("writes");
     let rfind = |needle: &[u8]| bytes.windows(needle.len()).rposition(|w| w == needle);
     let text = String::from_utf8_lossy(&bytes);
     assert!(bytes.starts_with(b"%PDF-1.4"));
