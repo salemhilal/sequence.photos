@@ -27,6 +27,8 @@ pub fn bookmark(path: &Path) -> Result<Vec<u8>, String> {
 pub fn resolve(bookmark: &[u8]) -> Result<(PathBuf, bool), String> {
   let data = NSData::with_bytes(bookmark);
   let mut stale = Bool::NO;
+  // SAFETY: bookmark data of any content is checked by Foundation (an error, if bad); `stale`
+  // is a live local it writes to.
   let url: Retained<NSURL> = unsafe {
     NSURL::URLByResolvingBookmarkData_options_relativeToURL_bookmarkDataIsStale_error(
       &data,
@@ -37,6 +39,7 @@ pub fn resolve(bookmark: &[u8]) -> Result<(PathBuf, bool), String> {
   }
   .map_err(|e| e.localizedDescription().to_string())?;
   // Kept until the app quits: the project stays open, and may be saved, until then.
+  // SAFETY: a URL just resolved from a security-scoped bookmark, as the call requires.
   unsafe { url.startAccessingSecurityScopedResource() };
   let path = url.path().map(|p| PathBuf::from(p.to_string())).ok_or("not a file")?;
   Ok((path, stale.as_bool()))

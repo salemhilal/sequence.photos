@@ -270,7 +270,11 @@ impl Workspace {
   /// Start connecting: open Instagram's sign-in page in the browser.
   pub fn connect_instagram(&mut self, return_to_export: bool, cx: &mut Context<Self>) {
     let server = ig::server_url(&self.prefs.server_url);
-    let (url, pending) = ig::plan_sign_in(&server);
+    let Some((url, pending)) = ig::plan_sign_in(&server) else {
+      self.ig.message = Some(("Couldn’t start signing in to Instagram. Try again.".into(), true));
+      cx.notify();
+      return;
+    };
     self.ig.pending = Some(pending);
     self.ig.return_to_export = return_to_export;
     cx.open_url(&url);
@@ -286,11 +290,12 @@ impl Workspace {
     let Some(back) = parse_sign_in_return(fragment) else {
       return;
     };
-    let pending = self.ig.pending.take();
     let state = match &back {
       SignInReturn::Connected { state, .. } | SignInReturn::Error { state, .. } => state,
     };
-    let Some(pending) = pending.filter(|p| &p.state == state) else {
+    // Only the sign-in started here, taken once it matches: a stray link leaves it waiting.
+    let matches = self.ig.pending.as_ref().is_some_and(|p| &p.state == state);
+    let Some(pending) = matches.then(|| self.ig.pending.take()).flatten() else {
       self.say_signed_in(Some(sequence_core::instagram::OTHER_SIGN_IN.into()), true, cx);
       return;
     };
@@ -406,7 +411,7 @@ impl Workspace {
     let feed = p.kind != Some(PostKind::Story);
     if self.chosen_slides().is_empty() {
       Some("Choose at least one slide to post.".into())
-    } else if feed && caption.chars().count() > limits::CAPTION_LENGTH {
+    } else if feed && caption.encode_utf16().count() > limits::CAPTION_LENGTH {
       Some(format!(
         "Captions can be up to {} characters.",
         crate::views::instagram::grouped(limits::CAPTION_LENGTH)
@@ -514,7 +519,12 @@ impl Workspace {
         let _ = this.update(cx, |ws, cx| {
           match ev {
             Event::Step(s) => ws.ig.status = Status::Posting(s),
-            Event::Connection(c) => ws.set_connection(Some(c)),
+            // Unless it was disconnected or changed meanwhile.
+            Event::Connection(c) => {
+              if ws.ig.connection.as_ref().is_some_and(|now| now.user_id == c.user_id) {
+                ws.set_connection(Some(c));
+              }
+            }
             Event::Previews(n) => ws.ig.previews = n,
           }
           cx.notify();

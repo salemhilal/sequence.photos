@@ -63,15 +63,36 @@ pub fn is_image_name(name: &str) -> bool {
   .any(|e| lower.ends_with(e))
 }
 
-fn format_of(bytes: &[u8]) -> ImageFormat {
+/// An image's format, from its first bytes: one the window can draw, or None.
+pub fn sniff_format(bytes: &[u8]) -> Option<ImageFormat> {
   if bytes.starts_with(&[0x89, b'P', b'N', b'G']) {
-    ImageFormat::Png
+    Some(ImageFormat::Png)
   } else if bytes.starts_with(b"GIF") {
-    ImageFormat::Gif
+    Some(ImageFormat::Gif)
   } else if bytes.len() > 12 && &bytes[8..12] == b"WEBP" {
-    ImageFormat::Webp
+    Some(ImageFormat::Webp)
+  } else if bytes.starts_with(&[0xff, 0xd8]) {
+    Some(ImageFormat::Jpeg)
   } else {
-    ImageFormat::Jpeg
+    None
+  }
+}
+
+/// A display copy's format (JPEG, unless its bytes say otherwise).
+fn format_of(bytes: &[u8]) -> ImageFormat {
+  sniff_format(bytes).unwrap_or(ImageFormat::Jpeg)
+}
+
+/// The app's temporary folders (pasted images, test images) left by earlier runs: removed.
+pub fn clean_temp() {
+  let Ok(entries) = fs::read_dir(std::env::temp_dir()) else {
+    return;
+  };
+  for e in entries.flatten() {
+    let name = e.file_name().to_string_lossy().into_owned();
+    if name.starts_with("sequence-paste-") || name.starts_with("Sequence test images ") {
+      let _ = fs::remove_dir_all(e.path());
+    }
   }
 }
 
@@ -367,7 +388,13 @@ impl Library {
     exported_at: &str,
     mut progress: impl FnMut(f64),
   ) -> io::Result<()> {
-    let lib = Library::at(dir.to_path_buf());
+    // Only to name its files: nothing's created (a save runs beside opens' folder swaps).
+    let lib = Library {
+      dir: dir.to_path_buf(),
+      epoch: 0,
+      thumbs: HashMap::new(),
+      missing: HashSet::new(),
+    };
     let me = &lib;
     let mut images = Vec::new();
     let mut thumbs = Vec::new();

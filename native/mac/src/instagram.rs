@@ -77,8 +77,23 @@ pub fn load_connection() -> Option<Connection> {
 pub fn save_connection(c: Option<&Connection>) {
   match c {
     Some(c) => {
-      if let Ok(bytes) = serde_json::to_vec(c) {
-        let _ = std::fs::write(connection_path(), bytes);
+      // Readable by this user only, and written whole: to a file beside it, then renamed.
+      use std::io::Write;
+      use std::os::unix::fs::OpenOptionsExt;
+      let Ok(bytes) = serde_json::to_vec(c) else { return };
+      let path = connection_path();
+      let tmp = path.with_extension("json.tmp");
+      let written = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(&tmp)
+        .and_then(|mut f| f.write_all(&bytes).and_then(|()| f.sync_all()));
+      if written.is_ok() {
+        let _ = std::fs::rename(&tmp, &path);
+      } else {
+        let _ = std::fs::remove_file(&tmp);
       }
     }
     None => {
@@ -144,11 +159,11 @@ pub struct Pending {
   pub server: String,
 }
 
-fn random_token() -> String {
+/// 32 random bytes, encoded; None without the system's randomness (no safe sign-in then).
+fn random_token() -> Option<String> {
   let mut bytes = [0u8; 32];
-  // Without randomness there's no safe sign-in; the state just won't match.
-  let _ = getrandom::fill(&mut bytes);
-  encode_base64_url(&bytes)
+  getrandom::fill(&mut bytes).ok()?;
+  Some(encode_base64_url(&bytes))
 }
 
 pub fn challenge_of(verifier: &str) -> String {
@@ -156,9 +171,9 @@ pub fn challenge_of(verifier: &str) -> String {
 }
 
 /// Instagram's sign-in page for a server, and what to keep until it comes back.
-pub fn plan_sign_in(server: &str) -> (String, Pending) {
-  let verifier = random_token();
-  let state = format!("{}.{}.{}", config::CLIENT, random_token(), challenge_of(&verifier));
+pub fn plan_sign_in(server: &str) -> Option<(String, Pending)> {
+  let verifier = random_token()?;
+  let state = format!("{}.{}.{}", config::CLIENT, random_token()?, challenge_of(&verifier));
   let redirect = format!("{server}/auth/callback");
   let query = form(&[
     ("client_id", config::instagram_app_id()),
@@ -168,14 +183,14 @@ pub fn plan_sign_in(server: &str) -> (String, Pending) {
     ("enable_fb_login", "false"),
     ("state", &state),
   ]);
-  (
+  Some((
     format!("{}?{query}", config::INSTAGRAM_AUTHORIZE_URL),
     Pending {
       state,
       verifier,
       server: server.to_string(),
     },
-  )
+  ))
 }
 
 /// Trade a sign-in's sealed bundle and verifier for the connection.
@@ -624,7 +639,7 @@ mod tests {
 
   #[test]
   fn sign_in_urls() {
-    let (url, pending) = plan_sign_in("https://example.test");
+    let (url, pending) = plan_sign_in("https://example.test").expect("random");
     assert!(url.starts_with(config::INSTAGRAM_AUTHORIZE_URL));
     assert!(url.contains("redirect_uri=https%3A%2F%2Fexample.test%2Fauth%2Fcallback"));
     let parts: Vec<&str> = pending.state.split('.').collect();

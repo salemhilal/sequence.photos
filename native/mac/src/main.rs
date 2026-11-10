@@ -61,6 +61,7 @@ fn main() {
     cx.on_action(|_: &ShowAll, cx| cx.unhide_other_apps());
     cx.on_action(|_: &OpenGitHub, cx| cx.open_url(crate::config::repo_url()));
 
+    library::clean_temp();
     let mut prefs = Prefs::load();
     // The open project's file, through its bookmark (the sandbox forgets it otherwise).
     #[cfg(target_os = "macos")]

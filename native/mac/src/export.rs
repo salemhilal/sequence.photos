@@ -342,6 +342,8 @@ impl Workspace {
     cx: &mut Context<Self>,
   ) {
     if self.ui.busy.is_some() || self.is_importing() {
+      self.ui.notice = Some("Wait for the work under way to finish, then export.".into());
+      cx.notify();
       return;
     }
     let dir = self

@@ -650,7 +650,8 @@ impl Workspace {
       let caption = post.caption.unwrap_or_default();
       let input = self.caption_input(window, cx);
       let tags = hashtag_count(&caption);
-      let len = caption.chars().count();
+      // Counted as the web app (and Instagram's limit) does: in UTF-16 units.
+      let len = caption.encode_utf16().count();
       let over = len > limits::CAPTION_LENGTH || tags > limits::HASHTAGS;
       let counts = format!(
         "{} / {}{}",

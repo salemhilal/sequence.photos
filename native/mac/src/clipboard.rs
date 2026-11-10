@@ -29,14 +29,9 @@ fn hash(bytes: &[u8]) -> u64 {
   h.finish()
 }
 
+/// Formats a copy can put on the clipboard as they are.
 fn format_of(bytes: &[u8]) -> Option<ImageFormat> {
-  if bytes.starts_with(&[0xff, 0xd8]) {
-    Some(ImageFormat::Jpeg)
-  } else if bytes.starts_with(&[0x89, b'P', b'N', b'G']) {
-    Some(ImageFormat::Png)
-  } else {
-    None
-  }
+  crate::library::sniff_format(bytes).filter(|f| matches!(f, ImageFormat::Jpeg | ImageFormat::Png))
 }
 
 impl Workspace {
@@ -57,7 +52,7 @@ impl Workspace {
     let original = std::fs::read(self.lib.image_path(first)).ok();
     let bytes = original
       .filter(|b| format_of(b).is_some())
-      .or_else(|| std::fs::read(self.lib.dir.join("thumbs").join(format!("{first}.jpg"))).ok());
+      .or_else(|| std::fs::read(self.lib.thumb_path(first)).ok());
     let image = bytes.and_then(|b| {
       let format = format_of(&b)?;
       let h = hash(&b);
@@ -103,7 +98,9 @@ impl Workspace {
       return;
     }
     // Clipboard images have no name: "Pasted image 18.23.png".
-    let dir = std::env::temp_dir().join(format!("sequence-paste-{}", std::process::id()));
+    // A folder of their own (a paste a minute after another has the same names); cleared
+    // at the next launch, once they're copied into the library.
+    let dir = std::env::temp_dir().join(format!("sequence-paste-{}", sequence_core::PhotoId::new()));
     let _ = std::fs::create_dir_all(&dir);
     let time = crate::commands::local_time_hm().replace(':', ".");
     let count = images.len();
