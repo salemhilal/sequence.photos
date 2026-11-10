@@ -175,8 +175,9 @@ pub fn soft_badge(r: Rect, theme: &Theme) -> Div {
 }
 
 /// A shortcut's badge just below its button, while ⌘ is held (`ShortcutBadges`). The button
-/// must be `relative()`.
-pub fn shortcut_badge(label: &'static str, theme: &Theme) -> Div {
+/// must be `relative()`. Drawn after everything else, so the desk and sidebar (drawn after
+/// the toolbar) don't cover it.
+pub fn shortcut_badge(label: &'static str, theme: &Theme) -> impl IntoElement {
   div()
     .absolute()
     .top_full()
@@ -186,16 +187,20 @@ pub fn shortcut_badge(label: &'static str, theme: &Theme) -> Div {
     .flex()
     .justify_center()
     .child(
-      div()
-        .px(px(5.0))
-        .py(px(1.0))
-        .rounded(px(3.0))
-        .bg(theme.text)
-        .text_color(theme.bg)
-        .text_size(px(10.0))
-        .font_family(crate::assets::MONO)
-        .whitespace_nowrap()
-        .child(label),
+      deferred(
+        div()
+          .px(px(5.0))
+          .py(px(1.0))
+          .rounded(px(3.0))
+          .bg(theme.text)
+          .text_color(theme.bg)
+          .text_size(px(10.0))
+          .font_family(crate::assets::MONO)
+          .whitespace_nowrap()
+          .shadow_md()
+          .child(label),
+      )
+      .with_priority(10),
     )
 }
 
