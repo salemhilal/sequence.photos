@@ -200,16 +200,17 @@ impl Workspace {
     };
     let pager_h = 44.0;
     let margin = 28.0;
-    let pw = spread_width(spread.kind, &sheet);
-    let scale = ((stage.w - 2.0 * margin) / pw).min((stage.h - 2.0 * margin - pager_h) / sheet.page_h);
-    let (w, h) = (pw * scale, sheet.page_h * scale);
+    // Every spread at one scale (both pages' width), so single pages aren't enlarged.
+    let (extent_left, across) = sequence_core::geometry::sheet_extent(sheet.arrangement, sheet.page_w);
+    let scale = ((stage.w - 2.0 * margin) / across).min((stage.h - 2.0 * margin - pager_h) / sheet.page_h);
+    let (w, h) = (across * scale, sheet.page_h * scale);
     let left = (stage.w - w) / 2.0;
     let top = (stage.h - pager_h - h) / 2.0;
     let pic = SpreadPicture {
       spread,
       sheet: &sheet,
       scale,
-      origin: (left - spread_left(spread.kind, &sheet) * scale, top),
+      origin: (left - extent_left * scale, top),
       clip: true,
     };
     let mut el = div().absolute().size_full().bg(Hsla::from(rgb(self.prefs.desk_color)));

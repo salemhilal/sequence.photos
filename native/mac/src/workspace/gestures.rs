@@ -85,6 +85,15 @@ pub enum Drag {
     frame0: Rect,
     whole0: Rect,
   },
+  /// A number field's label dragged sideways: its value scrubbed, a step every couple of pixels.
+  Scrub {
+    field: crate::fields::Field,
+    start: f64,
+    value0: f64,
+    step: f64,
+    last: f64,
+    moved: bool,
+  },
   /// A person's tag on an Instagram slide, moved within its image (`size`, in pixels).
   Tag {
     key: String,
@@ -99,6 +108,8 @@ pub enum Drag {
 const DRAG_THRESHOLD: f64 = 4.0;
 /// The largest a dragged photo's ghost gets.
 const GHOST_MAX: f64 = 140.0;
+/// Pixels of drag per step when scrubbing a number field.
+const SCRUB_PX: f64 = 2.0;
 /// Snapping reach in the editor, in screen pixels.
 pub const SNAP_PX: f64 = 8.0;
 /// The smallest a desk photo gets when resized, in inches.
@@ -302,6 +313,35 @@ impl Workspace {
         let (key, username) = (key.clone(), username.clone());
         self.move_tag(&key, &username, x, y, false, cx);
       }
+      Drag::Scrub {
+        field,
+        start,
+        value0,
+        step,
+        last,
+        moved,
+      } => {
+        let dx = at.0 - *start;
+        if !*moved && dx.abs() < 3.0 {
+          self.drag = Some(drag);
+          return;
+        }
+        *moved = true;
+        // Shift steps by ten, Option by a tenth.
+        let k = if ev.modifiers.shift {
+          10.0
+        } else if ev.modifiers.alt {
+          0.1
+        } else {
+          1.0
+        };
+        let n = ((*value0 + (dx / SCRUB_PX).round() * *step * k) * 1e6).round() / 1e6;
+        if n != *last {
+          *last = n;
+          let field = field.clone();
+          self.field_value(field, n, cx);
+        }
+      }
       Drag::Pan { start, view0, surface } => {
         let (dx, dy) = (at.0 - start.0, at.1 - start.1);
         let v = match surface {
@@ -321,8 +361,9 @@ impl Workspace {
         let b = self.to_desk((m.x + m.w, m.y + m.h));
         let bx = Rect::new(a.0, a.1, b.0 - a.0, b.1 - a.1);
         let mut sel = initial.clone();
+        let had: HashSet<&PhotoId> = initial.iter().collect();
         for item in &self.history.project().pile {
-          if intersects(&Rect::from(item), &bx) && !sel.contains(&item.photo_id) {
+          if intersects(&Rect::from(item), &bx) && !had.contains(&item.photo_id) {
             sel.push(item.photo_id.clone());
           }
         }
@@ -655,7 +696,15 @@ impl Workspace {
         let home = match from {
           Source::Desk => target == Some(DropTarget::Desk),
           Source::Editor => matches!(target, Some(DropTarget::Page { .. })) || target.is_none(),
-          Source::Sidebar | Source::Strip => false,
+          // Dropped back on the page it came from, a photo stays where it was (not refitted).
+          Source::Sidebar => match (&target, act::locate(self.history.gesture_start(), &clicked)) {
+            (Some(DropTarget::Page { spread, side }), Some((act::Location::Spread(from), place))) => {
+              let sheet = self.project().sheet();
+              *spread == from && sequence_core::geometry::side_at(&sheet, place.x + place.w / 2.0) == *side
+            }
+            _ => false,
+          },
+          Source::Strip => false,
         };
         if home {
           self.history.end();
@@ -711,7 +760,7 @@ impl Workspace {
       },
       Drag::Crop { .. } => cx.notify(),
       Drag::Guide(g) => self.guide_up(g, at, ev.modifiers, cx),
-      Drag::Pan { .. } | Drag::Marquee { .. } | Drag::SidebarWidth { .. } => {
+      Drag::Pan { .. } | Drag::Marquee { .. } | Drag::SidebarWidth { .. } | Drag::Scrub { .. } => {
         if matches!(drag, Drag::SidebarWidth { .. }) {
           self.prefs.save();
         }

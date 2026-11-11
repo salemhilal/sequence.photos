@@ -139,7 +139,8 @@ impl Workspace {
 
   /// Change the Page tab's draft.
   pub fn set_draft(&mut self, cx: &mut Context<Self>, f: impl FnOnce(&mut PageDraft, &sequence_core::Project)) {
-    let project = self.history.project().clone();
+    // Shared, not copied: the draft only reads it.
+    let project = self.history.shared();
     if let Some(l) = &mut self.ui.layout {
       f(&mut l.draft, &project);
       l.presets_open = false;
@@ -330,10 +331,14 @@ impl Workspace {
 
   /// A number field's value, typed and committed.
   pub fn field_committed(&mut self, field: Field, text: &str, _window: &mut Window, cx: &mut Context<Self>) {
-    let Some(n) = parse_number(text) else {
-      cx.notify();
-      return;
-    };
+    match parse_number(text) {
+      Some(n) => self.field_value(field, n, cx),
+      None => cx.notify(),
+    }
+  }
+
+  /// A number field's new value (typed, or scrubbed).
+  pub fn field_value(&mut self, field: Field, n: f64, cx: &mut Context<Self>) {
     match field {
       Field::Item(i) => self.item_field(i, n, cx),
       Field::PageW | Field::PageH => self.set_draft(cx, |d, _| {

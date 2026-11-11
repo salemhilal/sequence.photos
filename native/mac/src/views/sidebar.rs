@@ -135,12 +135,31 @@ impl Workspace {
     };
     for (i, spread) in all.iter().enumerate() {
       let (row, gap) = slot(i, y);
+      // Rows out of view aren't drawn (a long book has hundreds).
+      if row.y + row.h < -2.0 * GAP_H || row.y > list.h + 2.0 * GAP_H {
+        y += GAP_H + row_h;
+        continue;
+      }
       // The gap before this spread (a book's first stays first).
       if i > 0 || !book {
         gaps.push((i, Rect::new(list.x + gap.x, list.y + gap.y, gap.w, gap.h)));
         let lit = self.ui.hover == Some(DropTarget::Insert(i)) || reorder.as_ref().is_some_and(|(_, d)| *d == i);
         if lit {
           list_el = list_el.child(gap_line(gap));
+          // Photos dragged over it: what dropping does.
+          if !grid && reorder.is_none() {
+            list_el = list_el.child(
+              boxed(gap).flex().items_center().justify_center().child(
+                div()
+                  .px(px(6.0))
+                  .rounded(px(3.0))
+                  .bg(theme.accent)
+                  .text_color(theme.on_accent)
+                  .text_size(px(10.0))
+                  .child(format!("Drop to add a {noun}")),
+              ),
+            );
+          }
         } else if !dragging_any {
           list_el = list_el.child(insert_button(i, gap, grid, noun, theme, cx));
         }
@@ -160,6 +179,9 @@ impl Workspace {
             ws.spread_down(id.clone(), ev, cx);
           }),
         );
+      if !is_movable(spread.kind) {
+        row_el = row_el.tip("The first and last pages stay in place", weak.clone());
+      }
       if selected {
         row_el = row_el.bg(theme.control).border_1().border_color(theme.accent);
       } else if is_editing {
@@ -284,7 +306,8 @@ impl Workspace {
           .tip("Edit", weak.clone())
           .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
         })
-        .when(is_movable(spread.kind), |d| {
+        // A book's middle spreads, and any frame but a sequence's only one.
+        .when(is_movable(spread.kind) && (book || total > 1), |d| {
           let id = spread.id.clone();
           d.child(
             icon_button(

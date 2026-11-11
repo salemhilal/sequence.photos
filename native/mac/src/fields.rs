@@ -35,12 +35,30 @@ pub enum Field {
 #[derive(Default)]
 pub struct Fields {
   inputs: HashMap<Field, Entity<InputState>>,
+  /// What each field last showed of the project (or had committed): text that's still the
+  /// same when the field is left wasn't edited, so nothing is committed.
+  shown: HashMap<Field, String>,
+  /// The photo the editor's X, Y, W, H fields are for. It stays the photo they were typed
+  /// for while one has the keyboard, so a value left by clicking another photo isn't given
+  /// to that one.
+  pub item_for: Option<sequence_core::PhotoId>,
 }
 
 impl Fields {
   /// Forget fields for things that went away (a removed guide).
   pub fn retain(&mut self, keep: impl Fn(&Field) -> bool) {
     self.inputs.retain(|f, _| keep(f));
+    self.shown.retain(|f, _| keep(f));
+  }
+}
+
+impl Fields {
+  /// Whether one of the editor's X, Y, W, H fields has the keyboard.
+  pub fn item_focused(&self, window: &Window, cx: &App) -> bool {
+    self
+      .inputs
+      .iter()
+      .any(|(f, s)| matches!(f, Field::Item(_)) && s.read(cx).focus_handle(cx).is_focused(window))
   }
 }
 
@@ -55,6 +73,16 @@ pub fn parse_number(text: &str) -> Option<f64> {
 }
 
 impl Workspace {
+  /// How much a number field's value steps by: the unit's step for a distance, one for a dpi.
+  pub fn field_step(&self, field: &Field) -> f64 {
+    let unit = match (field, &self.ui.layout) {
+      (Field::Dpi | Field::ExportDpi | Field::PrintAt, _) => return 1.0,
+      (Field::PageW | Field::PageH, Some(l)) => l.draft.page.unit,
+      _ => self.project().page.unit,
+    };
+    sequence_core::units::units(unit).field_step
+  }
+
   /// A number field showing `text` (the value, formatted), with a label before it.
   #[allow(clippy::too_many_arguments)] // a field's own settings, plus GPUI's window and context
   pub fn number_field(
@@ -67,6 +95,7 @@ impl Workspace {
     window: &mut Window,
     cx: &mut Context<Self>,
   ) -> AnyElement {
+    let shown = text.clone();
     let state = match self.fields.inputs.get(&field) {
       Some(s) => s.clone(),
       None => {
@@ -75,24 +104,51 @@ impl Workspace {
         cx.subscribe_in(&s, window, move |ws, state, ev: &InputEvent, window, cx| {
           if matches!(ev, InputEvent::PressEnter { .. } | InputEvent::Blur) {
             let typed = state.read(cx).value().to_string();
+            // Left as it was: committing the rounded number it shows would change the value.
+            if ws.fields.shown.get(&f) == Some(&typed) {
+              return;
+            }
+            ws.fields.shown.insert(f.clone(), typed.clone());
             ws.field_committed(f.clone(), &typed, window, cx);
           }
         })
         .detach();
         self.fields.inputs.insert(field.clone(), s.clone());
+        self.fields.shown.insert(field.clone(), text.clone());
         s
       }
     };
     // Follow the project while it isn't being typed in.
     let focused = state.read(cx).focus_handle(cx).is_focused(window);
     if !focused && state.read(cx).value().as_ref() != text {
+      self.fields.shown.insert(field.clone(), text.clone());
       state.update(cx, |s, cx| s.set_value(text, window, cx));
     }
     let mut row = div().flex().items_center().gap(px(6.0)).min_w_0();
     if let Some(l) = label {
       // A letter (X, W) takes little room; a word, a column of its own.
       let w = if l.chars().count() <= 2 { 14.0 } else { 52.0 };
-      row = row.child(div().w(px(w)).flex_none().text_color(theme.muted).child(l));
+      // Dragging the label sideways scrubs the value.
+      let scrub = parse_number(&shown).filter(|_| enabled);
+      let mut label = div().w(px(w)).flex_none().text_color(theme.muted).child(l);
+      if let Some(value) = scrub {
+        let f = field.clone();
+        label = label.cursor(CursorStyle::ResizeLeftRight).on_mouse_down(
+          MouseButton::Left,
+          cx.listener(move |ws, ev: &MouseDownEvent, _, _| {
+            let step = ws.field_step(&f);
+            ws.drag = Some(crate::workspace::Drag::Scrub {
+              field: f.clone(),
+              start: f64::from(ev.position.x),
+              value0: value,
+              step,
+              last: value,
+              moved: false,
+            });
+          }),
+        );
+      }
+      row = row.child(label);
     }
     row
       .child(

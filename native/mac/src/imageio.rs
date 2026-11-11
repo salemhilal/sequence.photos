@@ -10,7 +10,7 @@ use objc2_core_foundation::{
 };
 use objc2_core_graphics::{
   CGBitmapContextCreate, CGBitmapContextCreateImage, CGBitmapInfo, CGColorRenderingIntent, CGColorSpace, CGContext,
-  CGDataProvider, CGImage, CGImageAlphaInfo, CGInterpolationQuality, kCGColorSpaceSRGB,
+  CGDataProvider, CGImage, CGImageAlphaInfo, CGImageByteOrderInfo, CGInterpolationQuality, kCGColorSpaceSRGB,
 };
 use objc2_image_io::{
   CGImageDestination, CGImageSource, kCGImageDestinationLossyCompressionQuality, kCGImagePropertyOrientation,
@@ -357,6 +357,30 @@ pub fn upright_jpeg(path: &Path, quality: f64) -> Option<(Vec<u8>, u32, u32)> {
   Some((jpeg(&image, quality)?, size.0, size.1))
 }
 
+/// A file's photo, upright, at most `max` px on its longest side, as the window draws it:
+/// its width, height, and pixels in sRGB, 4 bytes each in the order blue, green, red,
+/// alpha, rows packed. Transparent parts are on white, so every pixel is opaque.
+pub fn bgra(path: &Path, max: f64) -> Option<(u32, u32, Vec<u8>)> {
+  let source = source_at(path)?;
+  let image = thumbnail_image(&source, max)?;
+  let (w, h) = (CGImage::width(Some(&image)), CGImage::height(Some(&image)));
+  if w == 0 || h == 0 {
+    return None;
+  }
+  let mut pixels = vec![0u8; w * h * 4];
+  // SAFETY: the documented sRGB name.
+  let space = CGColorSpace::with_name(Some(unsafe { kCGColorSpaceSRGB }))?;
+  // Alpha first in a little-endian word: blue, green, red, alpha in memory.
+  let info = CGImageAlphaInfo::PremultipliedFirst.0 | CGImageByteOrderInfo::Order32Little.0;
+  // SAFETY: the buffer holds w × h × 4 bytes, as described, and outlives the context.
+  let ctx = unsafe { CGBitmapContextCreate(pixels.as_mut_ptr().cast(), w, h, 8, w * 4, Some(&space), info) }?;
+  let all = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(w as f64, h as f64));
+  fill(&ctx, [255, 255, 255], all);
+  CGContext::draw_image(Some(&ctx), all, Some(&image));
+  drop(ctx);
+  Some((w as u32, h as u32, pixels))
+}
+
 /// The source's first image, upright, at most `max` px on its longest side.
 fn thumbnail_image(source: &CGImageSource, max: f64) -> Option<CFRetained<CGImage>> {
   let size = CFNumber::new_f64(max.max(1.0));
@@ -450,6 +474,31 @@ mod tests {
     let bottom = part_jpeg(&path, (80, 60), Rect::new(0.0, 30.0, 80.0, 30.0), (40, 15), 0.95).expect("a part");
     let [r, _, b] = middle(&bottom);
     assert!(b > 150 && r < 80, "the bottom is blue: {r} {b}");
+    std::fs::remove_dir_all(&dir).ok();
+  }
+
+  #[test]
+  fn decodes_to_pixels_for_the_window() {
+    let dir = std::env::temp_dir().join(format!("sequence-bgra-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("a folder");
+    let path = dir.join("p.jpg");
+    // Red on top, blue below.
+    let (w, h) = (80, 60);
+    let rgb: Vec<u8> = (0..w * h)
+      .flat_map(|i| if i / w < h / 2 { [220, 20, 20] } else { [20, 20, 220] })
+      .collect();
+    std::fs::write(&path, encode_jpeg(&rgb, w, h, 0.95).expect("encodes")).expect("writes");
+    let (pw, ph, px) = bgra(&path, 40.0).expect("decodes");
+    assert_eq!((pw, ph), (40, 30));
+    assert_eq!(px.len(), 40 * 30 * 4);
+    // The first row is the top: red, so its third byte is high and its first low.
+    let top = &px[..4];
+    assert!(top[2] > 150 && top[0] < 80 && top[3] == 255, "the top is red: {top:?}");
+    let bottom = &px[px.len() - 4..];
+    assert!(
+      bottom[0] > 150 && bottom[2] < 80 && bottom[3] == 255,
+      "the bottom is blue: {bottom:?}"
+    );
     std::fs::remove_dir_all(&dir).ok();
   }
 }

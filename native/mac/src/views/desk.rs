@@ -215,9 +215,10 @@ impl Workspace {
       })
     );
     let cropping = self.ui.cropping.as_ref().map(|c| c.photo.clone());
+    let chosen: std::collections::HashSet<&sequence_core::PhotoId> = self.ui.selection.iter().collect();
     for p in items
       .iter()
-      .filter(|p| self.ui.selection.contains(&p.photo_id) && cropping.as_ref() != Some(&p.photo_id))
+      .filter(|p| chosen.contains(&p.photo_id) && cropping.as_ref() != Some(&p.photo_id))
     {
       let r = view.to_screen(Rect::from(*p));
       let handles =

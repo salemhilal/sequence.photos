@@ -3,19 +3,20 @@
 //! and the project itself (`project.json`), saved as it changes so nothing is lost if the
 //! app quits. Project files are read into it and written from it.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{self, BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use gpui_kit::{Image, ImageFormat};
+use gpui_kit::{ImageFormat, RenderImage};
 use sequence_core::geometry::DESK_PHOTO_PX;
 use sequence_core::project_file::{OpenError, OpenedProject, PhotoSource, write_project};
 use sequence_core::schema::migrate_project;
 use sequence_core::{PhotoId, PhotoMeta, Project};
 
 use crate::imageio;
+use crate::photo_cache::{self, Decode, PhotoCache};
 
 /// The open project's photos on disk, and their display copies in memory.
 /// Why the library's project couldn't be loaded.
@@ -32,15 +33,15 @@ pub struct Library {
   /// Bumped whenever the library is emptied or replaced, so work started before (an
   /// import in the background) can tell its files went away.
   pub epoch: u64,
-  thumbs: HashMap<PhotoId, Arc<Image>>,
-  missing: HashSet<PhotoId>,
+  /// The photos decoded for drawing.
+  pictures: PhotoCache<Arc<RenderImage>>,
+  /// The window's device pixels per point, which photos are decoded for.
+  scale: f64,
 }
 
 /// Photos read from files: the ones that worked, and the names of those that didn't.
 pub struct Imported {
   pub photos: Vec<PhotoMeta>,
-  /// Each photo's display copy, to show without reading it back.
-  pub thumbs: Vec<(PhotoId, Vec<u8>)>,
   pub failed: Vec<String>,
 }
 
@@ -78,11 +79,6 @@ pub fn sniff_format(bytes: &[u8]) -> Option<ImageFormat> {
   }
 }
 
-/// A display copy's format (JPEG, unless its bytes say otherwise).
-fn format_of(bytes: &[u8]) -> ImageFormat {
-  sniff_format(bytes).unwrap_or(ImageFormat::Jpeg)
-}
-
 /// The app's temporary folders (pasted images, test images) left by earlier runs: removed.
 pub fn clean_temp() {
   let Ok(entries) = fs::read_dir(std::env::temp_dir()) else {
@@ -104,9 +100,48 @@ impl Library {
     Self {
       dir,
       epoch: 0,
-      thumbs: HashMap::new(),
-      missing: HashSet::new(),
+      pictures: PhotoCache::new(photo_cache::BUDGET),
+      scale: 1.0,
     }
+  }
+
+  /// The start of drawing a frame at `scale` device pixels per point: the pictures let go
+  /// since the last, which the window drops (GPUI keeps each one's texture until told).
+  pub fn begin_frame(&mut self, scale: f64) -> Vec<Arc<RenderImage>> {
+    self.scale = scale;
+    self.pictures.take_evicted()
+  }
+
+  /// The end of drawing a frame: the decodes it asked for, to start in the background
+  /// (`decode`, then `landed`). Pictures over the budget that it didn't draw are let go.
+  pub fn end_frame(&mut self) -> Vec<Decode> {
+    self.pictures.end_frame()
+  }
+
+  /// The file a decode reads: the display copy, or the original for the larger levels.
+  pub fn decode_path(&self, d: &Decode) -> PathBuf {
+    if d.key.1.is_original() {
+      self.image_path(&d.key.0)
+    } else {
+      self.thumb_path(&d.key.0)
+    }
+  }
+
+  /// A decode finished (None: its file couldn't be read).
+  pub fn landed(&mut self, d: &Decode, image: Option<(Arc<RenderImage>, usize)>) {
+    self.pictures.landed(d, image);
+  }
+
+  /// The picture to draw a photo with, its whole drawn `w` × `h` points (not just its
+  /// crop): decoded about that large, in the background; meanwhile a nearby size, or None.
+  pub fn picture(&mut self, meta: &PhotoMeta, w: f64, h: f64) -> Option<Arc<RenderImage>> {
+    let drawn = w.abs().max(h.abs()) * self.scale;
+    self.pictures.get(&meta.id, drawn, meta.px_w.max(meta.px_h))
+  }
+
+  /// A photo's files were written again (the tour's samples): what was decoded of it goes.
+  pub fn rewrote(&mut self, id: &PhotoId) {
+    self.pictures.forget(id);
   }
 
   pub fn image_path(&self, id: &PhotoId) -> PathBuf {
@@ -121,48 +156,12 @@ impl Library {
     self.dir.join("project.json")
   }
 
-  /// A photo's display copy, read the first time it's asked for.
-  pub fn thumb(&mut self, id: &PhotoId) -> Option<Arc<Image>> {
-    if let Some(t) = self.thumbs.get(id) {
-      return Some(t.clone());
-    }
-    if self.missing.contains(id) {
-      return None;
-    }
-    match fs::read(self.thumb_path(id)) {
-      Ok(bytes) => {
-        let img = Arc::new(Image::from_bytes(format_of(&bytes), bytes));
-        self.thumbs.insert(id.clone(), img.clone());
-        Some(img)
-      }
-      Err(_) => {
-        self.missing.insert(id.clone());
-        None
-      }
-    }
-  }
-
-  /// A display copy just made: keep it (and its file).
-  fn remember(&mut self, id: &PhotoId, thumb: Vec<u8>) {
-    self.missing.remove(id);
-    self
-      .thumbs
-      .insert(id.clone(), Arc::new(Image::from_bytes(ImageFormat::Jpeg, thumb)));
-  }
-
   /// Remove photos' files (an import that came back to a library that moved on).
   pub fn discard(&mut self, ids: impl IntoIterator<Item = PhotoId>) {
     for id in ids {
       let _ = fs::remove_file(self.image_path(&id));
       let _ = fs::remove_file(self.thumb_path(&id));
-      self.thumbs.remove(&id);
-    }
-  }
-
-  /// Keep display copies made elsewhere (by an import in the background).
-  pub fn remember_all(&mut self, thumbs: Vec<(PhotoId, Vec<u8>)>) {
-    for (id, t) in thumbs {
-      self.remember(&id, t);
+      self.pictures.forget(&id);
     }
   }
 }
@@ -176,25 +175,51 @@ pub fn import_files(dir: &Path, paths: &[PathBuf], mut progress: impl FnMut(usiz
     .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(is_image_name))
     .collect();
   files.sort_by(|a, b| natural_cmp(&name_of(a), &name_of(b)));
-  let mut photos = Vec::new();
-  let mut thumbs = Vec::new();
-  let mut failed = Vec::new();
   let total = files.len();
-  for (i, path) in files.into_iter().enumerate() {
-    progress(i, total);
-    let name = name_of(path);
-    match import_one(dir, path, &name) {
-      Some((meta, thumb)) => {
-        thumbs.push((meta.id.clone(), thumb));
-        photos.push(meta);
-      }
-      None => failed.push(name),
+  // Decoding is most of the work, and each photo's is its own: a few at a time, on as many
+  // threads, with the photos kept in their sorted order.
+  let workers = std::thread::available_parallelism()
+    .map_or(2, |n| n.get())
+    .clamp(1, 6)
+    .min(total.max(1));
+  let next = std::sync::atomic::AtomicUsize::new(0);
+  let (tx, rx) = std::sync::mpsc::channel();
+  let mut read: Vec<Option<PhotoMeta>> = (0..total).map(|_| None).collect();
+  progress(0, total);
+  std::thread::scope(|s| {
+    for _ in 0..workers {
+      let tx = tx.clone();
+      let (next, files) = (&next, &files);
+      s.spawn(move || {
+        loop {
+          let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+          let Some(path) = files.get(i) else { break };
+          // ImageIO's temporaries are let go after each photo, not when the thread ends.
+          let one = objc2::rc::autoreleasepool(|_| import_one(dir, path, &name_of(path)));
+          if tx.send((i, one)).is_err() {
+            break;
+          }
+        }
+      });
+    }
+    drop(tx);
+    for (done, (i, one)) in rx.iter().enumerate() {
+      read[i] = one;
+      progress(done + 1, total);
+    }
+  });
+  let mut photos = Vec::new();
+  let mut failed = Vec::new();
+  for (path, one) in files.into_iter().zip(read) {
+    match one {
+      Some(meta) => photos.push(meta),
+      None => failed.push(name_of(path)),
     }
   }
-  Imported { photos, thumbs, failed }
+  Imported { photos, failed }
 }
 
-fn import_one(dir: &Path, path: &Path, name: &str) -> Option<(PhotoMeta, Vec<u8>)> {
+fn import_one(dir: &Path, path: &Path, name: &str) -> Option<PhotoMeta> {
   let bytes = fs::read(path).ok()?;
   let decoded = imageio::decode(&bytes, DESK_PHOTO_PX)?;
   let id = PhotoId::new();
@@ -211,7 +236,7 @@ fn import_one(dir: &Path, path: &Path, name: &str) -> Option<(PhotoMeta, Vec<u8>
     px_h: decoded.px_h,
     crop: None,
   };
-  Some((meta, decoded.thumb))
+  Some(meta)
 }
 
 impl Library {
@@ -219,17 +244,15 @@ impl Library {
   pub fn copy(&mut self, from: &PhotoId, to: &PhotoId) -> bool {
     let ok = fs::copy(self.image_path(from), self.image_path(to)).is_ok();
     let _ = fs::copy(self.thumb_path(from), self.thumb_path(to));
-    if let Some(t) = self.thumbs.get(from).cloned() {
-      self.thumbs.insert(to.clone(), t);
-    }
+    // Its pictures are its original's, already decoded, until the original goes.
+    self.pictures.alias(from, to);
     ok
   }
 
-  /// Show a copy's display image before its files are copied (while it's dragged out).
+  /// Show a copy with its original's pictures before its files are copied (while it's
+  /// dragged out).
   pub fn share_thumb(&mut self, from: &PhotoId, to: &PhotoId) {
-    if let Some(t) = self.thumb(from) {
-      self.thumbs.insert(to.clone(), t);
-    }
+    self.pictures.alias(from, to);
   }
 
   /// Empty the library, for another project.
@@ -244,8 +267,7 @@ impl Library {
 
   /// Drop what's cached about the files, which have changed under it.
   fn forget(&mut self) {
-    self.thumbs.clear();
-    self.missing.clear();
+    self.pictures.clear();
     self.epoch += 1;
   }
 
@@ -263,7 +285,7 @@ impl Library {
       if !keep.contains(&id) {
         let _ = fs::remove_file(e.path());
         let _ = fs::remove_file(self.thumb_path(&id));
-        self.thumbs.remove(&id);
+        self.pictures.forget(&id);
       }
     }
   }
@@ -392,8 +414,8 @@ impl Library {
     let lib = Library {
       dir: dir.to_path_buf(),
       epoch: 0,
-      thumbs: HashMap::new(),
-      missing: HashSet::new(),
+      pictures: PhotoCache::new(0),
+      scale: 1.0,
     };
     let me = &lib;
     let mut images = Vec::new();
@@ -504,7 +526,7 @@ mod tests {
     let back = other.open_file(&file).expect("opens");
     assert_eq!(back, p);
     let id = back.photos.keys().next().cloned().expect("a photo");
-    assert!(other.thumb(&id).is_some());
+    assert!(other.thumb_path(&id).exists());
 
     // A file that won't open leaves the library as it was.
     other.save_project(&back).expect("keeps");

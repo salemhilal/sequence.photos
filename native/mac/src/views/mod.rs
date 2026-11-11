@@ -130,6 +130,19 @@ pub fn text_button(
 
 impl Render for Workspace {
   fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    // Photos let go since the last frame: their textures go too (GPUI keeps them until told).
+    for picture in self.lib.begin_frame(f64::from(window.scale_factor())) {
+      cx.drop_image(picture, Some(window));
+    }
+    let el = self.render_window(window, cx);
+    self.start_decodes(cx);
+    el
+  }
+}
+
+impl Workspace {
+  /// The window's contents, asking the library for each photo at the size it's drawn.
+  fn render_window(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
     // The menu bar's wording follows the sidebar, the guides, and the arrangement.
     let menu = crate::commands::MenuState {
       sidebar_open: self.prefs.sidebar_open,
@@ -304,7 +317,9 @@ impl Render for Workspace {
     {
       let r = Rect::new(g.x - g.w / 2.0, g.y - g.h / 2.0, g.w, g.h);
       let mut ghost = boxed(r).opacity(0.85).shadow_lg();
-      if let Some(t) = self.lib.thumb(&meta.id) {
+      // Covering the ghost, the whole photo is drawn at least as large as it on both sides.
+      let k = (g.w / meta.px_w.max(1.0)).max(g.h / meta.px_h.max(1.0));
+      if let Some(t) = self.lib.picture(&meta, meta.px_w * k, meta.px_h * k) {
         ghost = ghost.child(img(t).size_full().object_fit(ObjectFit::Cover));
       }
       if g.count > 1 {
@@ -1053,7 +1068,6 @@ impl Workspace {
     let Some(meta) = self.project().photos.get(&id).cloned() else {
       return div().into_any_element();
     };
-    let image = self.quick_look_image(&id, cx);
     let n = ids.len();
     let win = self.frames.window;
     let dark = Theme::dark();
@@ -1087,6 +1101,8 @@ impl Workspace {
       iw,
       ih,
     );
+    // At actual pixels it's drawn from the original, at its full size.
+    let image = self.lib.picture(&meta, r.w, r.h);
     let header = div()
       .flex()
       .items_center()
@@ -1246,33 +1262,25 @@ impl Workspace {
     el.into_any_element()
   }
 
-  /// The photo Quick Look shows: upright at full size once read (in the background), its
-  /// display copy until then.
-  fn quick_look_image(&mut self, id: &sequence_core::PhotoId, cx: &mut Context<Self>) -> Option<std::sync::Arc<Image>> {
-    if let Some((for_id, full)) = &self.ui.ql_full
-      && for_id == id
-    {
-      return full.clone().or_else(|| self.lib.thumb(id));
-    }
-    self.ui.ql_full = Some((id.clone(), None));
-    let path = self.lib.image_path(id);
-    let id2 = id.clone();
-    let task = cx
-      .background_executor()
-      .spawn(async move { crate::imageio::upright_jpeg(&path, 0.92) });
-    cx.spawn(async move |this, cx| {
-      let Some((bytes, _, _)) = task.await else { return };
-      let _ = this.update(cx, |ws, cx| {
-        if ws.ui.ql_full.as_ref().is_some_and(|(i, _)| *i == id2) {
-          ws.ui.ql_full = Some((
-            id2,
-            Some(std::sync::Arc::new(Image::from_bytes(ImageFormat::Jpeg, bytes))),
-          ));
-          cx.notify();
-        }
+  /// Start the photo decodes the frame just drawn asked for, each in the background;
+  /// the window is drawn again as each lands.
+  fn start_decodes(&mut self, cx: &mut Context<Self>) {
+    for d in self.lib.end_frame() {
+      let path = self.lib.decode_path(&d);
+      let side = d.side;
+      let task = cx.background_executor().spawn(async move {
+        // ImageIO's temporaries are let go after each photo.
+        objc2::rc::autoreleasepool(|_| crate::imageio::bgra(&path, side))
+          .and_then(|(w, h, px)| crate::photo_cache::render_image(w, h, px))
       });
-    })
-    .detach();
-    self.lib.thumb(id)
+      cx.spawn(async move |this, cx| {
+        let image = task.await;
+        let _ = this.update(cx, |ws, cx| {
+          ws.lib.landed(&d, image);
+          cx.notify();
+        });
+      })
+      .detach();
+    }
   }
 }

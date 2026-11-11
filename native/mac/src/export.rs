@@ -396,9 +396,14 @@ impl Workspace {
     cx.notify();
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(usize, usize)>();
     let task = cx.background_executor().spawn(async move {
-      job(&path, &mut |done, total| {
+      let made = job(&path, &mut |done, total| {
         let _ = tx.unbounded_send((done, total));
-      })
+      });
+      // A failed export leaves no half-written file behind.
+      if made.is_none() {
+        let _ = std::fs::remove_file(&path);
+      }
+      made
     });
     cx.spawn(async move |this, cx| {
       use futures::StreamExt;

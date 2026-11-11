@@ -18,6 +18,8 @@ serde.workspace = true
 serde_json.workspace = true
 # GPUI and its components, pinned: GPUI's releases change its API often.
 gpui-kit = "=0.9.0"
+# Decoded photos handed to GPUI as frames (the version GPUI uses).
+image = { version = "0.25", default-features = false }
 anyhow = "1"
 futures = "0.3"
 # Instagram: talking to its API and Sequence's server, and signing in (PKCE).

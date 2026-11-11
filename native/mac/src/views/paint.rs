@@ -25,18 +25,19 @@ pub fn ink(i: Ink) -> Hsla {
   rgb((u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b)).into()
 }
 
-/// A placed photo at `r` (relative to its parent): its crop of the display copy.
+/// A placed photo at `r` (relative to its parent): its crop of the photo, decoded about as
+/// large as the whole photo is drawn.
 pub fn photo(lib: &mut Library, project: &Project, p: &Placement, r: Rect, theme: &Theme) -> Div {
   let frame = boxed(r).overflow_hidden();
   let Some(meta) = project.photos.get(&p.photo_id) else {
     return frame.bg(theme.inset);
   };
-  let Some(thumb) = lib.thumb(&p.photo_id) else {
+  let whole = whole_rect(Rect::new(0.0, 0.0, r.w, r.h), crop_of(meta));
+  let Some(picture) = lib.picture(meta, whole.w, whole.h) else {
     return frame.bg(theme.inset);
   };
-  let whole = whole_rect(Rect::new(0.0, 0.0, r.w, r.h), crop_of(meta));
   frame.child(
-    img(thumb)
+    img(picture)
       .absolute()
       .left(x(whole.x))
       .top(x(whole.y))

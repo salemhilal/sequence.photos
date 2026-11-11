@@ -440,6 +440,9 @@ impl Workspace {
         .child("Drag photos in from the desk strip below, or drag one onto the strip to send it back.");
       return foot(el, None, cx).into_any_element();
     };
+    if !self.fields.item_focused(window, cx) {
+      self.fields.item_for = Some(item.photo_id.clone());
+    }
     let meta = project.photos.get(&item.photo_id).cloned();
     let name = meta.as_ref().map(|m| m.name.clone()).unwrap_or_default();
     let side = side_at(&sheet, item.x + item.w / 2.0);
@@ -583,7 +586,7 @@ impl Workspace {
   /// A number typed in the editor's X, Y, W, or H: the selected photo moved or resized (W
   /// and H keep its proportions, if asked), as one undo step per field.
   pub fn item_field(&mut self, i: usize, n: f64, cx: &mut Context<Self>) {
-    let Some(id) = self.ui.editor_selected.clone() else {
+    let Some(id) = self.fields.item_for.clone().or_else(|| self.ui.editor_selected.clone()) else {
       return;
     };
     let project = self.project();
@@ -635,12 +638,32 @@ impl Workspace {
     );
     let mut pile: Vec<_> = project.pile.iter().collect();
     pile.sort_by(|a, b| a.y.total_cmp(&b.y).then(a.x.total_cmp(&b.x)));
-    for p in pile {
-      let Some(meta) = project.photos.get(&p.photo_id) else {
+    // Where each photo sits along the row (after about this much for the label), so the
+    // strip stops scrolling at its end and photos out of view are only room, not pictures.
+    const LABEL_W: f64 = 110.0;
+    let widths: Vec<f64> = pile
+      .iter()
+      .map(|p| {
+        project.photos.get(&p.photo_id).map_or(0.0, |m| {
+          let (pw, ph) = pile_size(m);
+          h * pw / ph
+        })
+      })
+      .collect();
+    let content_w = 24.0 + LABEL_W + widths.iter().map(|w| w + 8.0).sum::<f64>();
+    self.ui.strip_scroll = self.ui.strip_scroll.min((content_w - r.w).max(0.0));
+    let scroll = self.ui.strip_scroll;
+    let mut at = 12.0 + LABEL_W;
+    for (p, w) in pile.into_iter().zip(widths) {
+      if !project.photos.contains_key(&p.photo_id) {
         continue;
-      };
-      let (pw, ph) = pile_size(meta);
-      let w = h * pw / ph;
+      }
+      let left = at - scroll;
+      at += w + 8.0;
+      if left + w < -2.0 * LABEL_W || left > r.w + LABEL_W {
+        row = row.child(div().flex_none().w(x(w)).h(x(h)));
+        continue;
+      }
       let id = p.photo_id.clone();
       let mut cell = div()
         .id(SharedString::from(format!("strip-{id}")))

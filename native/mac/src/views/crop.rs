@@ -39,7 +39,9 @@ impl Workspace {
     let l = |r: Rect| Rect::new(r.x - clip.x, r.y - clip.y, r.w, r.h);
     let (wl, fl) = (l(w), l(f));
 
-    let photo = self.lib.thumb(&c.photo);
+    // The whole photo, drawn at `w`.
+    let meta = self.project().photos.get(&c.photo).cloned();
+    let photo = meta.and_then(|m| self.lib.picture(&m, w.w, w.h));
     let picture = |r: Rect| {
       let mut d = boxed(r);
       if let Some(t) = photo.clone() {

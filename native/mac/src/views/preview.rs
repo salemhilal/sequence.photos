@@ -3,17 +3,18 @@
 
 use gpui_kit::*;
 use sequence_core::actions::folio_label;
-use sequence_core::geometry::{spread_left, spread_width};
+use sequence_core::geometry::{Rect, page_rect, page_sides, sheet_extent};
 use sequence_core::units::terms;
+use sequence_core::{PageSide, SpreadKind};
 
-use super::paint::SpreadPicture;
+use super::paint::{SpreadPicture, boxed};
 use super::{icon_button, text_button};
 use crate::assets::MONO;
 use crate::theme::Theme;
 use crate::workspace::Workspace;
 
 /// How long the presentation's controls stay after the pointer stops.
-const IDLE: std::time::Duration = std::time::Duration::from_millis(2000);
+const IDLE: std::time::Duration = std::time::Duration::from_millis(1000);
 
 impl Workspace {
   pub fn render_preview(&mut self, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
@@ -30,9 +31,11 @@ impl Workspace {
     };
     let pager_h = if self.ui.presenting { 0.0 } else { 52.0 };
     let margin = if self.ui.presenting { 0.0 } else { 32.0 };
-    let pw = spread_width(spread.kind, &sheet);
-    let scale = ((main.w - 2.0 * margin) / pw).min((main.h - 2.0 * margin - pager_h) / sheet.page_h);
-    let w = pw * scale;
+    // A book shows both pages' width, so its single first and last pages sit on their
+    // side at a page's size (not enlarged to fill); a frame, its own.
+    let (extent_left, across) = sheet_extent(arrangement, sheet.page_w);
+    let scale = ((main.w - 2.0 * margin) / across).min((main.h - 2.0 * margin - pager_h) / sheet.page_h);
+    let w = across * scale;
     let h = sheet.page_h * scale;
     let left = (main.w - w) / 2.0;
     let top = (main.h - pager_h - h) / 2.0;
@@ -40,7 +43,7 @@ impl Workspace {
       spread,
       sheet: &sheet,
       scale,
-      origin: (left - spread_left(spread.kind, &sheet) * scale, top),
+      origin: (left - extent_left * scale, top),
       clip: true,
     };
     let bg: Hsla = if self.ui.presenting {
@@ -68,19 +71,51 @@ impl Workspace {
         if !was {
           cx.notify();
         }
-        // Hide the controls once the pointer rests.
-        cx.spawn(async move |this, cx| {
-          cx.background_executor().timer(IDLE).await;
-          let _ = this.update(cx, |ws, cx| {
-            if ws.ui.preview_moved.is_some_and(|t| t.elapsed() >= IDLE) {
-              cx.notify();
+        // Hide the controls once the pointer rests: one timer, which waits again for as long
+        // as the pointer moved meanwhile (not a timer per move).
+        if !was {
+          cx.spawn(async move |this, cx| {
+            let mut wait = IDLE;
+            loop {
+              cx.background_executor().timer(wait).await;
+              let rest = this.update(cx, |ws, cx| {
+                let since = ws.ui.preview_moved.map_or(IDLE, |t| t.elapsed());
+                if since >= IDLE {
+                  cx.notify();
+                  None
+                } else {
+                  Some(IDLE - since)
+                }
+              });
+              match rest {
+                Ok(Some(more)) => wait = more,
+                _ => break,
+              }
             }
-          });
-        })
-        .detach();
+          })
+          .detach();
+        }
       }));
     for el in pic.page_elements(theme, None) {
       stage = stage.child(el);
+    }
+    // The gutter's shade on each page of a book (white pages only: it's lost on black).
+    if spread.background.is_none() && spread.kind != SpreadKind::Frame {
+      for &side in page_sides(spread.kind) {
+        let r = pic.at(page_rect(side, &sheet));
+        let shade = r.w * 0.06;
+        let (dark, clear) = (hsla(0.0, 0.0, 0.0, 0.1), hsla(0.0, 0.0, 0.0, 0.0));
+        let (strip, from, to) = if side == PageSide::Left {
+          (Rect::new(r.x + r.w - shade, r.y, shade, r.h), clear, dark)
+        } else {
+          (Rect::new(r.x, r.y, shade, r.h), dark, clear)
+        };
+        stage = stage.child(boxed(strip).bg(linear_gradient(
+          90.0,
+          linear_color_stop(from, 0.0),
+          linear_color_stop(to, 1.0),
+        )));
+      }
     }
     stage = stage.child(pic.photo_elements(&mut self.lib, &project, theme));
     // Presenting: how to use it, and the way out, while the pointer moves.

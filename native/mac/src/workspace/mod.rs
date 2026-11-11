@@ -95,9 +95,8 @@ pub struct Ui {
   /// When the pointer last moved over the presentation (its controls show a moment after).
   pub preview_moved: Option<Instant>,
   pub quick_look: Option<(Vec<PhotoId>, usize)>,
-  /// Quick Look's view (actual pixels, panned, a press under way), and its full-size image.
+  /// Quick Look's view (actual pixels, panned, a press under way).
   pub ql: QuickLookView,
-  pub ql_full: Option<(PhotoId, Option<std::sync::Arc<Image>>)>,
   /// The window's pixels per point, as last drawn.
   pub scale_factor: f64,
   pub context_menu: Option<ContextMenu>,
@@ -166,7 +165,6 @@ impl Default for Ui {
       preview_moved: None,
       quick_look: None,
       ql: QuickLookView::default(),
-      ql_full: None,
       scale_factor: 2.0,
       context_menu: None,
       menu_sub: false,
@@ -325,6 +323,17 @@ impl Workspace {
     };
     ws.doc.saved_revision = if ws.prefs.document_edited { u64::MAX } else { 0 };
     ws
+  }
+
+  /// What the window shows, as new (for another project).
+  pub fn reset_ui(&mut self) {
+    // The window's scale and the Layout view's tab aren't the project's.
+    let (scale_factor, layout_tab) = (self.ui.scale_factor, self.ui.layout_tab);
+    self.ui = Ui {
+      scale_factor,
+      layout_tab,
+      ..Ui::default()
+    };
   }
 
   pub fn project(&self) -> &Project {
@@ -589,7 +598,6 @@ impl Workspace {
 
   /// Put photos just read on the desk, in a grid, and show them.
   fn place_imported(&mut self, imported: Imported) {
-    self.lib.remember_all(imported.thumbs);
     let visible = self.visible();
     let mut bounds = None;
     self

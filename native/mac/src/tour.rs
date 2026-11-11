@@ -144,6 +144,7 @@ impl Workspace {
       let id = sample_id(name);
       let _ = std::fs::write(self.lib.image_path(&id), bytes);
       let _ = std::fs::write(self.lib.thumb_path(&id), bytes);
+      self.lib.rewrote(&id);
     }
     // Saved work first, while it's the user's.
     self.save_to_library();

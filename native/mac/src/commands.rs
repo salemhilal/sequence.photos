@@ -796,7 +796,7 @@ impl Workspace {
         match opened {
           Ok(project) => {
             ws.history.reset(project);
-            ws.ui = crate::workspace::Ui::default();
+            ws.reset_ui();
             ws.doc.generation += 1;
             ws.doc.path = Some(path.clone());
             ws.doc.saved_revision = ws.history.revision();
@@ -1088,7 +1088,7 @@ impl Workspace {
     self.finish_crop(true, cx);
     self.lib.clear();
     self.history.reset(Project::empty());
-    self.ui = crate::workspace::Ui::default();
+    self.reset_ui();
     self.doc = crate::workspace::Document {
       path: None,
       saved_revision: self.history.revision(),

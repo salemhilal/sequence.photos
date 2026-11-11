@@ -15,6 +15,7 @@ mod imageio;
 mod instagram;
 mod layout;
 mod library;
+mod photo_cache;
 mod posting;
 mod prefs;
 mod theme;
@@ -107,6 +108,14 @@ fn main() {
             {
               l.tab = layout::LayoutTab::Guides;
             }
+          });
+        }
+        // Or on Preview, at a spread (counted from 0).
+        #[cfg(debug_assertions)]
+        if let Some(at) = std::env::var_os("SEQUENCE_OPEN_PREVIEW") {
+          ws.update(cx, |ws, cx| {
+            ws.go_to(workspace::Page::Preview, cx);
+            ws.ui.preview_index = at.to_str().and_then(|s| s.parse().ok()).unwrap_or(0);
           });
         }
         #[cfg(debug_assertions)]
