@@ -10,7 +10,7 @@ mod frames;
 pub mod gestures;
 mod navigation;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -116,6 +116,11 @@ pub struct Ui {
   pub zoom_menu: bool,
   /// The notice a timer's been started for.
   pub notice_timed: Option<String>,
+  /// The sidebar's spreads gliding to new places.
+  pub sidebar_glide: Glide,
+  /// Frames fading out after their photos were let go of.
+  pub unselecting_desk: Unselecting,
+  pub unselecting_editor: Unselecting,
   /// The context menu's Crop to submenu is open.
   pub menu_sub: bool,
   pub busy: Option<String>,
@@ -171,6 +176,9 @@ impl Default for Ui {
       scale_factor: 2.0,
       context_menu: None,
       menu_sub: false,
+      unselecting_desk: Unselecting::default(),
+      sidebar_glide: Glide::default(),
+      unselecting_editor: Unselecting::default(),
       import_progress: None,
       zoom_menu: false,
       save_failed: false,
@@ -197,6 +205,84 @@ impl Default for Ui {
 }
 
 type Point2 = (f64, f64);
+
+/// Photos let go of on a surface, for their frames to fade out.
+#[derive(Default)]
+pub struct Unselecting {
+  /// What was selected when last drawn.
+  before: Vec<PhotoId>,
+  /// Each photo let go of, and when (ms, also its animation's stamp).
+  fading: Vec<(PhotoId, u64)>,
+}
+
+impl Ui {
+  /// The photos on `surface` let go of a moment ago, given what's selected now: each with
+  /// a stamp for its fade. A redraw comes once they've faded.
+  pub fn unselecting(&mut self, surface: Surface, now: &[PhotoId], cx: &mut Context<Workspace>) -> Vec<(PhotoId, u64)> {
+    let u = match surface {
+      Surface::Desk => &mut self.unselecting_desk,
+      Surface::Editor => &mut self.unselecting_editor,
+    };
+    let ms = now_ms() as u64;
+    let fade = crate::motion::FADE.as_millis() as u64;
+    let gone: Vec<PhotoId> = u.before.iter().filter(|id| !now.contains(id)).cloned().collect();
+    if !gone.is_empty() {
+      for id in gone {
+        u.fading.retain(|(f, _)| f != &id);
+        u.fading.push((id, ms));
+      }
+      cx.spawn(async move |this, cx| {
+        cx.background_executor().timer(crate::motion::FADE).await;
+        let _ = this.update(cx, |_, cx| cx.notify());
+      })
+      .detach();
+    }
+    u.before = now.to_vec();
+    u.fading
+      .retain(|(id, at)| ms.saturating_sub(*at) < fade && !now.contains(id));
+    u.fading.clone()
+  }
+}
+
+/// Each spread's place in the sidebar's list (scrolling aside).
+pub type Places = HashMap<SpreadId, (f64, f64)>;
+
+/// The sidebar's spreads, as last drawn, so they can glide to new places.
+#[derive(Default)]
+pub struct Glide {
+  cols: usize,
+  order: Vec<SpreadId>,
+  /// Each spread's place in the list (scrolling aside).
+  places: Places,
+  /// The places a glide under way started from, and its number.
+  from: Option<(Places, u64, Instant)>,
+  n: u64,
+}
+
+impl Glide {
+  /// Before drawing: a new glide when the columns or the order changed; the one under way
+  /// otherwise (until it's done).
+  pub fn begin(&mut self, cols: usize, order: &[SpreadId]) -> Option<(Places, u64)> {
+    if !self.places.is_empty() && (cols != self.cols || order != self.order.as_slice()) {
+      self.n += 1;
+      self.from = Some((self.places.clone(), self.n, Instant::now()));
+    }
+    self.cols = cols;
+    self.order = order.to_vec();
+    match &self.from {
+      Some((from, n, at)) if at.elapsed() < crate::motion::GLIDE * 2 => Some((from.clone(), *n)),
+      _ => {
+        self.from = None;
+        None
+      }
+    }
+  }
+
+  /// After drawing: where each spread is now.
+  pub fn drawn(&mut self, places: Places) {
+    self.places = places;
+  }
+}
 
 /// Quick Look's view of its photo.
 #[derive(Clone, Copy, Debug, Default)]

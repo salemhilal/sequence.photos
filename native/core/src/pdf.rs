@@ -13,7 +13,7 @@ use crate::PhotoId;
 use crate::crop::crop_of;
 use crate::export_options::export_px_per_unit;
 use crate::geometry::Rect;
-use crate::model::{ExportDestination, Ink, PhotoMeta, Project, Unit};
+use crate::model::{ExportDestination, Paper, PhotoMeta, Project, Unit};
 use crate::render_plan::{Draw, Per, ink_rgb, output_pages, page_region, plan_page};
 use crate::units::{js_round, terms};
 
@@ -374,8 +374,8 @@ pub fn render_pdf_to<W: io::Write>(
     let page_w = page_region(out, &sheet).w * to_pt;
     let to_box = |r: Rect| Rect::new(r.x * pt, page_h - (r.y + r.h) * pt, r.w * pt, r.h * pt);
     let mut content = PageContent::default();
-    if plan.background != Ink::White {
-      content.fill_rect(Rect::new(0.0, 0.0, page_w, page_h), ink_rgb(plan.background));
+    if plan.background != Paper::White {
+      content.fill_rect(Rect::new(0.0, 0.0, page_w, page_h), plan.background.rgb());
     }
     for d in &plan.draws {
       let Some(photo) = project.photos.get(&d.photo_id) else {

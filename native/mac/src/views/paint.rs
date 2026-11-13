@@ -96,7 +96,8 @@ impl SpreadPicture<'_> {
   /// The pages, each lit if it's the drop target.
   pub fn page_elements(&self, theme: &Theme, lit: Option<PageSide>) -> Vec<AnyElement> {
     // As exports draw it: pure white, or black.
-    let bg = ink(self.spread.background.unwrap_or(Ink::White));
+    let [r, g, b] = self.spread.background.unwrap_or(sequence_core::Paper::White).rgb();
+    let bg: Hsla = rgb((u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b)).into();
     self
       .pages()
       .into_iter()
@@ -173,7 +174,6 @@ pub fn soft_badge(r: Rect, theme: &Theme) -> Div {
     .items_center()
     .justify_center()
     .bg(theme.panel)
-    .shadow_sm()
     .child(
       svg()
         .path(crate::assets::icon("triangle-alert"))

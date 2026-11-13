@@ -3,6 +3,7 @@
 
 use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
+use sequence_core::PhotoId;
 use sequence_core::geometry::{Corner, Rect};
 
 use super::paint::{boxed, photo, x};
@@ -25,7 +26,29 @@ fn corner_at(r: Rect, c: Corner) -> (f64, f64) {
 }
 
 /// A selected photo's frame, and its corner handles if it can be resized.
-pub fn selection_frame(r: Rect, theme: &Theme, handles: bool) -> Div {
+/// A photo's selection frame, fading in when it's selected (`id`: the photo's).
+pub fn selection_in(id: &PhotoId, r: Rect, theme: &Theme, handles: bool) -> AnyElement {
+  selection_box(r, theme, handles)
+    .with_animation(
+      SharedString::from(format!("sel-{id}")),
+      crate::motion::ease(crate::motion::FADE),
+      |el, t| el.opacity(t),
+    )
+    .into_any_element()
+}
+
+/// The frame of a photo just deselected, fading out (`stamp`: when it was let go).
+pub fn selection_out(id: &PhotoId, stamp: u64, r: Rect, theme: &Theme) -> AnyElement {
+  selection_box(r, theme, false)
+    .with_animation(
+      SharedString::from(format!("unsel-{id}-{stamp}")),
+      crate::motion::ease(crate::motion::FADE),
+      |el, t| el.opacity(1.0 - t),
+    )
+    .into_any_element()
+}
+
+fn selection_box(r: Rect, theme: &Theme, handles: bool) -> Div {
   let f = Rect::new(
     r.x - FRAME_GAP,
     r.y - FRAME_GAP,
@@ -214,6 +237,13 @@ impl Workspace {
       })
     );
     let cropping = self.ui.cropping.as_ref().map(|c| c.photo.clone());
+    // Photos just let go of: their frames fade out.
+    let selection = self.ui.selection.clone();
+    for (id, stamp) in self.ui.unselecting(Surface::Desk, &selection, cx) {
+      if let Some(p) = items.iter().find(|p| p.photo_id == id) {
+        desk = desk.child(selection_out(&id, stamp, view.to_screen(Rect::from(*p)), theme));
+      }
+    }
     let chosen: std::collections::HashSet<&sequence_core::PhotoId> = self.ui.selection.iter().collect();
     for p in items
       .iter()
@@ -222,7 +252,7 @@ impl Workspace {
       let r = view.to_screen(Rect::from(*p));
       let handles =
         single.as_ref() == Some(&p.photo_id) && (self.ui.hover_photo.as_ref() == single.as_ref() || resizing);
-      desk = desk.child(selection_frame(r, theme, handles));
+      desk = desk.child(selection_in(&p.photo_id, r, theme, handles));
       if single.as_ref() == Some(&p.photo_id) {
         for t in handle_targets(r, Surface::Desk, p.photo_id.clone(), cx) {
           desk = desk.child(t);

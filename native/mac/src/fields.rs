@@ -10,6 +10,7 @@ use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 use sequence_core::GuideId;
 
+use crate::assets::MONO;
 use crate::theme::Theme;
 use crate::workspace::Workspace;
 
@@ -95,6 +96,11 @@ impl Workspace {
     window: &mut Window,
     cx: &mut Context<Self>,
   ) -> AnyElement {
+    // "10 in": the number in the field, the unit after it (`.num-suffix`).
+    let (text, suffix) = match text.rsplit_once(' ') {
+      Some((n, u)) if parse_number(n).is_some() && parse_number(u).is_none() => (n.to_string(), Some(u.to_string())),
+      _ => (text, None),
+    };
     let shown = text.clone();
     let state = match self.fields.inputs.get(&field) {
       Some(s) => s.clone(),
@@ -124,41 +130,70 @@ impl Workspace {
       self.fields.shown.insert(field.clone(), text.clone());
       state.update(cx, |s, cx| s.set_value(text, window, cx));
     }
-    let mut row = div().flex().items_center().gap(px(6.0)).min_w_0();
-    if let Some(l) = label {
-      // A letter (X, W) takes little room; a word, a column of its own.
-      let w = if l.chars().count() <= 2 { 14.0 } else { 52.0 };
-      // Dragging the label sideways scrubs the value.
-      let scrub = parse_number(&shown).filter(|_| enabled);
-      let mut label = div().w(px(w)).flex_none().text_color(theme.muted).child(l);
-      if let Some(value) = scrub {
-        let f = field.clone();
-        label = label.cursor(CursorStyle::ResizeLeftRight).on_mouse_down(
-          MouseButton::Left,
-          cx.listener(move |ws, ev: &MouseDownEvent, _, _| {
-            let step = ws.field_step(&f);
-            ws.drag = Some(crate::workspace::Drag::Scrub {
-              field: f.clone(),
-              start: f64::from(ev.position.x),
-              value0: value,
-              step,
-              last: value,
-              moved: false,
-            });
-          }),
-        );
-      }
-      row = row.child(label);
-    }
-    row
-      .child(
-        div()
-          .flex_1()
-          .min_w_0()
-          .when(!enabled, |d| d.opacity(0.5))
-          .child(Input::new(&state).small().disabled(!enabled)),
+    // As the web's `.num-field`: a recessed box, the label and unit inside it in mono (drag
+    // either sideways to scrub the value), the value in mono too. A word for a label (Photos
+    // at) sits before the box instead.
+    let focused_ring = focused;
+    let scrub = parse_number(&shown).filter(|_| enabled);
+    let scrubber = |el: Div, cx: &mut Context<Self>| -> Div {
+      let Some(value) = scrub else { return el };
+      let f = field.clone();
+      el.cursor(CursorStyle::ResizeLeftRight).on_mouse_down(
+        MouseButton::Left,
+        cx.listener(move |ws, ev: &MouseDownEvent, _, _| {
+          let step = ws.field_step(&f);
+          ws.drag = Some(crate::workspace::Drag::Scrub {
+            field: f.clone(),
+            start: f64::from(ev.position.x),
+            value0: value,
+            step,
+            last: value,
+            moved: false,
+          });
+        }),
       )
-      .into_any_element()
+    };
+    let mono = |el: Div| {
+      el.flex_none()
+        .font_family(MONO)
+        .text_size(px(11.0))
+        .text_color(theme.muted)
+    };
+    let inside = label.filter(|l| l.chars().count() <= 2);
+    let mut field_box = div()
+      .flex()
+      .flex_1()
+      .items_center()
+      .gap(px(4.0))
+      .min_w_0()
+      .h(px(24.0))
+      .px(px(6.0))
+      .rounded(px(3.0))
+      .bg(theme.inset)
+      .border_1()
+      .border_color(if focused_ring { theme.accent } else { theme.border })
+      .when(!enabled, |d| d.opacity(0.5));
+    if let Some(l) = inside {
+      field_box = field_box.child(scrubber(mono(div().min_w(px(12.0)).child(l)), cx));
+    }
+    field_box = field_box.child(
+      div().flex_1().min_w_0().font_family(MONO).text_size(px(12.0)).child(
+        Input::new(&state)
+          .appearance(false)
+          .small()
+          .font_family(MONO)
+          .text_size(px(12.0))
+          .disabled(!enabled),
+      ),
+    );
+    if let Some(u) = suffix {
+      field_box = field_box.child(scrubber(mono(div().child(u)), cx));
+    }
+    let mut row = div().flex().items_center().gap(px(6.0)).min_w_0();
+    if let Some(l) = label.filter(|l| l.chars().count() > 2) {
+      row = row.child(div().w(px(72.0)).flex_none().text_color(theme.muted).child(l));
+    }
+    row.child(field_box).into_any_element()
   }
 }
 

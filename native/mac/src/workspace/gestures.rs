@@ -94,6 +94,8 @@ pub enum Drag {
     last: f64,
     moved: bool,
   },
+  /// The JPEG quality slider (its track's place is kept on the Export page).
+  Quality,
   /// The sidebar's columns slider.
   Columns {
     track: Rect,
@@ -306,6 +308,7 @@ impl Workspace {
     let Some(mut drag) = self.drag.take() else { return };
     let threshold_passed = |start: (f64, f64)| (at.0 - start.0).hypot(at.1 - start.1) >= DRAG_THRESHOLD;
     match &mut drag {
+      Drag::Quality => self.quality_at(at.0, cx),
       Drag::Columns { track, fit } => {
         let n = crate::views::sidebar::columns_at(at.0, *track, *fit);
         self.set_columns(n, cx);
@@ -638,6 +641,7 @@ impl Workspace {
     self.clear_drag_feedback();
     match drag {
       Drag::Columns { .. } => self.prefs.save(),
+      Drag::Quality => self.quality_done(cx),
       Drag::Tag { .. } => {
         self.save_post(cx);
         cx.notify();
@@ -682,6 +686,7 @@ impl Workspace {
                   side
                 };
                 self.apply(cx, |d| act::put_on_page(d, std::slice::from_ref(&clicked), &id, pick));
+                self.ui.editor_selected = Some(clicked.clone());
                 return;
               }
             }
@@ -734,6 +739,12 @@ impl Workspace {
           }
           if t == DropTarget::Desk {
             self.ui.selection = ids.clone();
+          }
+          // Dropped on the page being edited: it's selected there, to adjust.
+          if let DropTarget::Page { spread, .. } = &t
+            && self.ui.editing.as_ref() == Some(spread)
+          {
+            self.ui.editor_selected = ids.first().cloned();
           }
         } else {
           self.history.cancel();

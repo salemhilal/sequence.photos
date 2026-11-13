@@ -156,7 +156,7 @@ pub struct PagePlan {
   pub px_w: f64,
   #[serde(rename = "pxH")]
   pub px_h: f64,
-  pub background: Ink,
+  pub background: Paper,
   /// Output pixels per unit: the page's, or less.
   pub px_per_unit: f64,
   /// Back to front. Photos entirely off the image are left out.
@@ -225,7 +225,7 @@ pub fn plan_page(
   PagePlan {
     px_w,
     px_h,
-    background: page.spread.background.unwrap_or(Ink::White),
+    background: page.spread.background.unwrap_or(Paper::White),
     px_per_unit: k,
     draws,
   }

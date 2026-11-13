@@ -31,6 +31,8 @@ pub const TOOLBAR_H: f64 = 42.0;
 pub const STATUS_H: f64 = 24.0;
 /// Where the toolbar's content starts, after the traffic lights.
 const LIGHTS_W: f64 = 94.0;
+/// Each of the toolbar's page tabs, all one width so the highlight slides between them.
+const PAGE_TAB_W: f64 = 72.0;
 
 /// A toolbar or status bar button with an icon.
 pub fn icon_button(
@@ -126,6 +128,20 @@ pub fn text_button(
       .active(move |s| s.bg(pressed))
   };
   b.on_click(click)
+}
+
+/// A context menu item's icon, as the web's menus have them.
+fn menu_icon(a: MenuAction) -> Option<&'static str> {
+  Some(match a {
+    MenuAction::Tidy => "layout-grid",
+    MenuAction::QuickLook => "eye",
+    MenuAction::Copy => "copy",
+    MenuAction::Duplicate => "copy-plus",
+    MenuAction::ToDesk => "undo-2",
+    MenuAction::Crop => "crop",
+    MenuAction::Delete => "trash-2",
+    _ => return None,
+  })
 }
 
 impl Render for Workspace {
@@ -472,19 +488,42 @@ impl Workspace {
         .when(hints, |d| d.child(paint::shortcut_badge(key, theme)))
         .flex()
         .items_center()
+        .justify_center()
+        .w(x(PAGE_TAB_W))
         .h(px(22.0))
-        .px(px(12.0))
         .rounded(px(3.0))
         .text_color(if on { theme.text } else { theme.muted })
         .child(label)
         .on_click(cx.listener(move |ws, _, _, cx| ws.go_to(which, cx)));
-      if on {
-        t = t.bg(theme.control).shadow_xs();
-      } else {
+      if !on {
         t = t.hover(|s| s.text_color(theme.text));
       }
       t
     };
+    // The page's highlight, sliding from the last page to this one.
+    let slide = crate::motion::slide(
+      "page-tabs",
+      match page {
+        Page::Desk => 0,
+        Page::Preview => 1,
+        Page::Export => 2,
+      },
+    );
+    let step = PAGE_TAB_W + 2.0;
+    let pill = div()
+      .absolute()
+      .top(px(2.0))
+      .w(x(PAGE_TAB_W))
+      .h(px(22.0))
+      .rounded(px(3.0))
+      .bg(theme.control)
+      .shadow_xs()
+      .left(x(2.0 + slide.to as f64 * step))
+      .with_animation(
+        SharedString::from(format!("page-tabs-{}", slide.n)),
+        crate::motion::ease(crate::motion::TOGGLE),
+        move |el, t| el.left(x(2.0 + f64::from(slide.at(t)) * step)),
+      );
     let sidebar_open = self.prefs.sidebar_open;
     div()
       .id("toolbar")
@@ -534,11 +573,13 @@ impl Workspace {
           .items_center()
           .child(
             div()
+              .relative()
               .flex()
               .gap(px(2.0))
               .p(px(2.0))
               .rounded(px(4.0))
               .bg(theme.track)
+              .child(pill)
               .child(tab("page-desk", "Desk", Page::Desk, theme, cx))
               .child(tab("page-preview", "Preview", Page::Preview, theme, cx))
               .child(tab("page-export", "Export", Page::Export, theme, cx)),
@@ -792,6 +833,7 @@ impl Workspace {
     /// A row: a label, a shortcut, what it does (None: disabled), and whether it's checked.
     enum Row {
       Caption(String),
+      Section(String),
       Item(String, &'static str, Option<MenuAction>, bool),
       Sub,
       Separator,
@@ -819,7 +861,7 @@ impl Workspace {
           false,
         ));
         rows.push(Row::Separator);
-        rows.push(Row::Caption("Desk color".into()));
+        rows.push(Row::Section("Desk color".into()));
         rows.push(Row::Swatches);
       }
       ContextMenu::Photo { photo, .. } => {
@@ -901,8 +943,15 @@ impl Workspace {
         .px(px(10.0))
         .when(!enabled, |d| d.text_color(theme.muted.opacity(0.6)))
         .when(enabled, |d| d.hover(|s| s.bg(theme.accent).text_color(theme.on_accent)))
-        .child(div().w(px(12.0)).when(checked, |d| {
-          d.child(svg().path(icon("check")).size(px(12.0)).text_color(theme.text))
+        // A check for the shape chosen, else the item's icon.
+        .child(div().w(px(16.0)).flex().items_center().map(|d| {
+          if checked {
+            d.child(svg().path(icon("check")).size(px(14.0)).text_color(theme.text))
+          } else if let Some(name) = action.and_then(menu_icon) {
+            d.child(svg().path(icon(name)).size(px(14.0)).text_color(theme.muted))
+          } else {
+            d
+          }
         }))
         .child(div().flex_1().child(label))
         .child(
@@ -931,6 +980,16 @@ impl Workspace {
     let sub_open = self.ui.menu_sub;
     for (i, row) in rows.into_iter().enumerate() {
       list = list.child(match row {
+        // A section's label, in the menu's own type.
+        Row::Section(t) => div()
+          .h(x(row_h))
+          .px(px(10.0))
+          .flex()
+          .items_center()
+          .text_color(theme.muted)
+          .text_size(px(12.0))
+          .child(t)
+          .into_any_element(),
         Row::Caption(t) => div()
           .h(x(row_h))
           .px(px(10.0))
@@ -953,14 +1012,14 @@ impl Workspace {
           item(("menu-item", i), label, key, action, checked, menu.clone(), cx).into_any_element()
         }
         Row::Swatches => {
-          let mut row = div().h(x(row_h)).px(px(10.0)).flex().items_center().gap(px(6.0));
+          let mut row = div().h(px(36.0)).px(px(10.0)).flex().items_center().gap(px(8.0));
           for (k, &(_, c)) in crate::theme::DESK_COLORS.iter().enumerate() {
             let on = c == self.prefs.desk_color;
             let m = menu.clone();
             row = row.child(
               div()
                 .id(("menu-swatch", k))
-                .size(px(16.0))
+                .size(px(24.0))
                 .rounded_full()
                 .bg(rgb(c))
                 .border_1()
@@ -970,13 +1029,20 @@ impl Workspace {
                 .on_click(cx.listener(move |ws, _, window, cx| ws.run_menu(&m, MenuAction::DeskColor(c), window, cx))),
             );
           }
+          // Any other color: the system's color panel, with its eyedropper.
           let m = menu.clone();
           row = row.child(
             div()
               .id("menu-custom-color")
-              .ml(px(4.0))
-              .text_color(theme.accent_ink)
-              .child("Custom…")
+              .size(px(24.0))
+              .rounded_full()
+              .flex()
+              .items_center()
+              .justify_center()
+              .bg(theme.control)
+              .border_1()
+              .border_color(theme.border_strong)
+              .child(svg().path(icon("pipette")).size(px(12.0)).text_color(theme.muted))
               .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
               .on_click(cx.listener(move |ws, _, window, cx| ws.run_menu(&m, MenuAction::CustomColor, window, cx))),
           );
@@ -992,7 +1058,7 @@ impl Workspace {
             .h(x(row_h))
             .px(px(10.0))
             .when(sub_open, |d| d.bg(theme.accent).text_color(theme.on_accent))
-            .child(div().w(px(12.0)))
+            .child(div().w(px(16.0)))
             .child(div().flex_1().child("Crop to"))
             .child(svg().path(icon("chevron-right")).size(px(12.0)).text_color(theme.muted))
             .on_hover(cx.listener(|ws, h: &bool, _, cx| {
@@ -1052,7 +1118,12 @@ impl Workspace {
         ws.ui.menu_sub = false;
         cx.notify();
       }))
-      .child(list.on_any_mouse_down(|_, _, cx| cx.stop_propagation()))
+      // It fades in, settling a few points into place.
+      .child(list.on_any_mouse_down(|_, _, cx| cx.stop_propagation()).with_animation(
+        SharedString::from(format!("menu-{left}-{top}")),
+        crate::motion::ease(crate::motion::POP),
+        move |el, t| el.opacity(t).top(x(top - 4.0 * f64::from(1.0 - t))),
+      ))
   }
 
   /// Quick Look (`QuickLook.tsx`): the photo at full size over everything. ← → browse
@@ -1259,7 +1330,11 @@ impl Workspace {
       }
     }
     let _ = theme;
-    el.into_any_element()
+    // It fades in as it opens.
+    el.with_animation("quick-look-in", crate::motion::ease(crate::motion::POP), |el, t| {
+      el.opacity(t)
+    })
+    .into_any_element()
   }
 
   /// Start the photo decodes the frame just drawn asked for, each in the background;

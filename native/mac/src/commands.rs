@@ -597,7 +597,16 @@ impl Workspace {
     match action {
       MenuAction::Tidy => self.tidy(cx),
       MenuAction::DeskColor(c) => self.set_desk_color(c, cx),
-      MenuAction::CustomColor => window.dispatch_action(Box::new(OpenSettings), cx),
+      MenuAction::CustomColor => {
+        let _ = window;
+        let weak = cx.entity().downgrade();
+        let start = self.prefs.desk_color;
+        let start = [(start >> 16) as u8, (start >> 8) as u8, start as u8];
+        crate::colorpanel::pick(start, cx, move |[r, g, b], cx| {
+          let c = (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b);
+          let _ = weak.update(cx, |ws, cx| ws.set_desk_color(c, cx));
+        });
+      }
       MenuAction::QuickLook => self.ui.quick_look = Some((one, 0)),
       MenuAction::Copy => {
         let keep = std::mem::take(&mut self.ui.selection);

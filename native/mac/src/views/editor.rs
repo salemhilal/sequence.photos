@@ -8,10 +8,10 @@ use sequence_core::geometry::{
   Rect, border_box, fit_centered, page_rect, page_sides, pile_size, sheet_extent, side_at, spread_guides,
 };
 use sequence_core::units::{terms, units};
-use sequence_core::{Ink, PageSide, PhotoMeta};
+use sequence_core::{PageSide, Paper, PhotoMeta};
 
 use super::controls::check;
-use super::desk::{handle_targets, selection_frame};
+use super::desk::handle_targets;
 use super::paint::{SpreadPicture, Tip as _, boxed, photo, soft_badge, x};
 use super::{icon_button, text_button};
 use crate::fields::Field;
@@ -219,12 +219,18 @@ impl Workspace {
         stage_el = stage_el.child(boxed(Rect::new(0.0, origin.1 + hy * scale, stage.w, 1.0)).bg(theme.guide_hit));
       }
     }
+    let now: Vec<PhotoId> = selected.iter().cloned().collect();
+    for (id, stamp) in self.ui.unselecting(Surface::Editor, &now, cx) {
+      if let Some(p) = spread.items.iter().find(|i| i.photo_id == id) {
+        stage_el = stage_el.child(super::desk::selection_out(&id, stamp, pic.at(Rect::from(p)), theme));
+      }
+    }
     if let Some(sel) = &selected
       && self.ui.cropping.as_ref().is_none_or(|c| &c.photo != sel)
       && let Some(p) = spread.items.iter().find(|i| &i.photo_id == sel)
     {
       let r = pic.at(Rect::from(p));
-      stage_el = stage_el.child(selection_frame(r, theme, true));
+      stage_el = stage_el.child(super::desk::selection_in(sel, r, theme, true));
       for t in handle_targets(r, Surface::Editor, sel.clone(), cx) {
         stage_el = stage_el.child(t);
       }
@@ -237,8 +243,6 @@ impl Workspace {
     });
     stage_el = stage_el.child(pager);
 
-    let spread_id = spread.id.clone();
-    let spread_bg = spread.background.unwrap_or(Ink::White);
     let header = div()
       .absolute()
       .left_0()
@@ -253,30 +257,6 @@ impl Workspace {
       .border_b_1()
       .border_color(theme.divider)
       .child(div().flex_1())
-      // The page's background, as exports draw it.
-      .child(div().text_color(theme.muted).text_size(px(11.0)).child("Background"))
-      .child({
-        let id = spread_id.clone();
-        let ws = cx.entity().downgrade();
-        super::controls::segmented(
-          "spread-background",
-          &[(Ink::White, "White"), (Ink::Black, "Black")],
-          spread_bg,
-          theme,
-          move |ink, _, cx| {
-            let id = id.clone();
-            let _ = ws.update(cx, |ws, cx| {
-              ws.apply(cx, |d| {
-                if let Some(s) = sequence_core::actions::spread_mut(d, &id) {
-                  s.background = (ink == Ink::Black).then_some(Ink::Black);
-                }
-              });
-            });
-          },
-        )
-        .w(px(120.0))
-        .mr(px(8.0))
-      })
       .child(
         icon_button(
           "toggle-guides",
@@ -393,9 +373,17 @@ impl Workspace {
     };
     let Some(item) = item else {
       let el = el
-        .text_color(theme.muted)
-        .child("Select a photo to adjust its position and size.")
-        .child("Drag photos in from the desk strip below, or drag one onto the strip to send it back.");
+        .child(self.background_choice(theme, cx))
+        .child(
+          div()
+            .text_color(theme.muted)
+            .child("Select a photo to adjust its position and size."),
+        )
+        .child(
+          div()
+            .text_color(theme.muted)
+            .child("Drag photos in from the desk strip below, or drag one onto the strip to send it back."),
+        );
       return foot(el, None, cx).into_any_element();
     };
     if !self.fields.item_focused(window, cx) {
@@ -539,6 +527,86 @@ impl Workspace {
       );
     }
     foot(el, Some(item.photo_id.clone()), cx).into_any_element()
+  }
+
+  /// The open spread's color: white, black, or any other from the color panel.
+  fn background_choice(&mut self, theme: &Theme, cx: &mut Context<Self>) -> Div {
+    let Some(id) = self.ui.editing.clone() else {
+      return div();
+    };
+    let now = self
+      .project()
+      .find_spread(&id)
+      .and_then(|s| s.background)
+      .unwrap_or(Paper::White);
+    let custom = matches!(now, Paper::Rgb(_));
+    let mut row = div().flex().items_center().gap(px(8.0));
+    for (i, p) in [Paper::White, Paper::Black].into_iter().enumerate() {
+      let id = id.clone();
+      row = row.child(
+        swatch(("page-color", i), p.rgb(), now == p, theme).on_click(cx.listener(move |ws, _, _, cx| {
+          ws.set_page_color(&id, p, cx);
+        })),
+      );
+    }
+    // Any other color, from the system's color panel (with its eyedropper).
+    let picked = custom.then(|| now.rgb());
+    let pick_id = id.clone();
+    let mut other = div()
+      .id("page-color-other")
+      .size(px(22.0))
+      .rounded_full()
+      .flex()
+      .items_center()
+      .justify_center()
+      .border_1()
+      .border_color(theme.border_strong)
+      .tip("Another color", cx.entity().downgrade())
+      .on_click(cx.listener(move |ws, _, _, cx| {
+        let id = pick_id.clone();
+        let start = ws
+          .project()
+          .find_spread(&id)
+          .and_then(|s| s.background)
+          .unwrap_or(Paper::White)
+          .rgb();
+        let weak = cx.entity().downgrade();
+        crate::colorpanel::pick(start, cx, move |c, cx| {
+          let _ = weak.update(cx, |ws, cx| ws.set_page_color(&id, Paper::from_rgb(c), cx));
+        });
+      }));
+    other = match picked {
+      Some([r, g, b]) => other
+        .bg(rgb((u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b)))
+        .border_2()
+        .border_color(theme.accent),
+      None => other.child(
+        svg()
+          .path(crate::assets::icon("pipette"))
+          .size(px(12.0))
+          .text_color(theme.muted),
+      ),
+    };
+    div()
+      .flex()
+      .flex_col()
+      .gap(px(8.0))
+      .pb(px(12.0))
+      .border_b_1()
+      .border_color(theme.divider)
+      .child(div().text_color(theme.muted).text_size(px(11.0)).child("Background"))
+      .child(row.child(other))
+  }
+
+  /// A spread's color (one undo step for a run of changes, as the color panel makes them).
+  pub fn set_page_color(&mut self, id: &sequence_core::SpreadId, p: Paper, cx: &mut Context<Self>) {
+    let key = format!("page-color:{id}");
+    let id = id.clone();
+    self.apply_coalesced(&key, cx, |d| {
+      if let Some(s) = sequence_core::actions::spread_mut(d, &id) {
+        s.background = (p != Paper::White).then_some(p);
+      }
+    });
   }
 
   /// A number typed in the editor's X, Y, W, or H: the selected photo moved or resized (W
@@ -691,4 +759,16 @@ impl Workspace {
 
 fn act_locate(project: &sequence_core::Project, id: &sequence_core::PhotoId) -> Option<sequence_core::Placement> {
   sequence_core::actions::locate(project, id).map(|l| l.1)
+}
+
+/// A round color swatch, ringed when it's the one chosen.
+pub fn swatch(id: impl Into<ElementId>, [r, g, b]: [u8; 3], on: bool, theme: &Theme) -> Stateful<Div> {
+  div()
+    .id(id)
+    .size(px(22.0))
+    .rounded_full()
+    .bg(rgb((u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b)))
+    .border_1()
+    .border_color(theme.border_strong)
+    .when(on, |d| d.border_2().border_color(theme.accent))
 }

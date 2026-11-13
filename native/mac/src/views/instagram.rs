@@ -243,9 +243,16 @@ impl Workspace {
         .border_color(rgb(0xdbdbdb))
         .shadow_md()
         .child(head(false));
+      // Hairlines above and below the image, as Instagram's app draws them, so a white
+      // edge still shows where the post starts and ends.
       let media = div().relative().w(x(w)).h(x(h)).bg(rgb(0xffffff));
       // Over the image: the count and the arrows (the tag layer would take their clicks).
-      let mut over = boxed(Rect::new(left, media_top, w, h));
+      // With hairlines above and below the image, as Instagram's app draws them, so a white
+      // edge still shows where the post starts and ends.
+      let line: Hsla = rgb(0xdbdbdb).into();
+      let mut over = boxed(Rect::new(left, media_top, w, h))
+        .child(div().absolute().top_0().left_0().right_0().h(px(1.0)).bg(line))
+        .child(div().absolute().bottom_0().left_0().right_0().h(px(1.0)).bg(line));
       if total > 1 {
         over = over.child(
           div()
@@ -356,8 +363,8 @@ impl Workspace {
       layer = layer.child(
         div()
           .absolute()
-          .left(x(d.x * image.w - 60.0))
-          .top(x(d.y * image.h + 6.0))
+          .left(x((d.x * image.w - 60.0).clamp(4.0, (image.w - 124.0).max(4.0))))
+          .top(x((d.y * image.h + 6.0).clamp(4.0, (image.h - 32.0).max(4.0))))
           .w(px(120.0))
           .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
           .child(Input::new(&d.input)),
@@ -378,11 +385,15 @@ impl Workspace {
     let (k1, k2) = (key.to_string(), key.to_string());
     let (u1, u2) = (t.username.clone(), t.username.clone());
     let (x0, y0) = (t.x, t.y);
-    div().absolute().left(x(t.x * image.w)).top(x(t.y * image.h)).child(
+    // Centered under its spot, but kept inside the image (as Instagram shows it).
+    let chip_w = 16.0 + t.username.chars().count() as f64 * 7.2 + if editable { 15.0 } else { 0.0 };
+    let chip_h = 22.0;
+    let cx_ = (t.x * image.w - chip_w / 2.0).clamp(4.0, (image.w - chip_w - 4.0).max(4.0));
+    let cy_ = (t.y * image.h + 6.0).clamp(4.0, (image.h - chip_h - 4.0).max(4.0));
+    div().absolute().left(x(cx_)).top(x(cy_)).child(
       div()
         .id(SharedString::from(format!("tag-{}", t.username)))
-        .ml(px(-40.0))
-        .mt(px(6.0))
+        .whitespace_nowrap()
         .flex()
         .items_center()
         .gap(px(4.0))
@@ -670,7 +681,7 @@ impl Workspace {
       );
       panel = panel.child(
         section(Some("Caption"), theme)
-          .child(Textarea::new(&input).disabled(posting))
+          .child(Textarea::new(&input).text_size(px(12.0)).disabled(posting))
           .child(
             div()
               .font_family(MONO)

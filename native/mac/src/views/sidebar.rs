@@ -25,9 +25,9 @@ const FOOT_H: f64 = 20.0;
 const GAP_H: f64 = 12.0;
 /// In a grid: the gutter between columns (where dropping adds a spread), the rows' gap,
 /// and the side padding.
-const GAP_X: f64 = 12.0;
+const GAP_X: f64 = 16.0;
 const GRID_ROW_GAP: f64 = 10.0;
-const GRID_PAD: f64 = 10.0;
+const GRID_PAD: f64 = 16.0;
 /// Horizontal room in a cell beside its picture.
 const CELL_PAD_X: f64 = 2.0 * ROW_PAD + 2.0 * WELL_PAD;
 /// The columns slider's size and place in the header (`.columns-slider`), and its knob's.
@@ -78,8 +78,16 @@ fn columns_slider(cols: usize, fit: usize, track: Rect, theme: &Theme, cx: &mut 
         .w(x(KNOB_W))
         .h(px(8.0))
         .rounded_full()
-        .bg(rgb(0xcfcfcf))
-        .shadow_sm(),
+        .bg(theme.knob)
+        .border_1()
+        .border_color(hsla(0.0, 0.0, 0.0, 0.35))
+        .shadow(vec![BoxShadow {
+          color: hsla(0.0, 0.0, 0.0, 0.35),
+          offset: point(px(0.0), px(1.0)),
+          blur_radius: px(2.0),
+          spread_radius: px(0.0),
+          inset: false,
+        }]),
     )
 }
 
@@ -186,6 +194,10 @@ impl Workspace {
         boxed(Rect::new(g.x, g.y + g.h / 2.0 - 1.0, g.w, 2.0)).bg(theme.accent)
       }
     };
+    // When the columns or the order change, spreads glide from where they were.
+    let order: Vec<sequence_core::SpreadId> = all.iter().map(|s| s.id.clone()).collect();
+    let glide = self.ui.sidebar_glide.begin(cols, &order);
+    let mut placed = std::collections::HashMap::new();
     for (i, spread) in all.iter().enumerate() {
       let (row, gap) = slot(i, y);
       // Rows out of view aren't drawn (a long book has hundreds).
@@ -355,12 +367,11 @@ impl Workspace {
         .child(div().flex_1())
         .child({
           let id = spread.id.clone();
-          icon_button(
+          row_icon(
             SharedString::from(format!("edit-{}", spread.id)),
             "pencil",
+            13.0,
             theme,
-            true,
-            false,
             cx.listener(move |ws, _, _, cx| ws.open_editor(id.clone(), cx)),
           )
           .tip("Edit", weak.clone())
@@ -372,12 +383,11 @@ impl Workspace {
         .when(is_movable(spread.kind) && (book || total > 1), |d| {
           let id = spread.id.clone();
           d.child(
-            icon_button(
+            row_icon(
               SharedString::from(format!("delete-{}", spread.id)),
               "x",
+              15.0,
               theme,
-              true,
-              false,
               cx.listener(move |ws, _, _, cx| {
                 let visible = ws.visible();
                 let ids = vec![id.clone()];
@@ -401,7 +411,26 @@ impl Workspace {
           )
         });
       row_el = row_el.child(foot);
-      list_el = list_el.child(row_el);
+      // Where it is in the list (scrolling aside), and where it glides from.
+      placed.insert(spread.id.clone(), (row.x, row.y + scroll));
+      match glide
+        .as_ref()
+        .and_then(|(from, n)| from.get(&spread.id).map(|f| (*f, *n)))
+      {
+        Some(((fx, fy), n)) if (fx, fy - scroll) != (row.x, row.y) => {
+          let (tx, ty) = (row.x, row.y);
+          let fy = fy - scroll;
+          list_el = list_el.child(row_el.with_animation(
+            SharedString::from(format!("glide-{n}-{}", spread.id)),
+            crate::motion::ease(crate::motion::GLIDE),
+            move |el, t| {
+              let t = f64::from(t);
+              el.left(x(fx + (tx - fx) * t)).top(x(fy + (ty - fy) * t))
+            },
+          ));
+        }
+        _ => list_el = list_el.child(row_el),
+      }
       // Where this row and its pages are, in window pixels.
       let to_window = |q: Rect| Rect::new(list.x + row.x + q.x, list.y + row.y + q.y, q.w, q.h);
       cells.push(Cell {
@@ -422,6 +451,7 @@ impl Workspace {
         list_el = list_el.child(insert_button(total, gap, grid, noun, theme, cx));
       }
     }
+    self.ui.sidebar_glide.drawn(placed);
     // Only gaps and cells in view take drops.
     let in_view = |q: &Rect| q.y + q.h > list.y && q.y < list.y + list.h;
     self.frames.cells = cells.into_iter().filter(|c| in_view(&c.row)).collect();
@@ -559,6 +589,34 @@ fn insert_button(
         .text_size(px(10.0))
         .child(label),
     )
+}
+
+/// A spread's edit or delete button (`.row-edit`, `.row-delete`): a small icon, muted until
+/// hovered, with no fill behind it.
+fn row_icon(
+  id: SharedString,
+  name: &'static str,
+  size: f64,
+  theme: &Theme,
+  click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> Stateful<Div> {
+  let hover = theme.text;
+  div()
+    .id(id)
+    .flex()
+    .items_center()
+    .justify_center()
+    .w(px(20.0))
+    .h(px(20.0))
+    .text_color(theme.muted)
+    .hover(move |s| s.text_color(hover))
+    .child(
+      svg()
+        .path(crate::assets::icon(name))
+        .size(x(size))
+        .text_color(theme.muted),
+    )
+    .on_click(click)
 }
 
 /// The part of `r` inside `bounds`.

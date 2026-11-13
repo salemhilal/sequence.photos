@@ -2,7 +2,6 @@
 //! where it goes and that destination's choices. A PDF works so far; images, InDesign and
 //! Instagram come next.
 
-use gpui_kit::component::slider::{Slider, SliderEvent, SliderState};
 use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 use sequence_core::export_options::{DESTINATIONS, converts, export_px_per_unit, per_of};
@@ -113,7 +112,32 @@ impl Workspace {
     }
 
     // The panel: where it goes, then its choices.
-    let mut picker = div().flex().flex_wrap().gap(px(6.0));
+    // Two by two; the one picked is raised, and its highlight slides to a new pick.
+    let (cell_w, cell_h, gap): (f64, f64, f64) = (124.0, 30.0, 6.0);
+    let at = DESTINATIONS.iter().position(|d| *d == to).unwrap_or(0);
+    let slide = crate::motion::slide("export-destination", at);
+    let cell = |i: usize| ((i % 2) as f64 * (cell_w + gap), (i / 2) as f64 * (cell_h + gap));
+    let (fx, fy) = cell(slide.from);
+    let (tx, ty) = cell(slide.to);
+    let mut picker = div().relative().flex().flex_wrap().gap(x(gap)).child(
+      div()
+        .absolute()
+        .w(x(cell_w))
+        .h(x(cell_h))
+        .rounded(px(3.0))
+        .bg(theme.control)
+        .shadow_sm()
+        .left(x(tx))
+        .top(x(ty))
+        .with_animation(
+          SharedString::from(format!("destination-{}", slide.n)),
+          crate::motion::ease(crate::motion::TOGGLE),
+          move |el, t| {
+            let t = f64::from(t);
+            el.left(x(fx + (tx - fx) * t)).top(x(fy + (ty - fy) * t))
+          },
+        ),
+    );
     for (i, d) in DESTINATIONS.into_iter().enumerate() {
       let (label, name) = look(d);
       let on = d == to;
@@ -123,15 +147,18 @@ impl Workspace {
           .flex()
           .items_center()
           .gap(px(6.0))
-          .w(px(124.0))
-          .h(px(30.0))
+          .relative()
+          .w(x(cell_w))
+          .h(x(cell_h))
           .px(px(8.0))
           .rounded(px(3.0))
-          // The one picked is raised; the others are outlined.
-          .when(on, |d| d.bg(theme.control).shadow_sm())
-          .when(!on, |d| {
-            d.border_1().border_color(theme.border).hover(|s| s.bg(theme.fill))
+          .border_1()
+          .border_color(if on {
+            gpui_kit::transparent_black()
+          } else {
+            theme.border
           })
+          .when(!on, |d| d.hover(|s| s.bg(theme.fill)))
           .child(svg().path(icon(name)).size(px(14.0)).text_color(theme.text))
           .child(label)
           .when(busy.is_none() && !posting, |b| {
@@ -259,14 +286,14 @@ impl Workspace {
           },
         ));
         if o.format == ImageFormat::Jpeg {
-          let slider = self.quality_slider(o.quality, window, cx);
+          let slider = self.quality_slider(o.quality, enabled, theme, cx);
           sec = sec.child(
             div()
               .flex()
               .items_center()
               .gap(px(8.0))
               .child(div().w(px(56.0)).text_color(theme.muted).child("Quality"))
-              .child(div().flex_1().child(Slider::new(&slider).disabled(!enabled)))
+              .child(div().flex_1().child(slider))
               .child(
                 div()
                   .w(px(36.0))
@@ -420,32 +447,67 @@ impl Workspace {
       .into_any_element()
   }
 
-  /// The JPEG quality slider, from 50 to 100%: saved when it's let go.
-  fn quality_slider(&mut self, quality: f64, window: &mut Window, cx: &mut Context<Self>) -> Entity<SliderState> {
-    if let Some(s) = &self.ui.export.quality {
-      return s.clone();
+  /// The JPEG quality slider, from 50 to 100% (as the web's range inputs: a thin track and a
+  /// small knob). Pressed or dragged; saved when it's let go.
+  fn quality_slider(&mut self, quality: f64, enabled: bool, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
+    let bounds = self.ui.export.quality_track.clone();
+    let measured = bounds.clone();
+    let f = ((quality - 0.5) / 0.5).clamp(0.0, 1.0) as f32;
+    div()
+      .id("quality")
+      .relative()
+      .h(px(16.0))
+      .flex()
+      .items_center()
+      .when(!enabled, |d| d.opacity(0.5))
+      // Where the track is, for presses and drags.
+      .child(
+        canvas(move |b, _, _| measured.set(Some(b)), |_, _, _, _| {})
+          .absolute()
+          .size_full(),
+      )
+      .child(div().w_full().h(px(2.0)).rounded(px(1.0)).bg(theme.border_strong))
+      .child(
+        div()
+          .absolute()
+          .left(relative(f))
+          .ml(px(-5.0))
+          .size(px(10.0))
+          .rounded_full()
+          .bg(theme.knob)
+          .border_1()
+          .border_color(hsla(0.0, 0.0, 0.0, 0.35))
+          .shadow_sm(),
+      )
+      .when(enabled, |d| {
+        d.on_mouse_down(
+          MouseButton::Left,
+          cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
+            cx.stop_propagation();
+            ws.drag = Some(crate::workspace::Drag::Quality);
+            ws.quality_at(f64::from(ev.position.x), cx);
+          }),
+        )
+      })
+      .into_any_element()
+  }
+
+  /// The quality for a press or drag at window x on its track (shown, not saved yet).
+  pub fn quality_at(&mut self, x_: f64, cx: &mut Context<Self>) {
+    let Some(b) = self.ui.export.quality_track.get() else {
+      return;
+    };
+    let (left, w) = (f64::from(b.origin.x), f64::from(b.size.width).max(1.0));
+    let f = ((x_ - left) / w).clamp(0.0, 1.0);
+    self.ui.export.live_quality = Some((50.0 + 50.0 * f).round() / 100.0);
+    cx.notify();
+  }
+
+  /// The slider let go: keep the quality.
+  pub fn quality_done(&mut self, cx: &mut Context<Self>) {
+    if let Some(q) = self.ui.export.live_quality.take() {
+      self.set_export_options(cx, |o| o.quality = q);
     }
-    let s = cx.new(|_| {
-      SliderState::new()
-        .min(50.0)
-        .max(100.0)
-        .step(1.0)
-        .default_value((quality * 100.0).round() as f32)
-    });
-    cx.subscribe_in(&s, window, |ws, _, ev: &SliderEvent, _, cx| match ev {
-      SliderEvent::Change(v) => {
-        ws.ui.export.live_quality = Some(f64::from(v.start()) / 100.0);
-        cx.notify();
-      }
-      SliderEvent::Release(v) => {
-        ws.ui.export.live_quality = None;
-        let q = f64::from(v.start()) / 100.0;
-        ws.set_export_options(cx, |o| o.quality = q);
-      }
-    })
-    .detach();
-    self.ui.export.quality = Some(s.clone());
-    s
   }
 
   /// Open a placed photo in the spread editor, selected.
@@ -473,6 +535,8 @@ impl Workspace {
 /// A note on how the destination converts the project's measurements.
 fn note(text: String, theme: &Theme) -> Div {
   div()
+    .w_full()
+    .min_w_0()
     .flex()
     .gap(px(6.0))
     .text_color(theme.muted)
@@ -484,7 +548,7 @@ fn note(text: String, theme: &Theme) -> Div {
         .size(px(13.0))
         .text_color(theme.muted),
     )
-    .child(div().flex_1().child(text))
+    .child(div().flex_1().min_w_0().child(text))
 }
 
 fn capitalize(s: &str) -> String {

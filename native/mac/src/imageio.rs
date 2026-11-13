@@ -174,7 +174,7 @@ fn draw_plan(
   let hh = plan.px_h;
   fill(
     &ctx,
-    ink_rgb(plan.background),
+    plan.background.rgb(),
     CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(plan.px_w, hh)),
   );
   CGContext::set_interpolation_quality(Some(&ctx), CGInterpolationQuality::High);

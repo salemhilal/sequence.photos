@@ -8,7 +8,7 @@ use gpui_kit::*;
 use crate::assets::icon;
 use crate::theme::Theme;
 
-/// A row of choices, one on.
+/// A row of choices, one on: its raised highlight slides to the choice picked.
 pub fn segmented<T: Copy + PartialEq + 'static>(
   id: &'static str,
   options: &[(T, &str)],
@@ -17,26 +17,52 @@ pub fn segmented<T: Copy + PartialEq + 'static>(
   on: impl Fn(T, &mut Window, &mut App) + 'static,
 ) -> Div {
   let on = Rc::new(on);
-  let mut row = div().flex().p(px(2.0)).gap(px(2.0)).rounded(px(4.0)).bg(theme.track);
+  let n = options.len().max(1);
+  let chosen = options.iter().position(|(v, _)| *v == value);
+  let mut row = div()
+    .relative()
+    .flex()
+    .p(px(2.0))
+    .gap(px(2.0))
+    .rounded(px(4.0))
+    .bg(theme.track);
+  // The highlight, under the labels, gliding from the last choice to this one.
+  if let Some(to) = chosen {
+    let slide = crate::motion::slide(id, to);
+    let control = theme.control;
+    let pill = div()
+      .absolute()
+      .top(px(2.0))
+      .bottom(px(2.0))
+      .w(relative(1.0 / n as f32))
+      .px(px(1.0))
+      .child(div().size_full().rounded(px(3.0)).bg(control).shadow_xs());
+    row = row.child(div().absolute().top_0().bottom_0().left(px(2.0)).right(px(2.0)).child(
+      pill.left(relative(slide.to as f32 / n as f32)).with_animation(
+        SharedString::from(format!("{id}-slide-{}", slide.n)),
+        crate::motion::ease(crate::motion::TOGGLE),
+        move |el, t| el.left(relative(slide.at(t) / n as f32)),
+      ),
+    ));
+  }
   for (i, &(v, label)) in options.iter().enumerate() {
     let on = on.clone();
-    let chosen = v == value;
-    let mut b = div()
-      .id((id, i))
-      .flex_1()
-      .flex()
-      .justify_center()
-      .h(px(22.0))
-      .items_center()
-      .px(px(8.0))
-      .rounded(px(3.0))
-      .text_color(if chosen { theme.text } else { theme.muted })
-      .child(label.to_string())
-      .on_click(move |_, window, cx| on(v, window, cx));
-    if chosen {
-      b = b.bg(theme.control).shadow_xs();
-    }
-    row = row.child(b);
+    let on_it = Some(i) == chosen;
+    row = row.child(
+      div()
+        .id((id, i))
+        .relative()
+        .flex_1()
+        .flex()
+        .justify_center()
+        .h(px(22.0))
+        .items_center()
+        .px(px(8.0))
+        .rounded(px(3.0))
+        .text_color(if on_it { theme.text } else { theme.muted })
+        .child(label.to_string())
+        .on_click(move |_, window, cx| on(v, window, cx)),
+    );
   }
   row
 }

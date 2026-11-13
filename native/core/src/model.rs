@@ -42,6 +42,72 @@ pub enum Ink {
   Black,
 }
 
+/// A page's color: white, black, or any other, saved as "white", "black", or "#rrggbb".
+/// (Apps from before colors read any other as white.)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Paper {
+  White,
+  Black,
+  Rgb([u8; 3]),
+}
+
+impl Paper {
+  /// The color, as RGB.
+  pub fn rgb(self) -> [u8; 3] {
+    match self {
+      Paper::White => [255, 255, 255],
+      Paper::Black => [0, 0, 0],
+      Paper::Rgb(c) => c,
+    }
+  }
+
+  /// White and black by name; any other color as itself.
+  pub fn from_rgb(c: [u8; 3]) -> Self {
+    match c {
+      [255, 255, 255] => Paper::White,
+      [0, 0, 0] => Paper::Black,
+      c => Paper::Rgb(c),
+    }
+  }
+
+  /// As saved.
+  pub fn name(self) -> String {
+    match self {
+      Paper::White => "white".into(),
+      Paper::Black => "black".into(),
+      Paper::Rgb([r, g, b]) => format!("#{r:02x}{g:02x}{b:02x}"),
+    }
+  }
+
+  /// From what's saved; None for anything else.
+  pub fn parse(s: &str) -> Option<Self> {
+    match s {
+      "white" => Some(Paper::White),
+      "black" => Some(Paper::Black),
+      _ => {
+        let hex = s
+          .strip_prefix('#')
+          .filter(|h| h.len() == 6 && h.bytes().all(|b| b.is_ascii_hexdigit()))?;
+        let n = u32::from_str_radix(hex, 16).ok()?;
+        Some(Paper::from_rgb([(n >> 16) as u8, (n >> 8) as u8, n as u8]))
+      }
+    }
+  }
+}
+
+impl Serialize for Paper {
+  fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_str(&self.name())
+  }
+}
+
+impl<'de> Deserialize<'de> for Paper {
+  fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+    let s = String::deserialize(d)?;
+    Paper::parse(&s).ok_or_else(|| serde::de::Error::custom("not a page color"))
+  }
+}
+
 /// A border drawn around a placed photo, outside its edges, in the page's unit.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PhotoBorder {
@@ -88,7 +154,7 @@ pub struct Spread {
   pub items: Vec<Placement>,
   /// The color behind its photos; none is white.
   #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub background: Option<Ink>,
+  pub background: Option<Paper>,
 }
 
 impl Spread {
@@ -430,5 +496,20 @@ impl Project {
   /// The spread (or frame) with this id.
   pub fn find_spread(&self, id: &SpreadId) -> Option<&Spread> {
     self.layout.all().into_iter().find(|s| &s.id == id)
+  }
+}
+
+#[cfg(test)]
+mod paper_tests {
+  use super::Paper;
+
+  #[test]
+  fn page_colors_as_saved() {
+    assert_eq!(Paper::parse("white"), Some(Paper::White));
+    assert_eq!(Paper::parse("#000000"), Some(Paper::Black));
+    assert_eq!(Paper::parse("#1a2B3c"), Some(Paper::Rgb([0x1a, 0x2b, 0x3c])));
+    assert_eq!(Paper::Rgb([0x1a, 0x2b, 0x3c]).name(), "#1a2b3c");
+    assert_eq!(Paper::parse("#12345"), None);
+    assert_eq!(Paper::parse("red"), None);
   }
 }

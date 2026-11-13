@@ -103,7 +103,7 @@ impl Workspace {
       clip: true,
     };
     let bg: Hsla = rgb(0x0f0f0e).into();
-    let mut stage = div()
+    let stage = div()
       .id("preview")
       .absolute()
       .size_full()
@@ -148,6 +148,9 @@ impl Workspace {
           .detach();
         }
       }));
+    // The spread, drawn in a layer of its own that slides in from the side it was turned to.
+    let outer = stage;
+    let mut stage = div().absolute().size_full();
     // The book's pages cast a shadow.
     for (_, r) in pic.pages() {
       stage = stage.child(boxed(r).shadow(vec![BoxShadow {
@@ -180,6 +183,17 @@ impl Workspace {
       }
     }
     stage = stage.child(pic.photo_elements(&mut self.lib, &project, theme));
+    let turned = crate::motion::slide("preview-turn", index);
+    let dir = (turned.to as f64 - turned.from as f64).signum();
+    let mut stage = outer.child(stage.with_animation(
+      SharedString::from(format!("turn-{}", turned.n)),
+      crate::motion::ease(crate::motion::TURN),
+      move |el, t| {
+        let t = f64::from(t);
+        el.opacity(if dir == 0.0 { 1.0 } else { t as f32 })
+          .left(x(24.0 * dir * (1.0 - t)))
+      },
+    ));
     if shown {
       let soft: Hsla = rgb(0x8d8a83).into();
       // The header: in fullscreen, how to use it; Fullscreen, or the way out.

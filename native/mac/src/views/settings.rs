@@ -11,7 +11,7 @@ use super::controls::{check, help, segmented};
 use super::text_button;
 use crate::assets::FONT;
 use crate::fields::parse_number;
-use crate::theme::{DESK_COLORS, Theme, ThemePref, hex_color, parse_hex_color};
+use crate::theme::{DESK_COLORS, Theme, ThemePref};
 use crate::workspace::Workspace;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -51,8 +51,6 @@ const THEMES: &[(ThemePref, &str)] = &[
 pub struct SettingsWindow {
   ws: Entity<Workspace>,
   tab: Tab,
-  /// The desk's custom color, as hex.
-  custom_desk: Entity<InputState>,
   /// How many test images to add.
   test_count: Entity<InputState>,
   /// A server on this computer, as typed.
@@ -64,17 +62,6 @@ impl SettingsWindow {
     // The main window's changes (a desk color picked from its menu) show here too.
     cx.observe(&ws, |_, _, cx| cx.notify()).detach();
     cx.observe_window_appearance(window, |_, _, cx| cx.notify()).detach();
-
-    let desk = ws.read(cx).prefs.desk_color;
-    let custom_desk = cx.new(|cx| InputState::new(window, cx).default_value(hex_color(desk)));
-    cx.subscribe_in(&custom_desk, window, |this, state, ev: &InputEvent, _, cx| {
-      if matches!(ev, InputEvent::PressEnter { .. } | InputEvent::Blur)
-        && let Some(c) = parse_hex_color(&state.read(cx).value())
-      {
-        this.ws.update(cx, |ws, cx| ws.set_desk_color(c, cx));
-      }
-    })
-    .detach();
 
     let test_count = cx.new(|cx| InputState::new(window, cx).default_value("6"));
     cx.subscribe_in(&test_count, window, |this, _, ev: &InputEvent, _, cx| match ev {
@@ -105,7 +92,6 @@ impl SettingsWindow {
     Self {
       ws,
       tab: Tab::General,
-      custom_desk,
       test_count,
       local_server,
     }
@@ -126,7 +112,7 @@ impl SettingsWindow {
   #[cfg(not(target_os = "macos"))]
   fn add_test_images(&mut self, _: &mut Context<Self>) {}
 
-  fn general(&mut self, theme: &Theme, window: &mut Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
+  fn general(&mut self, theme: &Theme, _window: &mut Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
     let prefs = self.ws.read(cx).prefs.clone();
     let ws = self.ws.downgrade();
     let themes = segmented("theme", THEMES, prefs.theme, theme, move |t, _, cx| {
@@ -158,28 +144,40 @@ impl SettingsWindow {
           }),
       );
     }
-    // Follow the color while it isn't being typed in.
-    let hex = hex_color(prefs.desk_color);
-    let focused = self.custom_desk.read(cx).focus_handle(cx).is_focused(window);
-    if !focused && self.custom_desk.read(cx).value().as_ref() != hex {
-      self.custom_desk.update(cx, |s, cx| s.set_value(hex, window, cx));
-    }
+    // Any other color: the system's color panel (with its eyedropper), shown filled with
+    // the color when it's one of those.
+    let ws = self.ws.downgrade();
+    let c = prefs.desk_color;
+    let start = [(c >> 16) as u8, (c >> 8) as u8, c as u8];
     swatches = swatches.child(
       div()
+        .id("desk-custom")
+        .size(px(22.0))
+        .rounded_full()
         .flex()
         .items_center()
-        .gap(px(6.0))
-        .ml(px(6.0))
-        .child(
-          div()
-            .size(px(22.0))
-            .rounded_full()
-            .bg(rgb(prefs.desk_color))
-            .border_1()
-            .border_color(theme.border_strong)
-            .when(!preset, |d| d.border_2().border_color(theme.accent)),
-        )
-        .child(div().w(px(84.0)).child(Input::new(&self.custom_desk))),
+        .justify_center()
+        .border_1()
+        .border_color(theme.border_strong)
+        .map(|d| {
+          if preset {
+            d.bg(theme.control).child(
+              svg()
+                .path(crate::assets::icon("pipette"))
+                .size(px(12.0))
+                .text_color(theme.muted),
+            )
+          } else {
+            d.bg(rgb(c)).border_2().border_color(theme.accent)
+          }
+        })
+        .on_click(move |_, _, cx| {
+          let ws = ws.clone();
+          crate::colorpanel::pick(start, cx, move |[r, g, b], cx| {
+            let c = (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b);
+            let _ = ws.update(cx, |ws, cx| ws.set_desk_color(c, cx));
+          });
+        }),
     );
 
     let ws = self.ws.downgrade();
@@ -198,7 +196,7 @@ impl SettingsWindow {
         "Desk color",
         theme,
         div().flex().flex_col().gap(px(6.0)).child(swatches).child(help(
-          "A hex color, like #787878. Also in the desk’s right-click menu.",
+          "Or any color, from the eyedropper. Also in the desk’s right-click menu.",
           theme,
         )),
       ),

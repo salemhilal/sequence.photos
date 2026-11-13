@@ -5,7 +5,6 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use gpui_kit::component::slider::SliderState;
 use gpui_kit::*;
 use sequence_core::PhotoId;
 use sequence_core::export_options::{Options, default_destination, export_px_per_unit, per_of};
@@ -28,7 +27,7 @@ pub struct ExportUi {
   /// Inches projects' dpi for this session (not saved, as on the web).
   pub dpi: Option<f64>,
   /// The JPEG quality slider, made with the page.
-  pub quality: Option<Entity<SliderState>>,
+  pub quality_track: std::rc::Rc<std::cell::Cell<Option<Bounds<Pixels>>>>,
   /// The quality while the slider's dragged, before it's saved.
   pub live_quality: Option<f64>,
   /// The images' estimated size in bytes, for the choices it was made with.

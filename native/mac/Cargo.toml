@@ -29,6 +29,8 @@ getrandom = "0.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"
+# The system's color panel (with its eyedropper), for page and desk colors.
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorPanel", "NSColorSpace", "NSPanel", "NSWindow", "NSResponder", "objc2-core-foundation"] }
 objc2 = "0.6"
 objc2-core-foundation = "0.3"
 objc2-core-graphics = "0.3"

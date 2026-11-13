@@ -185,7 +185,12 @@ impl Placements<'_> {
       .map(|(i, p)| self.item(p, &format!("{where_}.items[{i}]")))
       .collect::<Result<Vec<_>>>()?;
     // White is the default, kept as none; an unknown color is too.
-    let background = ink_of(s.get("background")).filter(|i| *i == Ink::Black);
+    // White is none; any other color is kept.
+    let background = s
+      .get("background")
+      .and_then(Value::as_str)
+      .and_then(Paper::parse)
+      .filter(|p| *p != Paper::White);
     Ok(Spread {
       kind,
       id: SpreadId(id),

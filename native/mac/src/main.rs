@@ -5,6 +5,7 @@ mod assets;
 #[cfg(target_os = "macos")]
 mod bookmarks;
 mod clipboard;
+mod colorpanel;
 mod commands;
 mod config;
 mod crop;
@@ -15,6 +16,7 @@ mod imageio;
 mod instagram;
 mod layout;
 mod library;
+mod motion;
 mod photo_cache;
 mod posting;
 mod prefs;
