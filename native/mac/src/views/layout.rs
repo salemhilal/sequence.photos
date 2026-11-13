@@ -16,6 +16,7 @@ use sequence_core::units::{PRESETS, terms, units};
 use sequence_core::{Arrangement, Axis, BorderShape, PageSide, Spread, SpreadKind, Unit};
 
 use super::controls::{self, check, field_row, help, radio};
+use super::paint::Tip as _;
 use super::paint::{SpreadPicture, boxed, x};
 use super::{icon_button, text_button};
 use crate::assets::{MONO, icon};
@@ -106,6 +107,7 @@ impl Workspace {
     } else {
       self.render_guides_stage(&st, stage, theme, cx)
     };
+    let tabs = self.render_tabs(&st, theme, cx);
     let inspector = match st.tab {
       LayoutTab::Page => self.render_page_tab(&st, pending, theme, window, cx),
       LayoutTab::Guides => self.render_guides_tab(&st, theme, window, cx),
@@ -151,10 +153,19 @@ impl Workspace {
           .top_0()
           .w(x(PANEL_W))
           .h_full()
+          .flex()
+          .flex_col()
           .border_l_1()
           .border_color(theme.divider)
-          .overflow_y_scroll()
-          .child(inspector),
+          .child(tabs)
+          .child(
+            div()
+              .id("layout-panel-body")
+              .flex_1()
+              .min_h_0()
+              .overflow_y_scroll()
+              .child(inspector),
+          ),
       );
     let modal = boxed(panel)
       .id("layout")
@@ -223,10 +234,21 @@ impl Workspace {
         el = el.child(super::paint::soft_badge(pic.at(Rect::from(p)), theme));
       }
     }
+    // The guides, on each page, as the web's preview shows them.
+    let g = sequence_core::geometry::spread_guides(spread, &sheet);
+    for (side, pr) in pic.pages() {
+      let page = sequence_core::geometry::page_rect(side, &sheet);
+      for &gx in g.xs.iter().filter(|&&gx| gx >= page.x && gx <= page.x + page.w) {
+        let r = pic.at(Rect::new(gx, 0.0, 0.0, sheet.page_h));
+        el = el.child(boxed(Rect::new(r.x, pr.y, 1.0, pr.h)).bg(theme.guide));
+      }
+      for &gy in &g.ys {
+        let r = pic.at(Rect::new(0.0, gy, 0.0, 0.0));
+        el = el.child(boxed(Rect::new(pr.x, r.y, pr.w, 1.0)).bg(theme.guide));
+      }
+    }
     el = el.child(pic.outline(theme));
-    let noun = terms(sheet.arrangement).spread;
     let i = st.preview_index;
-    let light = self.desk_light();
     // With no changes waiting, this is the project as it is: photos are soft, not would be.
     let soft = soft_photos(&project, None).len();
     if soft > 0 {
@@ -244,38 +266,17 @@ impl Workspace {
           .child(soft_sentence(soft, sheet.unit, sheet.px_per_unit, changed)),
       );
     }
-    el.child(
-      div()
-        .absolute()
-        .left_0()
-        .right_0()
-        .bottom(px(12.0))
-        .flex()
-        .justify_center()
-        .items_center()
-        .gap(px(6.0))
-        .text_color(if light { theme.text } else { rgb(0xeeeeee).into() })
-        .child(icon_button("layout-prev", "chevron-left", theme, i > 0, false, {
-          let t = cx.entity().downgrade();
-          move |_, _, cx| {
-            let _ = t.update(cx, |ws, cx| ws.layout_go(-1, cx));
-          }
-        }))
-        .child(format!("{} {} of {total}", capitalize(noun), i + 1))
-        .child(icon_button(
-          "layout-next",
-          "chevron-right",
-          theme,
-          i + 1 < total,
-          false,
-          {
-            let t = cx.entity().downgrade();
-            move |_, _, cx| {
-              let _ = t.update(cx, |ws, cx| ws.layout_go(1, cx));
-            }
-          },
-        )),
-    )
+    let t = cx.entity().downgrade();
+    el.child(controls::pager(
+      "layout-pager",
+      i,
+      total,
+      String::new(),
+      theme,
+      move |d, _, cx| {
+        let _ = t.update(cx, |ws, cx| ws.layout_go(d, cx));
+      },
+    ))
     .into_any_element()
   }
 
@@ -601,15 +602,38 @@ impl Workspace {
     el.into_any_element()
   }
 
+  /// Page and Guides, as tabs along the panel's top (`.tabs`).
   fn render_tabs(&mut self, st: &LayoutState, theme: &Theme, cx: &mut Context<Self>) -> Div {
-    segmented(
-      "layout-tab",
-      &[(LayoutTab::Page, "Page"), (LayoutTab::Guides, "Guides")],
-      st.tab,
-      theme,
-      Rc::new(|ws: &mut Workspace, t, window: &mut Window, cx: &mut Context<Workspace>| ws.layout_tab(t, window, cx)),
-      cx,
-    )
+    let mut row = div()
+      .flex()
+      .flex_none()
+      .items_stretch()
+      .gap(px(2.0))
+      .h(px(28.0))
+      .px(px(6.0))
+      .bg(theme.header)
+      .border_b_1()
+      .border_color(theme.divider);
+    for (i, (t, label)) in [(LayoutTab::Page, "Page"), (LayoutTab::Guides, "Guides")]
+      .into_iter()
+      .enumerate()
+    {
+      let on = st.tab == t;
+      row = row.child(
+        div()
+          .id(("layout-tab", i))
+          .flex()
+          .items_center()
+          .px(px(8.0))
+          .border_b_2()
+          .border_color(if on { theme.text } else { gpui_kit::transparent_black() })
+          .text_color(if on { theme.text } else { theme.muted })
+          .hover(|s| s.text_color(theme.text))
+          .child(label)
+          .on_click(cx.listener(move |ws, _, window, cx| ws.layout_tab(t, window, cx))),
+      );
+    }
+    row
   }
 
   fn render_page_tab(
@@ -624,12 +648,7 @@ impl Workspace {
     let project = self.history.shared();
     let base = self.page_run.base(&project).clone();
     let u = units(d.page.unit);
-    let mut col = div()
-      .flex()
-      .flex_col()
-      .gap(px(14.0))
-      .p(px(12.0))
-      .child(self.render_tabs(st, theme, cx));
+    let mut col = div().flex().flex_col().gap(px(14.0)).p(px(12.0)).min_h_full();
 
     let note = (d.arrangement != project.layout.arrangement()).then(|| {
       if d.arrangement == Arrangement::Frames {
@@ -675,7 +694,9 @@ impl Workspace {
         .bg(theme.control)
         .border_1()
         .border_color(theme.border_strong)
-        .child(div().flex_1().child(preset.map_or("Custom", |p| p.label)))
+        .child(div().flex_1().child(preset.map_or("Custom".to_string(), |p| {
+          format!("{} · {}", p.label, fmt(p.w, p.h, p.unit))
+        })))
         .child(svg().path(icon("chevron-down")).size(px(14.0)).text_color(theme.muted))
         .on_click(cx.listener(|ws, _, _, cx| {
           if let Some(l) = &mut ws.ui.layout {
@@ -728,33 +749,53 @@ impl Workspace {
       ),
     ));
 
-    let w_field = self.number_field(Field::PageW, Some("W"), u.format(d.page.w), true, theme, window, cx);
-    let h_field = self.number_field(Field::PageH, Some("H"), u.format(d.page.h), true, theme, window, cx);
+    // W ⇆ H on one row, with the unit in the fields.
+    let w_field = self.number_field(
+      Field::PageW,
+      Some("W"),
+      format!("{} {}", u.format(d.page.w), u.suffix),
+      true,
+      theme,
+      window,
+      cx,
+    );
+    let h_field = self.number_field(
+      Field::PageH,
+      Some("H"),
+      format!("{} {}", u.format(d.page.h), u.suffix),
+      true,
+      theme,
+      window,
+      cx,
+    );
+    let swap = icon_button(
+      "swap",
+      "arrow-left-right",
+      theme,
+      true,
+      false,
+      cx.listener(|ws, _, _, cx| {
+        ws.set_draft(cx, |d, _| std::mem::swap(&mut d.page.w, &mut d.page.h));
+      }),
+    )
+    .tip("Swap width and height", cx.entity().downgrade());
     col = col.child(field_row(
       "Size",
       theme,
       div()
         .flex()
-        .flex_col()
-        .gap(px(4.0))
-        .child(w_field)
-        .child(h_field)
-        .child(div().child(text_button(
-          "swap",
-          "Swap width and height",
-          theme,
-          false,
-          cx.listener(|ws, _, _, cx| {
-            ws.set_draft(cx, |d, _| std::mem::swap(&mut d.page.w, &mut d.page.h));
-          }),
-        ))),
+        .items_center()
+        .gap(px(2.0))
+        .child(div().flex_1().min_w_0().child(w_field))
+        .child(swap)
+        .child(div().flex_1().min_w_0().child(h_field)),
     ));
 
     let dpi = if d.page.unit == Unit::In {
       self.number_field(
         Field::Dpi,
         None,
-        format!("{}", d.page.px_per_unit),
+        format!("{} dpi", d.page.px_per_unit),
         true,
         theme,
         window,
@@ -768,7 +809,7 @@ impl Workspace {
         .into_any_element()
     };
     let dpi_label = if d.page.unit == Unit::In {
-      format!("{} (dpi)", self.dpi_label())
+      self.dpi_label().to_string()
     } else {
       "Density".to_string()
     };
@@ -839,7 +880,8 @@ impl Workspace {
         cx.listener(|ws, _, _, cx| ws.revert_page(cx)),
       ));
     }
-    col.child(actions).into_any_element()
+    // At the panel's foot, as on the web.
+    col.child(div().flex_1()).child(actions).into_any_element()
   }
 
   fn render_guides_tab(
@@ -875,12 +917,7 @@ impl Workspace {
       d.rounded(px(4.0)).p(px(4.0)).when(on, |d| d.bg(theme.accent_soft))
     };
 
-    let mut col = div()
-      .flex()
-      .flex_col()
-      .gap(px(10.0))
-      .p(px(12.0))
-      .child(self.render_tabs(st, theme, cx));
+    let mut col = div().flex().flex_col().gap(px(10.0)).p(px(12.0));
 
     // Center lines.
     let mut centers = div().flex().gap(px(8.0));
@@ -1090,11 +1127,4 @@ fn format_tick(d: f64) -> String {
   } else {
     format!("{r}")
   }
-}
-
-fn capitalize(s: &str) -> String {
-  let mut c = s.chars();
-  c.next()
-    .map(|f| f.to_uppercase().collect::<String>() + c.as_str())
-    .unwrap_or_default()
 }

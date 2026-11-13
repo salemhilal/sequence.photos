@@ -15,7 +15,7 @@ use sequence_core::units::{terms, units};
 
 use super::controls::{help, segmented};
 use super::paint::{SpreadPicture, boxed, x};
-use super::{icon_button, text_button};
+use super::text_button;
 use crate::assets::{MONO, icon};
 use crate::fields::Field;
 use crate::theme::Theme;
@@ -99,48 +99,17 @@ impl Workspace {
         format!("{} × {} {}", u.format(r.w), u.format(r.h), u.suffix)
       };
       let total = pages.len();
-      stage = stage.child(
-        div()
-          .absolute()
-          .left_0()
-          .right_0()
-          .bottom(px(12.0))
-          .flex()
-          .justify_center()
-          .child(
-            div()
-              .flex()
-              .items_center()
-              .gap(px(4.0))
-              .px(px(4.0))
-              .rounded(px(5.0))
-              .bg(theme.panel)
-              .border_1()
-              .border_color(theme.border)
-              .child(icon_button(
-                "export-prev",
-                "chevron-left",
-                theme,
-                index > 0,
-                false,
-                cx.listener(move |ws, _, _, cx| ws.export_go(-1, total, cx)),
-              ))
-              .child(
-                div()
-                  .font_family(MONO)
-                  .text_size(px(11.0))
-                  .child(format!("Page {} of {total} · {size}", index + 1)),
-              )
-              .child(icon_button(
-                "export-next",
-                "chevron-right",
-                theme,
-                index + 1 < total,
-                false,
-                cx.listener(move |ws, _, _, cx| ws.export_go(1, total, cx)),
-              )),
-          ),
-      );
+      let ws = cx.entity().downgrade();
+      stage = stage.child(super::controls::pager(
+        "export-pager",
+        index,
+        total,
+        format!(" · {size}"),
+        theme,
+        move |d, _, cx| {
+          let _ = ws.update(cx, |ws, cx| ws.export_go(d, total, cx));
+        },
+      ));
     }
 
     // The panel: where it goes, then its choices.
@@ -154,13 +123,15 @@ impl Workspace {
           .flex()
           .items_center()
           .gap(px(6.0))
-          .w(px(122.0))
+          .w(px(124.0))
           .h(px(30.0))
           .px(px(8.0))
-          .rounded(px(4.0))
-          .border_1()
-          .border_color(if on { theme.accent } else { theme.border_strong })
-          .bg(if on { theme.accent_soft } else { theme.control })
+          .rounded(px(3.0))
+          // The one picked is raised; the others are outlined.
+          .when(on, |d| d.bg(theme.control).shadow_sm())
+          .when(!on, |d| {
+            d.border_1().border_color(theme.border).hover(|s| s.bg(theme.fill))
+          })
           .child(svg().path(icon(name)).size(px(14.0)).text_color(theme.text))
           .child(label)
           .when(busy.is_none() && !posting, |b| {
@@ -400,7 +371,10 @@ impl Workspace {
       if busy.is_some() {
         button = button.opacity(0.6);
       }
-      panel = panel.child(actions.child(button));
+      // Kept at the panel's foot, as on the web.
+      panel = panel
+        .child(div().flex_1().min_h(px(8.0)))
+        .child(actions.child(button).border_b_0().border_t_1());
     }
 
     div()
@@ -419,7 +393,7 @@ impl Workspace {
     let region = page_region(page, &sheet);
     let pad = sheet.page_w * PAD_SHARE;
     let across = if page.part == Part::Spread {
-      sheet_extent(sheet.arrangement, sheet.page_w).0
+      sheet_extent(sheet.arrangement, sheet.page_w).1
     } else {
       region.w
     };

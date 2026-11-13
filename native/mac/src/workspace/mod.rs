@@ -79,6 +79,8 @@ pub struct Ui {
   pub modal: Option<Modal>,
   pub view: DeskView,
   pub sidebar_scroll: f64,
+  /// When the sidebar last scrolled (its count shows a moment).
+  pub sidebar_scrolled: Option<Instant>,
   pub strip_scroll: f64,
   pub hover: Option<DropTarget>,
   pub hover_photo: Option<PhotoId>,
@@ -150,6 +152,7 @@ impl Default for Ui {
       modal: None,
       view: DeskView::default(),
       sidebar_scroll: 0.0,
+      sidebar_scrolled: None,
       strip_scroll: 0.0,
       hover: None,
       hover_photo: None,
@@ -245,6 +248,8 @@ pub struct Workspace {
   pub component_theme: Option<bool>,
   /// The menu bar's wording, as last set.
   pub menu_state: Option<crate::commands::MenuState>,
+  /// What the workspace keeps listening to.
+  pub subscriptions: Vec<Subscription>,
   /// The main window, for asking questions in it.
   pub window_handle: Option<AnyWindowHandle>,
   saved_to_library: u64,
@@ -293,6 +298,7 @@ impl Workspace {
         ..Default::default()
       },
       window_handle: None,
+      subscriptions: Vec::new(),
       menu_state: None,
       component_theme: None,
       tour: None,

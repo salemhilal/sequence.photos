@@ -112,6 +112,20 @@ fn main() {
         }
         // Or on Preview, at a spread (counted from 0).
         #[cfg(debug_assertions)]
+        if let Some(at) = std::env::var_os("SEQUENCE_OPEN_EDITOR") {
+          ws.update(cx, |ws, cx| {
+            let i: usize = at.to_str().and_then(|s| s.parse().ok()).unwrap_or(0);
+            if let Some(id) = ws.project().layout.all().get(i).map(|s| s.id.clone()) {
+              ws.open_editor(id, cx);
+              ws.ui.editor_selected = ws
+                .project()
+                .find_spread(&ws.ui.editing.clone().unwrap_or_default())
+                .and_then(|s| s.items.first())
+                .map(|p| p.photo_id.clone());
+            }
+          });
+        }
+        #[cfg(debug_assertions)]
         if let Some(at) = std::env::var_os("SEQUENCE_OPEN_PREVIEW") {
           ws.update(cx, |ws, cx| {
             ws.go_to(workspace::Page::Preview, cx);
@@ -172,6 +186,24 @@ fn main() {
     // Quitting asks about changes that aren't in a file (and keeps the work in the library).
     let _ = window.update(cx, |ws, window, cx| {
       ws.window_handle = Some(window.window_handle());
+      // Shortcut badges go with any shortcut pressed, and when the app goes to the back
+      // (⌘ released elsewhere is never heard).
+      let hide = |ws: &mut Workspace, cx: &mut Context<Workspace>| {
+        ws.ui.hint_press += 1;
+        if ws.ui.hints {
+          ws.ui.hints = false;
+          cx.notify();
+        }
+      };
+      ws.subscriptions
+        .push(cx.observe_keystrokes(move |ws, _, _, cx| hide(ws, cx)));
+      ws.subscriptions
+        .push(cx.observe_window_activation(window, move |ws, window, cx| {
+          if !window.is_window_active() {
+            ws.ui.cmd_held = false;
+            hide(ws, cx);
+          }
+        }));
       let this = cx.entity().downgrade();
       window.on_window_should_close(cx, move |_, cx| {
         let _ = this.update(cx, |ws, cx| ws.request_quit(cx));

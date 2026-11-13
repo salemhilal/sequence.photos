@@ -2,16 +2,68 @@
 //! arrow keys or the pager; fullscreen to present (`Preview.tsx`).
 
 use gpui_kit::*;
-use sequence_core::actions::folio_label;
 use sequence_core::geometry::{Rect, page_rect, page_sides, sheet_extent};
 use sequence_core::units::terms;
 use sequence_core::{PageSide, SpreadKind};
 
-use super::paint::{SpreadPicture, boxed};
-use super::{icon_button, text_button};
+use gpui_kit::prelude::FluentBuilder as _;
+
+use super::paint::{SpreadPicture, boxed, x};
 use crate::assets::MONO;
 use crate::theme::Theme;
 use crate::workspace::Workspace;
+
+/// Preview's buttons on its dark stage (`.preview .btn`): light text on a faint fill.
+fn dark_button(
+  id: &'static str,
+  icon_name: &'static str,
+  label: &'static str,
+  click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> Stateful<Div> {
+  div()
+    .id(id)
+    .flex()
+    .items_center()
+    .gap(px(6.0))
+    .h(px(26.0))
+    .px(px(10.0))
+    .rounded(px(3.0))
+    .bg(hsla(0.0, 0.0, 1.0, 0.08))
+    .hover(|s| s.bg(hsla(0.0, 0.0, 1.0, 0.14)))
+    .text_color(rgb(0xe9e6df))
+    .child(
+      svg()
+        .path(crate::assets::icon(icon_name))
+        .size(px(14.0))
+        .text_color(rgb(0xe9e6df)),
+    )
+    .child(label)
+    .on_click(click)
+}
+
+/// A turn button at the stage's side (`.turn`).
+fn turn(
+  id: &'static str,
+  icon_name: &'static str,
+  enabled: bool,
+  r: Rect,
+  click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> Stateful<Div> {
+  let b = boxed(r)
+    .id(id)
+    .flex()
+    .items_center()
+    .justify_center()
+    .rounded(px(8.0))
+    .bg(hsla(0.0, 0.0, 1.0, 0.08))
+    .child(
+      svg()
+        .path(crate::assets::icon(icon_name))
+        .size(px(28.0))
+        .text_color(rgb(0xeeeeee)),
+    );
+  if enabled { b.on_click(click) } else { b.opacity(0.2) }
+}
 
 /// How long the presentation's controls stay after the pointer stops.
 const IDLE: std::time::Duration = std::time::Duration::from_millis(1000);
@@ -29,16 +81,20 @@ impl Workspace {
     let Some(spread) = all.get(index).copied() else {
       return div().into_any_element();
     };
-    let pager_h = if self.ui.presenting { 0.0 } else { 52.0 };
-    let margin = if self.ui.presenting { 0.0 } else { 32.0 };
-    // A book shows both pages' width, so its single first and last pages sit on their
-    // side at a page's size (not enlarged to fill); a frame, its own.
+    // As the web's: a header for Fullscreen, the spread between the turn buttons, and its
+    // count just below it. A book shows both pages' width, so its single first and last
+    // pages sit on their side at a page's size (not enlarged to fill); a frame, its own.
+    let (head_h, side, foot, count_h) = (44.0, 64.0, 32.0, 24.0);
     let (extent_left, across) = sheet_extent(arrangement, sheet.page_w);
-    let scale = ((main.w - 2.0 * margin) / across).min((main.h - 2.0 * margin - pager_h) / sheet.page_h);
+    let room_w = (main.w - 2.0 * side).max(1.0);
+    let room_h = (main.h - head_h - foot - count_h).max(1.0);
+    let scale = (room_w / across).min(room_h / sheet.page_h);
     let w = across * scale;
     let h = sheet.page_h * scale;
     let left = (main.w - w) / 2.0;
-    let top = (main.h - pager_h - h) / 2.0;
+    let top = head_h + (room_h - h) / 2.0;
+    // The controls fade while presenting, once the pointer rests.
+    let shown = !self.ui.presenting || self.ui.preview_moved.is_some_and(|t| t.elapsed() < IDLE);
     let pic = SpreadPicture {
       spread,
       sheet: &sheet,
@@ -46,11 +102,7 @@ impl Workspace {
       origin: (left - extent_left * scale, top),
       clip: true,
     };
-    let bg: Hsla = if self.ui.presenting {
-      rgb(0x000000).into()
-    } else {
-      rgb(self.prefs.desk_color).into()
-    };
+    let bg: Hsla = rgb(0x0f0f0e).into();
     let mut stage = div()
       .id("preview")
       .absolute()
@@ -96,6 +148,16 @@ impl Workspace {
           .detach();
         }
       }));
+    // The book's pages cast a shadow.
+    for (_, r) in pic.pages() {
+      stage = stage.child(boxed(r).shadow(vec![BoxShadow {
+        color: hsla(0.0, 0.0, 0.0, 0.45),
+        offset: point(px(0.0), px(6.0)),
+        blur_radius: px(30.0),
+        spread_radius: px(0.0),
+        inset: false,
+      }]));
+    }
     for el in pic.page_elements(theme, None) {
       stage = stage.child(el);
     }
@@ -118,87 +180,70 @@ impl Workspace {
       }
     }
     stage = stage.child(pic.photo_elements(&mut self.lib, &project, theme));
-    // Presenting: how to use it, and the way out, while the pointer moves.
-    if self.ui.presenting && self.ui.preview_moved.is_some_and(|t| t.elapsed() < IDLE) {
+    if shown {
+      let soft: Hsla = rgb(0x8d8a83).into();
+      // The header: in fullscreen, how to use it; Fullscreen, or the way out.
+      let presenting = self.ui.presenting;
       stage = stage.child(
         div()
           .absolute()
           .top_0()
           .left_0()
           .right_0()
+          .h(x(head_h))
           .flex()
           .items_center()
           .justify_end()
           .gap(px(12.0))
-          .p(px(12.0))
-          .text_color(rgb(0xbbbbbb))
-          .font_family(MONO)
-          .text_size(px(11.0))
-          .child(format!("← → to {} · Esc to leave fullscreen", terms(arrangement).turn))
-          .child(text_button(
-            "exit-present",
-            "Exit fullscreen",
-            theme,
-            false,
-            cx.listener(|ws, _, window, cx| {
+          .px(px(16.0))
+          .text_color(soft)
+          .when(presenting, |d| {
+            d.child(format!("← → to {} · Esc to leave fullscreen", terms(arrangement).turn))
+          })
+          .child(dark_button(
+            "present",
+            if presenting { "minimize-2" } else { "maximize-2" },
+            if presenting { "Exit fullscreen" } else { "Fullscreen" },
+            cx.listener(move |ws, _, window, cx| {
               cx.stop_propagation();
-              ws.present(false, window, cx);
+              ws.present(!presenting, window, cx);
             }),
           )),
       );
-    }
-    if !self.ui.presenting {
-      let noun = terms(arrangement).spread;
-      stage = stage.child(
-        div()
-          .absolute()
-          .left_0()
-          .right_0()
-          .bottom(px(12.0))
-          .flex()
-          .justify_center()
-          .gap(px(8.0))
-          .child(
-            div()
-              .flex()
-              .items_center()
-              .gap(px(4.0))
-              .px(px(4.0))
-              .rounded(px(5.0))
-              .bg(theme.panel)
-              .border_1()
-              .border_color(theme.border)
-              .child(icon_button(
-                "preview-prev",
-                "chevron-left",
-                theme,
-                index > 0,
-                false,
-                cx.listener(|ws, _, _, cx| ws.preview_go(-1, cx)),
-              ))
-              .child(div().font_family(MONO).text_size(px(11.0)).child(format!(
-                "{} · {} of {total} {}",
-                folio_label(index, total, arrangement),
-                index + 1,
-                if total == 1 { noun } else { terms(arrangement).spreads }
-              )))
-              .child(icon_button(
-                "preview-next",
-                "chevron-right",
-                theme,
-                index + 1 < total,
-                false,
-                cx.listener(|ws, _, _, cx| ws.preview_go(1, cx)),
-              )),
-          )
-          .child(text_button(
-            "present",
-            "Fullscreen",
-            theme,
-            false,
-            cx.listener(|ws, _, window, cx| ws.present(true, window, cx)),
-          )),
-      );
+      // The turn buttons at the sides, and the count just below the spread.
+      let turn_y = top + h / 2.0 - 32.0;
+      stage = stage
+        .child(turn(
+          "turn-prev",
+          "chevron-left",
+          index > 0,
+          Rect::new(12.0, turn_y, 44.0, 64.0),
+          {
+            cx.listener(|ws, _, _, cx| {
+              cx.stop_propagation();
+              ws.preview_go(-1, cx)
+            })
+          },
+        ))
+        .child(turn(
+          "turn-next",
+          "chevron-right",
+          index + 1 < total,
+          Rect::new(main.w - 56.0, turn_y, 44.0, 64.0),
+          cx.listener(|ws, _, _, cx| {
+            cx.stop_propagation();
+            ws.preview_go(1, cx)
+          }),
+        ))
+        .child(
+          boxed(Rect::new(0.0, top + h + 8.0, main.w, 16.0))
+            .flex()
+            .justify_center()
+            .font_family(MONO)
+            .text_size(px(11.0))
+            .text_color(soft)
+            .child(format!("{} / {total}", index + 1)),
+        );
     }
     stage.into_any_element()
   }

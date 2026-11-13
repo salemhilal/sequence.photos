@@ -30,6 +30,59 @@ const GRID_ROW_GAP: f64 = 10.0;
 const GRID_PAD: f64 = 10.0;
 /// Horizontal room in a cell beside its picture.
 const CELL_PAD_X: f64 = 2.0 * ROW_PAD + 2.0 * WELL_PAD;
+/// The columns slider's size and place in the header (`.columns-slider`), and its knob's.
+const SLIDER_W: f64 = 52.0;
+const SLIDER_RIGHT: f64 = 10.0;
+const KNOB_W: f64 = 16.0;
+/// How long the count stays after scrolling stops.
+pub const COUNT_SHOWN: std::time::Duration = std::time::Duration::from_millis(1000);
+
+/// Columns for a press or drag at window x on the slider `track` (its x and width).
+pub fn columns_at(x_: f64, track: Rect, fit: usize) -> usize {
+  let room = track.w - 2.0 - KNOB_W;
+  let f = ((x_ - track.x - 1.0 - KNOB_W / 2.0) / room).clamp(0.0, 1.0);
+  1 + (f * (fit - 1) as f64).round() as usize
+}
+
+/// The header's columns slider: a pill with a knob, pressed or dragged to a column count.
+fn columns_slider(cols: usize, fit: usize, track: Rect, theme: &Theme, cx: &mut Context<Workspace>) -> Stateful<Div> {
+  let room = SLIDER_W - 2.0 - KNOB_W;
+  let at = 1.0 + room * (cols - 1) as f64 / (fit - 1).max(1) as f64;
+  div()
+    .id("sidebar-columns")
+    .absolute()
+    .right(x(SLIDER_RIGHT))
+    .w(x(SLIDER_W))
+    .h(px(12.0))
+    .rounded_full()
+    .bg(theme.track)
+    .border_1()
+    .border_color(theme.border)
+    .tip(
+      format!("{cols} {}", if cols == 1 { "column" } else { "columns" }),
+      cx.entity().downgrade(),
+    )
+    .on_mouse_down(
+      MouseButton::Left,
+      cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
+        cx.stop_propagation();
+        ws.set_columns(columns_at(f64::from(ev.position.x), track, fit), cx);
+        ws.drag = Some(crate::workspace::gestures::Drag::Columns { track, fit });
+      }),
+    )
+    .child(
+      div()
+        .absolute()
+        .top(px(1.0))
+        .left(x(at - 1.0))
+        .w(x(KNOB_W))
+        .h(px(8.0))
+        .rounded_full()
+        .bg(rgb(0xcfcfcf))
+        .shadow_sm(),
+    )
+}
+
 /// The most columns, and the narrowest a spread's (or frame's) picture gets.
 pub const MAX_COLUMNS: usize = 4;
 fn min_thumb(a: Arrangement) -> f64 {
@@ -169,8 +222,11 @@ impl Workspace {
       let dragging = reorder.as_ref().is_some_and(|(ids, _)| ids.contains(&spread.id));
       let is_editing = editing.as_ref() == Some(&spread.id);
       let id = spread.id.clone();
+      // Its edit and delete buttons show while it's hovered.
+      let group = SharedString::from(format!("row-{}", spread.id));
       let mut row_el = boxed(row)
-        .id(SharedString::from(format!("row-{}", spread.id)))
+        .id(group.clone())
+        .group(group.clone())
         .rounded(px(3.0))
         .on_mouse_down(
           MouseButton::Left,
@@ -275,21 +331,25 @@ impl Workspace {
             .font_weight(FontWeight::MEDIUM)
             .child(label),
         )
+        // Just the mark; what it means is its hint.
         .when(soft > 0, |d| {
           d.child(
             div()
+              .id(SharedString::from(format!("soft-{}", spread.id)))
+              .size(px(18.0))
               .flex()
               .items_center()
-              .gap(px(3.0))
-              .text_size(px(10.0))
-              .text_color(theme.warn)
+              .justify_center()
+              .rounded(px(3.0))
+              .bg(theme.panel)
+              .shadow_sm()
               .child(
                 svg()
                   .path(crate::assets::icon("triangle-alert"))
-                  .size(px(11.0))
+                  .size(px(12.0))
                   .text_color(theme.warn),
               )
-              .child(soft_label(soft, sheet.unit, sheet.px_per_unit)),
+              .tip(soft_label(soft, sheet.unit, sheet.px_per_unit), weak.clone()),
           )
         })
         .child(div().flex_1())
@@ -304,6 +364,8 @@ impl Workspace {
             cx.listener(move |ws, _, _, cx| ws.open_editor(id.clone(), cx)),
           )
           .tip("Edit", weak.clone())
+          .opacity(0.0)
+          .group_hover(group.clone(), |s| s.opacity(1.0))
           .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
         })
         // A book's middle spreads, and any frame but a sequence's only one.
@@ -333,6 +395,8 @@ impl Workspace {
               ),
               weak.clone(),
             )
+            .opacity(0.0)
+            .group_hover(group.clone(), |s| s.opacity(1.0))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation()),
           )
         });
@@ -391,29 +455,11 @@ impl Workspace {
         .tip(terms.add_at_end, cx.entity().downgrade()),
       )
       .child(div().flex_1())
+      // Only as many columns as fit: none to choose from when one is all that fits.
       .when(fit > 1, |d| {
-        // Only as many columns as fit: none to choose from when one is all that fits.
-        let options: Vec<(usize, String)> = (1..=fit).map(|n| (n, n.to_string())).collect();
-        let options: Vec<(usize, &str)> = options.iter().map(|(n, l)| (*n, l.as_str())).collect();
-        let ws = cx.entity().downgrade();
-        d.child(
-          super::controls::segmented("sidebar-columns", &options, cols, theme, move |n, _, cx| {
-            let _ = ws.update(cx, |ws, cx| {
-              ws.prefs.sidebar_columns = n;
-              ws.prefs.save();
-              cx.notify();
-            });
-          })
-          .mr(px(6.0)),
-        )
-      })
-      .child(
-        div()
-          .text_color(theme.muted)
-          .font_family(MONO)
-          .text_size(px(11.0))
-          .child(terms.count(total)),
-      );
+        let track = Rect::new(r.x + r.w - SLIDER_RIGHT - SLIDER_W, 0.0, SLIDER_W, 0.0);
+        d.child(columns_slider(cols, fit, track, theme, cx))
+      });
 
     let resize = div()
       .id("sidebar-resize")
@@ -452,6 +498,32 @@ impl Workspace {
       .child(list_el)
       .child(header)
       .child(resize)
+      // How many there are, at the foot while scrolling (and a moment after).
+      .when(
+        self.ui.sidebar_scrolled.is_some_and(|t| t.elapsed() < COUNT_SHOWN),
+        |d| {
+          d.child(
+            div()
+              .absolute()
+              .bottom(px(14.0))
+              .left_0()
+              .right_0()
+              .flex()
+              .justify_center()
+              .child(
+                div()
+                  .px(px(10.0))
+                  .py(px(4.0))
+                  .rounded_full()
+                  .bg(theme.text.opacity(0.9))
+                  .text_color(theme.bg)
+                  .font_family(MONO)
+                  .text_size(px(11.0))
+                  .child(terms.count(total)),
+              ),
+          )
+        },
+      )
       .into_any_element()
   }
 }

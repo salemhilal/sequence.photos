@@ -746,7 +746,10 @@ impl Workspace {
         }
       }
     }
-    panel.child(actions)
+    // Kept at the panel's foot, as on the web.
+    panel
+      .child(div().flex_1().min_h(px(8.0)))
+      .child(actions.border_b_0().border_t_1())
   }
 }
 

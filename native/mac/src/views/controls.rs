@@ -120,3 +120,58 @@ pub fn radio(id: impl Into<ElementId>, label: &'static str, on: bool, theme: &Th
     .child(b)
     .child(label)
 }
+
+/// ‹ 2 / 6 › below a spread or page (`Pager`): Layout's and Export's previews, and the
+/// spread editor. `extra` follows the count (an export page's size). `go` hears -1 or 1.
+pub fn pager(
+  id: &'static str,
+  at: usize,
+  count: usize,
+  extra: String,
+  theme: &Theme,
+  go: impl Fn(isize, &mut Window, &mut App) + 'static,
+) -> Div {
+  let go = Rc::new(go);
+  let (back, on) = (go.clone(), go);
+  div()
+    .absolute()
+    .left_0()
+    .right_0()
+    .bottom(px(12.0))
+    .flex()
+    .justify_center()
+    .child(
+      div()
+        .flex()
+        .items_center()
+        .gap(px(10.0))
+        .px(px(6.0))
+        .py(px(2.0))
+        .rounded(px(3.0))
+        .bg(theme.panel)
+        .shadow_sm()
+        .child(super::icon_button(
+          (id, 0usize),
+          "chevron-left",
+          theme,
+          at > 0,
+          false,
+          move |_, w, cx| back(-1, w, cx),
+        ))
+        .child(
+          div()
+            .font_family(crate::assets::MONO)
+            .text_size(px(11.0))
+            .text_color(theme.muted)
+            .child(format!("{} / {count}{extra}", at + 1)),
+        )
+        .child(super::icon_button(
+          (id, 1usize),
+          "chevron-right",
+          theme,
+          at + 1 < count,
+          false,
+          move |_, w, cx| on(1, w, cx),
+        )),
+    )
+}

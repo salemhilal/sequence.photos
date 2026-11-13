@@ -76,7 +76,22 @@ impl Workspace {
   pub fn sidebar_scroll(&mut self, ev: &ScrollEvent, cx: &mut Context<Self>) {
     let d = ev.delta.pixel_delta(px(16.0));
     self.ui.sidebar_scroll = (self.ui.sidebar_scroll - f64::from(d.y)).max(0.0);
+    // The count shows while scrolling, and goes a moment after.
+    self.ui.sidebar_scrolled = Some(std::time::Instant::now());
+    cx.spawn(async move |this, cx| {
+      cx.background_executor().timer(crate::views::sidebar::COUNT_SHOWN).await;
+      let _ = this.update(cx, |_, cx| cx.notify());
+    })
+    .detach();
     cx.notify();
+  }
+
+  /// The sidebar's columns, as chosen (saved once the slider's let go).
+  pub fn set_columns(&mut self, n: usize, cx: &mut Context<Self>) {
+    if self.prefs.sidebar_columns != n {
+      self.prefs.sidebar_columns = n;
+      cx.notify();
+    }
   }
 
   // Pages and modes.

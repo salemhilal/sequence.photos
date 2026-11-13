@@ -3,7 +3,7 @@
 
 use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
-use sequence_core::actions::{DropTarget, folio_label, placement_mut};
+use sequence_core::actions::{DropTarget, placement_mut};
 use sequence_core::geometry::{
   Rect, border_box, fit_centered, page_rect, page_sides, pile_size, sheet_extent, side_at, spread_guides,
 };
@@ -14,7 +14,6 @@ use super::controls::check;
 use super::desk::{handle_targets, selection_frame};
 use super::paint::{SpreadPicture, Tip as _, boxed, photo, soft_badge, x};
 use super::{icon_button, text_button};
-use crate::assets::MONO;
 use crate::fields::Field;
 use crate::theme::Theme;
 use crate::workspace::{EditorFrame, Source, Surface, Workspace};
@@ -232,46 +231,10 @@ impl Workspace {
     }
     // Which spread of how many, below it.
     let total = all.len();
-    let noun = terms(arrangement).spread;
-    let pager = div()
-      .absolute()
-      .left_0()
-      .right_0()
-      .bottom(px(12.0))
-      .flex()
-      .justify_center()
-      .child(
-        div()
-          .flex()
-          .items_center()
-          .gap(px(4.0))
-          .px(px(4.0))
-          .rounded(px(5.0))
-          .bg(theme.panel)
-          .border_1()
-          .border_color(theme.border)
-          .child(icon_button(
-            "editor-prev",
-            "chevron-left",
-            theme,
-            index > 0,
-            false,
-            cx.listener(|ws, _, _, cx| ws.editor_go(-1, cx)),
-          ))
-          .child(div().font_family(MONO).text_size(px(11.0)).child(format!(
-            "{} · {} of {total}",
-            folio_label(index, total, arrangement),
-            index + 1
-          )))
-          .child(icon_button(
-            "editor-next",
-            "chevron-right",
-            theme,
-            index + 1 < total,
-            false,
-            cx.listener(|ws, _, _, cx| ws.editor_go(1, cx)),
-          )),
-      );
+    let ws = cx.entity().downgrade();
+    let pager = super::controls::pager("editor-pager", index, total, String::new(), theme, move |d, _, cx| {
+      let _ = ws.update(cx, |ws, cx| ws.editor_go(d, cx));
+    });
     stage_el = stage_el.child(pager);
 
     let spread_id = spread.id.clone();
@@ -289,11 +252,6 @@ impl Workspace {
       .bg(theme.header)
       .border_b_1()
       .border_color(theme.divider)
-      .child(div().font_weight(FontWeight::SEMIBOLD).child(format!(
-        "{} {}",
-        capitalize(noun),
-        folio_label(index, total, arrangement)
-      )))
       .child(div().flex_1())
       // The page's background, as exports draw it.
       .child(div().text_color(theme.muted).text_size(px(11.0)).child("Background"))
@@ -623,15 +581,23 @@ impl Workspace {
   fn render_strip(&mut self, r: Rect, theme: &Theme, cx: &mut Context<Self>) -> AnyElement {
     let project = self.history.shared();
     let lit = self.ui.hover == Some(DropTarget::Strip);
-    let mut row = div().flex().items_center().gap(px(8.0)).h_full().px(px(12.0)).child(
-      div()
-        .flex_none()
-        .text_color(theme.muted)
-        .text_size(px(11.0))
-        .font_weight(FontWeight::SEMIBOLD)
-        .child(format!("Desk · {}", project.pile.len())),
-    );
-    let h = r.h - 24.0;
+    // The label above the photos, as on the web.
+    let label = div()
+      .absolute()
+      .left(px(12.0))
+      .top(px(6.0))
+      .text_color(theme.muted)
+      .text_size(px(11.0))
+      .font_weight(FontWeight::SEMIBOLD)
+      .child(format!("Desk · {}", project.pile.len()));
+    let mut row = div()
+      .flex()
+      .items_center()
+      .gap(px(8.0))
+      .h_full()
+      .px(px(12.0))
+      .pt(px(14.0));
+    let h = r.h - 36.0;
     let strip_tip = format!(
       "Drag onto the {}, or click to add",
       terms(project.layout.arrangement()).page
@@ -714,7 +680,8 @@ impl Workspace {
           .top_0()
           .h_full()
           .child(row),
-      );
+      )
+      .child(label);
     if lit {
       el = el.child(div().absolute().size_full().border_2().border_color(theme.accent));
     }
@@ -724,11 +691,4 @@ impl Workspace {
 
 fn act_locate(project: &sequence_core::Project, id: &sequence_core::PhotoId) -> Option<sequence_core::Placement> {
   sequence_core::actions::locate(project, id).map(|l| l.1)
-}
-
-fn capitalize(s: &str) -> String {
-  let mut c = s.chars();
-  c.next()
-    .map(|f| f.to_uppercase().chain(c).collect())
-    .unwrap_or_default()
 }

@@ -101,7 +101,14 @@ impl SpreadPicture<'_> {
       .pages()
       .into_iter()
       .map(|(side, r)| {
-        let mut el = boxed(r).bg(bg);
+        // A hairline at the page's edge (`--page-edge`), so a white page shows on white.
+        let mut el = boxed(r).bg(bg).shadow(vec![BoxShadow {
+          color: theme.page_edge,
+          offset: point(px(0.0), px(0.0)),
+          blur_radius: px(0.0),
+          spread_radius: px(1.0),
+          inset: false,
+        }]);
         if lit == Some(side) {
           el = el.border_2().border_color(theme.accent);
         }
@@ -158,20 +165,20 @@ impl SpreadPicture<'_> {
   }
 }
 
-/// A mark on a photo with less detail than the page asks for, at its top right (`SoftBadge`).
+/// A mark on a photo with less detail than the page asks for, at its top left (`SoftBadge`).
 pub fn soft_badge(r: Rect, theme: &Theme) -> Div {
-  let size = 18f64.min(r.w * 0.4).min(r.h * 0.4).max(10.0);
-  boxed(Rect::new(r.x + r.w - size - 4.0, r.y + 4.0, size, size))
-    .rounded_full()
+  boxed(Rect::new(r.x + 4.0, r.y + 4.0, 18.0, 18.0))
+    .rounded(px(3.0))
     .flex()
     .items_center()
     .justify_center()
-    .bg(theme.warn)
+    .bg(theme.panel)
+    .shadow_sm()
     .child(
       svg()
         .path(crate::assets::icon("triangle-alert"))
-        .size(x(size * 0.62))
-        .text_color(gpui_kit::white()),
+        .size(px(12.0))
+        .text_color(theme.warn),
     )
 }
 

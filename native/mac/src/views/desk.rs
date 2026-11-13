@@ -6,7 +6,6 @@ use gpui_kit::*;
 use sequence_core::geometry::{Corner, Rect};
 
 use super::paint::{boxed, photo, x};
-use super::text_button;
 use crate::prefs::SIDEBAR_MIN_WIDTH;
 use crate::theme::Theme;
 use crate::workspace::{ContextMenu, Source, Surface, Workspace};
@@ -289,28 +288,28 @@ impl Workspace {
       .flex_col()
       .items_center()
       .justify_center()
-      .gap(px(10.0))
+      .gap(px(4.0))
       .text_color(text)
-      .text_size(px(13.0))
+      .text_size(px(14.0))
       .when(any, |d| d.child("Every photo is placed."))
+      // "Drop photos here, or add them." with "add them" a link.
       .child(
         div()
           .flex()
           .items_center()
-          .gap(px(8.0))
-          .child("Drop photos here, or")
+          .child("Drop photos here, or\u{a0}")
           .child(
-            text_button(
-              "add-photos-empty",
-              "Add photos…",
-              theme,
-              true,
-              cx.listener(|ws, _, window, cx| ws.pick_photos(window, cx)),
-            )
-            .relative()
-            .when(hints, |d| d.child(super::paint::shortcut_badge("⌘I", theme)))
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation()),
-          ),
+            div()
+              .id("add-photos-empty")
+              .relative()
+              .underline()
+              .cursor_pointer()
+              .child("add them")
+              .when(hints, |d| d.child(super::paint::shortcut_badge("⌘I", theme)))
+              .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+              .on_click(cx.listener(|ws, _, window, cx| ws.pick_photos(window, cx))),
+          )
+          .child("."),
       )
       .when(!any, |d| d.child(self.setup_card(theme, cx)))
   }

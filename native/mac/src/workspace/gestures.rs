@@ -94,6 +94,11 @@ pub enum Drag {
     last: f64,
     moved: bool,
   },
+  /// The sidebar's columns slider.
+  Columns {
+    track: Rect,
+    fit: usize,
+  },
   /// A person's tag on an Instagram slide, moved within its image (`size`, in pixels).
   Tag {
     key: String,
@@ -301,6 +306,10 @@ impl Workspace {
     let Some(mut drag) = self.drag.take() else { return };
     let threshold_passed = |start: (f64, f64)| (at.0 - start.0).hypot(at.1 - start.1) >= DRAG_THRESHOLD;
     match &mut drag {
+      Drag::Columns { track, fit } => {
+        let n = crate::views::sidebar::columns_at(at.0, *track, *fit);
+        self.set_columns(n, cx);
+      }
       Drag::Tag {
         key,
         username,
@@ -628,6 +637,7 @@ impl Workspace {
     let Some(drag) = self.drag.take() else { return };
     self.clear_drag_feedback();
     match drag {
+      Drag::Columns { .. } => self.prefs.save(),
       Drag::Tag { .. } => {
         self.save_post(cx);
         cx.notify();
