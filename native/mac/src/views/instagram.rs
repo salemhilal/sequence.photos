@@ -35,7 +35,7 @@ fn section(title: Option<&'static str>, theme: &Theme) -> Div {
     .border_b_1()
     .border_color(theme.divider)
     .when_some(title, |d, t| {
-      d.child(div().font_weight(FontWeight::SEMIBOLD).text_color(theme.text).child(t))
+      d.child(div().font_weight(FontWeight::MEDIUM).text_color(theme.text).child(t))
     })
 }
 
@@ -363,11 +363,12 @@ impl Workspace {
       layer = layer.child(
         div()
           .absolute()
-          .left(x((d.x * image.w - 60.0).clamp(4.0, (image.w - 124.0).max(4.0))))
-          .top(x((d.y * image.h + 6.0).clamp(4.0, (image.h - 32.0).max(4.0))))
+          .left(x(d.x * image.w - 60.0))
+          .top(x(d.y * image.h + 6.0))
           .w(px(120.0))
           .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-          .child(Input::new(&d.input)),
+          // Above everything (as a tooltip is), so the image's edges never clip it.
+          .child(deferred(div().w(px(120.0)).child(Input::new(&d.input))).with_priority(5)),
       );
     }
     el.child(layer).into_any_element()
@@ -696,7 +697,7 @@ impl Workspace {
     let mut actions = section(None, theme);
     match self.ig.status.clone() {
       Status::Done(link) => {
-        actions = actions.child(div().font_weight(FontWeight::SEMIBOLD).child("Posted to Instagram."));
+        actions = actions.child(div().font_weight(FontWeight::MEDIUM).child("Posted to Instagram."));
         if let Some(n) = self.post_previews_notice() {
           actions = actions.child(warn(n, theme));
         }

@@ -472,7 +472,7 @@ impl Workspace {
       .bg(theme.header)
       .border_b_1()
       .border_color(theme.divider)
-      .child(div().font_weight(FontWeight::SEMIBOLD).child(terms.spreads_title))
+      .child(div().font_weight(FontWeight::MEDIUM).child(terms.spreads_title))
       .child(
         icon_button(
           "add-spread",
@@ -567,28 +567,45 @@ fn insert_button(
   theme: &Theme,
   cx: &mut Context<Workspace>,
 ) -> Stateful<Div> {
-  let label = if grid { "+".to_string() } else { format!("+ Add {noun}") };
-  boxed(gap)
-    .id(("insert", index))
+  let group = SharedString::from(format!("insert-{index}"));
+  // In a grid, a round "+"; in a column, a pill that says what it adds. Drawn above the
+  // list (as a tooltip is), so the sidebar's edges never clip it.
+  let chip = div()
     .flex()
     .items_center()
     .justify_center()
+    .bg(theme.accent)
+    .text_color(theme.on_accent)
     .opacity(0.0)
-    .hover(|s| s.opacity(1.0))
+    .group_hover(group.clone(), |s| s.opacity(1.0))
+    .shadow_sm();
+  let chip = if grid {
+    chip.size(px(18.0)).rounded_full().child(
+      svg()
+        .path(crate::assets::icon("plus"))
+        .size(px(12.0))
+        .text_color(theme.on_accent),
+    )
+  } else {
+    chip
+      .h(px(18.0))
+      .px(px(8.0))
+      .rounded_full()
+      .text_size(px(11.0))
+      .child(format!("+ Add {noun}"))
+  };
+  boxed(gap)
+    .id(("insert", index))
+    .group(group)
+    .flex()
+    .items_center()
+    .justify_center()
     .tip(format!("Add a {noun} here"), cx.entity().downgrade())
     .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
     .on_click(cx.listener(move |ws, _, _, cx| {
       ws.apply(cx, |d| drop(sequence_core::actions::add_spread(d, index)));
     }))
-    .child(
-      div()
-        .px(px(6.0))
-        .rounded(px(3.0))
-        .bg(theme.accent)
-        .text_color(theme.on_accent)
-        .text_size(px(10.0))
-        .child(label),
-    )
+    .child(deferred(chip).with_priority(5))
 }
 
 /// A spread's edit or delete button (`.row-edit`, `.row-delete`): a small icon, muted until

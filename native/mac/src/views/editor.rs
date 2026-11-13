@@ -372,18 +372,8 @@ impl Workspace {
       el
     };
     let Some(item) = item else {
-      let el = el
-        .child(self.background_choice(theme, cx))
-        .child(
-          div()
-            .text_color(theme.muted)
-            .child("Select a photo to adjust its position and size."),
-        )
-        .child(
-          div()
-            .text_color(theme.muted)
-            .child("Drag photos in from the desk strip below, or drag one onto the strip to send it back."),
-        );
+      // Nothing selected: the panel is the page's own.
+      let el = el.child(self.background_choice(theme, cx));
       return foot(el, None, cx).into_any_element();
     };
     if !self.fields.item_focused(window, cx) {
@@ -656,7 +646,7 @@ impl Workspace {
       .top(px(6.0))
       .text_color(theme.muted)
       .text_size(px(11.0))
-      .font_weight(FontWeight::SEMIBOLD)
+      .font_weight(FontWeight::MEDIUM)
       .child(format!("Desk · {}", project.pile.len()));
     let mut row = div()
       .flex()

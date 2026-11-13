@@ -47,7 +47,7 @@ fn section(title: Option<&'static str>, theme: &Theme) -> Div {
     .border_b_1()
     .border_color(theme.divider)
     .when_some(title, |d, t| {
-      d.child(div().font_weight(FontWeight::SEMIBOLD).text_color(theme.text).child(t))
+      d.child(div().font_weight(FontWeight::MEDIUM).text_color(theme.text).child(t))
     })
 }
 

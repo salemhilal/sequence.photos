@@ -121,7 +121,7 @@ impl Workspace {
       .px(px(12.0))
       .border_b_1()
       .border_color(theme.divider)
-      .child(div().font_weight(FontWeight::SEMIBOLD).child("Layout"))
+      .child(div().font_weight(FontWeight::MEDIUM).child("Layout"))
       .child(div().flex_1())
       .child(icon_button("layout-close", "x", theme, true, false, {
         let t = cx.entity().downgrade();
@@ -910,7 +910,7 @@ impl Workspace {
         .flex()
         .items_center()
         .gap(px(2.0))
-        .child(div().flex_1().font_weight(FontWeight::SEMIBOLD).child(title))
+        .child(div().flex_1().font_weight(FontWeight::MEDIUM).child(title))
         .text_color(theme.text)
     };
     let pick = |on: bool, theme: &Theme, d: Stateful<Div>| -> Stateful<Div> {
