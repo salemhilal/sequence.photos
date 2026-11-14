@@ -17,8 +17,6 @@ pub struct Cell {
   pub row: Rect,
   /// Each page, in window pixels.
   pub pages: Vec<(PageSide, Rect)>,
-  /// Pixels per unit.
-  pub scale: f64,
 }
 
 /// The spread editor's stage, as last drawn.

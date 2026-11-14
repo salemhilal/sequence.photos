@@ -11,7 +11,7 @@ use sequence_core::geometry::{Corner, GuideLines, Rect, intersects, resize_rect,
 use sequence_core::units::units;
 use sequence_core::{PhotoId, SpreadId};
 
-use super::frames::{inside, p};
+use super::frames::p;
 use super::{Ghost, Workspace};
 use crate::crop::CropGrip;
 
@@ -20,7 +20,6 @@ use crate::crop::CropGrip;
 pub enum Source {
   Desk,
   Editor,
-  Sidebar,
   /// The editor's strip of desk photos.
   Strip,
 }
@@ -194,7 +193,7 @@ impl Workspace {
         self.ui.editor_selected = Some(photo.clone());
         vec![photo.clone()]
       }
-      Source::Sidebar | Source::Strip => vec![photo.clone()],
+      Source::Strip => vec![photo.clone()],
     };
     let copies = if ev.modifiers.alt && matches!(from, Source::Desk | Source::Editor) {
       act::copies_of(&picked)
@@ -212,12 +211,6 @@ impl Workspace {
     let k = match from {
       Source::Desk => self.ui.view.scale(),
       Source::Editor => self.frames.editor.as_ref().map_or(1.0, |e| e.scale),
-      Source::Sidebar => self
-        .frames
-        .cells
-        .iter()
-        .find(|c| c.pages.iter().any(|(_, r)| inside(r, at)))
-        .map_or(1.0, |c| c.scale),
       // As tall as the strip's photos.
       Source::Strip => 72.0 / rect.h.max(1e-9),
     };
@@ -409,7 +402,7 @@ impl Workspace {
             match from {
               Source::Desk => self.ui.selection = ids.clone(),
               Source::Editor => self.ui.editor_selected = ids.first().cloned(),
-              Source::Sidebar | Source::Strip => {}
+              Source::Strip => {}
             }
           }
         }
@@ -461,12 +454,12 @@ impl Workspace {
               }
             });
           }
-          Source::Sidebar | Source::Strip => {}
+          Source::Strip => {}
         }
         let over_home = match from {
           Source::Desk => target == Some(DropTarget::Desk),
           Source::Editor => matches!(target, Some(DropTarget::Page { .. })),
-          Source::Sidebar | Source::Strip => false,
+          Source::Strip => false,
         };
         self.ui.ghost = (!over_home).then(|| Ghost {
           photo: picked.first().cloned().unwrap_or_else(|| clicked.clone()),
@@ -690,18 +683,6 @@ impl Workspace {
                 return;
               }
             }
-            Source::Sidebar => {
-              // A click on a photo in a spread's picture selects the spread.
-              if let Some(c) = self
-                .frames
-                .cells
-                .iter()
-                .find(|c| c.pages.iter().any(|(_, r)| inside(r, at)))
-              {
-                let id = c.id.clone();
-                self.select_spread(id, ev.modifiers);
-              }
-            }
           }
           self.changed(cx);
           return;
@@ -711,14 +692,6 @@ impl Workspace {
         let home = match from {
           Source::Desk => target == Some(DropTarget::Desk),
           Source::Editor => matches!(target, Some(DropTarget::Page { .. })) || target.is_none(),
-          // Dropped back on the page it came from, a photo stays where it was (not refitted).
-          Source::Sidebar => match (&target, act::locate(self.history.gesture_start(), &clicked)) {
-            (Some(DropTarget::Page { spread, side }), Some((act::Location::Spread(from), place))) => {
-              let sheet = self.project().sheet();
-              *spread == from && sequence_core::geometry::side_at(&sheet, place.x + place.w / 2.0) == *side
-            }
-            _ => false,
-          },
           Source::Strip => false,
         };
         if home {
@@ -735,7 +708,7 @@ impl Workspace {
           match from {
             Source::Desk => self.ui.selection.clear(),
             Source::Editor => self.ui.editor_selected = None,
-            Source::Sidebar | Source::Strip => {}
+            Source::Strip => {}
           }
           if t == DropTarget::Desk {
             self.ui.selection = ids.clone();

@@ -13,7 +13,7 @@ use super::paint::{SpreadPicture, Tip as _, boxed, x};
 use super::{icon_button, paint};
 use crate::assets::MONO;
 use crate::theme::Theme;
-use crate::workspace::{Cell, Source, Workspace};
+use crate::workspace::{Cell, Workspace};
 
 const HEADER_H: f64 = 28.0;
 const LIST_PAD: f64 = 10.0;
@@ -226,7 +226,15 @@ impl Workspace {
             );
           }
         } else if !dragging_any {
-          list_el = list_el.child(insert_button(i, gap, grid, noun, theme, cx));
+          list_el = list_el.child(insert_button(
+            i,
+            gap,
+            grid,
+            noun,
+            self.ui.insert_hover == Some(i),
+            theme,
+            cx,
+          ));
         }
       }
       y += GAP_H;
@@ -285,31 +293,17 @@ impl Workspace {
         if clipped.w <= 0.0 || clipped.h <= 0.0 {
           continue;
         }
-        let pid = p.photo_id.clone();
         let pid2 = p.photo_id.clone();
-        let sid = spread.id.clone();
         row_el = row_el.child(
-          boxed(clipped)
-            .on_mouse_down(
-              MouseButton::Left,
-              cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
-                cx.stop_propagation();
-                // A double-click opens the spread, as anywhere else on it.
-                if ev.click_count == 2 {
-                  ws.drag = None;
-                  ws.open_editor(sid.clone(), cx);
-                  return;
-                }
-                ws.photo_down(Source::Sidebar, pid.clone(), ev, cx);
-              }),
-            )
-            .on_mouse_down(
-              MouseButton::Right,
-              cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
-                cx.stop_propagation();
-                ws.photo_menu(pid2.clone(), ev, cx);
-              }),
-            ),
+          // A press here is the spread's (it drags to reorder, or opens on a double-click);
+          // a right-click is the photo's.
+          boxed(clipped).on_mouse_down(
+            MouseButton::Right,
+            cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
+              cx.stop_propagation();
+              ws.photo_menu(pid2.clone(), ev, cx);
+            }),
+          ),
         );
       }
       if let Some(side) = lit {
@@ -438,7 +432,6 @@ impl Workspace {
         index: i,
         row: Rect::new(list.x + row.x, list.y + row.y, row.w, row.h),
         pages: pic.pages().into_iter().map(|(s, q)| (s, to_window(q))).collect(),
-        scale,
       });
       y += row_h;
     }
@@ -448,7 +441,15 @@ impl Workspace {
       if self.ui.hover == Some(DropTarget::Insert(total)) || reorder.as_ref().is_some_and(|(_, d)| *d == total) {
         list_el = list_el.child(gap_line(gap));
       } else if !dragging_any {
-        list_el = list_el.child(insert_button(total, gap, grid, noun, theme, cx));
+        list_el = list_el.child(insert_button(
+          total,
+          gap,
+          grid,
+          noun,
+          self.ui.insert_hover == Some(total),
+          theme,
+          cx,
+        ));
       }
     }
     self.ui.sidebar_glide.drawn(placed);
@@ -564,10 +565,10 @@ fn insert_button(
   gap: Rect,
   grid: bool,
   noun: &'static str,
+  hovered: bool,
   theme: &Theme,
   cx: &mut Context<Workspace>,
 ) -> Stateful<Div> {
-  let group = SharedString::from(format!("insert-{index}"));
   // In a grid, a round "+"; in a column, a pill that says what it adds. Drawn above the
   // list (as a tooltip is), so the sidebar's edges never clip it.
   let chip = div()
@@ -576,8 +577,6 @@ fn insert_button(
     .justify_center()
     .bg(theme.accent)
     .text_color(theme.on_accent)
-    .opacity(0.0)
-    .group_hover(group.clone(), |s| s.opacity(1.0))
     .shadow_sm();
   let chip = if grid {
     chip.size(px(18.0)).rounded_full().child(
@@ -594,18 +593,27 @@ fn insert_button(
       .text_size(px(11.0))
       .child(format!("+ Add {noun}"))
   };
+  let tip = format!("Add a {noun} here");
   boxed(gap)
     .id(("insert", index))
-    .group(group)
     .flex()
     .items_center()
     .justify_center()
-    .tip(format!("Add a {noun} here"), cx.entity().downgrade())
+    .on_hover(cx.listener(move |ws, h: &bool, _, cx| {
+      if *h {
+        ws.ui.insert_hover = Some(index);
+        ws.ui.hint = Some(tip.clone());
+      } else if ws.ui.insert_hover == Some(index) {
+        ws.ui.insert_hover = None;
+        ws.ui.hint = None;
+      }
+      cx.notify();
+    }))
     .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
     .on_click(cx.listener(move |ws, _, _, cx| {
       ws.apply(cx, |d| drop(sequence_core::actions::add_spread(d, index)));
     }))
-    .child(deferred(chip).with_priority(5))
+    .when(hovered, |d| d.child(deferred(chip).with_priority(5)))
 }
 
 /// A spread's edit or delete button (`.row-edit`, `.row-delete`): a small icon, muted until

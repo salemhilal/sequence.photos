@@ -89,14 +89,16 @@ impl Workspace {
       .iter()
       .filter_map(|k| all.iter().find(|p| slide_key(p) == *k).cloned())
       .collect();
+    // It scrolls when the post (with a long caption) is taller than the room for it.
     let mut stage = div()
+      .id("ig-stage")
       .absolute()
       .left_0()
       .top_0()
       .w(x(stage_w))
       .h(x(stage_h))
       .bg(rgb(self.prefs.desk_color))
-      .overflow_hidden();
+      .overflow_y_scroll();
     if slides.is_empty() {
       return stage
         .flex()
@@ -164,8 +166,20 @@ impl Workspace {
         .child(username.clone())
     };
 
-    // The card or screen, centered, in the stage's pixels.
-    let (card_w, card_h) = if story { (w, h) } else { (w, h + 52.0 + 90.0) };
+    // The card or screen, centered, in the stage's pixels. The feed's card grows with its
+    // caption (its height here is an estimate, for centering and scrolling).
+    let caption = post.caption.clone().unwrap_or_default();
+    let per_line = ((w - 24.0) / 7.0).max(10.0);
+    let lines: f64 = format!("{username} {caption}")
+      .split('\n')
+      .map(|l| (l.chars().count() as f64 / per_line).ceil().max(1.0))
+      .sum();
+    let caption_h = lines * 18.0 + 14.0;
+    let (card_w, card_h) = if story {
+      (w, h)
+    } else {
+      (w, 52.0 + h + 22.0 + caption_h)
+    };
     let left = (stage_w - card_w) / 2.0;
     let top = ((stage_h - card_h) / 2.0).max(12.0);
     let media_top = if story { top } else { top + 52.0 };
@@ -235,7 +249,11 @@ impl Workspace {
       let overlay = arrows(boxed(Rect::new(left, top, w, h)), cx);
       stage = stage.child(screen).child(image_el).child(overlay);
     } else {
-      let mut card = boxed(Rect::new(left, top, w, card_h))
+      let mut card = div()
+        .absolute()
+        .left(x(left))
+        .top(x(top))
+        .w(x(w))
         .rounded(px(8.0))
         .overflow_hidden()
         .bg(rgb(0xffffff))
@@ -287,11 +305,15 @@ impl Workspace {
           .text_size(px(13.0))
           .text_color(rgb(0x262626))
           .line_height(px(18.0))
-          .max_h(px(60.0))
-          .overflow_hidden()
+          .pb(px(14.0))
           .child(caption_text(&username, post.caption.as_deref().unwrap_or(""))),
       );
-      stage = stage.child(card).child(image_el).child(over);
+      // Room below the card to scroll to.
+      stage = stage
+        .child(div().w_full().h(x(top + card_h + 24.0)))
+        .child(card)
+        .child(image_el)
+        .child(over);
     }
     stage.into_any_element()
   }
@@ -780,6 +802,8 @@ fn round_arrow(
     .justify_center()
     .bg(rgba(0xffffffdd))
     .shadow_sm()
+    // An ordinary pointer here, not the tagging crosshair under it.
+    .cursor(CursorStyle::Arrow)
     .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
     .on_click(click)
     .child(svg().path(icon(name)).size(px(14.0)).text_color(rgb(0x262626)))

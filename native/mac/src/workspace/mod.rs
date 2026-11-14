@@ -121,6 +121,8 @@ pub struct Ui {
   /// Frames fading out after their photos were let go of.
   pub unselecting_desk: Unselecting,
   pub unselecting_editor: Unselecting,
+  /// The gap between spreads the pointer's over (its + shows).
+  pub insert_hover: Option<usize>,
   /// The context menu's Crop to submenu is open.
   pub menu_sub: bool,
   pub busy: Option<String>,
@@ -176,6 +178,7 @@ impl Default for Ui {
       scale_factor: 2.0,
       context_menu: None,
       menu_sub: false,
+      insert_hover: None,
       unselecting_desk: Unselecting::default(),
       sidebar_glide: Glide::default(),
       unselecting_editor: Unselecting::default(),
