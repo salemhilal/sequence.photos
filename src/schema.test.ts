@@ -119,6 +119,28 @@ const samples: Record<number, unknown> = {
     },
     nextZ: 2,
   },
+  // Before pages had backgrounds and photos borders.
+  6: {
+    schemaVersion: 6,
+    photos: { a: { id: 'a', name: 'a.jpg', pxW: 1200, pxH: 800 } },
+    pile: [{ photoId: 'a', x: 1, y: 1, w: 2, h: 1.33, z: 1 }],
+    page: { w: 10, h: 8, unit: 'in', pxPerUnit: 300 },
+    layout: {
+      kind: 'spreads',
+      firstSpread: { kind: 'first', id: 's1', items: [] },
+      spreads: [],
+      lastSpread: { kind: 'last', id: 's2', items: [] },
+    },
+    settings: {
+      centerV: true,
+      centerH: false,
+      keepRelative: true,
+      borders: [{ id: 'm', kind: 'even', inset: 0.5 }],
+      lines: [],
+      dropBorder: 'm',
+    },
+    nextZ: 2,
+  },
 };
 
 /**

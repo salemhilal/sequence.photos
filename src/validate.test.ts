@@ -115,6 +115,28 @@ describe('validateProject', () => {
     });
   });
 
+  describe('backgrounds and borders', () => {
+    it('keeps a black background and a sound border', () => {
+      const v = check((d) => {
+        d.layout.spreads[0].background = 'black';
+        d.layout.spreads[0].items[0].border = { width: 0.25, color: 'white' };
+      })();
+      expect(allSpreads(v)[1]!.background).toBe('black');
+      expect(allSpreads(v)[1]!.items[0]!.border).toEqual({ width: 0.25, color: 'white' });
+    });
+
+    it('leaves out white (the default), unknown colors, and damaged borders', () => {
+      const v = check((d) => {
+        d.layout.firstSpread.background = 'white';
+        d.layout.spreads[0].background = 'red';
+        d.layout.spreads[0].items[0].border = { width: -1, color: 'black' };
+      })();
+      expect(allSpreads(v)[0]).not.toHaveProperty('background');
+      expect(allSpreads(v)[1]).not.toHaveProperty('background');
+      expect(allSpreads(v)[1]!.items[0]).not.toHaveProperty('border');
+    });
+  });
+
   describe('spreads', () => {
     it('needs the first and last spreads in their places', () => {
       expect(check((d) => delete d.layout.firstSpread)).toThrow(/layout.firstSpread/);

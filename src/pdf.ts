@@ -10,7 +10,7 @@ import { projectStore } from './store';
 import { ui } from './ui';
 import { sheetOf } from './spreads';
 import type { PhotoId } from './ids';
-import type { PhotoMeta, Unit } from './types';
+import type { Ink, PhotoMeta, Unit } from './types';
 import { TERMS } from './units';
 
 /** PDF points per unit: 72 to the inch, and for pixels, as many as print at `printAt` dpi. */
@@ -33,8 +33,9 @@ export async function renderPdf(
   options: Pick<ExportOptions, 'per' | 'dpi' | 'printAt'>,
   onProgress: (done: number, total: number) => void,
 ): Promise<{ blob: Blob; previews: number; missing: number }> {
-  const { PDFDocument, pushGraphicsState, popGraphicsState, concatTransformationMatrix, drawObject } =
+  const { PDFDocument, pushGraphicsState, popGraphicsState, concatTransformationMatrix, drawObject, rgb } =
     await import('pdf-lib');
+  const ink = (i: Ink) => (i === 'black' ? rgb(0, 0, 0) : rgb(1, 1, 1));
   const project = projectStore.project;
   const sheet = sheetOf(project);
   const pdf = await PDFDocument.create();
@@ -65,10 +66,20 @@ export async function renderPdf(
       w: r.w * pt,
       h: r.h * pt,
     });
+    const fill = (r: { x: number; y: number; w: number; h: number }, color: Ink) => {
+      const b = box(r);
+      page.drawRectangle({ x: b.x, y: b.y, width: b.w, height: b.h, color: ink(color) });
+    };
+    if (plan.background !== 'white') fill({ x: 0, y: 0, w: plan.pxW, h: plan.pxH }, plan.background);
 
     for (const d of plan.draws) {
       const photo = project.photos[d.photoId];
       if (!photo) continue;
+      if (d.border) {
+        const b = d.border.width;
+        const p = d.placed;
+        fill({ x: p.x - b, y: p.y - b, w: p.w + 2 * b, h: p.h + 2 * b }, d.border.color);
+      }
       // An unreadable photo is left out rather than failing the whole PDF.
       const placed = await embed(pdf, d, photo, originals).catch(() => null);
       if (!placed) {

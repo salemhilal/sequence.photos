@@ -9,7 +9,7 @@ import {
   spreadWidth,
   type SnapFeedback,
 } from '../geometry';
-import { pageRegion, type OutputPage } from '../renderPlan';
+import { INK_COLOR, pageRegion, type OutputPage } from '../renderPlan';
 import type { Placement, Sheet, Spread } from '../types';
 import { ui } from '../ui';
 import { PhotoImg } from './PhotoImg';
@@ -91,7 +91,7 @@ export function SpreadCanvas({
           <div
             key={side}
             className={`page page-${side}${hover ? ' drop-hover' : ''}`}
-            style={box(r.x, r.y, r.w, r.h)}
+            style={{ ...box(r.x, r.y, r.w, r.h), ...(spread.background === 'black' ? { background: '#000' } : {}) }}
             data-drop={droppable ? 'page' : undefined}
             data-spread={spread.id}
             data-side={side}
@@ -114,6 +114,8 @@ export function SpreadCanvas({
                 height: p.h * scale,
               }
             : box(p.x, p.y, p.w, p.h);
+          // A border, outside the photo, as exports draw it.
+          if (p.border) style.boxShadow = `0 0 0 ${p.border.width * scale}px ${INK_COLOR[p.border.color]}`;
           return renderItem ? (
             renderItem(p, style)
           ) : (

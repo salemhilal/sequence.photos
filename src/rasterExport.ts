@@ -4,7 +4,7 @@ import { getImage, type StoredImage } from './db';
 import type { PhotoId } from './ids';
 import { platform } from '#platform';
 import { DEFAULT_QUALITY, exportPxPerUnit, perOf, type ExportOptions } from './exportOptions';
-import { fitPixels, itemsOn, outputPages, planPage, type OutputPage, type PagePlan } from './renderPlan';
+import { fitPixels, INK_COLOR, itemsOn, outputPages, planPage, type OutputPage, type PagePlan } from './renderPlan';
 import { allSpreads, sheetOf } from './spreads';
 import { projectStore } from './store';
 import type { PhotoMeta, Project } from './types';
@@ -32,12 +32,18 @@ export async function renderPage(
   const canvas = new OffscreenCanvas(plan.pxW, plan.pxH);
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No 2D canvas');
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = INK_COLOR[plan.background];
   ctx.fillRect(0, 0, plan.pxW, plan.pxH);
   ctx.imageSmoothingQuality = 'high';
   let missing = 0;
   let previews = 0;
   for (const d of plan.draws) {
+    // The border first, under the photo: a frame around it, at its stacking order.
+    if (d.border) {
+      const b = d.border.width;
+      ctx.fillStyle = INK_COLOR[d.border.color];
+      ctx.fillRect(d.placed.x - b, d.placed.y - b, d.placed.w + 2 * b, d.placed.h + 2 * b);
+    }
     const photo = photos[d.photoId];
     const decoded = photo && (await decodePhoto(d.photoId, photo, d.placed.w, d.placed.h));
     if (!photo || !decoded) {

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  What the app may do in the App Sandbox (required on the Mac App Store; local builds
+  use it too, so they behave like the real thing): read and write the files the user
+  picks (open, save, or double-click in Finder), and keep bookmarks to them so a project
+  can still be saved after the app restarts. The App Store build adds its identifiers
+  (see scripts/app-store.mjs).
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.app-sandbox</key>
+  <true/>
+  <key>com.apple.security.files.user-selected.read-write</key>
+  <true/>
+  <key>com.apple.security.files.bookmarks.app-scope</key>
+  <true/>
+  <key>com.apple.security.network.client</key>
+  <true/>
+</dict>
+</plist>

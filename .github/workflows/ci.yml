@@ -68,3 +68,19 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+
+  # The native iPhone app (ios/): its unit and UI tests in the Simulator.
+  ios:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v7
+      - run: brew install xcodegen
+      # The project, from project.yml (with this runner's XcodeGen).
+      - run: xcodegen generate
+      - name: Test
+        run: |
+          device=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["name"] for r in sorted(d, reverse=True) if "iOS" in r for x in d[r] if x["name"].startswith("iPhone")))')
+          xcodebuild test -scheme Sequence -destination "platform=iOS Simulator,name=$device" CODE_SIGNING_ALLOWED=NO -quiet

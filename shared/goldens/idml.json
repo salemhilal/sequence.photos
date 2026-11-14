@@ -1,0 +1,838 @@
+[
+  {
+    "name": "fixture book.json",
+    "input": {
+      "project": {
+        "schemaVersion": 7,
+        "photos": {
+          "a": {
+            "id": "a",
+            "name": "a.jpg",
+            "pxW": 3000,
+            "pxH": 2000
+          },
+          "b": {
+            "id": "b",
+            "name": "b.jpg",
+            "pxW": 2000,
+            "pxH": 3000,
+            "crop": {
+              "x": 0.1,
+              "y": 0,
+              "w": 0.8,
+              "h": 1
+            }
+          }
+        },
+        "pile": [],
+        "page": {
+          "w": 10,
+          "h": 8,
+          "unit": "in",
+          "pxPerUnit": 300
+        },
+        "layout": {
+          "kind": "spreads",
+          "firstSpread": {
+            "kind": "first",
+            "id": "s1",
+            "items": []
+          },
+          "spreads": [
+            {
+              "kind": "middle",
+              "id": "s2",
+              "items": [
+                {
+                  "photoId": "a",
+                  "x": -9,
+                  "y": 1,
+                  "w": 6,
+                  "h": 4,
+                  "z": 1
+                },
+                {
+                  "photoId": "b",
+                  "x": -2,
+                  "y": 1,
+                  "w": 4,
+                  "h": 6,
+                  "z": 2,
+                  "border": {
+                    "width": 0.1,
+                    "color": "black"
+                  }
+                }
+              ]
+            }
+          ],
+          "lastSpread": {
+            "kind": "last",
+            "id": "s3",
+            "items": [],
+            "background": "black"
+          }
+        },
+        "settings": {
+          "centerV": true,
+          "centerH": false,
+          "keepRelative": true,
+          "borders": [
+            {
+              "id": "m",
+              "kind": "even",
+              "inset": 0.5
+            },
+            {
+              "id": "e",
+              "kind": "edges",
+              "top": 0.5,
+              "bottom": 1,
+              "inside": 1.5,
+              "outside": 0.75
+            }
+          ],
+          "lines": [
+            {
+              "id": "v",
+              "axis": "vertical",
+              "at": 2
+            },
+            {
+              "id": "h",
+              "axis": "horizontal",
+              "at": 3
+            }
+          ],
+          "dropBorder": "m"
+        },
+        "nextZ": 3
+      },
+      "links": [
+        [
+          "a",
+          {
+            "path": "Links/a & co 0.jpg",
+            "format": "jpeg",
+            "ppi": 72,
+            "pxW": 3000,
+            "pxH": 2000
+          }
+        ],
+        [
+          "b",
+          {
+            "path": "Links/b & co 1.png",
+            "format": "png",
+            "ppi": 300,
+            "pxW": 2000,
+            "pxH": 3000
+          }
+        ]
+      ]
+    },
+    "output": [
+      {
+        "name": "mimetype",
+        "text": "application/vnd.adobe.indesign-idml-package"
+      },
+      {
+        "name": "designmap.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<?aid style=\"50\" type=\"document\" readerVersion=\"6.0\" featureSet=\"257\" product=\"8.0(370)\" ?>\n<Document xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\" Self=\"d\">\n<idPkg:Preferences src=\"Resources/Preferences.xml\"/>\n<Layer Self=\"layer\" Name=\"Photos\" Visible=\"true\" Locked=\"false\" IgnoreWrap=\"false\" ShowGuides=\"true\" LockGuides=\"false\" UI=\"true\" Expendable=\"true\" Printable=\"true\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs1.xml\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs10.xml\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs33.xml\"/>\n</Document>"
+      },
+      {
+        "name": "META-INF/container.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<container xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\" version=\"1.0\">\n<rootfiles><rootfile full-path=\"designmap.xml\" media-type=\"text/xml\"/></rootfiles>\n</container>"
+      },
+      {
+        "name": "Resources/Preferences.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Preferences xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<DocumentPreference PageHeight=\"576\" PageWidth=\"720\" PageOrientation=\"Landscape\" PagesPerDocument=\"1\" FacingPages=\"true\" StartPageNumber=\"1\" PageBinding=\"LeftToRight\" AllowPageShuffle=\"true\" DocumentBleedUniformSize=\"true\" DocumentBleedTopOffset=\"0\" DocumentBleedBottomOffset=\"0\" DocumentBleedInsideOrLeftOffset=\"0\" DocumentBleedOutsideOrRightOffset=\"0\" Intent=\"PrintIntent\"/>\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"36\" Bottom=\"36\" Left=\"36\" Right=\"36\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 648\"/>\n<ViewPreference HorizontalMeasurementUnits=\"Inches\" VerticalMeasurementUnits=\"Inches\"/>\n</idPkg:Preferences>"
+      },
+      {
+        "name": "Spreads/Spread_pbs1.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs1\" PageCount=\"1\" BindingLocation=\"0\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 0\">\n<Page Self=\"pbs2\" Name=\"1\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 0 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"36\" Bottom=\"36\" Left=\"36\" Right=\"36\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 648\"/>\n<Guide Self=\"pbs3\" Orientation=\"Vertical\" Location=\"360\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs4\" Orientation=\"Vertical\" Location=\"108\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs5\" Orientation=\"Vertical\" Location=\"666\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs6\" Orientation=\"Vertical\" Location=\"576\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs7\" Orientation=\"Horizontal\" Location=\"36\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs8\" Orientation=\"Horizontal\" Location=\"504\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs9\" Orientation=\"Horizontal\" Location=\"216\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n\n</Spread>\n</idPkg:Spread>"
+      },
+      {
+        "name": "Spreads/Spread_pbs10.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs10\" PageCount=\"2\" BindingLocation=\"1\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 612\">\n<Page Self=\"pbs11\" Name=\"2\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 -720 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"36\" Bottom=\"36\" Left=\"36\" Right=\"36\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 648\"/>\n<Guide Self=\"pbs12\" Orientation=\"Vertical\" Location=\"360\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs13\" Orientation=\"Vertical\" Location=\"54\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs14\" Orientation=\"Vertical\" Location=\"612\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs15\" Orientation=\"Vertical\" Location=\"144\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs16\" Orientation=\"Horizontal\" Location=\"36\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs17\" Orientation=\"Horizontal\" Location=\"504\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs18\" Orientation=\"Horizontal\" Location=\"216\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n<Page Self=\"pbs19\" Name=\"3\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 0 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"36\" Bottom=\"36\" Left=\"36\" Right=\"36\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 648\"/>\n<Guide Self=\"pbs20\" Orientation=\"Vertical\" Location=\"1080\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs21\" Orientation=\"Vertical\" Location=\"828\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs22\" Orientation=\"Vertical\" Location=\"1386\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs23\" Orientation=\"Vertical\" Location=\"1296\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs24\" Orientation=\"Horizontal\" Location=\"36\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs25\" Orientation=\"Horizontal\" Location=\"504\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs26\" Orientation=\"Horizontal\" Location=\"216\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n</Page>\n<Rectangle Self=\"pbs29\" Name=\"a.jpg\" ContentType=\"GraphicType\" StoredState=\"Normal\" ItemLayer=\"layer\" Locked=\"false\" Visible=\"true\" AppliedObjectStyle=\"ObjectStyle/$ID/[None]\" FillColor=\"Swatch/None\" StrokeColor=\"Swatch/None\" StrokeWeight=\"0\" ItemTransform=\"1 0 0 1 0 0\">\n<Properties><PathGeometry><GeometryPathType PathOpen=\"false\"><PathPointArray><PathPointType Anchor=\"-648 -216\" LeftDirection=\"-648 -216\" RightDirection=\"-648 -216\"/><PathPointType Anchor=\"-648 72\" LeftDirection=\"-648 72\" RightDirection=\"-648 72\"/><PathPointType Anchor=\"-216 72\" LeftDirection=\"-216 72\" RightDirection=\"-216 72\"/><PathPointType Anchor=\"-216 -216\" LeftDirection=\"-216 -216\" RightDirection=\"-216 -216\"/></PathPointArray></GeometryPathType></PathGeometry></Properties>\n<Image Self=\"pbs27\" ItemTransform=\"0.144 0 0 0.144 -648 -216\" ActualPpi=\"72 72\" EffectivePpi=\"500 500\">\n<Properties><GraphicBounds Left=\"0\" Top=\"0\" Right=\"3000\" Bottom=\"2000\"/></Properties>\n<Link Self=\"pbs28\" LinkResourceURI=\"file:Links/a%20%26%20co%200.jpg\" LinkResourceFormat=\"$ID/JPEG\" StoredState=\"Normal\" LinkClassID=\"35906\" LinkClientID=\"257\" LinkResourceModified=\"false\" LinkObjectModified=\"false\" ShowInUI=\"true\" CanEmbed=\"true\" CanUnembed=\"true\" CanPackage=\"true\" ImportPolicy=\"NoAutoImport\" ExportPolicy=\"NoAutoExport\"/>\n</Image>\n</Rectangle>\n<Rectangle Self=\"pbs32\" Name=\"b.jpg\" ContentType=\"GraphicType\" StoredState=\"Normal\" ItemLayer=\"layer\" Locked=\"false\" Visible=\"true\" AppliedObjectStyle=\"ObjectStyle/$ID/[None]\" FillColor=\"Swatch/None\" StrokeColor=\"Swatch/None\" StrokeWeight=\"0\" ItemTransform=\"1 0 0 1 0 0\">\n<Properties><PathGeometry><GeometryPathType PathOpen=\"false\"><PathPointArray><PathPointType Anchor=\"-144 -216\" LeftDirection=\"-144 -216\" RightDirection=\"-144 -216\"/><PathPointType Anchor=\"-144 216\" LeftDirection=\"-144 216\" RightDirection=\"-144 216\"/><PathPointType Anchor=\"144 216\" LeftDirection=\"144 216\" RightDirection=\"144 216\"/><PathPointType Anchor=\"144 -216\" LeftDirection=\"144 -216\" RightDirection=\"144 -216\"/></PathPointArray></GeometryPathType></PathGeometry></Properties>\n<Image Self=\"pbs30\" ItemTransform=\"0.75 0 0 0.6 -180 -216\" ActualPpi=\"300 300\" EffectivePpi=\"400 500\">\n<Properties><GraphicBounds Left=\"0\" Top=\"0\" Right=\"480\" Bottom=\"720\"/></Properties>\n<Link Self=\"pbs31\" LinkResourceURI=\"file:Links/b%20%26%20co%201.png\" LinkResourceFormat=\"$ID/Portable Network Graphics (PNG)\" StoredState=\"Normal\" LinkClassID=\"35906\" LinkClientID=\"257\" LinkResourceModified=\"false\" LinkObjectModified=\"false\" ShowInUI=\"true\" CanEmbed=\"true\" CanUnembed=\"true\" CanPackage=\"true\" ImportPolicy=\"NoAutoImport\" ExportPolicy=\"NoAutoExport\"/>\n</Image>\n</Rectangle>\n</Spread>\n</idPkg:Spread>"
+      },
+      {
+        "name": "Spreads/Spread_pbs33.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs33\" PageCount=\"1\" BindingLocation=\"1\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 1224\">\n<Page Self=\"pbs34\" Name=\"4\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 -720 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"36\" Bottom=\"36\" Left=\"36\" Right=\"36\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 648\"/>\n<Guide Self=\"pbs35\" Orientation=\"Vertical\" Location=\"360\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs36\" Orientation=\"Vertical\" Location=\"54\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs37\" Orientation=\"Vertical\" Location=\"612\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs38\" Orientation=\"Vertical\" Location=\"144\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs39\" Orientation=\"Horizontal\" Location=\"36\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs40\" Orientation=\"Horizontal\" Location=\"504\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs41\" Orientation=\"Horizontal\" Location=\"216\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n\n</Spread>\n</idPkg:Spread>"
+      }
+    ]
+  },
+  {
+    "name": "fixture frames.json",
+    "input": {
+      "project": {
+        "schemaVersion": 7,
+        "photos": {
+          "a": {
+            "id": "a",
+            "name": "door.jpg",
+            "pxW": 795,
+            "pxH": 1200
+          },
+          "b": {
+            "id": "b",
+            "name": "taxi.jpg",
+            "pxW": 795,
+            "pxH": 1200,
+            "crop": {
+              "x": 0,
+              "y": 0.1,
+              "w": 1,
+              "h": 0.6625
+            }
+          },
+          "c": {
+            "id": "c",
+            "name": "lily.jpg",
+            "pxW": 795,
+            "pxH": 1200
+          }
+        },
+        "pile": [
+          {
+            "photoId": "c",
+            "x": 0.5,
+            "y": 0.5,
+            "w": 16.5625,
+            "h": 25,
+            "z": 3
+          }
+        ],
+        "page": {
+          "w": 1080,
+          "h": 1350,
+          "unit": "px",
+          "pxPerUnit": 1
+        },
+        "layout": {
+          "kind": "frames",
+          "frames": [
+            {
+              "kind": "frame",
+              "id": "f1",
+              "items": [
+                {
+                  "photoId": "a",
+                  "x": 126,
+                  "y": 54,
+                  "w": 828,
+                  "h": 1242,
+                  "z": 1
+                }
+              ]
+            },
+            {
+              "kind": "frame",
+              "id": "f2",
+              "items": [
+                {
+                  "photoId": "b",
+                  "x": 140,
+                  "y": 400,
+                  "w": 800,
+                  "h": 530,
+                  "z": 2,
+                  "border": {
+                    "width": 24,
+                    "color": "white"
+                  }
+                }
+              ],
+              "background": "black"
+            },
+            {
+              "kind": "frame",
+              "id": "f3",
+              "items": []
+            }
+          ]
+        },
+        "settings": {
+          "centerV": true,
+          "centerH": true,
+          "keepRelative": true,
+          "borders": [
+            {
+              "id": "g1",
+              "kind": "even",
+              "inset": 54
+            }
+          ],
+          "lines": [],
+          "dropBorder": "g1"
+        },
+        "nextZ": 4,
+        "export": {
+          "to": "instagram",
+          "options": {
+            "format": "jpeg",
+            "quality": 0.9
+          },
+          "instagram": {
+            "kind": "feed",
+            "fit": "crop",
+            "caption": "Walks #35mm",
+            "chosen": [
+              "f1:whole",
+              "f2:whole"
+            ]
+          }
+        }
+      },
+      "links": [
+        [
+          "a",
+          {
+            "path": "Links/door & co 0.jpg",
+            "format": "jpeg",
+            "ppi": 72,
+            "pxW": 795,
+            "pxH": 1200
+          }
+        ],
+        [
+          "b",
+          {
+            "path": "Links/taxi & co 1.png",
+            "format": "png",
+            "ppi": 300,
+            "pxW": 795,
+            "pxH": 1200
+          }
+        ],
+        [
+          "c",
+          {
+            "path": "Links/lily & co 2.jpg",
+            "format": "jpeg",
+            "ppi": 300,
+            "pxW": 795,
+            "pxH": 1200
+          }
+        ]
+      ]
+    },
+    "output": [
+      {
+        "name": "mimetype",
+        "text": "application/vnd.adobe.indesign-idml-package"
+      },
+      {
+        "name": "designmap.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<?aid style=\"50\" type=\"document\" readerVersion=\"6.0\" featureSet=\"257\" product=\"8.0(370)\" ?>\n<Document xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\" Self=\"d\">\n<idPkg:Preferences src=\"Resources/Preferences.xml\"/>\n<Layer Self=\"layer\" Name=\"Photos\" Visible=\"true\" Locked=\"false\" IgnoreWrap=\"false\" ShowGuides=\"true\" LockGuides=\"false\" UI=\"true\" Expendable=\"true\" Printable=\"true\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs1.xml\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs8.xml\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs15.xml\"/>\n</Document>"
+      },
+      {
+        "name": "META-INF/container.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<container xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\" version=\"1.0\">\n<rootfiles><rootfile full-path=\"designmap.xml\" media-type=\"text/xml\"/></rootfiles>\n</container>"
+      },
+      {
+        "name": "Resources/Preferences.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Preferences xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<DocumentPreference PageHeight=\"1350\" PageWidth=\"1080\" PageOrientation=\"Portrait\" PagesPerDocument=\"1\" FacingPages=\"false\" StartPageNumber=\"1\" PageBinding=\"LeftToRight\" AllowPageShuffle=\"true\" DocumentBleedUniformSize=\"true\" DocumentBleedTopOffset=\"0\" DocumentBleedBottomOffset=\"0\" DocumentBleedInsideOrLeftOffset=\"0\" DocumentBleedOutsideOrRightOffset=\"0\" Intent=\"PrintIntent\"/>\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"54\" Bottom=\"54\" Left=\"54\" Right=\"54\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 972\"/>\n<ViewPreference HorizontalMeasurementUnits=\"Pixels\" VerticalMeasurementUnits=\"Pixels\"/>\n</idPkg:Preferences>"
+      },
+      {
+        "name": "Spreads/Spread_pbs1.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs1\" PageCount=\"1\" BindingLocation=\"0\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 0\">\n<Page Self=\"pbs2\" Name=\"1\" AppliedMaster=\"n\" GeometricBounds=\"0 0 1350 1080\" ItemTransform=\"1 0 0 1 -540 -675\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"54\" Bottom=\"54\" Left=\"54\" Right=\"54\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 972\"/>\n<Guide Self=\"pbs3\" Orientation=\"Vertical\" Location=\"540\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs4\" Orientation=\"Horizontal\" Location=\"675\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n<Rectangle Self=\"pbs7\" Name=\"door.jpg\" ContentType=\"GraphicType\" StoredState=\"Normal\" ItemLayer=\"layer\" Locked=\"false\" Visible=\"true\" AppliedObjectStyle=\"ObjectStyle/$ID/[None]\" FillColor=\"Swatch/None\" StrokeColor=\"Swatch/None\" StrokeWeight=\"0\" ItemTransform=\"1 0 0 1 0 0\">\n<Properties><PathGeometry><GeometryPathType PathOpen=\"false\"><PathPointArray><PathPointType Anchor=\"-414 -621\" LeftDirection=\"-414 -621\" RightDirection=\"-414 -621\"/><PathPointType Anchor=\"-414 621\" LeftDirection=\"-414 621\" RightDirection=\"-414 621\"/><PathPointType Anchor=\"414 621\" LeftDirection=\"414 621\" RightDirection=\"414 621\"/><PathPointType Anchor=\"414 -621\" LeftDirection=\"414 -621\" RightDirection=\"414 -621\"/></PathPointArray></GeometryPathType></PathGeometry></Properties>\n<Image Self=\"pbs5\" ItemTransform=\"1.0415 0 0 1.035 -414 -621\" ActualPpi=\"72 72\" EffectivePpi=\"69 70\">\n<Properties><GraphicBounds Left=\"0\" Top=\"0\" Right=\"795\" Bottom=\"1200\"/></Properties>\n<Link Self=\"pbs6\" LinkResourceURI=\"file:Links/door%20%26%20co%200.jpg\" LinkResourceFormat=\"$ID/JPEG\" StoredState=\"Normal\" LinkClassID=\"35906\" LinkClientID=\"257\" LinkResourceModified=\"false\" LinkObjectModified=\"false\" ShowInUI=\"true\" CanEmbed=\"true\" CanUnembed=\"true\" CanPackage=\"true\" ImportPolicy=\"NoAutoImport\" ExportPolicy=\"NoAutoExport\"/>\n</Image>\n</Rectangle>\n</Spread>\n</idPkg:Spread>"
+      },
+      {
+        "name": "Spreads/Spread_pbs8.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs8\" PageCount=\"1\" BindingLocation=\"0\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 1386\">\n<Page Self=\"pbs9\" Name=\"2\" AppliedMaster=\"n\" GeometricBounds=\"0 0 1350 1080\" ItemTransform=\"1 0 0 1 -540 -675\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"54\" Bottom=\"54\" Left=\"54\" Right=\"54\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 972\"/>\n<Guide Self=\"pbs10\" Orientation=\"Vertical\" Location=\"540\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs11\" Orientation=\"Horizontal\" Location=\"675\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n<Rectangle Self=\"pbs14\" Name=\"taxi.jpg\" ContentType=\"GraphicType\" StoredState=\"Normal\" ItemLayer=\"layer\" Locked=\"false\" Visible=\"true\" AppliedObjectStyle=\"ObjectStyle/$ID/[None]\" FillColor=\"Swatch/None\" StrokeColor=\"Swatch/None\" StrokeWeight=\"0\" ItemTransform=\"1 0 0 1 0 0\">\n<Properties><PathGeometry><GeometryPathType PathOpen=\"false\"><PathPointArray><PathPointType Anchor=\"-400 -275\" LeftDirection=\"-400 -275\" RightDirection=\"-400 -275\"/><PathPointType Anchor=\"-400 255\" LeftDirection=\"-400 255\" RightDirection=\"-400 255\"/><PathPointType Anchor=\"400 255\" LeftDirection=\"400 255\" RightDirection=\"400 255\"/><PathPointType Anchor=\"400 -275\" LeftDirection=\"400 -275\" RightDirection=\"400 -275\"/></PathPointArray></GeometryPathType></PathGeometry></Properties>\n<Image Self=\"pbs12\" ItemTransform=\"4.1929 0 0 2.7778 -400 -355\" ActualPpi=\"300 300\" EffectivePpi=\"72 108\">\n<Properties><GraphicBounds Left=\"0\" Top=\"0\" Right=\"190.8\" Bottom=\"288\"/></Properties>\n<Link Self=\"pbs13\" LinkResourceURI=\"file:Links/taxi%20%26%20co%201.png\" LinkResourceFormat=\"$ID/Portable Network Graphics (PNG)\" StoredState=\"Normal\" LinkClassID=\"35906\" LinkClientID=\"257\" LinkResourceModified=\"false\" LinkObjectModified=\"false\" ShowInUI=\"true\" CanEmbed=\"true\" CanUnembed=\"true\" CanPackage=\"true\" ImportPolicy=\"NoAutoImport\" ExportPolicy=\"NoAutoExport\"/>\n</Image>\n</Rectangle>\n</Spread>\n</idPkg:Spread>"
+      },
+      {
+        "name": "Spreads/Spread_pbs15.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs15\" PageCount=\"1\" BindingLocation=\"0\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 2772\">\n<Page Self=\"pbs16\" Name=\"3\" AppliedMaster=\"n\" GeometricBounds=\"0 0 1350 1080\" ItemTransform=\"1 0 0 1 -540 -675\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"54\" Bottom=\"54\" Left=\"54\" Right=\"54\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 972\"/>\n<Guide Self=\"pbs17\" Orientation=\"Vertical\" Location=\"540\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs18\" Orientation=\"Horizontal\" Location=\"675\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n\n</Spread>\n</idPkg:Spread>"
+      }
+    ]
+  },
+  {
+    "name": "book at 150 dpi",
+    "input": {
+      "project": {
+        "schemaVersion": 7,
+        "photos": {
+          "a": {
+            "id": "a",
+            "name": "a.jpg",
+            "pxW": 3000,
+            "pxH": 2000
+          },
+          "b": {
+            "id": "b",
+            "name": "b.jpg",
+            "pxW": 2000,
+            "pxH": 3000,
+            "crop": {
+              "x": 0.1,
+              "y": 0,
+              "w": 0.8,
+              "h": 1
+            }
+          }
+        },
+        "pile": [],
+        "page": {
+          "w": 10,
+          "h": 8,
+          "unit": "in",
+          "pxPerUnit": 150
+        },
+        "layout": {
+          "kind": "spreads",
+          "firstSpread": {
+            "kind": "first",
+            "id": "s1",
+            "items": []
+          },
+          "spreads": [
+            {
+              "kind": "middle",
+              "id": "s2",
+              "items": [
+                {
+                  "photoId": "a",
+                  "x": -9,
+                  "y": 1,
+                  "w": 6,
+                  "h": 4,
+                  "z": 1
+                },
+                {
+                  "photoId": "b",
+                  "x": -2,
+                  "y": 1,
+                  "w": 4,
+                  "h": 6,
+                  "z": 2,
+                  "border": {
+                    "width": 0.1,
+                    "color": "black"
+                  }
+                }
+              ]
+            }
+          ],
+          "lastSpread": {
+            "kind": "last",
+            "id": "s3",
+            "items": [],
+            "background": "black"
+          }
+        },
+        "settings": {
+          "centerV": true,
+          "centerH": false,
+          "keepRelative": true,
+          "borders": [
+            {
+              "id": "m",
+              "kind": "even",
+              "inset": 0.5
+            },
+            {
+              "id": "e",
+              "kind": "edges",
+              "top": 0.5,
+              "bottom": 1,
+              "inside": 1.5,
+              "outside": 0.75
+            }
+          ],
+          "lines": [
+            {
+              "id": "v",
+              "axis": "vertical",
+              "at": 2
+            },
+            {
+              "id": "h",
+              "axis": "horizontal",
+              "at": 3
+            }
+          ],
+          "dropBorder": "m"
+        },
+        "nextZ": 3
+      },
+      "links": [
+        [
+          "a",
+          {
+            "path": "Links/a & co 0.jpg",
+            "format": "jpeg",
+            "ppi": 72,
+            "pxW": 3000,
+            "pxH": 2000
+          }
+        ],
+        [
+          "b",
+          {
+            "path": "Links/b & co 1.png",
+            "format": "png",
+            "ppi": 300,
+            "pxW": 2000,
+            "pxH": 3000
+          }
+        ]
+      ]
+    },
+    "output": [
+      {
+        "name": "mimetype",
+        "text": "application/vnd.adobe.indesign-idml-package"
+      },
+      {
+        "name": "designmap.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<?aid style=\"50\" type=\"document\" readerVersion=\"6.0\" featureSet=\"257\" product=\"8.0(370)\" ?>\n<Document xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\" Self=\"d\">\n<idPkg:Preferences src=\"Resources/Preferences.xml\"/>\n<Layer Self=\"layer\" Name=\"Photos\" Visible=\"true\" Locked=\"false\" IgnoreWrap=\"false\" ShowGuides=\"true\" LockGuides=\"false\" UI=\"true\" Expendable=\"true\" Printable=\"true\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs1.xml\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs10.xml\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs33.xml\"/>\n</Document>"
+      },
+      {
+        "name": "META-INF/container.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<container xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\" version=\"1.0\">\n<rootfiles><rootfile full-path=\"designmap.xml\" media-type=\"text/xml\"/></rootfiles>\n</container>"
+      },
+      {
+        "name": "Resources/Preferences.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Preferences xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<DocumentPreference PageHeight=\"576\" PageWidth=\"720\" PageOrientation=\"Landscape\" PagesPerDocument=\"1\" FacingPages=\"true\" StartPageNumber=\"1\" PageBinding=\"LeftToRight\" AllowPageShuffle=\"true\" DocumentBleedUniformSize=\"true\" DocumentBleedTopOffset=\"0\" DocumentBleedBottomOffset=\"0\" DocumentBleedInsideOrLeftOffset=\"0\" DocumentBleedOutsideOrRightOffset=\"0\" Intent=\"PrintIntent\"/>\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"36\" Bottom=\"36\" Left=\"36\" Right=\"36\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 648\"/>\n<ViewPreference HorizontalMeasurementUnits=\"Inches\" VerticalMeasurementUnits=\"Inches\"/>\n</idPkg:Preferences>"
+      },
+      {
+        "name": "Spreads/Spread_pbs1.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs1\" PageCount=\"1\" BindingLocation=\"0\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 0\">\n<Page Self=\"pbs2\" Name=\"1\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 0 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"36\" Bottom=\"36\" Left=\"36\" Right=\"36\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 648\"/>\n<Guide Self=\"pbs3\" Orientation=\"Vertical\" Location=\"360\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs4\" Orientation=\"Vertical\" Location=\"108\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs5\" Orientation=\"Vertical\" Location=\"666\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs6\" Orientation=\"Vertical\" Location=\"576\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs7\" Orientation=\"Horizontal\" Location=\"36\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs8\" Orientation=\"Horizontal\" Location=\"504\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs9\" Orientation=\"Horizontal\" Location=\"216\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n\n</Spread>\n</idPkg:Spread>"
+      },
+      {
+        "name": "Spreads/Spread_pbs10.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs10\" PageCount=\"2\" BindingLocation=\"1\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 612\">\n<Page Self=\"pbs11\" Name=\"2\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 -720 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"36\" Bottom=\"36\" Left=\"36\" Right=\"36\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 648\"/>\n<Guide Self=\"pbs12\" Orientation=\"Vertical\" Location=\"360\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs13\" Orientation=\"Vertical\" Location=\"54\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs14\" Orientation=\"Vertical\" Location=\"612\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs15\" Orientation=\"Vertical\" Location=\"144\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs16\" Orientation=\"Horizontal\" Location=\"36\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs17\" Orientation=\"Horizontal\" Location=\"504\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs18\" Orientation=\"Horizontal\" Location=\"216\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n<Page Self=\"pbs19\" Name=\"3\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 0 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"36\" Bottom=\"36\" Left=\"36\" Right=\"36\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 648\"/>\n<Guide Self=\"pbs20\" Orientation=\"Vertical\" Location=\"1080\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs21\" Orientation=\"Vertical\" Location=\"828\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs22\" Orientation=\"Vertical\" Location=\"1386\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs23\" Orientation=\"Vertical\" Location=\"1296\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs24\" Orientation=\"Horizontal\" Location=\"36\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs25\" Orientation=\"Horizontal\" Location=\"504\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs26\" Orientation=\"Horizontal\" Location=\"216\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"1\" GuideType=\"Ruler\"/>\n</Page>\n<Rectangle Self=\"pbs29\" Name=\"a.jpg\" ContentType=\"GraphicType\" StoredState=\"Normal\" ItemLayer=\"layer\" Locked=\"false\" Visible=\"true\" AppliedObjectStyle=\"ObjectStyle/$ID/[None]\" FillColor=\"Swatch/None\" StrokeColor=\"Swatch/None\" StrokeWeight=\"0\" ItemTransform=\"1 0 0 1 0 0\">\n<Properties><PathGeometry><GeometryPathType PathOpen=\"false\"><PathPointArray><PathPointType Anchor=\"-648 -216\" LeftDirection=\"-648 -216\" RightDirection=\"-648 -216\"/><PathPointType Anchor=\"-648 72\" LeftDirection=\"-648 72\" RightDirection=\"-648 72\"/><PathPointType Anchor=\"-216 72\" LeftDirection=\"-216 72\" RightDirection=\"-216 72\"/><PathPointType Anchor=\"-216 -216\" LeftDirection=\"-216 -216\" RightDirection=\"-216 -216\"/></PathPointArray></GeometryPathType></PathGeometry></Properties>\n<Image Self=\"pbs27\" ItemTransform=\"0.144 0 0 0.144 -648 -216\" ActualPpi=\"72 72\" EffectivePpi=\"500 500\">\n<Properties><GraphicBounds Left=\"0\" Top=\"0\" Right=\"3000\" Bottom=\"2000\"/></Properties>\n<Link Self=\"pbs28\" LinkResourceURI=\"file:Links/a%20%26%20co%200.jpg\" LinkResourceFormat=\"$ID/JPEG\" StoredState=\"Normal\" LinkClassID=\"35906\" LinkClientID=\"257\" LinkResourceModified=\"false\" LinkObjectModified=\"false\" ShowInUI=\"true\" CanEmbed=\"true\" CanUnembed=\"true\" CanPackage=\"true\" ImportPolicy=\"NoAutoImport\" ExportPolicy=\"NoAutoExport\"/>\n</Image>\n</Rectangle>\n<Rectangle Self=\"pbs32\" Name=\"b.jpg\" ContentType=\"GraphicType\" StoredState=\"Normal\" ItemLayer=\"layer\" Locked=\"false\" Visible=\"true\" AppliedObjectStyle=\"ObjectStyle/$ID/[None]\" FillColor=\"Swatch/None\" StrokeColor=\"Swatch/None\" StrokeWeight=\"0\" ItemTransform=\"1 0 0 1 0 0\">\n<Properties><PathGeometry><GeometryPathType PathOpen=\"false\"><PathPointArray><PathPointType Anchor=\"-144 -216\" LeftDirection=\"-144 -216\" RightDirection=\"-144 -216\"/><PathPointType Anchor=\"-144 216\" LeftDirection=\"-144 216\" RightDirection=\"-144 216\"/><PathPointType Anchor=\"144 216\" LeftDirection=\"144 216\" RightDirection=\"144 216\"/><PathPointType Anchor=\"144 -216\" LeftDirection=\"144 -216\" RightDirection=\"144 -216\"/></PathPointArray></GeometryPathType></PathGeometry></Properties>\n<Image Self=\"pbs30\" ItemTransform=\"0.75 0 0 0.6 -180 -216\" ActualPpi=\"300 300\" EffectivePpi=\"400 500\">\n<Properties><GraphicBounds Left=\"0\" Top=\"0\" Right=\"480\" Bottom=\"720\"/></Properties>\n<Link Self=\"pbs31\" LinkResourceURI=\"file:Links/b%20%26%20co%201.png\" LinkResourceFormat=\"$ID/Portable Network Graphics (PNG)\" StoredState=\"Normal\" LinkClassID=\"35906\" LinkClientID=\"257\" LinkResourceModified=\"false\" LinkObjectModified=\"false\" ShowInUI=\"true\" CanEmbed=\"true\" CanUnembed=\"true\" CanPackage=\"true\" ImportPolicy=\"NoAutoImport\" ExportPolicy=\"NoAutoExport\"/>\n</Image>\n</Rectangle>\n</Spread>\n</idPkg:Spread>"
+      },
+      {
+        "name": "Spreads/Spread_pbs33.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs33\" PageCount=\"1\" BindingLocation=\"1\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 1224\">\n<Page Self=\"pbs34\" Name=\"4\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 -720 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"36\" Bottom=\"36\" Left=\"36\" Right=\"36\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 648\"/>\n<Guide Self=\"pbs35\" Orientation=\"Vertical\" Location=\"360\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs36\" Orientation=\"Vertical\" Location=\"54\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs37\" Orientation=\"Vertical\" Location=\"612\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs38\" Orientation=\"Vertical\" Location=\"144\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs39\" Orientation=\"Horizontal\" Location=\"36\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs40\" Orientation=\"Horizontal\" Location=\"504\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs41\" Orientation=\"Horizontal\" Location=\"216\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n\n</Spread>\n</idPkg:Spread>"
+      }
+    ]
+  },
+  {
+    "name": "book with no guides",
+    "input": {
+      "project": {
+        "schemaVersion": 7,
+        "photos": {
+          "a": {
+            "id": "a",
+            "name": "a.jpg",
+            "pxW": 3000,
+            "pxH": 2000
+          },
+          "b": {
+            "id": "b",
+            "name": "b.jpg",
+            "pxW": 2000,
+            "pxH": 3000,
+            "crop": {
+              "x": 0.1,
+              "y": 0,
+              "w": 0.8,
+              "h": 1
+            }
+          }
+        },
+        "pile": [],
+        "page": {
+          "w": 10,
+          "h": 8,
+          "unit": "in",
+          "pxPerUnit": 300
+        },
+        "layout": {
+          "kind": "spreads",
+          "firstSpread": {
+            "kind": "first",
+            "id": "s1",
+            "items": []
+          },
+          "spreads": [
+            {
+              "kind": "middle",
+              "id": "s2",
+              "items": [
+                {
+                  "photoId": "a",
+                  "x": -9,
+                  "y": 1,
+                  "w": 6,
+                  "h": 4,
+                  "z": 1
+                },
+                {
+                  "photoId": "b",
+                  "x": -2,
+                  "y": 1,
+                  "w": 4,
+                  "h": 6,
+                  "z": 2,
+                  "border": {
+                    "width": 0.1,
+                    "color": "black"
+                  }
+                }
+              ]
+            }
+          ],
+          "lastSpread": {
+            "kind": "last",
+            "id": "s3",
+            "items": [],
+            "background": "black"
+          }
+        },
+        "settings": {
+          "centerV": false,
+          "centerH": false,
+          "keepRelative": true,
+          "borders": [],
+          "lines": [],
+          "dropBorder": null
+        },
+        "nextZ": 3
+      },
+      "links": [
+        [
+          "a",
+          {
+            "path": "Links/a & co 0.jpg",
+            "format": "jpeg",
+            "ppi": 72,
+            "pxW": 3000,
+            "pxH": 2000
+          }
+        ],
+        [
+          "b",
+          {
+            "path": "Links/b & co 1.png",
+            "format": "png",
+            "ppi": 300,
+            "pxW": 2000,
+            "pxH": 3000
+          }
+        ]
+      ]
+    },
+    "output": [
+      {
+        "name": "mimetype",
+        "text": "application/vnd.adobe.indesign-idml-package"
+      },
+      {
+        "name": "designmap.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<?aid style=\"50\" type=\"document\" readerVersion=\"6.0\" featureSet=\"257\" product=\"8.0(370)\" ?>\n<Document xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\" Self=\"d\">\n<idPkg:Preferences src=\"Resources/Preferences.xml\"/>\n<Layer Self=\"layer\" Name=\"Photos\" Visible=\"true\" Locked=\"false\" IgnoreWrap=\"false\" ShowGuides=\"true\" LockGuides=\"false\" UI=\"true\" Expendable=\"true\" Printable=\"true\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs1.xml\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs3.xml\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs12.xml\"/>\n</Document>"
+      },
+      {
+        "name": "META-INF/container.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<container xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\" version=\"1.0\">\n<rootfiles><rootfile full-path=\"designmap.xml\" media-type=\"text/xml\"/></rootfiles>\n</container>"
+      },
+      {
+        "name": "Resources/Preferences.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Preferences xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<DocumentPreference PageHeight=\"576\" PageWidth=\"720\" PageOrientation=\"Landscape\" PagesPerDocument=\"1\" FacingPages=\"true\" StartPageNumber=\"1\" PageBinding=\"LeftToRight\" AllowPageShuffle=\"true\" DocumentBleedUniformSize=\"true\" DocumentBleedTopOffset=\"0\" DocumentBleedBottomOffset=\"0\" DocumentBleedInsideOrLeftOffset=\"0\" DocumentBleedOutsideOrRightOffset=\"0\" Intent=\"PrintIntent\"/>\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"0\" Bottom=\"0\" Left=\"0\" Right=\"0\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 720\"/>\n<ViewPreference HorizontalMeasurementUnits=\"Inches\" VerticalMeasurementUnits=\"Inches\"/>\n</idPkg:Preferences>"
+      },
+      {
+        "name": "Spreads/Spread_pbs1.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs1\" PageCount=\"1\" BindingLocation=\"0\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 0\">\n<Page Self=\"pbs2\" Name=\"1\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 0 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"0\" Bottom=\"0\" Left=\"0\" Right=\"0\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 720\"/>\n\n</Page>\n\n</Spread>\n</idPkg:Spread>"
+      },
+      {
+        "name": "Spreads/Spread_pbs3.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs3\" PageCount=\"2\" BindingLocation=\"1\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 612\">\n<Page Self=\"pbs4\" Name=\"2\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 -720 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"0\" Bottom=\"0\" Left=\"0\" Right=\"0\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 720\"/>\n\n</Page>\n<Page Self=\"pbs5\" Name=\"3\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 0 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"0\" Bottom=\"0\" Left=\"0\" Right=\"0\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 720\"/>\n\n</Page>\n<Rectangle Self=\"pbs8\" Name=\"a.jpg\" ContentType=\"GraphicType\" StoredState=\"Normal\" ItemLayer=\"layer\" Locked=\"false\" Visible=\"true\" AppliedObjectStyle=\"ObjectStyle/$ID/[None]\" FillColor=\"Swatch/None\" StrokeColor=\"Swatch/None\" StrokeWeight=\"0\" ItemTransform=\"1 0 0 1 0 0\">\n<Properties><PathGeometry><GeometryPathType PathOpen=\"false\"><PathPointArray><PathPointType Anchor=\"-648 -216\" LeftDirection=\"-648 -216\" RightDirection=\"-648 -216\"/><PathPointType Anchor=\"-648 72\" LeftDirection=\"-648 72\" RightDirection=\"-648 72\"/><PathPointType Anchor=\"-216 72\" LeftDirection=\"-216 72\" RightDirection=\"-216 72\"/><PathPointType Anchor=\"-216 -216\" LeftDirection=\"-216 -216\" RightDirection=\"-216 -216\"/></PathPointArray></GeometryPathType></PathGeometry></Properties>\n<Image Self=\"pbs6\" ItemTransform=\"0.144 0 0 0.144 -648 -216\" ActualPpi=\"72 72\" EffectivePpi=\"500 500\">\n<Properties><GraphicBounds Left=\"0\" Top=\"0\" Right=\"3000\" Bottom=\"2000\"/></Properties>\n<Link Self=\"pbs7\" LinkResourceURI=\"file:Links/a%20%26%20co%200.jpg\" LinkResourceFormat=\"$ID/JPEG\" StoredState=\"Normal\" LinkClassID=\"35906\" LinkClientID=\"257\" LinkResourceModified=\"false\" LinkObjectModified=\"false\" ShowInUI=\"true\" CanEmbed=\"true\" CanUnembed=\"true\" CanPackage=\"true\" ImportPolicy=\"NoAutoImport\" ExportPolicy=\"NoAutoExport\"/>\n</Image>\n</Rectangle>\n<Rectangle Self=\"pbs11\" Name=\"b.jpg\" ContentType=\"GraphicType\" StoredState=\"Normal\" ItemLayer=\"layer\" Locked=\"false\" Visible=\"true\" AppliedObjectStyle=\"ObjectStyle/$ID/[None]\" FillColor=\"Swatch/None\" StrokeColor=\"Swatch/None\" StrokeWeight=\"0\" ItemTransform=\"1 0 0 1 0 0\">\n<Properties><PathGeometry><GeometryPathType PathOpen=\"false\"><PathPointArray><PathPointType Anchor=\"-144 -216\" LeftDirection=\"-144 -216\" RightDirection=\"-144 -216\"/><PathPointType Anchor=\"-144 216\" LeftDirection=\"-144 216\" RightDirection=\"-144 216\"/><PathPointType Anchor=\"144 216\" LeftDirection=\"144 216\" RightDirection=\"144 216\"/><PathPointType Anchor=\"144 -216\" LeftDirection=\"144 -216\" RightDirection=\"144 -216\"/></PathPointArray></GeometryPathType></PathGeometry></Properties>\n<Image Self=\"pbs9\" ItemTransform=\"0.75 0 0 0.6 -180 -216\" ActualPpi=\"300 300\" EffectivePpi=\"400 500\">\n<Properties><GraphicBounds Left=\"0\" Top=\"0\" Right=\"480\" Bottom=\"720\"/></Properties>\n<Link Self=\"pbs10\" LinkResourceURI=\"file:Links/b%20%26%20co%201.png\" LinkResourceFormat=\"$ID/Portable Network Graphics (PNG)\" StoredState=\"Normal\" LinkClassID=\"35906\" LinkClientID=\"257\" LinkResourceModified=\"false\" LinkObjectModified=\"false\" ShowInUI=\"true\" CanEmbed=\"true\" CanUnembed=\"true\" CanPackage=\"true\" ImportPolicy=\"NoAutoImport\" ExportPolicy=\"NoAutoExport\"/>\n</Image>\n</Rectangle>\n</Spread>\n</idPkg:Spread>"
+      },
+      {
+        "name": "Spreads/Spread_pbs12.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs12\" PageCount=\"1\" BindingLocation=\"1\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 1224\">\n<Page Self=\"pbs13\" Name=\"4\" AppliedMaster=\"n\" GeometricBounds=\"0 0 576 720\" ItemTransform=\"1 0 0 1 -720 -288\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"0\" Bottom=\"0\" Left=\"0\" Right=\"0\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 720\"/>\n\n</Page>\n\n</Spread>\n</idPkg:Spread>"
+      }
+    ]
+  },
+  {
+    "name": "frames at 2x",
+    "input": {
+      "project": {
+        "schemaVersion": 7,
+        "photos": {
+          "a": {
+            "id": "a",
+            "name": "door.jpg",
+            "pxW": 795,
+            "pxH": 1200
+          },
+          "b": {
+            "id": "b",
+            "name": "taxi.jpg",
+            "pxW": 795,
+            "pxH": 1200,
+            "crop": {
+              "x": 0,
+              "y": 0.1,
+              "w": 1,
+              "h": 0.6625
+            }
+          },
+          "c": {
+            "id": "c",
+            "name": "lily.jpg",
+            "pxW": 795,
+            "pxH": 1200
+          }
+        },
+        "pile": [
+          {
+            "photoId": "c",
+            "x": 0.5,
+            "y": 0.5,
+            "w": 16.5625,
+            "h": 25,
+            "z": 3
+          }
+        ],
+        "page": {
+          "w": 1080,
+          "h": 1350,
+          "unit": "px",
+          "pxPerUnit": 2
+        },
+        "layout": {
+          "kind": "frames",
+          "frames": [
+            {
+              "kind": "frame",
+              "id": "f1",
+              "items": [
+                {
+                  "photoId": "a",
+                  "x": 126,
+                  "y": 54,
+                  "w": 828,
+                  "h": 1242,
+                  "z": 1
+                }
+              ]
+            },
+            {
+              "kind": "frame",
+              "id": "f2",
+              "items": [
+                {
+                  "photoId": "b",
+                  "x": 140,
+                  "y": 400,
+                  "w": 800,
+                  "h": 530,
+                  "z": 2,
+                  "border": {
+                    "width": 24,
+                    "color": "white"
+                  }
+                }
+              ],
+              "background": "black"
+            },
+            {
+              "kind": "frame",
+              "id": "f3",
+              "items": []
+            }
+          ]
+        },
+        "settings": {
+          "centerV": true,
+          "centerH": true,
+          "keepRelative": true,
+          "borders": [
+            {
+              "id": "g1",
+              "kind": "even",
+              "inset": 54
+            }
+          ],
+          "lines": [],
+          "dropBorder": "g1"
+        },
+        "nextZ": 4,
+        "export": {
+          "to": "instagram",
+          "options": {
+            "format": "jpeg",
+            "quality": 0.9
+          },
+          "instagram": {
+            "kind": "feed",
+            "fit": "crop",
+            "caption": "Walks #35mm",
+            "chosen": [
+              "f1:whole",
+              "f2:whole"
+            ]
+          }
+        }
+      },
+      "links": [
+        [
+          "a",
+          {
+            "path": "Links/door & co 0.jpg",
+            "format": "jpeg",
+            "ppi": 72,
+            "pxW": 795,
+            "pxH": 1200
+          }
+        ],
+        [
+          "b",
+          {
+            "path": "Links/taxi & co 1.png",
+            "format": "png",
+            "ppi": 300,
+            "pxW": 795,
+            "pxH": 1200
+          }
+        ],
+        [
+          "c",
+          {
+            "path": "Links/lily & co 2.jpg",
+            "format": "jpeg",
+            "ppi": 300,
+            "pxW": 795,
+            "pxH": 1200
+          }
+        ]
+      ]
+    },
+    "output": [
+      {
+        "name": "mimetype",
+        "text": "application/vnd.adobe.indesign-idml-package"
+      },
+      {
+        "name": "designmap.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<?aid style=\"50\" type=\"document\" readerVersion=\"6.0\" featureSet=\"257\" product=\"8.0(370)\" ?>\n<Document xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\" Self=\"d\">\n<idPkg:Preferences src=\"Resources/Preferences.xml\"/>\n<Layer Self=\"layer\" Name=\"Photos\" Visible=\"true\" Locked=\"false\" IgnoreWrap=\"false\" ShowGuides=\"true\" LockGuides=\"false\" UI=\"true\" Expendable=\"true\" Printable=\"true\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs1.xml\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs8.xml\"/>\n<idPkg:Spread src=\"Spreads/Spread_pbs15.xml\"/>\n</Document>"
+      },
+      {
+        "name": "META-INF/container.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<container xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\" version=\"1.0\">\n<rootfiles><rootfile full-path=\"designmap.xml\" media-type=\"text/xml\"/></rootfiles>\n</container>"
+      },
+      {
+        "name": "Resources/Preferences.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Preferences xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<DocumentPreference PageHeight=\"1350\" PageWidth=\"1080\" PageOrientation=\"Portrait\" PagesPerDocument=\"1\" FacingPages=\"false\" StartPageNumber=\"1\" PageBinding=\"LeftToRight\" AllowPageShuffle=\"true\" DocumentBleedUniformSize=\"true\" DocumentBleedTopOffset=\"0\" DocumentBleedBottomOffset=\"0\" DocumentBleedInsideOrLeftOffset=\"0\" DocumentBleedOutsideOrRightOffset=\"0\" Intent=\"PrintIntent\"/>\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"54\" Bottom=\"54\" Left=\"54\" Right=\"54\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 972\"/>\n<ViewPreference HorizontalMeasurementUnits=\"Pixels\" VerticalMeasurementUnits=\"Pixels\"/>\n</idPkg:Preferences>"
+      },
+      {
+        "name": "Spreads/Spread_pbs1.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs1\" PageCount=\"1\" BindingLocation=\"0\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 0\">\n<Page Self=\"pbs2\" Name=\"1\" AppliedMaster=\"n\" GeometricBounds=\"0 0 1350 1080\" ItemTransform=\"1 0 0 1 -540 -675\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"54\" Bottom=\"54\" Left=\"54\" Right=\"54\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 972\"/>\n<Guide Self=\"pbs3\" Orientation=\"Vertical\" Location=\"540\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs4\" Orientation=\"Horizontal\" Location=\"675\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n<Rectangle Self=\"pbs7\" Name=\"door.jpg\" ContentType=\"GraphicType\" StoredState=\"Normal\" ItemLayer=\"layer\" Locked=\"false\" Visible=\"true\" AppliedObjectStyle=\"ObjectStyle/$ID/[None]\" FillColor=\"Swatch/None\" StrokeColor=\"Swatch/None\" StrokeWeight=\"0\" ItemTransform=\"1 0 0 1 0 0\">\n<Properties><PathGeometry><GeometryPathType PathOpen=\"false\"><PathPointArray><PathPointType Anchor=\"-414 -621\" LeftDirection=\"-414 -621\" RightDirection=\"-414 -621\"/><PathPointType Anchor=\"-414 621\" LeftDirection=\"-414 621\" RightDirection=\"-414 621\"/><PathPointType Anchor=\"414 621\" LeftDirection=\"414 621\" RightDirection=\"414 621\"/><PathPointType Anchor=\"414 -621\" LeftDirection=\"414 -621\" RightDirection=\"414 -621\"/></PathPointArray></GeometryPathType></PathGeometry></Properties>\n<Image Self=\"pbs5\" ItemTransform=\"1.0415 0 0 1.035 -414 -621\" ActualPpi=\"72 72\" EffectivePpi=\"69 70\">\n<Properties><GraphicBounds Left=\"0\" Top=\"0\" Right=\"795\" Bottom=\"1200\"/></Properties>\n<Link Self=\"pbs6\" LinkResourceURI=\"file:Links/door%20%26%20co%200.jpg\" LinkResourceFormat=\"$ID/JPEG\" StoredState=\"Normal\" LinkClassID=\"35906\" LinkClientID=\"257\" LinkResourceModified=\"false\" LinkObjectModified=\"false\" ShowInUI=\"true\" CanEmbed=\"true\" CanUnembed=\"true\" CanPackage=\"true\" ImportPolicy=\"NoAutoImport\" ExportPolicy=\"NoAutoExport\"/>\n</Image>\n</Rectangle>\n</Spread>\n</idPkg:Spread>"
+      },
+      {
+        "name": "Spreads/Spread_pbs8.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs8\" PageCount=\"1\" BindingLocation=\"0\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 1386\">\n<Page Self=\"pbs9\" Name=\"2\" AppliedMaster=\"n\" GeometricBounds=\"0 0 1350 1080\" ItemTransform=\"1 0 0 1 -540 -675\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"54\" Bottom=\"54\" Left=\"54\" Right=\"54\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 972\"/>\n<Guide Self=\"pbs10\" Orientation=\"Vertical\" Location=\"540\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs11\" Orientation=\"Horizontal\" Location=\"675\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n<Rectangle Self=\"pbs14\" Name=\"taxi.jpg\" ContentType=\"GraphicType\" StoredState=\"Normal\" ItemLayer=\"layer\" Locked=\"false\" Visible=\"true\" AppliedObjectStyle=\"ObjectStyle/$ID/[None]\" FillColor=\"Swatch/None\" StrokeColor=\"Swatch/None\" StrokeWeight=\"0\" ItemTransform=\"1 0 0 1 0 0\">\n<Properties><PathGeometry><GeometryPathType PathOpen=\"false\"><PathPointArray><PathPointType Anchor=\"-400 -275\" LeftDirection=\"-400 -275\" RightDirection=\"-400 -275\"/><PathPointType Anchor=\"-400 255\" LeftDirection=\"-400 255\" RightDirection=\"-400 255\"/><PathPointType Anchor=\"400 255\" LeftDirection=\"400 255\" RightDirection=\"400 255\"/><PathPointType Anchor=\"400 -275\" LeftDirection=\"400 -275\" RightDirection=\"400 -275\"/></PathPointArray></GeometryPathType></PathGeometry></Properties>\n<Image Self=\"pbs12\" ItemTransform=\"4.1929 0 0 2.7778 -400 -355\" ActualPpi=\"300 300\" EffectivePpi=\"72 108\">\n<Properties><GraphicBounds Left=\"0\" Top=\"0\" Right=\"190.8\" Bottom=\"288\"/></Properties>\n<Link Self=\"pbs13\" LinkResourceURI=\"file:Links/taxi%20%26%20co%201.png\" LinkResourceFormat=\"$ID/Portable Network Graphics (PNG)\" StoredState=\"Normal\" LinkClassID=\"35906\" LinkClientID=\"257\" LinkResourceModified=\"false\" LinkObjectModified=\"false\" ShowInUI=\"true\" CanEmbed=\"true\" CanUnembed=\"true\" CanPackage=\"true\" ImportPolicy=\"NoAutoImport\" ExportPolicy=\"NoAutoExport\"/>\n</Image>\n</Rectangle>\n</Spread>\n</idPkg:Spread>"
+      },
+      {
+        "name": "Spreads/Spread_pbs15.xml",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<idPkg:Spread xmlns:idPkg=\"http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging\" DOMVersion=\"8.0\">\n<Spread Self=\"pbs15\" PageCount=\"1\" BindingLocation=\"0\" ShowMasterItems=\"true\" AllowPageShuffle=\"true\" ItemTransform=\"1 0 0 1 0 2772\">\n<Page Self=\"pbs16\" Name=\"3\" AppliedMaster=\"n\" GeometricBounds=\"0 0 1350 1080\" ItemTransform=\"1 0 0 1 -540 -675\" MasterPageTransform=\"1 0 0 1 0 0\">\n<MarginPreference ColumnCount=\"1\" ColumnGutter=\"12\" Top=\"54\" Bottom=\"54\" Left=\"54\" Right=\"54\" ColumnDirection=\"Horizontal\" ColumnsPositions=\"0 972\"/>\n<Guide Self=\"pbs17\" Orientation=\"Vertical\" Location=\"540\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n<Guide Self=\"pbs18\" Orientation=\"Horizontal\" Location=\"675\" FitToPage=\"true\" ViewThreshold=\"0\" Locked=\"false\" ItemLayer=\"layer\" PageIndex=\"0\" GuideType=\"Ruler\"/>\n</Page>\n\n</Spread>\n</idPkg:Spread>"
+      }
+    ]
+  }
+]

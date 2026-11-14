@@ -75,6 +75,18 @@ The website and the app share everything but `src/platform/`: each build imports
 `#platform`, which is `src/platform/browser.ts` for the website and `src/platform/macos/`
 for the app (see `vite.config.ts`). CI checks that neither build contains the other's code.
 
+## The iPhone app
+
+A native SwiftUI app in `ios/` (see `ios/README.md`): sequences of frames only (no books),
+the frames grid, a frame's editor with the desk in a drawer below it, crop (with the pin), a
+preview, and export as images or to Instagram. Projects are kept in the app (a list of them),
+in the same JSON the web and Mac apps save; `shared/fixtures/` holds projects both apps'
+tests read. It's `io.salem.SequencePhotosMobile`, iPhone only, portrait, iOS 17 and later.
+
+```bash
+cd ios && xcodegen generate && open Sequence.xcodeproj
+```
+
 ## Testing
 
 ```bash
@@ -107,7 +119,7 @@ public `VITE_` values only, since they ship in the website and the app. Vite rea
 | `src/`       | The app: React and TypeScript, with its unit tests beside each file                               |
 | `site/`      | The website's pages (landing, app, privacy, support), the landing page's code, and public files   |
 | `server/`    | The Cloudflare Worker for Instagram posting, with its own package and tests                       |
-| `src-tauri/` | The Mac app's native side (Rust), its config, entitlements, and icons                             |
+| `src-tauri/` | The Mac and iPhone apps' native side (Rust), their config, entitlements, and icons                |
 | `e2e/`       | Playwright interaction tests                                                                      |
 | `scripts/`   | Build and release scripts: the App Store build, version bump, icons, checks                       |
 | `assets/`    | Source art: the app icon's drawings (`npm run icons` makes the rest), and the screenshots' photos |

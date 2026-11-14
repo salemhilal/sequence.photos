@@ -1,6 +1,5 @@
 import type { PhotoId } from './ids';
 import { useEffect } from 'react';
-import type { Platform } from './platform/types';
 import { deleteFromProject, deleteSpreads, importPhotos } from './actions';
 import { copyPhotos, duplicateAndSelect } from './clipboard';
 import { hasMod, isMac, isTextField, isTyping, MOD_LABEL } from './input';
@@ -50,7 +49,7 @@ interface Command {
    * Its name in menus, in sentence case (the Mac app's menu bar title-cases it). Give
    * both where the website and the app word it differently.
    */
-  title?: string | Record<Platform['kind'], string>;
+  title?: string | Record<'browser' | 'macos', string>;
 }
 
 export function addPhotos(): void {
@@ -248,7 +247,7 @@ export type CommandId = keyof typeof commands;
 /** A command's name for menus on this platform (sentence case). */
 export function commandTitle(id: CommandId): string {
   const t = (commands[id] as Command).title ?? id;
-  return typeof t === 'string' ? t : t[platform.kind];
+  return typeof t === 'string' ? t : t[platform.kind === 'macos' ? 'macos' : 'browser'];
 }
 
 /** Run a command from a menu or button. */

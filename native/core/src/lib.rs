@@ -1,0 +1,42 @@
+//! Sequence's project model and logic, without a window: what the Mac app (and one day the
+//! website, through wasm) shares. Ported from the TypeScript in `src/`, which stays the
+//! reference; tests check this against golden files the TypeScript writes (`tests/`).
+
+pub mod actions;
+pub mod crop;
+pub mod desk;
+pub mod export_options;
+pub mod geometry;
+pub mod idml;
+pub mod ids;
+pub mod instagram;
+pub mod model;
+pub mod page_setup;
+pub mod pdf;
+pub mod project_file;
+pub mod raster;
+pub mod render_plan;
+pub mod resolution;
+pub mod schema;
+pub mod store;
+pub mod test_images;
+pub mod time;
+pub mod tour;
+pub mod units;
+pub mod validate;
+
+pub use ids::{GuideId, PhotoId, SpreadId};
+pub use indexmap;
+pub use model::*;
+
+/// A number as JavaScript prints it (`String(n)`): no ".0" on whole numbers.
+pub fn js_number(n: f64) -> String {
+  if n == 0.0 {
+    return "0".into();
+  }
+  if n.fract() == 0.0 && n.abs() < 1e21 {
+    return format!("{n:.0}");
+  }
+  // Rust's shortest round-trip form matches JavaScript's for ordinary values.
+  format!("{n}")
+}

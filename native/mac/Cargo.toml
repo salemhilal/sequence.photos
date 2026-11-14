@@ -1,0 +1,38 @@
+[package]
+name = "sequence-mac"
+description = "Sequence for the Mac, in GPUI"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "Sequence"
+path = "src/main.rs"
+
+[dependencies]
+sequence-core = { path = "../core" }
+serde.workspace = true
+serde_json.workspace = true
+# GPUI and its components, pinned: GPUI's releases change its API often.
+gpui-kit = "=0.9.0"
+# Decoded photos handed to GPUI as frames (the version GPUI uses).
+image = { version = "0.25", default-features = false }
+anyhow = "1"
+futures = "0.3"
+# Instagram: talking to its API and Sequence's server, and signing in (PKCE).
+ureq = "3"
+sha2 = "0.10"
+getrandom = "0.3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+# The system's color panel (with its eyedropper), for page and desk colors.
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorPanel", "NSColorSpace", "NSPanel", "NSWindow", "NSResponder", "objc2-core-foundation"] }
+objc2 = "0.6"
+objc2-core-foundation = "0.3"
+objc2-core-graphics = "0.3"
+objc2-foundation = { version = "0.3", features = ["NSArray", "NSData", "NSError", "NSString", "NSURL"] }
+objc2-image-io = { version = "0.3", features = ["CGImageSource", "CGImageDestination", "CGImageProperties", "objc2-core-graphics"] }

@@ -5,6 +5,8 @@ import {
   type BorderGuide,
   type Crop,
   type ExportState,
+  type Ink,
+  type PhotoBorder,
   type Project,
   type Layout,
   type LineGuide,
@@ -104,7 +106,21 @@ function placement(v: unknown, placed: Set<string>, photos: Record<PhotoId, Phot
     w: num(p.w, `${where}.w`, { min: 0, above: true }),
     h: num(p.h, `${where}.h`, { min: 0, above: true }),
     z: num(p.z, `${where}.z`),
+    ...borderOf(p.border),
   };
+}
+
+/** A photo's border; a damaged one is left out (no border) rather than refusing the project. */
+function borderOf(v: unknown): { border?: PhotoBorder } {
+  if (!isRecord(v)) return {};
+  const { width, color } = v;
+  if (typeof width !== 'number' || !Number.isFinite(width) || width <= 0) return {};
+  const ink = inkOf(color);
+  return ink ? { border: { width, color: ink } } : {};
+}
+
+function inkOf(v: unknown): Ink | undefined {
+  return v === 'white' || v === 'black' ? v : undefined;
 }
 
 function spread<K extends SpreadKind>(
@@ -113,13 +129,16 @@ function spread<K extends SpreadKind>(
   ids: Set<string>,
   items: (v: unknown, where: string) => Placement,
   where: string,
-): { kind: K; id: ReturnType<typeof toSpreadId>; items: Placement[] } {
+): { kind: K; id: ReturnType<typeof toSpreadId>; items: Placement[]; background?: Ink } {
   const s = record(v, where);
   if (s.kind !== kind) fail(`${where}.kind`);
+  // White is the default, kept as none; an unknown color is too.
+  const background = inkOf(s.background);
   return {
     kind,
     id: unique(ids, toSpreadId(text(s.id, `${where}.id`)), `${where}.id`),
     items: list(s.items, `${where}.items`).map((p, i) => items(p, `${where}.items[${i}]`)),
+    ...(background === 'black' ? { background } : {}),
   };
 }
 

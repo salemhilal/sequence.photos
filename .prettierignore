@@ -8,3 +8,9 @@ src-tauri/gen
 server
 # Icon Composer writes its own JSON style (made by scripts/icons.mjs)
 assets/icon/AppIcon.icon
+# The native iPhone app's build output (xcodebuild -derivedDataPath build)
+ios/build
+# Golden files for the GPUI app's Rust port, written by src/goldens.test.ts
+shared/goldens
+# The GPUI app's build output
+native/target

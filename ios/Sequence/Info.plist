@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleDisplayName</key>
+  <string>Sequence</string>
+  <key>CFBundleExecutable</key>
+  <string>$(EXECUTABLE_NAME)</string>
+  <key>CFBundleIdentifier</key>
+  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>$(PRODUCT_NAME)</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>$(MARKETING_VERSION)</string>
+  <key>CFBundleVersion</key>
+  <string>$(CURRENT_PROJECT_VERSION)</string>
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
+  <key>LSRequiresIPhoneOS</key>
+  <true/>
+  <!-- The photo picker's Take Photo. -->
+  <key>NSCameraUsageDescription</key>
+  <string>Sequence uses the camera to take photos for your sequences.</string>
+  <!-- The share sheet's Save Image puts exports in Photos. -->
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>Sequence saves the images you export to your photo library.</string>
+  <!-- The link an Instagram sign-in comes back through, as the Mac app's. -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>io.salem.SequencePhotosMobile.link</string>
+      <key>CFBundleURLSchemes</key>
+      <array><string>sequence-photos</string></array>
+    </dict>
+  </array>
+  <!-- What's dragged within the app: frames in the grid, and desk photos onto a frame. -->
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>io.salem.SequencePhotosMobile.photo</string>
+      <key>UTTypeDescription</key>
+      <string>Sequence photo</string>
+      <key>UTTypeConformsTo</key>
+      <array><string>public.data</string></array>
+    </dict>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>io.salem.SequencePhotosMobile.frames</string>
+      <key>UTTypeDescription</key>
+      <string>Sequence frames</string>
+      <key>UTTypeConformsTo</key>
+      <array><string>public.data</string></array>
+    </dict>
+  </array>
+  <key>UIApplicationSceneManifest</key>
+  <dict>
+    <key>UIApplicationSupportsMultipleScenes</key>
+    <false/>
+  </dict>
+  <!-- The web app's fonts (Fonts/, made by scripts/ios-fonts.mjs). -->
+  <key>UIAppFonts</key>
+  <array>
+    <string>InterTight-Regular.ttf</string>
+    <string>InterTight-Medium.ttf</string>
+    <string>InterTight-SemiBold.ttf</string>
+    <string>InterTight-Bold.ttf</string>
+    <string>IBMPlexMono-Regular.ttf</string>
+    <string>IBMPlexMono-Medium.ttf</string>
+  </array>
+  <key>UILaunchScreen</key>
+  <dict/>
+  <!-- Portrait only, for now: the editor's layout is built for it. -->
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+  </array>
+</dict>
+</plist>

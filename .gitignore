@@ -34,3 +34,6 @@ dist-ssr
 .env*.local
 .dev.vars*
 !.dev.vars.example
+
+# The GPUI app (native/)
+/native/target/

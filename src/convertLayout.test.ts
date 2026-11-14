@@ -63,6 +63,15 @@ describe('rearrange: spreads to frames', () => {
   });
 });
 
+describe('rearrange: backgrounds', () => {
+  it('gives each frame its spread’s background', () => {
+    const p = book();
+    allSpreads(p)[1]!.background = 'black';
+    const frames = allSpreads(rearrange(p, 'frames'));
+    expect(frames.map((f) => f.background ?? 'white')).toEqual(['white', 'black', 'black', 'white', 'white', 'white']);
+  });
+});
+
 describe('rearrange: frames to spreads', () => {
   it('comes back as the same book', () => {
     const p = book();
@@ -132,6 +141,12 @@ describe('scaleProject', () => {
     const d = scaleProject(book(), 108, 'px', 1);
     expect(d.page).toEqual({ w: 1080, h: 864, unit: 'px', pxPerUnit: 1 });
     expect(sheetOf(d).borders.map((b) => b.kind === 'even' && b.inset)).toEqual([54, 135]);
+  });
+
+  it('scales photos’ borders too', () => {
+    const p = book();
+    allSpreads(p)[1]!.items[0]!.border = { width: 0.25, color: 'white' };
+    expect(allSpreads(scaleProject(p, 108, 'px', 1))[1]!.items[0]!.border).toEqual({ width: 27, color: 'white' });
   });
 });
 

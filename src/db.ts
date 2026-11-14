@@ -2,7 +2,7 @@ import type { Project } from './types';
 
 // Named for the app's old name (Photobook Sequencer), as are the `photobook-*` prefs: renaming
 // them would lose everyone's saved work.
-const DB_NAME = 'photobook';
+const dbName = 'photobook';
 const DB_VERSION = 1;
 const STATE = 'state';
 const IMAGES = 'images';
@@ -21,7 +21,7 @@ let dbPromise: Promise<IDBDatabase> | null = null;
 
 function open(): Promise<IDBDatabase> {
   dbPromise ??= new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    const req = indexedDB.open(dbName, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STATE)) db.createObjectStore(STATE);

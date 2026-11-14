@@ -1,0 +1,44 @@
+# The iPhone app
+
+The iPhone app is native (SwiftUI, in `ios/`; see `ios/README.md`), as
+`io.salem.SequencePhotosMobile`, iPhone only, version 1.0.0. It reads and writes the web
+app's project JSON (schema 7) and ports its logic (geometry, crop, the render plan,
+Instagram's image layout and posting) to Swift.
+
+## What it does
+
+- **Sequences only.** Frames, in pixels (Instagram's sizes, slides, or a custom size); no
+  books, no inches.
+- **Sequences** (the first screen): every project on the phone, most recently changed
+  first. New, open, rename, delete. They're kept in the app's own storage, a list of
+  projects rather than the web app's one; there are no project files yet.
+- **Frames**: the sidebar as a grid. Tap a frame to edit it; hold and drag to move it; Select
+  to duplicate or delete several. + adds photos from the library, each on a new frame, into
+  the empty frames first, or onto the desk; or an empty frame. More: Frame settings (presets or
+  custom, the border guide, center lines; one undo step), Rename, Undo, Redo.
+- **The editor**: one frame, with ‹ n / N › to the others. Photos move (snapping to the
+  frame's edges and guides by their outer edge, border and all) and resize from their
+  corners; pinch zooms. Below it, the desk: drag a photo up onto the frame to place it,
+  and a placed photo down into the panel to put it back (always by dragging, never a tap).
+  Tap the frame for its background (white or black, for it or every frame); tap a photo for
+  its place and size, its border (0 to 6% of the frame's width, white or black, drawn
+  outside the photo), Crop, Fit, Center, Duplicate. Undo and Redo are in the top bar.
+- **Preview**: every frame full size, swiped through (▷ in the frames' bar, or from the
+  editor's menu).
+- **Motion**: screens change with the View Transitions API (`navigate` in `nav.ts`; the
+  motions are in `phone.css`); sheets slide; the frame in the editor resizes smoothly as the
+  tools below it change, and the tools are a drawer that tucks away. Natively, it's iOS's
+  own: navigation pushes, sheets, the editor's frames in a paging scroll view (a swipe on
+  the background, or ‹ ›, slides only the frames), and drag and drop for the desk's photos
+  and the grid's frames (a press lifts them).
+- **Crop**: as on the desktop, with shapes, Reset, and the pin: pinned, the crop holds still
+  and dragging moves the photo in it.
+- **Export**: images (JPEG or PNG; all the frames, or some) through the share sheet (Save Images puts them in
+  Photos), or a post to Instagram (feed or stories, previewed as Instagram shows them; slides; caption). Tagging people isn't
+  there yet.
+
+## Backgrounds and borders
+
+A spread or frame can have a black background, and a placed photo a border (schema 7). Every
+export draws them (the render plan carries them), and the desktop shows them, though only the
+phone sets them for now.

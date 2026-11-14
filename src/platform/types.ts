@@ -1,9 +1,8 @@
 /**
- * What differs between the website and the Mac app. Shared code imports `platform`
- * from '#platform', which each build points at its own implementation (see
- * vite.config.ts): ./browser.ts for the website, ./macos/ for the app. So the app's
- * code is never part of the website, and anything added here must be implemented by
- * both. Wording that differs is written where it's used, switching on `kind`.
+ * What differs between the website and the Mac app. Shared code imports `platform` from
+ * '#platform', which each build points at its own implementation (see vite.config.ts):
+ * ./browser.ts for the website, ./macos/ for the Mac app. So the app's code is never part of
+ * the website, and anything added here must be implemented by each. Wording that differs is written where it's used, switching on `kind`.
  */
 /** What the Settings window asks of the main window. */
 export type MainRequest = { kind: 'addTestImages'; count: number };

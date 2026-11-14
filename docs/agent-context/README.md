@@ -7,3 +7,4 @@ the code and `docs/testing.md` are the detail.
 - [projects-and-storage.md](projects-and-storage.md): where work is kept, project files,
   offline use and updates, the Mac app's documents.
 - [exports.md](exports.md): PDF, images, InDesign, and Instagram.
+- [phone.md](phone.md): the iPhone app: frames only, its screens, and how it differs.
