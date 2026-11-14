@@ -17,13 +17,9 @@ combinations where it matters: make a book, then switch it to frames, and to pix
       Sequence's servers and a `sha256-` hash for the app page's inline script.
 - [ ] `npm run app:ui:build`, then `node scripts/check-app-bundle.mjs`: the Mac app's
       build has none of the website's pages.
-- [ ] `npm run test:e2e`: the web app's interaction tests pass in Chromium and WebKit (the
-      Mac app's engine): pages and their shortcuts, Esc staying on a page, Layout's
-      unapplied-changes prompt, Preview's fullscreen option, the status bar (counts, selection,
-      hints, page text, zoom), Settings (tabs, persisted toggles), shortcut badges, the spread
-      editor (pager, zoom and pan, strip, Go to next error, Return to desk), scrubbing number
-      fields, test images, and the private-window notice. CI runs them on every pull request.
-      Items below marked _(e2e)_ are among them; check the rest by hand.
+- [ ] `npm run test:e2e`: the web app's interaction tests (`e2e/`) pass in Chromium and
+      WebKit (the Mac app's engine). CI runs them on every pull request. Items below marked
+      _(e2e)_ are among them; check the rest by hand.
 - [ ] `npm run test:app`: the Mac app end-to-end test passes (open, Save, Save As, relaunch,
       sandboxed, Preview's fullscreen, the Settings window and its sync with the main window).
       CI runs it on pull requests that touch the Mac side, and before App Store uploads.
@@ -161,8 +157,8 @@ combinations where it matters: make a book, then switch it to frames, and to pix
 - [ ] _(e2e)_ In the editor, the crop's edges snap to the page's edges, center lines, and guides;
       Option doesn't snap.
 - [ ] _(e2e)_ Right-click a photo: Crop… (on a page, opens its spread's editor in crop mode), Crop
-      to › Square, 4:5, 3:2, 16:9, The page (the current shape checked), and Reset crop when it's
-      cropped.
+      to › Square, 4:5, 3:2, 16:9, The page (The frame for frames; the current shape checked),
+      and Reset crop when it's cropped.
 - [ ] A crop is the photo's wherever it goes (desk, page, back), and in a saved project. Its
       frame has the crop's shape: fitting to guides, the desk's size, and the resolution warning
       all use what shows. Quick Look shows the whole photo.
@@ -500,7 +496,7 @@ Posts made while testing are real and public. Use a test account, or delete them
       and the empty desk's Add photos. A disabled button's badge is dimmed; releasing hides
       them. Off in Settings → General → Shortcuts, none show.
 - [ ] ⌘I add, ⌘O open, ⌘S save, ⌘⇧E export, ⌘P preview, ⌘; guides, ⌘,
-      settings, ⌘B sidebar.
+      settings, ⌘B sidebar, C crop.
 - [ ] Desk shortcuts (⌘A, ⌘C, ⌘D, Delete, arrows, Escape) do nothing on another page, or while
       a dialog or the editor is open.
 
