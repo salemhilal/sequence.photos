@@ -248,6 +248,9 @@ impl Workspace {
         .id(group.clone())
         .group(group.clone())
         .rounded(px(3.0))
+        // Always bordered (clear unless selected), so selecting it doesn't move what's in it.
+        .border_1()
+        .border_color(transparent_black())
         .on_mouse_down(
           MouseButton::Left,
           cx.listener(move |ws, ev: &MouseDownEvent, _, cx| {
@@ -259,7 +262,7 @@ impl Workspace {
         row_el = row_el.tip("The first and last pages stay in place", weak.clone());
       }
       if selected {
-        row_el = row_el.bg(theme.control).border_1().border_color(theme.accent);
+        row_el = row_el.bg(theme.control).border_color(theme.accent);
       } else if is_editing {
         row_el = row_el.bg(theme.accent_soft);
       }

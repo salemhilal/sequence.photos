@@ -834,7 +834,7 @@ impl Workspace {
     enum Row {
       Caption(String),
       Section(String),
-      Item(String, &'static str, Option<MenuAction>, bool),
+      Item(String, &'static str, MenuAction, bool, bool),
       Sub,
       Separator,
       Swatches,
@@ -857,7 +857,8 @@ impl Workspace {
             "Tidy up desk".into()
           },
           "",
-          can.then_some(MenuAction::Tidy),
+          MenuAction::Tidy,
+          can,
           false,
         ));
         rows.push(Row::Separator);
@@ -874,16 +875,17 @@ impl Workspace {
         rows.push(Row::Item(
           "Quick Look".into(),
           if on_page { "" } else { "Space" },
-          Some(MenuAction::QuickLook),
+          MenuAction::QuickLook,
+          true,
           false,
         ));
-        rows.push(Row::Item("Copy image".into(), "⌘C", Some(MenuAction::Copy), false));
-        rows.push(Row::Item("Duplicate".into(), "⌘D", Some(MenuAction::Duplicate), false));
+        rows.push(Row::Item("Copy image".into(), "⌘C", MenuAction::Copy, true, false));
+        rows.push(Row::Item("Duplicate".into(), "⌘D", MenuAction::Duplicate, true, false));
         if on_page {
-          rows.push(Row::Item("Return to desk".into(), "", Some(MenuAction::ToDesk), false));
+          rows.push(Row::Item("Return to desk".into(), "", MenuAction::ToDesk, true, false));
         }
         rows.push(Row::Separator);
-        rows.push(Row::Item("Crop…".into(), "C", Some(MenuAction::Crop), false));
+        rows.push(Row::Item("Crop…".into(), "C", MenuAction::Crop, true, false));
         if let Some(m) = &meta {
           let sheet = project.sheet();
           let page = if sheet.arrangement == sequence_core::Arrangement::Spreads {
@@ -902,16 +904,25 @@ impl Workspace {
           now_ratio = w / h;
           rows.push(Row::Sub);
           if !sequence_core::crop::is_whole(m.crop.as_ref()) {
-            rows.push(Row::Item("Reset crop".into(), "", Some(MenuAction::ResetCrop), false));
+            rows.push(Row::Item("Reset crop".into(), "", MenuAction::ResetCrop, true, false));
           }
         }
         rows.push(Row::Separator);
-        rows.push(Row::Item("Delete".into(), "", Some(MenuAction::Delete), false));
+        rows.push(Row::Item("Delete".into(), "", MenuAction::Delete, true, false));
       }
     }
     // Kept on screen.
     let row_h = 24.0;
-    let height = rows.len() as f64 * row_h + 8.0;
+    const SEPARATOR_H: f64 = 9.0;
+    let height = rows
+      .iter()
+      .map(|r| match r {
+        Row::Separator => SEPARATOR_H,
+        Row::Swatches => 36.0,
+        _ => row_h,
+      })
+      .sum::<f64>()
+      + 8.0;
     let width = 220.0;
     let win = self.frames.window;
     let left = mx.min(win.w - width - 8.0).max(4.0);
@@ -919,11 +930,11 @@ impl Workspace {
     let item = |id: (&'static str, usize),
                 label: String,
                 key: &'static str,
-                action: Option<MenuAction>,
+                action: MenuAction,
+                enabled: bool,
                 checked: bool,
                 menu: ContextMenu,
                 cx: &mut Context<Self>| {
-      let enabled = action.is_some();
       // Its own row (not the submenu's) closes the submenu when hovered.
       let closes_sub = id.0 == "menu-item";
       div()
@@ -947,8 +958,9 @@ impl Workspace {
         .child(div().w(px(16.0)).flex().items_center().map(|d| {
           if checked {
             d.child(svg().path(icon("check")).size(px(14.0)).text_color(theme.text))
-          } else if let Some(name) = action.and_then(menu_icon) {
-            d.child(svg().path(icon(name)).size(px(14.0)).text_color(theme.muted))
+          } else if let Some(name) = menu_icon(action) {
+            let c = if enabled { theme.muted } else { theme.muted.opacity(0.6) };
+            d.child(svg().path(icon(name)).size(px(14.0)).text_color(c))
           } else {
             d
           }
@@ -962,8 +974,8 @@ impl Workspace {
             .child(key),
         )
         .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-        .when_some(action, |d, a| {
-          d.on_click(cx.listener(move |ws, _, window, cx| ws.run_menu(&menu, a, window, cx)))
+        .when(enabled, |d| {
+          d.on_click(cx.listener(move |ws, _, window, cx| ws.run_menu(&menu, action, window, cx)))
         })
     };
     let mut list = div()
@@ -1003,13 +1015,13 @@ impl Workspace {
           .child(t)
           .into_any_element(),
         Row::Separator => div()
-          .h(x(row_h))
+          .h(x(SEPARATOR_H))
           .flex()
           .items_center()
           .child(div().h(px(1.0)).w_full().bg(theme.divider))
           .into_any_element(),
-        Row::Item(label, key, action, checked) => {
-          item(("menu-item", i), label, key, action, checked, menu.clone(), cx).into_any_element()
+        Row::Item(label, key, action, enabled, checked) => {
+          item(("menu-item", i), label, key, action, enabled, checked, menu.clone(), cx).into_any_element()
         }
         Row::Swatches => {
           let mut row = div().h(px(36.0)).px(px(10.0)).flex().items_center().gap(px(8.0));
@@ -1097,7 +1109,8 @@ impl Workspace {
                 ("menu-shape", k),
                 label.clone(),
                 note,
-                Some(MenuAction::CropTo(*ratio)),
+                MenuAction::CropTo(*ratio),
+                true,
                 checked,
                 menu.clone(),
                 cx,
